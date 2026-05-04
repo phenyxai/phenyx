@@ -1,35 +1,53 @@
-# phenyx-collective
+# Phenyx Collective
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+Identity-formation app. Two services, one repo.
 
-## Built with v0
+```
+.
+├── frontend/   Next.js 16 (App Router) — UI, marketing, auth-gated pages
+├── backend/    NestJS — REST API, Stripe, Supabase service-role, Anthropic
+└── supabase/   Shared SQL migrations
+```
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+## Local development
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_HvzJ9dEli1Y60WfvIVw4dejrcyVY)
+Both services run independently. Start each in its own terminal.
 
-## Getting Started
-
-First, run the development server:
+### Backend (port 4000)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+cd backend
+pnpm install
+pnpm start:dev
+```
+
+Requires `backend/.env` (see `backend/.env.example`). Holds all secrets: Supabase service role, Stripe secret, Anthropic key, encryption key.
+
+### Frontend (port 3000)
+
+```bash
+cd frontend
+pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Requires `frontend/.env.local` (see `frontend/.env.example`). Public keys only — points at the backend via `NEXT_PUBLIC_API_BASE_URL`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-## Learn More
+Two Render Web Services from this repo, each rooted at its subdirectory.
 
-To learn more, take a look at the following resources:
+| Service | Root | Build | Start |
+|---|---|---|---|
+| `phenyx-frontend` | `frontend/` | `pnpm install && pnpm build` | `pnpm start` |
+| `phenyx-backend` | `backend/` | `pnpm install && pnpm build` | `pnpm start:prod` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+After deploy: set `NEXT_PUBLIC_API_BASE_URL` on the frontend to the backend's Render URL, and `FRONTEND_ORIGIN` on the backend to the frontend's Render URL. Update the Stripe webhook endpoint in the Stripe Dashboard to `<backend-url>/stripe/webhook`.
 
-<a href="https://v0.app/chat/api/kiro/clone/itsjanesse/phenyx-collective-05" alt="Open in Kiro"><img src="https://pdgvvgmkdvyeydso.public.blob.vercel-storage.com/open%20in%20kiro.svg?sanitize=true" /></a>
+## Auth flow
+
+Frontend holds the Supabase session (browser cookies). Every API call from the frontend includes `Authorization: Bearer <jwt>`. The backend's `SupabaseAuthGuard` validates the token via `supabase.auth.getUser()` on every guarded route.
+
+## Database
+
+Supabase (Postgres). Migrations live in `supabase/migrations/`. The backend uses the service-role key for privileged operations; the frontend only uses the anon key.
