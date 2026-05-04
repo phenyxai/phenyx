@@ -351,14 +351,16 @@ export default function OnboardingPage() {
             ? profile?.streak_count ?? 0
             : 1;
       
-      await supabase.from("user_profiles").update({
+      const { error } = await supabase.from("user_profiles").upsert({
+        id: userId,
         last_reflection_date: today,
-        streak_count: newStreak
-      }).eq("id", userId);
-      
+        streak_count: newStreak,
+      });
+      if (error) console.warn("[onboarding] user_profiles upsert (reflection):", error.message);
+
       setReflections((prev) => ({ ...prev, [pillar]: currentReflection }));
-    } catch {
-      // Continue anyway
+    } catch (err) {
+      console.warn("[onboarding] reflection submit failed:", err);
     }
     
     transitionToNextStep();
@@ -408,11 +410,10 @@ export default function OnboardingPage() {
     if (userId && Object.keys(profilePayload).length > 0) {
       void supabase
         .from("user_profiles")
-        .update({ onairos_data: profilePayload })
-        .eq("id", userId)
+        .upsert({ id: userId, onairos_data: profilePayload })
         .then(({ error }) => {
           if (error) {
-            console.warn("[onboarding] user_profiles.onairos_data update:", error.message);
+            console.warn("[onboarding] user_profiles.onairos_data upsert:", error.message);
           }
         });
     }
@@ -446,13 +447,15 @@ export default function OnboardingPage() {
     const value = motivation === "something else" ? customMotivation : motivation;
     
     try {
-      await supabase.from("user_profiles").update({
-        motivation: value
-      }).eq("id", userId);
-    } catch {
-      // Continue anyway
+      const { error } = await supabase.from("user_profiles").upsert({
+        id: userId,
+        motivation: value,
+      });
+      if (error) console.warn("[onboarding] user_profiles upsert (motivation):", error.message);
+    } catch (err) {
+      console.warn("[onboarding] motivation save failed:", err);
     }
-    
+
     setStep(-2);
   };
 
@@ -463,18 +466,22 @@ export default function OnboardingPage() {
     }
     
     try {
-      await supabase.from("user_profiles").update({
+      const { error } = await supabase.from("user_profiles").upsert({
+        id: userId,
         prompt_times: promptTimes,
         notification_prefs: {
           push: notificationsEnabled,
           sms: false,
-          email: true
-        }
-      }).eq("id", userId);
-    } catch {
-      // Continue anyway
+          email: true,
+        },
+      });
+      if (error) {
+        console.warn("[onboarding] user_profiles upsert (schedule):", error.message);
+      }
+    } catch (err) {
+      console.warn("[onboarding] schedule save failed:", err);
     }
-    
+
     router.push("/constellation");
   };
 
