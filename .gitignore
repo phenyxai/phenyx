@@ -8,9 +8,6 @@ out
 build
 dist
 
-# OpenNext (Cloudflare)
-.open-next
-
 # Env & secrets
 .env
 .env.*
@@ -31,10 +28,6 @@ coverage
 # Vercel
 .vercel
 
-# Wrangler / Cloudflare
-.wrangler
-.dev.vars
-
 # IDE & OS
 .DS_Store
 *.pem
@@ -45,6 +38,9 @@ coverage
 
 # Turborepo (if added later)
 .turbo
+
+# Claude Code
+.claude/
 
 # Local notes / agent handoff (not for the repo)
 current-fixing.md
