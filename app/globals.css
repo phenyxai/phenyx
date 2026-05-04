@@ -1,0 +1,217 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #0D0D0C;
+  --foreground: #FFFDFD;
+  --card: #0D0D0C;
+  --card-foreground: #FFFDFD;
+  --popover: #0D0D0C;
+  --popover-foreground: #FFFDFD;
+  --primary: #FFFDFD;
+  --primary-foreground: #0D0D0C;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #FFFDFD;
+  --muted: #1a1a1a;
+  --muted-foreground: #888888;
+  --accent: #E8451E;
+  --accent-foreground: #FFFDFD;
+  --destructive: #E8451E;
+  --destructive-foreground: #FFFDFD;
+  --border: #2a2a2a;
+  --input: #1a1a1a;
+  --ring: #E8451E;
+  --radius: 0.625rem;
+
+  /* PHENYX design system */
+  --color-bg: #0A0A0A;
+  --color-surface: #0E0E0E;
+  --color-border: #1C1C1C;
+  --color-text: #FFFDFD;
+  --color-subtle: #555555;
+  --color-stellar: #5599FF;
+
+  /* Stellar palette */
+  --stellar-1: #CC3300;
+  --stellar-2: #E84422;
+  --stellar-3: #E87722;
+  --stellar-4: #E8B822;
+  --stellar-5: #D4C87A;
+  --stellar-6: #C8C8C8;
+  --stellar-7: #88AAEE;
+  --stellar-8: #77BBFF;
+  --stellar-9: #5599FF;
+  --stellar-10: #4488EE;
+  --stellar-11: #3366DD;
+  --stellar-12: #2255CC;
+  --stellar-13: #1144BB;
+  --stellar-14: #0033AA;
+}
+
+@theme inline {
+  --font-sans: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  *:focus {
+    outline: none;
+  }
+  *:focus-visible {
+    outline: 2px solid var(--color-stellar);
+    outline-offset: 2px;
+  }
+  html, body {
+    font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  input, textarea, button, select {
+    font-family: inherit;
+  }
+  ::placeholder {
+    font-family: inherit;
+  }
+  /* Global input styling for dark theme */
+  input, textarea, select {
+    background: #0d0d0d !important;
+    color: #FFFDFD !important;
+    border: 0.5px solid #1e1e1e !important;
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+    font-size: 14px !important;
+    font-weight: 300 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    -webkit-appearance: none !important;
+  }
+  input::placeholder, textarea::placeholder {
+    color: #333 !important;
+  }
+  input:focus, textarea:focus {
+    border-color: var(--color-stellar) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-stellar) 8%, transparent) !important;
+  }
+  input:focus-visible, textarea:focus-visible {
+    outline: none !important;
+  }
+}
+
+/* Fade in animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 600ms ease-out forwards;
+}
+
+/* Constellation floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Line draw animation */
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-draw-line {
+  stroke-dasharray: 100;
+  animation: draw-line 800ms ease-out forwards;
+}
+
+/* Node fade in animation */
+@keyframes node-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-node-fade-in {
+  animation: node-fade-in 400ms ease-out forwards;
+}
+
+/* Fade in animation for auth pages */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease forwards;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-float,
+  .animate-draw-line,
+  .animate-node-fade-in,
+  .animate-fade-in {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}

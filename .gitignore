@@ -1,0 +1,50 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Next.js
+.next
+out
+build
+dist
+
+# OpenNext (Cloudflare)
+.open-next
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Debug & logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage
+
+# Vercel
+.vercel
+
+# Wrangler / Cloudflare
+.wrangler
+.dev.vars
+
+# IDE & OS
+.DS_Store
+*.pem
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Turborepo (if added later)
+.turbo
+
+# Local notes / agent handoff (not for the repo)
+current-fixing.md

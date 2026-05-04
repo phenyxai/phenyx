@@ -1,0 +1,834 @@
+Using this llm instruction file (@llm.txt) and the Onairos package this is located in (@onairos) 
+install and setup Onairos so that we have the onairos button setup in the onbaording and the intialization 
+and everything else is setup, including tthe callback function for us to export the data from onairos easily
+
+The following is depth description Onairos package
+
+# Onairos NPM Package - LLM Context
+
+## Package Overview
+- **Version**: 7.1.2
+- **Type**: React Web Library for Data Requests & OAuth Authentication
+- **Main Use**: Personal AI training data collection via social media OAuth
+- **Base API**: `https://api2.onairos.uk` (production), `staging-api.onairos.uk` (staging), `dev-api.onairos.uk` (development)
+- **Authentication**: Two-tier system (Developer API Keys + JWT User Tokens)
+
+## Cross-SDK parity (web vs React Native)
+
+- **Docs:** `docs/CROSS_SDK_PARITY.md` (contracts: `onComplete` shape, `authorizedData`, `training`, `autoFetch` + `backgroundLoadData` matrix, polling rules) and `docs/ONAIROS_BUTTON_PROPS.md` (web `OnairosButton` map).
+- **`OnairosButton` props:** `backgroundLoadData`, `trainingScreenMode` (`real` | `mock` | `full`), `recommendedPlatforms`, `preferredPlatform`, `primaryAuthOnly`, `useNewWelcomeFlow`, `preCheck`, `returnLink`, `onRejection` — align with the React Native SDK where applicable.
+- **Host polling helper:** `import { pollTrainingStatus, normalizeTrainingFromResolution } from 'onairos'` — same GET + Bearer + interval / 429 backoff intent as RN (see parity doc §5).
+- **Completion payload:** `onComplete` may include `authorizedData` and `training` from URL resolution; `apiResponse` is filled when `autoFetch` runs the traits/inference fetch after training is ready (or when traits-only skips the training wait).
+
+## MBTI inference input preset (v7.1.2+, backend 3.9.35+)
+
+- **Prop:** `preferencesMbti?: boolean` (default `false`) on `<Onairos />` / `OnairosButton`. Only applies when the user approves the **`preferences`** data tier in consent (maps to `Traits` in `confirmations`).
+- **Handshake:** When `preferencesMbti` is `true` and `preferences` is in approved tiers, the SDK sets `Info.Options.preferencesMbti: true` on `POST /getAPIurlMobile` so the session JWT can include `inferenceInputPreset: "mbti"` (see JWT / response echo in the spec file below).
+- **Inference POST** (`/inferenceNoProof`, `/mobileInferenceNoProof`, `/combinedInference`, `/combined-training-inference` when used by `autoFetch`): the SDK sends `preferencesMbti: true` on the JSON body. If there is no host `inferenceData`, the SDK no longer downgrades to traits-only for pure inference endpoints when MBTI is active (server provides the 16 MBTI rows; merged row caps and **413** are server rules).
+- **Spec (full contract):** `sdk-integration/MBTI_INFERENCE_INPUT_PRESET.md` — aliases (`inferenceMbti`, `inferenceInputPreset`), `Input` merge order, and response fields `inferenceInputPreset`, `inferenceInputProvenance`, `inferenceInputMerged`.
+
+## Key Features ✅
+1. **Data Request System**: Users can share "basic info", "personality", or "preferences" data
+2. **OAuth Connectors**: 9 platforms (YouTube, LinkedIn, Reddit, Pinterest, Instagram, GitHub, Facebook, Gmail, Notion)
+3. **Mobile Browser Support**: Auto-detects mobile and switches popup → redirect OAuth flow
+4. **API Integration**: Supports both test/live modes with automatic endpoint switching
+5. **PIN-based Encryption**: All models encrypted with user PIN + server key
+6. **Responsive Design**: Tailwind CSS with mobile-first approach
+7. **API Key Initialization**: Developer API key setup for authentication and environment configuration
+
+## Mobile Browser Compatibility ✅
+**WORKS PERFECTLY**: React components, API calls, touch interactions, responsive design, state management
+
+**AUTO-OPTIMIZED**: OAuth flow automatically detects mobile devices:
+- **Desktop**: Popup OAuth windows (`window.open`)
+- **Mobile**: Redirect OAuth flow (`window.location.href`)
+
+## OAuth Implementation ✅
+**Endpoints**: All OAuth connectors use `api2.onairos.uk/{platform}/authorize`
+- YouTube: `api2.onairos.uk/youtube/authorize`
+- LinkedIn: `api2.onairos.uk/linkedin/authorize`
+- Reddit: `api2.onairos.uk/reddit/authorize`
+- Pinterest: `api2.onairos.uk/pinterest/authorize`
+- Instagram: `api2.onairos.uk/instagram/authorize`
+- GitHub: `api2.onairos.uk/github/authorize`
+- Facebook: `api2.onairos.uk/facebook/authorize`
+- Gmail: `api2.onairos.uk/gmail/authorize`
+- Notion: `api2.onairos.uk/notion/authorize`
+
+**Flow**: POST request → Get OAuth URL → Open popup/redirect → Handle callback → Update connection state
+
+## API Endpoints & Environment Configuration
+
+### Environment URLs
+```typescript
+const API_ENDPOINTS = {
+  production: 'https://api2.onairos.uk',
+  staging: 'https://staging-api.onairos.uk', 
+  development: 'https://dev-api.onairos.uk',
+};
+```
+
+### Developer API Key Endpoints (Tier 1)
+- **API Key Validation**: `POST /auth/validate-key`
+- **Email Verification**: `POST /email/verification`
+- **App Registration**: `POST /app/register`
+- **OAuth Setup**: `POST /oauth/{platform}/setup`
+
+### JWT User Token Endpoints (Tier 2)
+- **User Profile**: `GET /user/profile`
+- **PIN Operations**: `POST /user/pin`
+- **Data Requests**: `POST /user/data-request`
+- **Training Routes**: `POST /mobile-training/clean` (regular) or `/enoch` (advanced)
+
+### Authentication Headers
+
+**Developer API Key Headers:**
+```typescript
+{
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${apiKey}`,
+  'User-Agent': 'OnairosSDK/1.0.0',
+  'X-SDK-Version': '3.0.72',
+  'X-SDK-Environment': 'production',
+  'X-API-Key-Type': 'developer',
+  'X-Timestamp': new Date().toISOString(),
+}
+```
+
+**JWT User Token Headers:**
+```typescript
+{
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${jwtToken}`,
+  'User-Agent': 'OnairosSDK/1.0.0',
+  'X-SDK-Version': '3.0.72',
+  'X-SDK-Environment': 'production',
+}
+```
+
+## Data Flow
+**Standard Flow:**
+1. **API Key Initialization** → 2. **Email Authentication** → 3. **OAuth Connections** → 4. **PIN Setup** → 5. **Data Request**
+
+**Pre-Verified Email Flow (v5.8.2+):**
+1. **API Key Initialization** → 2. **Pre-Verified Email Confirm** → 3. **OAuth Connections** → 4. **PIN Setup** → 5. **Data Request**
+
+**Backend Format**:
+```json
+{
+  "Info": {
+    "web3Type": "Normal",
+    "confirmations": ["Medium", "Large", "Traits"],
+    "Domain": "example.com",
+    "EncryptedUserPin": "encrypted_pin",
+    "UserSub": "user_hash"
+  }
+}
+```
+
+## API Key Setup ✅
+**CRITICAL**: Must initialize API key before using any Onairos components
+
+### Two-Tier Authentication System 🔐
+1. **Developer API Keys**: For app-level operations (email verification, app registration)
+2. **JWT User Tokens**: For user-level operations (PIN storage, user profile)
+
+### Complete Initialization
+```typescript
+import { initializeApiKey } from 'onairos';
+
+// Initialize with developer key
+await initializeApiKey({
+  apiKey: 'ona_your_api_key_here', // Get from Onairos Dashboard
+  environment: 'production', // 'production' | 'staging' | 'development'
+  enableLogging: true,
+  timeout: 30000,      // Optional: Request timeout (default: 30000ms)
+  retryAttempts: 3     // Optional: Retry attempts (default: 3)
+});
+```
+
+### Supported API Key Formats
+- **Developer Keys**: `dev_`, `pk_`, `ona_` prefixes + 32+ characters
+- **Admin Key**: Available for testing (contact support for access)
+- **Validation**: Backend validation with 5-minute cache
+
+### Configuration Interface
+```typescript
+interface OnairosConfig {
+  apiKey: string;                    // Required: Your API key
+  environment?: 'production' | 'staging' | 'development';  // Default: 'production'
+  enableLogging?: boolean;           // Default: true
+  timeout?: number;                  // Default: 30000ms
+  retryAttempts?: number;            // Default: 3
+  
+  // For Capacitor/native apps using Google Sign-In
+  googleClientIds?: {
+    webClientId?: string;            // For web browsers
+    iosClientId?: string;            // For iOS Capacitor apps (REQUIRED for iOS)
+    androidClientId?: string;        // For Android Capacitor apps (REQUIRED for Android)
+    serverClientId?: string;         // For backend token verification
+  };
+}
+```
+
+## Key Components & Functions
+
+### Exposed SDK Functions
+- **initializeApiKey**: Primary SDK initialization with developer API key validation (REQUIRED)
+
+### UI Components
+- **OnairosButton**: Main entry point with props (testMode, autoFetch, requestData)
+- **UniversalOnboarding**: OAuth connector management with mobile detection
+- **DataRequest**: Data type selection with visual checkmarks
+- **EmailAuth**: Email verification flow
+- **PinSetup**: PIN creation for encryption
+
+### Internal Functions (Not Exposed)
+The SDK internally handles:
+- JWT token management (store/load/clear)
+- Developer vs user request authentication
+- API key validation and caching
+- OAuth flow management
+- Error handling and retry logic
+
+## Mobile-Specific Features ✅
+- **MobileDataRequestPage**: Mobile-optimized data request UI
+- **Touch Events**: Proper touch handling with `touchAction` CSS
+- **Viewport Management**: Dynamic viewport height for mobile browsers
+- **Mobile OAuth Return**: Handles OAuth callback cleanup in mobile redirect flow
+- **Mobile Session Caching**: Persistent login with fallback storage (localStorage → cookies → sessionStorage)
+
+## Capacitor / Native Mobile App Integration 📱
+
+### Google Sign-In for Capacitor Apps
+
+**IMPORTANT**: Capacitor apps MUST provide their own Google OAuth credentials. Here's why:
+
+1. **`capacitor://localhost` is NOT a valid OAuth redirect URI** - Google only accepts `http://` and `https://` schemes
+2. **Google blocks OAuth in embedded WebViews** - WKWebView/Android WebView get `disallowed_useragent` errors
+3. **Native apps require platform-specific credentials** - iOS bundle ID, Android package + SHA-1 fingerprint
+
+### Setup for Capacitor Apps
+
+#### Step 1: Create Google OAuth Credentials
+
+Go to [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials:
+
+1. **Create iOS OAuth Client**:
+   - Application type: iOS
+   - Bundle ID: Your app's bundle identifier (e.g., `com.yourcompany.yourapp`)
+   
+2. **Create Android OAuth Client**:
+   - Application type: Android
+   - Package name: Your app's package name
+   - SHA-1 certificate fingerprint: From your signing keystore
+   
+3. **Create Web OAuth Client** (for backend token verification):
+   - Application type: Web application
+   - This "server client ID" is used for backend validation
+
+#### Step 2: Install Native Google Auth Plugin
+
+```bash
+npm install @codetrix-studio/capacitor-google-auth
+npx cap sync
+```
+
+#### Step 3: Configure Your Capacitor App
+
+**capacitor.config.ts:**
+```typescript
+import { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  plugins: {
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      serverClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+      forceCodeForRefreshToken: true,
+    },
+  },
+};
+```
+
+**iOS (Info.plist):**
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <!-- Reversed iOS Client ID -->
+      <string>com.googleusercontent.apps.YOUR_IOS_CLIENT_ID</string>
+    </array>
+  </dict>
+</array>
+<key>GIDClientID</key>
+<string>YOUR_IOS_CLIENT_ID.apps.googleusercontent.com</string>
+```
+
+**Android (strings.xml):**
+```xml
+<string name="server_client_id">YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
+```
+
+#### Step 4: Initialize Onairos with Your Client IDs
+
+**This is the key step!** External Capacitor apps pass their Google credentials directly in `initializeApiKey()`:
+
+```typescript
+import { initializeApiKey } from 'onairos';
+
+// Initialize SDK with your API key AND Google OAuth credentials in ONE call
+await initializeApiKey({
+  apiKey: 'ona_your_api_key_here',
+  environment: 'production',
+  
+  // Pass YOUR OWN Google OAuth credentials for Capacitor/native apps
+  googleClientIds: {
+    webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',       // Used on web browsers
+    iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',        // Used on iOS Capacitor apps
+    androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com', // Used on Android Capacitor apps
+    serverClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',      // Used for backend token verification
+  }
+});
+
+// That's it! Now use OnairosButton normally - Google Sign-In will work on all platforms
+```
+
+**✅ This works for ANY external Capacitor app:**
+- The developer creates their own Google OAuth credentials in Google Cloud Console
+- They pass these credentials in the `googleClientIds` option during `initializeApiKey()`
+- The Onairos SDK automatically uses native Google Sign-In on mobile when available
+- No changes needed to the OnairosButton component - it just works!
+- No need to call `updateGoogleClientIds()` separately!
+
+### How It Works
+
+1. **SDK auto-detects environment**:
+   - **Web browser** → Uses `@react-oauth/google` with Onairos's default web client ID
+   - **Capacitor (default)** → Uses system browser (SFSafariViewController) with Onairos's web client ID - **WORKS OUT OF BOX!**
+   - **Capacitor + custom googleClientIds** → Uses native Google Sign-In SDK with developer's client IDs
+
+2. **Default Capacitor flow (no setup needed)**:
+   - User taps "Continue with Google"
+   - System browser opens with Google OAuth
+   - User signs in, redirected back to app
+   - SDK handles the callback automatically
+
+3. **Native SDK flow (with custom googleClientIds)**:
+   - User taps "Continue with Google"
+   - Native Google Sign-In sheet appears (iOS/Android native UI)
+   - ID token returned directly to SDK
+   - SDK authenticates with Onairos backend
+
+### Manual Native Google Sign-In (Advanced)
+
+For custom implementations:
+
+```typescript
+import { 
+  isNativeGoogleAuthAvailable, 
+  performNativeGoogleSignIn,
+  performNativeGoogleSignOut 
+} from 'onairos';
+
+// Check if native auth is available
+if (isNativeGoogleAuthAvailable()) {
+  // Perform native sign-in
+  const result = await performNativeGoogleSignIn();
+  
+  if (result.success) {
+    console.log('User email:', result.user?.email);
+    console.log('ID Token:', result.idToken);
+    // Use idToken for authentication...
+  } else {
+    console.error('Sign-in failed:', result.error);
+  }
+}
+
+// Sign out
+await performNativeGoogleSignOut();
+```
+
+### FAQ: Capacitor Google Sign-In
+
+**Q: Does Google Sign-In work out of the box for Capacitor apps?**
+A: YES! By default, the SDK uses Onairos's web client ID with system browser OAuth (SFSafariViewController). No configuration needed.
+
+**Q: When would I need to provide my own Google client IDs?**
+A: Only if you want the native Google Sign-In sheet (iOS/Android native UI) instead of system browser. Pass `googleClientIds` in `initializeApiKey()`.
+
+**Q: How do external apps like Juno use their own Google Sign-In?**
+A: Just pass `googleClientIds` in initialization:
+```typescript
+await initializeApiKey({
+  apiKey: 'ona_...',
+  googleClientIds: {
+    iosClientId: 'their-ios-id.apps.googleusercontent.com',
+    androidClientId: 'their-android-id.apps.googleusercontent.com',
+  }
+});
+```
+
+**Q: Can I whitelist `capacitor://localhost:3000`?**
+A: NO. Google does not accept `capacitor://` scheme. That's why we use system browser OAuth by default.
+
+**Q: Why can't web-based @react-oauth/google work in Capacitor WebView?**
+A: Google blocks OAuth in embedded WebViews with `disallowed_useragent` error. The system browser workaround is the default solution.
+
+## Connector/Platform Control Props ✅
+
+Developers can control which data connectors (platforms) are shown to users:
+
+### Available Platforms
+```
+LLM Platforms:     ChatGPT, Claude, Gemini, Grok
+OAuth Platforms:   YouTube, LinkedIn, Pinterest, Reddit, Gmail, Instagram, X
+```
+
+### Props for Controlling Connectors
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `allowedPlatforms` | `string[]` | `null` | Array of platform names to show. `null` = show all. |
+| `rawMemoriesOnly` | `boolean` | `false` | When `true`, shows only LLM platforms (ChatGPT, Claude, Gemini, Grok) |
+| `priorityPlatform` | `string` | `null` | Platform to prioritize/highlight (e.g., 'gmail', 'youtube') |
+
+### Priority Order
+1. **Special Apps**: Wrapped/Valentine/Lunar apps use predefined platform lists
+2. **`rawMemoriesOnly`**: If `true`, shows only LLM platforms
+3. **`allowedPlatforms`**: If provided, filters to specified platforms
+4. **Default**: Shows all available platforms
+
+### Examples
+
+**Show only LLM platforms:**
+```jsx
+<OnairosButton
+  webpageName="MyAIApp"
+  rawMemoriesOnly={true}
+  // Shows: ChatGPT, Claude, Gemini, Grok
+/>
+```
+
+**Show specific platforms:**
+```jsx
+<OnairosButton
+  webpageName="MyApp"
+  allowedPlatforms={['YouTube', 'ChatGPT', 'Gmail']}
+  // Shows only: YouTube, ChatGPT, Gmail
+/>
+```
+
+**Prioritize a platform:**
+```jsx
+<OnairosButton
+  webpageName="MyApp"
+  priorityPlatform="gmail"
+  // Shows all platforms, but Gmail is highlighted/prioritized
+/>
+```
+
+**Combine props:**
+```jsx
+<OnairosButton
+  webpageName="MyApp"
+  allowedPlatforms={['YouTube', 'Instagram', 'ChatGPT']}
+  priorityPlatform="chatgpt"
+  // Shows: YouTube, Instagram, ChatGPT (with ChatGPT prioritized)
+/>
+```
+
+## Pre-Verified Email Passthrough (v5.8.2+) 🔐
+
+### Overview
+When a developer's app has already verified a user's email (via their own auth system), they can pass this email to the Onairos SDK to skip the email verification step. This improves UX by avoiding duplicate verification.
+
+### Usage
+```jsx
+import { OnairosButton } from 'onairos';
+
+function MyApp() {
+  const { user } = useAuth(); // Your auth system
+  
+  return (
+    <OnairosButton
+      preVerifiedEmail={user?.email}  // Pass verified email
+      requestData={{ personality: true }}
+      webpageName="MyApp"
+      onComplete={(data) => console.log(data)}
+    />
+  );
+}
+```
+
+### Props
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `preVerifiedEmail` | `string \| null` | `null` | Email already verified by the developer's app |
+
+### User Experience
+When `preVerifiedEmail` is provided:
+1. **Masked Email Display**: Shows `j*****@example.com` (first char + stars + domain)
+2. **Green Checkmark**: Visual confirmation of verified status
+3. **"Verified by app"**: Label indicating the source
+4. **Continue Button**: User must explicitly click to proceed
+5. **Escape Hatch**: "Use a different email" link for manual entry
+
+### Reactive Prop Handling
+The prop is reactive - email can be `null` initially and loaded later:
+```jsx
+const [email, setEmail] = useState(null);
+
+useEffect(() => {
+  fetchUser().then(u => setEmail(u.email)); // Loads after mount
+}, []);
+
+<OnairosButton preVerifiedEmail={email} />  // Updates when email becomes available
+```
+
+### Backend Endpoint Required
+```
+POST /email/pre-verified
+```
+
+**Request Headers:**
+```
+Content-Type: application/json
+x-api-key: developer_api_key
+Authorization: Bearer developer_api_key
+```
+
+**Request Body:**
+```json
+{
+  "email": "john@example.com",
+  "preVerified": true,
+  "source": "sdk_passthrough"
+}
+```
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "token": "jwt_token",
+  "isNewUser": true,
+  "userName": "john",
+  "user": { "email": "john@example.com", "id": "user_123" }
+}
+```
+
+**Response (Error):**
+```json
+{
+  "success": false,
+  "error": "Authentication failed"
+}
+```
+
+### 🔒 Security Considerations
+
+| Aspect | Implementation |
+|--------|----------------|
+| **Trust Model** | Similar to OAuth - trusts developer verified the email |
+| **API Key Required** | Only works for apps with valid `x-api-key` |
+| **Audit Trail** | `source: 'sdk_passthrough'` logged for tracking |
+| **User Consent** | Must click "Continue" to proceed (no auto-submit) |
+| **Fallback** | If endpoint returns 404, falls back to regular verification |
+| **Masked Display** | Email partially hidden until user consents |
+
+### Security Recommendations for Backend
+1. **Validate API Key**: Ensure request comes from registered developer
+2. **Log Pre-Verified Flows**: Track which apps use this feature
+3. **Rate Limit**: Prevent abuse by limiting requests per API key
+4. **Optional Signing**: For high-security apps, require signed tokens from developer backend
+
+## Known Discrepancies
+❌ **NONE** - All OAuth flows now properly handle both desktop and mobile
+❌ **NONE** - All API endpoints use correct `api2.onairos.uk` domain
+❌ **NONE** - Mobile browser compatibility is complete
+
+## Inference Result Formatting (v6.1.0) 🎯
+
+### Overview
+All 4 inference endpoints now support formatting parameters for sorting and filtering results:
+- `POST /inferenceNoProof`
+- `POST /mobileInferenceNoProof`
+- `POST /combinedInference`
+- `POST /combined-training-inference`
+
+### Available Props
+
+| Prop | Type | Example | Description |
+|------|------|---------|-------------|
+| `sortResults` | `'desc' \| 'asc' \| false` | `sortResults: 'desc'` | Sort by score |
+| `includeRank` | `boolean` | `includeRank: true` | Add rank (1, 2, 3...) |
+| `topK` | `number` | `topK: 5` | Return only top K |
+| `groupByScore` | `{ precision: number }` | `groupByScore: { precision: 1 }` | Group same scores |
+| `inferenceResponseFormat` | `string` | `inferenceResponseFormat: 'ranked'` | Output structure |
+| `includeOriginalIndex` | `boolean` | `includeOriginalIndex: true` | Keep input index |
+
+### Usage Examples
+
+**Get top 5 highest-scoring items, sorted:**
+```jsx
+<OnairosButton
+  webpageName="MyApp"
+  inferenceData={eventTags}
+  sortResults="desc"
+  topK={5}
+  includeRank={true}
+  onComplete={(data) => console.log(data)}
+/>
+```
+
+**Group items with same score (1 decimal precision):**
+```jsx
+<OnairosButton
+  webpageName="MyApp"
+  inferenceData={items}
+  inferenceResponseFormat="grouped"
+  groupByScore={{ precision: 1 }}
+  onComplete={(data) => console.log(data)}
+/>
+```
+
+### Response with Formatting Metadata
+When formatting options are used, the response includes metadata:
+```typescript
+{
+  // ... standard response fields
+  formattingApplied: {
+    sortResults: 'desc',
+    topK: 5,
+    includeRank: true,
+    originalCount: 100,
+    returnedCount: 5
+  }
+}
+```
+
+### Backward Compatibility
+- Default behavior unchanged - existing integrations work without modification
+- Formatting metadata only added when formatting options are used
+
+## Recent Updates (v2.1.5 → v6.1.0)
+✅ **Inference Formatting Options (v6.1.0)**: Sort, rank, and filter inference results with new props
+✅ **Pre-Verified Email Passthrough**: Skip email verification when developer has already verified user
+✅ **Two-Tier Authentication System**: Developer API keys + JWT user tokens
+✅ **Comprehensive SDK Initialization**: `initializeApiKey()` with full validation
+✅ **JWT Token Management**: Automatic storage, loading, and cleanup
+✅ **Multi-Environment Support**: Production, staging, development endpoints
+✅ **Advanced Error Handling**: Retry logic, exponential backoff, auto-recovery
+✅ **API Key Validation**: Backend validation with 5-minute caching
+✅ **Request Authentication**: Separate headers for developer vs user requests
+✅ **Mobile device detection for OAuth flows**
+✅ **Mobile OAuth redirect handling**
+✅ **Enhanced OAuth URL parsing for all 9 platforms**
+✅ **Mobile browser compatibility documentation**
+✅ **Fixed OAuth popup blocking on mobile devices**
+✅ **Fixed TypeScript declaration file resolution issue in package.json exports**
+✅ **React Native AsyncStorage integration for JWT persistence**
+✅ **Comprehensive logging system with configurable levels**
+✅ **Admin key support for testing and development**
+✅ **HTTP client abstraction with automatic authentication headers**
+
+## Complete Usage Flow 🚀
+
+### Step 1: Initialize SDK (Required)
+```typescript
+import { initializeApiKey } from 'onairos';
+
+// Initialize SDK with developer API key
+try {
+  await initializeApiKey({
+    apiKey: 'ona_your_api_key_here', // Get from Onairos Dashboard
+    environment: 'production',
+    enableLogging: true,
+    timeout: 30000,
+    retryAttempts: 3
+  });
+  
+  console.log('SDK initialized successfully!');
+} catch (error) {
+  console.error('SDK initialization failed:', error.message);
+}
+```
+
+### Step 2: Use Onairos Components
+```typescript
+import { OnairosButton } from 'onairos';
+
+// Components automatically handle all authentication internally
+<OnairosButton
+  requestData={{
+    basic: { type: "basic", reward: "10 tokens" },
+    personality: { type: "personality", reward: "25 tokens" }, 
+    preferences: { type: "preferences", reward: "15 tokens" }
+  }}
+  webpageName="MyApp"
+  testMode={false}
+  autoFetch={true}
+  onComplete={(result) => console.log(result)}
+/>
+```
+
+### Step 2b: Auto Sign-In & Redirect (v5.2.3+) 🚀
+For seamless integration with your app's authentication flow, use the new auto sign-in and redirect props:
+
+```typescript
+import { OnairosButton } from 'onairos';
+
+// Automatic sign-in and redirect after Onairos completion
+<OnairosButton
+  requestData={{
+    basic: { type: "basic", reward: "10 tokens" },
+    personality: { type: "personality", reward: "25 tokens" }, 
+    preferences: { type: "preferences", reward: "15 tokens" }
+  }}
+  webpageName="MyApp"
+  testMode={false}
+  autoFetch={true}
+  // NEW: Auto sign-in and redirect props
+  autoSignIn={true}              // Sets localStorage auth key after completion
+  signInKey="authenticated"       // Custom key name (default: 'authenticated')
+  redirectUrl="/dashboard"        // Redirect URL after completion
+/>
+```
+
+**What happens when `autoSignIn` is enabled:**
+1. User completes the Onairos data connection flow
+2. SDK automatically sets `localStorage.setItem(signInKey, 'true')`
+3. SDK also sets `localStorage.setItem('onairos_personalized', 'true')`
+4. SDK stores user data in `localStorage.setItem('onairos_user_data', JSON.stringify(result))`
+5. User is redirected to `redirectUrl` (if provided)
+
+**Props Reference:**
+- `autoSignIn` (boolean, default: false): Enable automatic localStorage auth setting
+- `signInKey` (string, default: 'authenticated'): The localStorage key to set for your app's auth
+- `redirectUrl` (string, optional): URL to redirect to after completion (e.g., '/home', '/dashboard')
+
+**Example: Complete Integration**
+```typescript
+// Your sign-in page component
+<OnairosButton
+  requestData={{
+    basic: { type: "basic", reward: "Access personalized content" },
+    personality: { type: "personality", reward: "Better recommendations" }
+  }}
+  webpageName="MyEducationApp"
+  autoSignIn={true}
+  signInKey="know_authenticated"  // Match your app's existing auth key
+  redirectUrl="/know.html"        // Your app's home/dashboard page
+/>
+```
+
+Then in your dashboard/home page:
+```typescript
+// Check for Onairos personalization data
+if (localStorage.getItem('onairos_personalized') === 'true') {
+  // Show personalized content
+  const userData = JSON.parse(localStorage.getItem('onairos_user_data'));
+  enablePersonalizedView(userData);
+}
+```
+
+## Error Handling & Retry Logic 🛡️
+
+### API Key Validation Errors
+```typescript
+// Invalid format
+throw new Error('Invalid API key format. Developer keys must be at least 32 characters and start with "dev_", "pk_", or "ona_"');
+
+// Backend validation failure
+throw new Error(`API key validation failed: ${validation.error}`);
+
+// Rate limiting
+throw new Error('API rate limit exceeded. Please try again later.');
+```
+
+### HTTP Request Errors
+- **401 Unauthorized**: Invalid/expired API key or JWT token
+- **403 Forbidden**: Insufficient permissions
+- **429 Too Many Requests**: Rate limit exceeded
+- **500 Server Error**: Backend service unavailable
+
+### Automatic Retry Logic
+- **Retry Attempts**: Configurable (default: 3)
+- **Timeout**: Configurable (default: 30000ms)
+- **Exponential Backoff**: For 429 and 5xx errors
+- **JWT Auto-Clear**: Clears expired JWT tokens on 401
+
+## Critical Success Factors
+1. **Two-Tier Authentication**: Developer API keys → JWT tokens → User operations
+2. **SDK Initialization**: Must call `initializeApiKey()` before using any components
+3. **Environment Configuration**: Proper staging/production endpoint management
+4. **Cross-Platform**: Same React code works in desktop browsers, mobile browsers, and React Native
+5. **OAuth Reliability**: Auto-detects environment and uses appropriate OAuth flow
+6. **JWT Token Management**: Automatic storage, loading, and cleanup of user sessions
+7. **Mobile UX**: Touch-friendly UI with proper viewport handling
+8. **Error Handling**: Comprehensive error states, retry logic, and user guidance
+
+## TypeScript Support ✅
+**Full TypeScript Support**: Complete type definitions provided in `onairos.d.ts`
+
+**Usage with TypeScript**:
+```typescript
+import { OnairosButton } from 'onairos';
+import type { OnairosProps } from 'onairos';
+
+// Component usage with full type safety
+const MyComponent: React.FC = () => {
+  return (
+    <OnairosButton
+      requestData={{
+        basic: { type: "basic", reward: "10 tokens" },
+        personality: { type: "personality", reward: "25 tokens" }, 
+        preferences: { type: "preferences", reward: "15 tokens" }
+      }}
+      webpageName="MyApp"
+      testMode={false}
+      autoFetch={true}
+      onComplete={(result) => console.log(result)}
+    />
+  );
+};
+```
+
+**Common TypeScript Issues & Solutions**:
+- **"Could not find declaration file"**: Fixed in v2.1.5 by adding `types` field to package.json exports
+- **Import errors**: Always import from `'onairos'` (not specific paths)
+- **Type inference**: All components have full TypeScript support with IntelliSense
+
+## SDK Consistency Across Platforms 🔄
+
+### For Other SDK Implementations
+To ensure consistency across all Onairos SDKs, implement:
+
+1. **Same API Key Formats**: `dev_`, `pk_`, `ona_` prefixes + 32+ character length
+2. **Same Validation Endpoint**: `POST /auth/validate-key`  
+3. **Same Headers Structure**: Authorization, X-API-Key-Type, X-SDK-Version, etc.
+4. **Same Two-Tier Auth**: Developer keys → JWT tokens → User operations
+5. **Same Error Handling**: 401, 403, 429 status codes with retry logic
+6. **Same Caching**: 5-minute validation cache for API keys
+7. **Same Admin Key**: `'OnairosIsAUnicorn2025'` for testing
+
+### Environment Consistency
+```typescript
+// All SDKs should use the same endpoint structure
+const endpoints = {
+  production: 'https://api2.onairos.uk',
+  staging: 'https://staging-api.onairos.uk',
+  development: 'https://dev-api.onairos.uk'
+};
+```
+
+## Build & Development
+- **Build**: `npm run build` (creates dist/ folder)
+- **Test Files**: Multiple test HTML files for different scenarios
+- **Entry Points**: `src/index.js` (main), `src/onairos.native.jsx` (React Native)
+- **Responsive**: Tailwind CSS with `sm:`, `md:`, `lg:` breakpoints throughout
+- **TypeScript**: Full type definitions with proper package.json exports configuration
+- **Authentication**: Two-tier system ensures secure and scalable API access 
