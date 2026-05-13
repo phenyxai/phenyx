@@ -3,7 +3,7 @@
 import { initializeApiKey } from "onairos";
 
 /** Client-side API key (NEXT_PUBLIC_*) — configure in Cloudflare/Vercel env. */
-function getOnairosApiKey(): string {
+export function getOnairosApiKey(): string {
   const key = process.env.NEXT_PUBLIC_ONAIROS_API_KEY?.trim();
   return key ?? "";
 }

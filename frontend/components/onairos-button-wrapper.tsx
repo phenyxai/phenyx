@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { OnairosButton } from "onairos";
 import type { OnairosCompleteData } from "onairos";
-import { initializeOnairos } from "@/lib/onairos";
+import { initializeOnairos, getOnairosApiKey } from "@/lib/onairos";
 
 /** Connector IDs — see vendor/onairos/CONNECTORS.md */
 export const DEFAULT_ONAIROS_ALLOWED_PLATFORMS = [
@@ -20,7 +20,10 @@ interface OnairosButtonWrapperProps {
   allowedPlatforms?: string[] | null;
   autoFetch?: boolean;
   onComplete: (result: OnairosCompleteData) => void;
-  children: ReactNode;
+  buttonType?: "pill" | "icon" | "rectangle";
+  buttonText?: string;
+  textColor?: "black" | "white";
+  showIcon?: boolean;
 }
 
 /**
@@ -33,7 +36,10 @@ export function OnairosButtonWrapper({
   allowedPlatforms = [...DEFAULT_ONAIROS_ALLOWED_PLATFORMS],
   autoFetch = true,
   onComplete,
-  children,
+  buttonType = "pill",
+  buttonText = "connect with onairos",
+  textColor = "white",
+  showIcon = true,
 }: OnairosButtonWrapperProps) {
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,38 +50,33 @@ export function OnairosButtonWrapper({
     if (initAttempted.current) return;
     initAttempted.current = true;
 
-    console.log("[v0] Starting Onairos initialization...");
     initializeOnairos()
       .then(() => {
-        console.log("[v0] Onairos initialized successfully");
         setInitialized(true);
       })
       .catch((err: unknown) => {
-        console.error("[v0] Onairos initialization failed:", err);
+        console.error("[onairos] SDK initialization failed:", err);
         const msg =
           err instanceof Error ? err.message : "Unknown Onairos initialization error";
         setError(msg);
       });
   }, []);
 
-  // Convert requestedData array to the SDK's requestData object format
-  const requestData: Record<string, { type: string; reward: string }> = {};
-  
-  requestedData.forEach((item) => {
-    const key = item.toLowerCase().replace(/\s+/g, "_");
-    if (item.toLowerCase().includes("personality") || item.toLowerCase().includes("traits")) {
-      requestData.personality = { type: "personality", reward: "Personalized experience" };
-    } else if (item.toLowerCase().includes("preference")) {
-      requestData.preferences = { type: "preferences", reward: "Better recommendations" };
-    } else if (item.toLowerCase().includes("basic")) {
-      requestData.basic = { type: "basic", reward: "Access to features" };
+  // v8 expects an array of lowercase tier strings: ["basic", "personality", ...]
+  const KNOWN_TIERS = ["basic", "personality", "preferences", "rawmemories"] as const;
+  const requestData = useMemo(() => {
+    const tiers = new Set<string>();
+    for (const item of requestedData) {
+      const lower = item.toLowerCase();
+      if (lower.includes("personality") || lower.includes("traits")) tiers.add("personality");
+      else if (lower.includes("preference")) tiers.add("preferences");
+      else if (lower.includes("raw") || lower.includes("memor")) tiers.add("rawmemories");
+      else if (lower.includes("basic")) tiers.add("basic");
+      else if ((KNOWN_TIERS as readonly string[]).includes(lower)) tiers.add(lower);
     }
-  });
-
-  // If no specific data types matched, default to personality traits
-  if (Object.keys(requestData).length === 0) {
-    requestData.personality = { type: "personality", reward: "Personalized experience" };
-  }
+    if (tiers.size === 0) tiers.add("personality");
+    return Array.from(tiers);
+  }, [requestedData]);
 
   if (error) {
     return (
@@ -109,8 +110,12 @@ export function OnairosButtonWrapper({
       allowedPlatforms={allowedPlatforms}
       autoFetch={autoFetch}
       onComplete={onComplete}
-    >
-      {children}
-    </OnairosButton>
+      buttonType={buttonType}
+      buttonText={buttonText}
+      textColor={textColor}
+      showIcon={showIcon}
+      apiKey={getOnairosApiKey()}
+      skipApiKeyInitialization={true}
+    />
   );
 }

@@ -885,45 +885,23 @@ export default function OnboardingPage() {
               className="animate-fade-in"
               style={{
                 animationDelay: "800ms",
-                animationFillMode: "both"
+                animationFillMode: "both",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center"
               }}
             >
               {!onairosConnected ? (
                 <OnairosButtonWrapper
                   webpageName="PHENYX COLLECTIVE"
-                  requestedData={["Personality Traits"]}
+                  requestedData={["personality"]}
+                  buttonType="pill"
+                  buttonText="connect with onairos"
+                  textColor="white"
                   onComplete={(result) => {
                     handleOnairosComplete(result);
                   }}
-                >
-                  <div
-                    style={{
-                      background: "transparent",
-                      border: `0.5px solid ${stellarColor}`,
-                      color: stellarColor,
-                      borderRadius: "8px",
-                      padding: "12px 32px",
-                      fontSize: "13px",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      transition: "all 0.2s ease",
-                      display: "inline-block"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#FFFDFD";
-                      e.currentTarget.style.color = "#0A0A0A";
-                      e.currentTarget.style.borderColor = "#FFFDFD";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.color = stellarColor;
-                      e.currentTarget.style.borderColor = stellarColor;
-                    }}
-                  >
-                    connect with onairos
-                  </div>
-                </OnairosButtonWrapper>
+                />
               ) : (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stellarColor} strokeWidth="2">
