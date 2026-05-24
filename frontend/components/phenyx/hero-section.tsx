@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { ScrollIndicator } from "./scroll-indicator";
 import { IdentityParticles } from "./identity-particles";
 import { useSessionColor } from "@/contexts/session-color-context";
@@ -11,7 +10,6 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ onEnterClick }: HeroSectionProps) {
-  const router = useRouter();
   const { sessionColor } = useSessionColor();
   const [isLoaded, setIsLoaded] = useState(false);
   const [buttonFlash, setButtonFlash] = useState(false);
@@ -28,7 +26,7 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
     setButtonFlash(true);
     setTimeout(() => {
       setButtonFlash(false);
-      router.push("/join");
+      onEnterClick();
     }, 80);
   };
 
