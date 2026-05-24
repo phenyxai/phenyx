@@ -48,8 +48,14 @@ export function HowItWorksSection() {
   const [visibleElements, setVisibleElements] = useState<number[]>([]);
   const elementRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
+    const desktopQuery = window.matchMedia("(min-width: 768px)");
+    setIsDesktop(desktopQuery.matches);
+    const handleDesktopChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    desktopQuery.addEventListener("change", handleDesktopChange);
+
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setPrefersReducedMotion(mediaQuery.matches);
 
@@ -80,7 +86,10 @@ export function HowItWorksSection() {
       if (ref) observer.observe(ref);
     });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      desktopQuery.removeEventListener("change", handleDesktopChange);
+    };
   }, []);
 
   const getAnimationStyle = (index: number) => {
@@ -161,7 +170,7 @@ export function HowItWorksSection() {
                 backgroundColor: "#111111",
                 border: "1px solid rgba(255,253,253,0.07)",
                 padding: "32px",
-                borderRadius: window?.innerWidth >= 768 ? card.radiusDesktop : card.radiusMobile,
+                borderRadius: isDesktop ? card.radiusDesktop : card.radiusMobile,
                 ...getAnimationStyle(index),
               }}
               className="md:rounded-none"
