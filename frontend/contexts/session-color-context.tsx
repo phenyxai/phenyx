@@ -40,27 +40,18 @@ const SessionColorContext = createContext<SessionColorContextType>({
 
 export function SessionColorProvider({ children }: { children: ReactNode }) {
   const [sessionColor, setSessionColor] = useState<string>('#DDEEFF');
-  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Check localStorage first for existing stellar color
     const stored = localStorage.getItem("phenyx_stellar_color");
     if (stored) {
       setSessionColor(stored);
     } else {
-      // Pick a random color on page load and persist it
       const randomIndex = Math.floor(Math.random() * orbColors.length);
       const color = orbColors[randomIndex];
       setSessionColor(color);
       localStorage.setItem("phenyx_stellar_color", color);
     }
-    setIsInitialized(true);
   }, []);
-
-  // Prevent flash by not rendering children until color is set
-  if (!isInitialized) {
-    return null;
-  }
 
   return (
     <SessionColorContext.Provider value={{ sessionColor }}>
