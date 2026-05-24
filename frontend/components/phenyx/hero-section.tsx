@@ -108,7 +108,7 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
         </div>
         
         {/* Right side - Identity formation particles (hidden on mobile) */}
-        <div className="hidden md:block relative h-[500px]" aria-hidden="true">
+        <div className="hidden lg:block relative h-[500px]" aria-hidden="true">
           <IdentityParticles />
         </div>
       </div>
