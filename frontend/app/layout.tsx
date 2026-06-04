@@ -12,7 +12,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'PHENYX — where identity takes form',
+  title: 'PHENYX',
   description: 'PHENYX. where identity takes form. an ai that synthesizes who you are across everything you have built.',
   keywords: ['identity', 'self discovery', 'personal development', 'identity platform', 'creator community', 'phenyx', 'identity formation', 'identity observatory'],
   authors: [{ name: 'Janesse Liang' }],
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'PHENYX — where identity takes form',
+    title: 'PHENYX',
     description: 'PHENYX. where identity takes form. an ai that synthesizes who you are across everything you have built.',
     url: 'https://phenyxcollective.com',
     siteName: 'PHENYX',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'PHENYX — where identity takes form',
+        alt: 'PHENYX',
       },
     ],
     locale: 'en_US',
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PHENYX — where identity takes form',
+    title: 'PHENYX',
     description: 'PHENYX. where identity takes form. an ai that synthesizes who you are across everything you have built.',
     creator: '@phenyxcollect',
     site: '@phenyxcollect',
