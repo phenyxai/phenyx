@@ -20,8 +20,8 @@ const cards = [
   },
   {
     layer: "layer three",
-    title: "reflect",
-    body: "the AI returns not a summary but a pattern. something that lands as i did not have words for that until now. it asks questions earned from your data, not generated from a template.",
+    title: "reveal",
+    body: "our agent, polaris, surfaces observations you did not know to look for. new findings drawn from patterns only visible when your whole digital life is seen at once. discover parts of yourself that were always there, now finally named.",
     radiusDesktop: "0 12px 0 0",
     radiusMobile: "12px",
   },
@@ -157,7 +157,7 @@ export function HowItWorksSection() {
             marginBottom: "64px",
           }}
         >
-          connect your platforms or tell us your story. either way <span className="uppercase font-light">PHENYX COLLECTIVE</span> reads the patterns others miss and reflects back a portrait only you could have.
+          connect your platforms or tell us your story. either way <span className="uppercase font-light">PHENYX</span> reads the patterns others miss and reflects back a portrait only you could have.
         </p>
 
         {/* Three cards */}

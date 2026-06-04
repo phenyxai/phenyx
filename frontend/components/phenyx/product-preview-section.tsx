@@ -249,7 +249,7 @@ export function ProductPreviewSection() {
                 color: "rgba(255,253,253,0.6)",
               }}
             >
-              PHENYX COLLECTIVE
+              PHENYX
             </span>
             <span
               className="lowercase"
@@ -319,7 +319,7 @@ export function ProductPreviewSection() {
                   paddingTop: "20px",
                 }}
               >
-                reflect.
+                reveal.
               </span>
             </div>
 

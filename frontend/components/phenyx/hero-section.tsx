@@ -45,7 +45,7 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
     <section className="h-screen relative flex flex-col justify-center px-6 md:px-20 py-20 overflow-hidden">
       <div className="mx-auto w-full grid lg:grid-cols-2 gap-12 lg:gap-8 items-center" style={{ maxWidth: "1100px" }}>
         {/* Left content */}
-        <div className="flex flex-col gap-6 text-center lg:text-left">
+        <div className="flex flex-col gap-6 text-left">
           {/* Subline - 16px, weight 300, tracking 0.08em, opacity 70% */}
           <p 
             className="text-[16px] lowercase"
@@ -70,13 +70,13 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
               ...getAnimationStyle(300),
             }}
           >
-            PHENYX<br />COLLECTIVE
+            PHENYX
           </h1>
           
           {/* Tagline - 12px, weight 300, tracking 0.18em, opacity 50% */}
-          <p 
-            className="text-[12px] lowercase"
-            style={{ 
+          <p
+            className="text-[15px] lowercase"
+            style={{
               fontWeight: 300,
               letterSpacing: "0.18em",
               color: "rgba(255,253,253,0.5)",

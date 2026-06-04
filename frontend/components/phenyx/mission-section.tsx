@@ -16,7 +16,7 @@ export function MissionSection() {
                 color: "rgba(255,253,253,0.9)",
               }}
             >
-              identity is not discovered. it is formed.
+              identity is formed through discovery and observation.
             </p>
             <p
               style={{
@@ -26,17 +26,7 @@ export function MissionSection() {
                 color: "rgba(255,253,253,0.9)",
               }}
             >
-              what pulled you before you had words for it. who others saw before you did. what you built on purpose. where your worlds began to meet. what you are still becoming.
-            </p>
-            <p
-              style={{
-                fontSize: "20px",
-                fontWeight: 300,
-                lineHeight: 1.7,
-                color: "rgba(255,253,253,0.9)",
-              }}
-            >
-              you are not one thing. you are a pattern. most platforms only ever saw one piece of you.
+              it stems from moments and milestones across your journey.
             </p>
             <p
               style={{
@@ -46,7 +36,7 @@ export function MissionSection() {
                 color: "#FFFDFD",
               }}
             >
-              <span className="uppercase">PHENYX COLLECTIVE</span> maps all of it.
+              we help map out your identity through a living constellation that grows with you.
             </p>
           </div>
         </div>

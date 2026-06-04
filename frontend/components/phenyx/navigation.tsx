@@ -52,13 +52,13 @@ export function Navigation({ onEnterClick }: NavigationProps) {
           <div className="flex items-center gap-3 shrink-0">
             <Image
               src="/phenyx-logo.png"
-              alt="PHENYX COLLECTIVE"
+              alt="PHENYX"
               width={32}
               height={32}
               className="w-8 h-8"
             />
             <span className="text-[13px] sm:text-[15px] font-medium tracking-[0.15em] text-[#FFFDFD] whitespace-nowrap">
-              PHENYX COLLECTIVE
+              PHENYX
             </span>
           </div>
 
