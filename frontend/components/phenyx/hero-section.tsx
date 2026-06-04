@@ -45,7 +45,7 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
     <section className="h-screen relative flex flex-col justify-center px-6 md:px-20 py-20 overflow-hidden">
       <div className="mx-auto w-full grid lg:grid-cols-2 gap-12 lg:gap-8 items-center" style={{ maxWidth: "1100px" }}>
         {/* Left content */}
-        <div className="flex flex-col gap-6 text-left">
+        <div className="flex flex-col gap-6 max-lg:items-center max-lg:text-center lg:text-left">
           {/* Subline - 16px, weight 300, tracking 0.08em, opacity 70% */}
           <p 
             className="text-[16px] lowercase"

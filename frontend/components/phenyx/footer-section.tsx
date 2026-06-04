@@ -199,7 +199,7 @@ export function FooterSection() {
         {/* Logo - absolutely positioned left on desktop */}
         <div className="md:absolute md:left-6 lg:left-20 flex-shrink-0 order-first md:order-none">
           <Image 
-            src="/phenyx-logo.png" 
+            src="/brand/phenyx-mark.png"
             alt="PHENYX" 
             width={20} 
             height={20}

@@ -51,7 +51,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 shrink-0">
             <Image
-              src="/phenyx-logo.png"
+              src="/brand/phenyx-mark.png"
               alt="PHENYX"
               width={32}
               height={32}
