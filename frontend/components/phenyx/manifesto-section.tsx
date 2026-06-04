@@ -12,7 +12,7 @@ export function ManifestoSection() {
     setPrefersReducedMotion(mediaQuery.matches);
 
     if (mediaQuery.matches) {
-      setVisibleParagraphs([0, 1, 2, 3, 4, 5]);
+      setVisibleParagraphs([0, 1, 2]);
       return;
     }
 
@@ -77,9 +77,9 @@ export function ManifestoSection() {
               ...getAnimationStyle(0),
             }}
           >
-            you have built a life across the internet. no platform has ever shown you what it adds up to.
+            every platform gave you a box. linkedin made you a professional. instagram made you an aesthetic. tiktok made you a moment. x made you an opinion.
           </p>
-          
+
           <p
             ref={(el) => { paragraphRefs.current[1] = el; }}
             style={{
@@ -90,60 +90,21 @@ export function ManifestoSection() {
               ...getAnimationStyle(1),
             }}
           >
-            every platform gave you a box. linkedin made you a resume. instagram made you an aesthetic. tiktok made you a moment. x made you an opinion.
+            you have built a life across the internet, but no platform has ever shown you what it adds up to.
           </p>
-          
-          <p
-            ref={(el) => { paragraphRefs.current[2] = el; }}
-            style={{
-              fontSize: "20px",
-              fontWeight: 300,
-              lineHeight: 1.7,
-              color: "rgba(255,253,253,0.9)",
-              ...getAnimationStyle(2),
-            }}
-          >
-            none of them made you whole.
-          </p>
-          
-          <p
-            ref={(el) => { paragraphRefs.current[3] = el; }}
-            style={{
-              fontSize: "20px",
-              fontWeight: 300,
-              lineHeight: 1.7,
-              color: "rgba(255,253,253,0.9)",
-              ...getAnimationStyle(3),
-            }}
-          >
-            you have been fragmenting yourself for years, shrinking to fit, performing for algorithms that were never designed to understand you. just to engage you.
-          </p>
-          
-          <p
-            ref={(el) => { paragraphRefs.current[4] = el; }}
-            style={{
-              fontSize: "20px",
-              fontWeight: 300,
-              lineHeight: 1.7,
-              color: "rgba(255,253,253,0.9)",
-              ...getAnimationStyle(4),
-            }}
-          >
-            this is not a personality quiz. this is not a report. this is a mirror.
-          </p>
-          
+
           {/* Emphasis paragraph - 20px, weight 600 */}
           <p
-            ref={(el) => { paragraphRefs.current[5] = el; }}
+            ref={(el) => { paragraphRefs.current[2] = el; }}
             style={{
               fontSize: "20px",
               fontWeight: 600,
               lineHeight: 1.7,
               color: "#FFFDFD",
-              ...getAnimationStyle(5),
+              ...getAnimationStyle(2),
             }}
           >
-            <span className="uppercase">PHENYX COLLECTIVE</span> shows you who you actually are.
+            <span className="uppercase">PHENYX</span> shows you who you are across your digital life.
           </p>
         </div>
       </div>

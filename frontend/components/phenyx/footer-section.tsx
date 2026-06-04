@@ -127,7 +127,7 @@ export function FooterSection() {
               className="text-[14px] text-center mb-10"
               style={{ color: "rgba(255,253,253,0.65)" }}
             >
-              updates from inside the making of PHENYX COLLECTIVE.
+              updates from inside the making of PHENYX.
             </p>
             
             <form onSubmit={handleSubmit} className="flex items-center gap-3">
@@ -143,12 +143,12 @@ export function FooterSection() {
                     setEmailError("");
                   }}
                   className="w-[180px] sm:w-[220px] bg-transparent border-b py-2 text-sm focus:outline-none transition-colors"
-                  style={{ 
-                    borderColor: emailError ? "#E8451E" : "rgba(255,253,253,0.2)",
+                  style={{
+                    borderColor: emailError ? "#E8451E" : "#888888",
                     color: "#FFFDFD",
                   }}
-                  onFocus={(e) => !emailError && (e.target.style.borderColor = "rgba(255,253,253,0.5)")}
-                  onBlur={(e) => !emailError && (e.target.style.borderColor = "rgba(255,253,253,0.2)")}
+                  onFocus={(e) => !emailError && (e.target.style.borderColor = "#888888")}
+                  onBlur={(e) => !emailError && (e.target.style.borderColor = "#888888")}
                 />
                 {emailError && (
                   <p className="absolute text-[12px] lowercase mt-1" style={{ color: "rgba(255,253,253,0.65)" }}>
@@ -161,21 +161,21 @@ export function FooterSection() {
                 type="submit"
                 disabled={!isValid || status === "loading"}
                 className="px-6 py-2 rounded-full text-[13px] lowercase font-medium tracking-wide transition-all disabled:cursor-not-allowed"
-                style={{ 
-                  border: "1px solid rgba(255,253,253,0.4)",
+                style={{
+                  border: "1px solid #888888",
                   backgroundColor: "transparent",
                   color: "#FFFDFD",
                   opacity: status === "loading" ? 0.5 : 1,
                 }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled) {
-                    e.currentTarget.style.borderColor = "rgba(255,253,253,0.9)";
+                    e.currentTarget.style.borderColor = "#888888";
                     e.currentTarget.style.backgroundColor = "#FFFDFD";
                     e.currentTarget.style.color = "#0D0D0C";
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(255,253,253,0.4)";
+                  e.currentTarget.style.borderColor = "#888888";
                   e.currentTarget.style.backgroundColor = "transparent";
                   e.currentTarget.style.color = "#FFFDFD";
                 }}
@@ -216,18 +216,18 @@ export function FooterSection() {
             color: "rgba(255,253,253,0.6)",
           }}
         >
-          © 2026 PHENYX COLLECTIVE
+          © 2026 PHENYX
         </p>
         
         {/* Contact email - absolutely positioned right on desktop */}
         <a 
-          href="mailto:contact@phenyxcollective.com"
+          href="mailto:contact@phenyxai.com"
           className="md:absolute md:right-6 lg:right-20 text-[11px] lowercase transition-colors flex-shrink-0 order-1 md:order-none"
           style={{ color: "rgba(255,253,253,0.6)" }}
           onMouseEnter={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.9)"}
           onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.6)"}
         >
-          contact@phenyxcollective.com
+          contact@phenyxai.com
         </a>
       </div>
     </footer>
