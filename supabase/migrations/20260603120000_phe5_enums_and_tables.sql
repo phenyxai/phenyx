@@ -26,6 +26,8 @@ exception when duplicate_object then null; end $$;
 
 -- ============================================================================
 -- user_profiles (table may already exist from earlier work; tier/onairos_data preserved)
+-- onairos_data was introduced by 20260502120000_user_profiles_onairos_data.sql.
+-- It is re-declared here so a fresh DB replay produces a schema identical to prod.
 -- ============================================================================
 create table if not exists public.user_profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -38,6 +40,7 @@ create table if not exists public.user_profiles (
   prompt_times jsonb not null default '{}'::jsonb,
   user_intention text,
   constellation_version int not null default 0,
+  onairos_data jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -52,6 +55,7 @@ alter table public.user_profiles add column if not exists avatar_url text;
 alter table public.user_profiles add column if not exists prompt_times jsonb not null default '{}'::jsonb;
 alter table public.user_profiles add column if not exists user_intention text;
 alter table public.user_profiles add column if not exists constellation_version int not null default 0;
+alter table public.user_profiles add column if not exists onairos_data jsonb;
 alter table public.user_profiles add column if not exists created_at timestamptz not null default now();
 alter table public.user_profiles add column if not exists updated_at timestamptz not null default now();
 
@@ -143,11 +147,41 @@ alter table public.constellation_state add column if not exists portrait jsonb;
 
 -- ============================================================================
 -- waitlist (table predates this migration; defensive only — do NOT touch existing columns)
+-- The legacy columns (name, role, platforms, why) are declared here so a fresh DB
+-- replay produces a schema identical to environments where waitlist was created
+-- ad-hoc in the dashboard. They are intentionally nullable; the current
+-- frontend/components/phenyx/waitlist-modal.tsx flow only writes `email`.
 -- ============================================================================
 create table if not exists public.waitlist (
   id uuid primary key default gen_random_uuid(),
+  name text,
   email text not null,
+  role text,
+  platforms text[],
+  why text,
   created_at timestamptz not null default now()
 );
 
+alter table public.waitlist add column if not exists name text;
 alter table public.waitlist add column if not exists email text;
+alter table public.waitlist add column if not exists role text;
+alter table public.waitlist add column if not exists platforms text[];
+alter table public.waitlist add column if not exists why text;
+alter table public.waitlist add column if not exists created_at timestamptz not null default now();
+
+-- Preserve waitlist.email UNIQUE (matches baseline 20260501000000).
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.waitlist'::regclass
+      and contype  = 'u'
+      and conname  = 'waitlist_email_key'
+  ) then
+    alter table public.waitlist add constraint waitlist_email_key unique (email);
+  end if;
+exception
+  when duplicate_table then null;
+  when duplicate_object then null;
+end$$;

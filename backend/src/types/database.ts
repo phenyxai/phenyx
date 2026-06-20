@@ -31,6 +31,7 @@ export interface UserProfile {
   prompt_times: Record<string, unknown>;
   user_intention: string | null;
   constellation_version: number;
+  onairos_data: Record<string, unknown> | null;
   created_at: string; // ISO timestamptz
   updated_at: string; // ISO timestamptz
 }
@@ -91,9 +92,10 @@ export interface WaitlistEntry {
   id: string;
   email: string;
   created_at: string;
-  // Legacy columns that predate PHE-5 (kept here for completeness; not managed by this migration).
-  name?: string | null;
-  role?: string | null;
-  platforms?: string[] | null;
-  why?: string | null;
+  // Legacy columns that predate PHE-5. Declared in the PHE-5 migration so fresh installs
+  // match prod; nullable because the current waitlist-modal flow only writes `email`.
+  name: string | null;
+  role: string | null;
+  platforms: string[] | null;
+  why: string | null;
 }
