@@ -16,7 +16,7 @@ export class StripeService {
         throw new Error("Missing STRIPE_SECRET_KEY");
       }
       this.stripe = new StripeSDK(key, {
-        apiVersion: "2026-04-22.dahlia",
+        apiVersion: "2026-06-24.dahlia",
       });
     }
     return this.stripe;
