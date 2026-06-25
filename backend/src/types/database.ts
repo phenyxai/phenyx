@@ -1,8 +1,9 @@
 /**
- * PHE-5 Database Types
+ * Database Types
  *
  * TypeScript shapes for the constellation data model. Mirrors the schema defined in
- * /supabase/migrations/20260603120000_phe5_enums_and_tables.sql.
+ * /supabase/migrations/20260603120000_phe5_enums_and_tables.sql (PHE-5) and
+ * /supabase/migrations/20260625120000_phe31_observation_polaris_model.sql (PHE-31).
  */
 
 export type Pillar =
@@ -31,6 +32,7 @@ export interface UserProfile {
   prompt_times: Record<string, unknown>;
   user_intention: string | null;
   constellation_version: number;
+  onairos_data: Record<string, unknown> | null;
   created_at: string; // ISO timestamptz
   updated_at: string; // ISO timestamptz
 }
@@ -85,15 +87,120 @@ export interface ConstellationState {
   transcendence_synthesis: string | null;
 
   portrait: Record<string, unknown> | null;
+
+  // PHE-31: forward-looking one-liner + Daily-tab 2-line mantra (1:1 with version).
+  foresight: string | null;
+  mantra: string | null;
 }
 
 export interface WaitlistEntry {
   id: string;
   email: string;
   created_at: string;
-  // Legacy columns that predate PHE-5 (kept here for completeness; not managed by this migration).
-  name?: string | null;
-  role?: string | null;
-  platforms?: string[] | null;
-  why?: string | null;
+  // Legacy columns that predate PHE-5. Declared in the PHE-5 migration so fresh installs
+  // match prod; nullable because the current waitlist-modal flow only writes `email`.
+  name: string | null;
+  role: string | null;
+  platforms: string[] | null;
+  why: string | null;
+}
+
+// ============================================================================
+// PHE-31: Observation + Polaris data model
+// Mirrors /supabase/migrations/20260625120000_phe31_observation_polaris_model.sql.
+// ============================================================================
+
+/** Optional DB-level enum for observation source platforms (columns stay `text[]`). */
+export type ObservationSource =
+  | 'linkedin'
+  | 'spotify'
+  | 'youtube'
+  | 'instagram'
+  | 'reddit'
+  | 'pinterest';
+
+/** Optional DB-level enum for analytics event types (column stays `text`). */
+export type EventType =
+  | 'tab_visit'
+  | 'tab_duration'
+  | 'login'
+  | 'upgrade'
+  | 'observation_unlock'
+  | 'polaris_message';
+
+export type PolarisRole = 'user' | 'assistant';
+
+/** Append-only feed of "what your data revealed" — many rows per pillar over time. */
+export interface Observation {
+  id: string;
+  user_id: string;
+  pillar: Pillar;
+  body: string;
+  source_platforms: string[];
+  meta_label: string | null;
+  is_new: boolean;
+  locked_for_free: boolean;
+  signal_hash: string;
+  surfaced_at: string; // ISO timestamptz
+  created_at: string; // ISO timestamptz
+}
+
+/** Append-only, versioned trait-grounding store. Internal; never surfaced raw. */
+export interface UserTrait {
+  id: string;
+  user_id: string;
+  keyword_tags: string[];
+  insight: string | null;
+  derived_from: string[];
+  synthesis_version: number | null;
+  created_at: string;
+}
+
+/** Per-platform connection state + redacted snapshot. Never stores an Onairos JWT. */
+export interface OnairosConnection {
+  id: string;
+  user_id: string;
+  platform: string;
+  status: string; // 'connected' | 'disconnected'
+  redacted_snapshot: Record<string, unknown> | null;
+  connected_at: string;
+  disconnected_at: string | null;
+}
+
+export interface PolarisConversation {
+  id: string;
+  user_id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Append-only Polaris turns. `body` is AES-256-GCM encrypted at rest. */
+export interface PolarisMessage {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  role: PolarisRole;
+  body: string;
+  pillar_tag: Pillar | null;
+  token_count: number;
+  created_at: string;
+}
+
+/** Weekly Polaris token meter; PK (user_id, week). */
+export interface PolarisTokenUsage {
+  user_id: string;
+  week: string; // ISO date (YYYY-MM-DD), Monday week start, UTC
+  tokens_used: number;
+  updated_at: string;
+}
+
+/** Append-only analytics events; structured props only, never message content. */
+export interface AnalyticsEvent {
+  id: string;
+  user_id: string;
+  event_type: EventType | string;
+  props: Record<string, unknown>;
+  occurred_at: string;
+  created_at: string;
 }
