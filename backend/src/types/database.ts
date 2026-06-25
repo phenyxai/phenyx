@@ -88,6 +88,16 @@ export interface ConstellationState {
   portrait: Record<string, unknown> | null;
 }
 
+// PHE-20: versioned, DB-backed Polaris Voice Standard. One row is active at a time
+// (enforced by the voice_standard_one_active partial unique index).
+export interface VoiceStandard {
+  id: string;
+  version: number;
+  body: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface WaitlistEntry {
   id: string;
   email: string;
