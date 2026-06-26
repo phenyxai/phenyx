@@ -2,8 +2,11 @@ import { HttpException, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { SupabaseService } from "../supabase/supabase.service";
 import { OnairosSnapshotService } from "./onairos-snapshot.service";
+import { VoiceStandardService } from "../voice-standard/voice-standard.service";
 
-const SYSTEM_PROMPT = `You are the PHENYX COLLECTIVE constellation synthesis engine. Your job is to map a user's Onairos trait data to four identity pillar scores and generate a one-paragraph synthesis for each active pillar.
+// Task-specific instructions only — voice/tone rules come from the shared Voice
+// Standard block (PHE-20), composed at call time via buildSystemBlocks().
+const TASK_INSTRUCTIONS = `You are the PHENYX COLLECTIVE constellation synthesis engine. Your job is to map a user's Onairos trait data to four identity pillar scores and generate a one-paragraph synthesis for each active pillar.
 
 The four active pillars at onboarding are:
 
@@ -23,7 +26,7 @@ Scoring rules:
 
 For each pillar return:
 - score: integer 0-100
-- synthesis: one paragraph, lowercase, 2-3 sentences, written directly to the user as 'you'. no therapeutic language. no 'journey', 'authentic', 'growth'. specific to their data, not generic. make it feel like the constellation already knows them.
+- synthesis: one paragraph, written directly to the user as 'you'. no therapeutic language. no 'journey', 'authentic', 'growth'. specific to their data, not generic. make it feel like the constellation already knows them.
 
 Return ONLY a valid JSON object in this exact shape. No preamble, no markdown, no explanation:
 
@@ -44,7 +47,8 @@ export class PersonaService {
   constructor(
     private readonly config: ConfigService,
     private readonly supabaseService: SupabaseService,
-    private readonly onairosSnapshot: OnairosSnapshotService
+    private readonly onairosSnapshot: OnairosSnapshotService,
+    private readonly voiceStandard: VoiceStandardService
   ) {}
 
   async generatePrompts(body: GeneratePromptsBody) {
@@ -56,7 +60,9 @@ export class PersonaService {
         throw new HttpException({ error: "missing required fields" }, 400);
       }
 
-      // Call Claude for synthesis
+      // Call Claude for synthesis. [Voice Standard] (cached) + [task instructions];
+      // the per-request Onairos data stays in the user message, after the cached prefix.
+      const system = await this.voiceStandard.buildSystemBlocks(TASK_INSTRUCTIONS);
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -67,7 +73,7 @@ export class PersonaService {
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
-          system: SYSTEM_PROMPT,
+          system,
           messages: [
             {
               role: "user",
@@ -110,6 +116,10 @@ export class PersonaService {
           ) {
             throw new Error(`invalid shape for ${p}`);
           }
+          // Plain-text guard — strip any markup the model slipped in.
+          synthesis[p].synthesis = this.voiceStandard.sanitizeProse(
+            synthesis[p].synthesis
+          );
         }
       } catch (parseError) {
         // eslint-disable-next-line no-console
