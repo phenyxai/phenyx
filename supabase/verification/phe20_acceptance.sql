@@ -1,6 +1,6 @@
 -- PHE-20 Acceptance Verification
 --
--- Run after applying 20260625120000_phe20_voice_standard.sql. Each DO block raises
+-- Run after applying 20260625120100_phe20_voice_standard.sql. Each DO block raises
 -- NOTICE on PASS or EXCEPTION on FAIL. Read-only — inserts no rows.
 --
 -- Usage: psql ... -f supabase/verification/phe20_acceptance.sql

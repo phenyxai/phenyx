@@ -5,7 +5,7 @@
 -- Seed: version=1 with the verbatim eight rules from docs/mvp-features/05-polaris.md plus
 --       the plain-text rendering instruction appended.
 -- Idempotency: IF NOT EXISTS / guarded inserts. Safe to re-run; will not duplicate the seed.
--- See down migration: supabase/migrations/down/20260625120000_phe20_voice_standard_down.sql
+-- See down migration: supabase/migrations/down/20260625120100_phe20_voice_standard_down.sql
 
 -- ============================================================================
 -- voice_standard table
