@@ -34,13 +34,28 @@ export interface SystemBlock {
  */
 @Injectable()
 export class VoiceStandardService {
-  /** In-process cache of the active standard; cleared via refresh() (e.g. after a version swap). */
+  /**
+   * Short-lived in-process cache of the active standard. Avoids a DB round-trip on
+   * every Claude call while keeping activation eventually-consistent: when a new
+   * version is activated in the DB, all running instances pick it up within
+   * CACHE_TTL_MS with no code deploy or restart (PHE-20 AC3). The TTL is short
+   * relative to how often wording changes, so the byte-stable prompt-cache prefix is
+   * effectively unaffected. refresh() forces an immediate re-fetch (e.g. from a future
+   * admin activation endpoint that wants zero-lag propagation on the local instance).
+   */
+  private static readonly CACHE_TTL_MS = 60_000;
   private cached: VoiceStandard | null = null;
+  private cachedAt = 0;
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async getActiveVoiceStandard(): Promise<VoiceStandard> {
-    if (this.cached) return this.cached;
+    if (
+      this.cached &&
+      Date.now() - this.cachedAt < VoiceStandardService.CACHE_TTL_MS
+    ) {
+      return this.cached;
+    }
 
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
@@ -56,12 +71,14 @@ export class VoiceStandardService {
     }
 
     this.cached = data as VoiceStandard;
+    this.cachedAt = Date.now();
     return this.cached;
   }
 
   /** Drop the in-process cache so the next read re-fetches the active version. */
   refresh(): void {
     this.cached = null;
+    this.cachedAt = 0;
   }
 
   /**
