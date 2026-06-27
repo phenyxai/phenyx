@@ -122,7 +122,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
           </div>
 
           {/* Col 2 — centered nav links (desktop only) */}
-          <div className="max-lg:hidden flex items-center gap-8 lg:gap-10 justify-self-center">
+          <div className="max-lg:hidden lg:flex items-center gap-8 lg:gap-10 justify-self-center">
             {NAV_LINKS.map((link) => {
               const isActive = activeHref === link.href;
               return (
@@ -174,7 +174,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
               aria-expanded={isMenuOpen}
               aria-controls="mobile-menu"
               onClick={() => setIsMenuOpen((v) => !v)}
-              className="lg:hidden relative w-10 h-10 flex flex-col items-center justify-center gap-[5px] text-[#FFFDFD]"
+              className="lg:hidden max-lg:flex relative w-10 h-10 flex-col items-center justify-center gap-[5px] text-[#FFFDFD]"
             >
               <span
                 className={`block h-px w-6 bg-current transition-transform duration-300 ${
@@ -204,7 +204,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
         aria-label="Site navigation"
         aria-hidden={!isMenuOpen}
         inert={!isMenuOpen}
-        className={`lg:hidden fixed inset-0 z-40 overflow-hidden flex items-center justify-center bg-[#0a0a0a]/95 backdrop-blur-[12px] transition-opacity duration-300 ${
+        className={`lg:hidden max-lg:flex fixed inset-0 z-40 overflow-hidden items-center justify-center bg-[#0a0a0a]/95 backdrop-blur-[12px] transition-opacity duration-300 ${
           isMenuOpen
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
