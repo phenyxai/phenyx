@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import type { OnairosCompleteData } from "onairos";
 import { OnairosButtonWrapper } from "@/components/onairos-button-wrapper";
 import { redactOnairosForProfile } from "@/lib/onairos-snapshot";
@@ -17,91 +15,53 @@ const STELLAR_PALETTE = [
   "#1144BB", "#0033AA"
 ];
 
-const PILLARS = [
-  "ORIGIN", "EMERGENCE", "SELF-CREATION", "CONVERGENCE",
-  "BECOMING", "RECOGNITION", "TRANSCENDENCE"
-];
+// ============================================================================
+// Onboarding step machine (PHE-14 foundation)
+// ----------------------------------------------------------------------------
+// `onboarding_step` is the single source of truth for the user's position in
+// the post-auth narrative funnel. It is persisted to user_profiles so the flow
+// is resumable across refresh and across devices (see setOnboardingStep + the
+// resume logic in the init effect). The 8 values mirror the prototype go()
+// router and the DB enum added in
+//   supabase/migrations/20260626000000_user_profiles_onboarding_step.sql
+//
+// Flow: welcome (separate /welcome route) → fork → manifesto → polaris_intro →
+//       connect → synthesizing → reveal → done (→ /constellation dashboard).
+//
+// The fork branches: "show me how it works" → manifesto; the skip link jumps
+// straight to connect, bypassing manifesto + polaris_intro (not marked seen).
+// ============================================================================
+type OnboardingStep =
+  | "welcome"
+  | "fork"
+  | "manifesto"
+  | "polaris_intro"
+  | "connect"
+  | "synthesizing"
+  | "reveal"
+  | "done";
 
-const PROMPTS: Record<string, string[]> = {
-  ORIGIN: [
-    "close your eyes for a moment.",
-    "think about the place you first called home.",
-    "not the address, but the feeling.",
-    "the light. the sounds you fell asleep to.",
-    "the way safety lived in your body.",
-    "what made you feel most like yourself",
-    "in that earliest world?"
-  ],
-  EMERGENCE: [
-    "at some point, something in you started waking up.",
-    "a curiosity that kept returning.",
-    "a pull you could not explain.",
-    "you may not have had language for it then.",
-    "what was that thing?",
-    "when did you first notice it?"
-  ],
-  "SELF-CREATION": [
-    "think of something you built, made, chose,",
-    "or became entirely on your own.",
-    "not because someone told you to.",
-    "not because it was expected.",
-    "because it was yours.",
-    "what was it? and what did it tell you",
-    "about what you are made of?"
-  ],
-  CONVERGENCE: [
-    "there are moments when everything you are",
-    "comes together at once.",
-    "your history, your instincts, your values,",
-    "your people.",
-    "you feel most complete.",
-    "you are not performing or translating yourself.",
-    "you are just there.",
-    "when does that happen for you?"
-  ],
-  BECOMING: [
-    "something in you is growing",
-    "that the world has not fully seen yet.",
-    "a version of yourself that is still forming.",
-    "you can feel the edges of it.",
-    "what is becoming true about you",
-    "that you are only beginning to say out loud?"
-  ],
-  RECOGNITION: [
-    "the people who truly see you.",
-    "not the version you present,",
-    "but the one underneath.",
-    "what do they notice that others miss?",
-    "and what do they reflect back to you",
-    "about who you actually are?"
-  ],
-  TRANSCENDENCE: [
-    "if you let yourself believe in the largest version",
-    "of your life,",
-    "not the realistic one but the true one,",
-    "what does it look like?",
-    "what does it ask of you?",
-    "what would it mean to already be that person?"
-  ]
+// Forward "continue" target for the linear (non-fork) part of the funnel.
+// The fork's two branches are handled explicitly in its button handlers.
+const NEXT_STEP: Record<OnboardingStep, OnboardingStep> = {
+  welcome: "fork",
+  fork: "manifesto",
+  manifesto: "polaris_intro",
+  polaris_intro: "connect",
+  connect: "synthesizing",
+  synthesizing: "reveal",
+  reveal: "done",
+  done: "done",
 };
 
-const SCHEDULE_DEFAULTS = [
-  { pillar: "ORIGIN", time: "07:00", hint: "your first coffee. before the day's identity begins." },
-  { pillar: "EMERGENCE", time: "09:30", hint: "when curiosity is highest." },
-  { pillar: "SELF-CREATION", time: "12:00", hint: "midday. a moment of agency." },
-  { pillar: "CONVERGENCE", time: "14:30", hint: "the afternoon drift." },
-  { pillar: "BECOMING", time: "17:00", hint: "the transition out of the workday." },
-  { pillar: "RECOGNITION", time: "19:00", hint: "after the day's social interactions." },
-  { pillar: "TRANSCENDENCE", time: "21:00", hint: "the last quiet moment before sleep." }
-];
-
-const MOTIVATION_OPTIONS = [
-  "understanding myself better",
-  "navigating a transition",
-  "creative clarity",
-  "shaping who i am becoming",
-  "something else"
-];
+// Back-arrow target for each screen. Placeholder semantics — later tickets
+// (PHE-15/16/17) own the real back behavior for their screens. `connect` goes
+// back to `fork` so the skip-path remains self-contained.
+const PREV_STEP: Partial<Record<OnboardingStep, OnboardingStep>> = {
+  manifesto: "fork",
+  polaris_intro: "manifesto",
+  connect: "fork",
+};
 
 interface Particle {
   x: number;
@@ -117,99 +77,80 @@ export default function OnboardingPage() {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
-  
+
   const [mounted, setMounted] = useState(false);
-  const [step, setStep] = useState(-3);
+  const [step, setStep] = useState<OnboardingStep>("fork");
   const [stellarColor, setStellarColor] = useState("#5599FF");
-  const [experienceMode, setExperienceMode] = useState("reflection");
   const [userId, setUserId] = useState<string | null>(null);
-  
-  // Step -3 state
-  const [motivation, setMotivation] = useState("");
-  const [customMotivation, setCustomMotivation] = useState("");
-  const [showContinue, setShowContinue] = useState(false);
-  
-  // Reflection state
-  const [reflections, setReflections] = useState<Record<string, string>>({});
-  const [currentReflection, setCurrentReflection] = useState("");
-  
-  // Onairos state
-  const [onairosData, setOnairosData] = useState<object | null>(null);
-  const [onairosConnected, setOnairosConnected] = useState(false);
-  const [constellationState, setConstellationState] = useState<object | null>(null);
-  
-  // Step 7 state
-  const [promptTimes, setPromptTimes] = useState<Record<string, string>>({
-    ORIGIN: "07:00",
-    EMERGENCE: "09:30",
-    "SELF-CREATION": "12:00",
-    CONVERGENCE: "14:30",
-    BECOMING: "17:00",
-    RECOGNITION: "19:00",
-    TRANSCENDENCE: "21:00"
-  });
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  
-  // Animation states
-  const [pillarOpacity, setPillarOpacity] = useState(1);
-  const [contentVisible, setContentVisible] = useState(true);
-  const [visibleLines, setVisibleLines] = useState<number>(-1);
-  const [showInput, setShowInput] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
-  // Initialize Onairos SDK from npm package
-  // Initialize
+  // Onairos state (used by the connect placeholder; PHE-17 builds the real s6)
+  const [onairosConnected, setOnairosConnected] = useState(false);
+
+  // --------------------------------------------------------------------------
+  // Init: stellar color, reduced-motion, user, and resume-on-load.
+  // Reads persisted onboarding_step and renders the shell at the saved step.
+  // - "done"        → route to /constellation (dashboard); never render shell.
+  // - null/"welcome" → default to "fork" (welcome already completed).
+  // - otherwise     → resume exactly where the user left off.
+  // setMounted(true) is deferred until the step is resolved to avoid a flash of
+  // the fork screen before resuming at a later step.
+  // --------------------------------------------------------------------------
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setPrefersReducedMotion(mediaQuery.matches);
-    
+
     const stored = localStorage.getItem("phenyx_stellar_color");
     if (stored) {
       setStellarColor(stored);
       document.documentElement.style.setProperty("--color-stellar", stored);
     }
-    
-    const fetchUser = async () => {
+
+    const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
         const { data: profile } = await supabase
           .from("user_profiles")
-          .select("stellar_color, experience_mode")
+          .select("stellar_color, onboarding_step")
           .eq("id", user.id)
           .single();
-        
-        if (profile) {
-          if (profile.stellar_color) {
-            setStellarColor(profile.stellar_color);
-            document.documentElement.style.setProperty("--color-stellar", profile.stellar_color);
-          }
-          if (profile.experience_mode) {
-            setExperienceMode(profile.experience_mode);
-          }
-        }
-      }
-    };
-    
-    fetchUser();
-    setMounted(true);
-  }, []);
 
-  // Particle animation
+        if (profile?.stellar_color) {
+          setStellarColor(profile.stellar_color);
+          document.documentElement.style.setProperty("--color-stellar", profile.stellar_color);
+        }
+
+        const saved = profile?.onboarding_step as OnboardingStep | null | undefined;
+        if (saved === "done") {
+          // Onboarding already complete — go straight to the dashboard surface.
+          router.replace("/constellation");
+          return;
+        }
+        // Unset/null or the welcome sentinel both resolve to the fork (s3b).
+        setStep(saved && saved !== "welcome" ? saved : "fork");
+      }
+      setMounted(true);
+    };
+
+    init();
+  }, [router]);
+
+  // Particle animation background (reused infra — keep across tickets)
   useEffect(() => {
     if (!mounted || !canvasRef.current) return;
-    
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
     resize();
     window.addEventListener("resize", resize);
-    
+
     const particles: Particle[] = [];
     for (let i = 0; i < 60; i++) {
       particles.push({
@@ -222,186 +163,74 @@ export default function OnboardingPage() {
         opacity: 0.10 + Math.random() * 0.08
       });
     }
-    
+
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       particles.forEach((p) => {
         if (!prefersReducedMotion) {
           p.x += p.vx;
           p.y += p.vy;
-          
+
           if (p.x < 0) p.x = canvas.width;
           if (p.x > canvas.width) p.x = 0;
           if (p.y < 0) p.y = canvas.height;
           if (p.y > canvas.height) p.y = 0;
         }
-        
+
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
         ctx.globalAlpha = p.opacity;
         ctx.fill();
       });
-      
+
       ctx.globalAlpha = 1;
       animationRef.current = requestAnimationFrame(animate);
     };
-    
+
     animate();
-    
+
     return () => {
       window.removeEventListener("resize", resize);
       cancelAnimationFrame(animationRef.current);
     };
   }, [mounted, prefersReducedMotion]);
 
-  // Pillar opacity animation
-  useEffect(() => {
-    if (step >= 0 && step <= 6) {
-      setPillarOpacity(1);
-      const timer = setTimeout(() => setPillarOpacity(0.12), 800);
-      return () => clearTimeout(timer);
+  // --------------------------------------------------------------------------
+  // setOnboardingStep — the reusable forward-transition helper (PHE-14).
+  // Updates local render state AND upserts user_profiles.onboarding_step so the
+  // position is durable. Later tickets (PHE-15..19) call this on every forward
+  // transition. Persistence is best-effort: render state always advances even
+  // if the upsert fails or the user is anonymous, so the UX never stalls.
+  // --------------------------------------------------------------------------
+  const setOnboardingStep = useCallback(async (next: OnboardingStep) => {
+    setStep(next);
+    if (!userId) return;
+    const { error } = await supabase
+      .from("user_profiles")
+      .upsert({ id: userId, onboarding_step: next });
+    if (error) {
+      console.warn("[onboarding] onboarding_step upsert:", error.message);
     }
-  }, [step]);
+  }, [userId]);
 
-  // Line reveal animation for reflection steps
-  useEffect(() => {
-    if (step >= 0 && step <= 6) {
-      // Reset all lines to invisible
-      setVisibleLines(-1);
-      setShowInput(false);
-      setCurrentReflection(reflections[PILLARS[step]] || "");
-      setContentVisible(true);
-      
-      const pillar = PILLARS[step];
-      const lines = PROMPTS[pillar];
-      const timeouts: NodeJS.Timeout[] = [];
-      
-      if (experienceMode === "signal") {
-        // Only show last line after delay
-        const t = setTimeout(() => {
-          setVisibleLines(lines.length - 1);
-          setTimeout(() => setShowInput(true), 400);
-        }, 300);
-        timeouts.push(t);
-      } else if (experienceMode === "observatory") {
-        // Show all lines after delay
-        const t = setTimeout(() => {
-          setVisibleLines(lines.length - 1);
-          setTimeout(() => setShowInput(true), 400);
-        }, 300);
-        timeouts.push(t);
-      } else {
-        // Reflection mode: stagger lines with 300ms initial delay
-        for (let i = 0; i < lines.length; i++) {
-          const t = setTimeout(() => {
-            setVisibleLines(i);
-          }, 300 + i * 200);
-          timeouts.push(t);
-        }
-        // Show input after last line is visible + 400ms
-        const inputDelay = 300 + (lines.length - 1) * 200 + 400 + 400;
-        const inputT = setTimeout(() => setShowInput(true), inputDelay);
-        timeouts.push(inputT);
-      }
-      
-      return () => timeouts.forEach(clearTimeout);
-    }
-  }, [step, experienceMode, reflections]);
+  // Convenience: advance one step along the linear funnel.
+  const advance = useCallback(() => {
+    void setOnboardingStep(NEXT_STEP[step]);
+  }, [setOnboardingStep, step]);
 
-  // Show continue button after motivation selection
-  useEffect(() => {
-    if (motivation) {
-      const timer = setTimeout(() => setShowContinue(true), 400);
-      return () => clearTimeout(timer);
-    }
-  }, [motivation]);
+  // Back-arrow handler (placeholder semantics — see PREV_STEP).
+  const goBack = useCallback(() => {
+    const prev = PREV_STEP[step];
+    if (prev) void setOnboardingStep(prev);
+  }, [setOnboardingStep, step]);
 
-  const handleSaveReflection = async () => {
-    if (!userId || !currentReflection.trim()) return;
-    
-    const pillar = PILLARS[step];
-    
-    try {
-      await supabase.from("user_persona").upsert({
-        user_id: userId,
-        pillar,
-        reflection_text: currentReflection.trim(),
-        created_at: new Date().toISOString()
-      }, { onConflict: "user_id,pillar" });
-      
-      await supabase.rpc("increment_constellation_age", {
-        user_id_input: userId,
-        amount: 10
-      });
-      
-      const today = new Date().toISOString().split("T")[0];
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("last_reflection_date, streak_count")
-        .eq("id", userId)
-        .single();
-      
-      const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-      const newStreak =
-        profile?.last_reflection_date === yesterday
-          ? (profile?.streak_count ?? 0) + 1
-          : profile?.last_reflection_date === today
-            ? profile?.streak_count ?? 0
-            : 1;
-      
-      const { error } = await supabase.from("user_profiles").upsert({
-        id: userId,
-        last_reflection_date: today,
-        streak_count: newStreak,
-      });
-      if (error) console.warn("[onboarding] user_profiles upsert (reflection):", error.message);
-
-      setReflections((prev) => ({ ...prev, [pillar]: currentReflection }));
-    } catch (err) {
-      console.warn("[onboarding] reflection submit failed:", err);
-    }
-    
-    transitionToNextStep();
-  };
-
-  const handleSkipReflection = async () => {
-    if (!userId) {
-      transitionToNextStep();
-      return;
-    }
-    
-    const pillar = PILLARS[step];
-    
-    try {
-      await supabase.from("user_persona").upsert({
-        user_id: userId,
-        pillar,
-        reflection_text: null,
-        created_at: new Date().toISOString()
-      }, { onConflict: "user_id,pillar" });
-    } catch {
-      // Continue anyway
-    }
-    
-    transitionToNextStep();
-  };
-
-  const transitionToNextStep = useCallback(() => {
-    setContentVisible(false);
-    setTimeout(() => {
-      setStep((s) => s + 1);
-      setCurrentReflection("");
-    }, 600);
-  }, []);
-
-// Handle Onairos completion — persist redacted snapshot on profile; constellation synthesis in background
+  // Onairos completion — persist redacted snapshot + fire-and-forget synthesis.
+  // Kept here (reused infra) so PHE-17 can build the real s6 on top of it.
   const handleOnairosComplete = useCallback((result: OnairosCompleteData) => {
     setOnairosConnected(true);
-    setOnairosData(result);
-    
-    // Store token for future API calls (browser only; never written to Supabase)
+
     if (result.token) {
       localStorage.setItem("onairos_token", result.token);
     }
@@ -417,82 +246,29 @@ export default function OnboardingPage() {
           }
         });
     }
-    
-    // Call synthesize-constellation in background (non-blocking)
-    // Do not await - let UI proceed immediately
+
     if (userId && result) {
       apiFetch("/synthesize-constellation", {
         method: "POST",
         body: JSON.stringify({ userId, onairosData: result })
       })
         .then((res) => res.json())
-        .then((data) => {
-          // Store the returned pillar synthesis object in state
-          if (data && !data.error) {
-            setConstellationState(data);
-          }
-        })
         .catch(() => {
-          // Log silently, don't block UI - synthesis will happen later
+          // Non-blocking — synthesis runs in the background (see spec feature 5).
         });
     }
   }, [userId]);
-
-  const handleMotivationSave = async () => {
-  if (!userId) {
-  setStep(-2);
-  return;
-    }
-    
-    const value = motivation === "something else" ? customMotivation : motivation;
-    
-    try {
-      const { error } = await supabase.from("user_profiles").upsert({
-        id: userId,
-        motivation: value,
-      });
-      if (error) console.warn("[onboarding] user_profiles upsert (motivation):", error.message);
-    } catch (err) {
-      console.warn("[onboarding] motivation save failed:", err);
-    }
-
-    setStep(-2);
-  };
-
-  const handleScheduleSave = async () => {
-    if (!userId) {
-      router.push("/constellation");
-      return;
-    }
-    
-    try {
-      const { error } = await supabase.from("user_profiles").upsert({
-        id: userId,
-        prompt_times: promptTimes,
-        notification_prefs: {
-          push: notificationsEnabled,
-          sms: false,
-          email: true,
-        },
-      });
-      if (error) {
-        console.warn("[onboarding] user_profiles upsert (schedule):", error.message);
-      }
-    } catch (err) {
-      console.warn("[onboarding] schedule save failed:", err);
-    }
-
-    router.push("/constellation");
-  };
 
   if (!mounted) {
     return <div style={{ minHeight: "100vh", background: "#0A0A0A" }} />;
   }
 
+  const showBack = Boolean(PREV_STEP[step]);
+
   return (
     <main style={{ minHeight: "100vh", background: "#0A0A0A", position: "relative", overflow: "hidden" }}>
-        {/* Particle canvas */}
-        <canvas
+      {/* Particle canvas (reused infra) */}
+      <canvas
         ref={canvasRef}
         aria-hidden="true"
         style={{
@@ -505,21 +281,21 @@ export default function OnboardingPage() {
           pointerEvents: "none"
         }}
       />
-      
+
       {/* Screen reader announcer */}
       <div aria-live="polite" aria-atomic="true" className="sr-only" id="step-announcer">
-{step === -3 && "motivation question"}
-{step === -2 && "constellation preview"}
-{step === -1 && "instructions"}
-{step === -0.5 && "connect platforms"}
-        {step >= 0 && step <= 6 && `${PILLARS[step]} reflection`}
-        {step === 7 && "scheduling"}
+        {step === "fork" && "new or familiar fork"}
+        {step === "manifesto" && "what phenyx is"}
+        {step === "polaris_intro" && "introducing polaris"}
+        {step === "connect" && "connect your platforms"}
+        {step === "synthesizing" && "synthesizing your constellation"}
+        {step === "reveal" && "constellation reveal"}
       </div>
-      
-      {/* Back arrow for steps 0+ */}
-      {step >= 0 && (
+
+      {/* Back arrow (non-fork screens) */}
+      {showBack && (
         <button
-          onClick={() => setStep((s) => s - 1)}
+          onClick={goBack}
           aria-label="go back to previous step"
           style={{
             position: "fixed",
@@ -534,37 +310,17 @@ export default function OnboardingPage() {
             padding: "8px",
             transition: "color 0.2s ease"
           }}
-          onMouseEnter={(e) => e.currentTarget.style.color = "#FFFDFD"}
-          onMouseLeave={(e) => e.currentTarget.style.color = "#555"}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
         >
           ←
         </button>
       )}
-      
-      {/* Pillar indicator for steps 0-6 */}
-      {step >= 0 && step <= 6 && (
-        <p
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            top: 32,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 10,
-            fontSize: "9px",
-            color: "#FFFDFD",
-            textTransform: "uppercase",
-            letterSpacing: "0.22em",
-            opacity: pillarOpacity,
-            transition: "opacity 0.8s ease"
-          }}
-        >
-          {PILLARS[step]}
-        </p>
-      )}
-      
-      {/* Main content */}
+
+      {/* Main content. Keyed by step so the fade-in re-fires cleanly on every
+          transition (no stale animation/visibility state on back-nav). */}
       <div
+        key={step}
         style={{
           position: "relative",
           zIndex: 1,
@@ -573,271 +329,71 @@ export default function OnboardingPage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "24px",
-          opacity: contentVisible ? 1 : 0,
-          transition: "opacity 0.6s ease"
+          padding: "24px"
         }}
       >
-        {/* STEP -3: Motivation */}
-        {step === -3 && (
-          <div style={{ textAlign: "center", maxWidth: 480 }}>
-            <h1
-              className="animate-fade-in"
-              style={{
-                fontSize: "22px",
-                fontWeight: 300,
-                color: "#FFFDFD",
-                letterSpacing: "0.04em",
-                marginBottom: "40px"
-              }}
-            >
-              what brought you here?
-            </h1>
-            
-            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px", marginBottom: "24px" }}>
-              {MOTIVATION_OPTIONS.map((option, i) => (
-                <button
-                  key={option}
-                  onClick={() => setMotivation(option)}
-                  aria-label={option}
-                  className="animate-fade-in"
-                  style={{
-                    animationDelay: `${800 + i * 150}ms`,
-                    animationFillMode: "both",
-                    display: "inline-flex",
-                    padding: "9px 22px",
-                    fontSize: "12px",
-                    fontFamily: "inherit",
-                    borderRadius: "20px",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    border: motivation === option ? `0.5px solid ${stellarColor}` : "0.5px solid #2a2a2a",
-                    color: motivation === option ? "#FFFDFD" : "#555",
-                    background: "transparent",
-                    outline: "none"
-                  }}
-                  onMouseEnter={(e) => {
-                    if (motivation !== option) {
-                      e.currentTarget.style.borderColor = "#444";
-                      e.currentTarget.style.color = "#888";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (motivation !== option) {
-                      e.currentTarget.style.borderColor = "#2a2a2a";
-                      e.currentTarget.style.color = "#555";
-                    }
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.outline = `2px solid ${stellarColor}`;
-                    e.currentTarget.style.outlineOffset = "2px";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.outline = "none";
-                  }}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-            
-            {motivation === "something else" && (
-              <input
-                type="text"
-                aria-label="tell us what brought you here"
-                placeholder="tell us in your own words"
-                value={customMotivation}
-                onChange={(e) => setCustomMotivation(e.target.value)}
-                autoFocus
-                className="animate-fade-in"
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  borderBottom: "1px solid #2a2a2a",
-                  color: "#FFFDFD",
-                  fontSize: "14px",
-                  fontWeight: 300,
-                  textAlign: "center",
-                  width: "60%",
-                  outline: "none",
-                  paddingBottom: "6px",
-                  display: "block",
-                  margin: "16px auto 0",
-                  fontFamily: "inherit"
-                }}
-                onFocus={(e) => e.target.style.borderBottomColor = stellarColor}
-                onBlur={(e) => e.target.style.borderBottomColor = "#2a2a2a"}
-              />
-            )}
-            
-            {showContinue && (
-              <button
-                onClick={handleMotivationSave}
-                aria-label="continue to my constellation"
-                className="animate-fade-in"
-                style={{
-                  marginTop: "32px",
-                  background: "transparent",
-                  border: `0.5px solid ${stellarColor}`,
-                  color: stellarColor,
-                  borderRadius: "8px",
-                  padding: "10px 32px",
-                  fontSize: "13px",
-                  fontWeight: 400,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  transition: "all 0.2s ease"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = stellarColor;
-                  e.currentTarget.style.borderColor = stellarColor;
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.outline = `2px solid ${stellarColor}`;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.outline = "none";
-                }}
-              >
-                continue
-              </button>
-            )}
-          </div>
-        )}
-        
-        {/* STEP -2: Constellation preview */}
-        {step === -2 && (
-          <div style={{ textAlign: "center" }}>
-            <svg
-              viewBox="0 0 120 160"
-              width={100}
-              height={133}
-              aria-label="your forming constellation, seven points of identity"
-              className="animate-fade-in"
-            >
-              {/* Connection lines */}
-              <line x1={60} y1={141} x2={26} y2={115} stroke="#1a1a1a" strokeWidth={0.5} />
-              <line x1={26} y1={115} x2={17} y2={72} stroke="#1a1a1a" strokeWidth={0.5} />
-              <line x1={17} y1={72} x2={60} y2={77} stroke="#1a1a1a" strokeWidth={0.5} />
-              <line x1={60} y1={77} x2={96} y2={83} stroke="#1a1a1a" strokeWidth={0.5} />
-              <line x1={96} y1={83} x2={86} y2={40} stroke="#1a1a1a" strokeWidth={0.5} />
-              <line x1={86} y1={40} x2={60} y2={16} stroke="#1a1a1a" strokeWidth={0.5} />
-              
-              {/* Dots with pulsing animation */}
-              {[
-                { cx: 60, cy: 141, delay: 0 },
-                { cx: 26, cy: 115, delay: 0.4 },
-                { cx: 17, cy: 72, delay: 0.8 },
-                { cx: 60, cy: 77, delay: 1.2 },
-                { cx: 96, cy: 83, delay: 1.6 },
-                { cx: 86, cy: 40, delay: 2.0 },
-                { cx: 60, cy: 16, delay: 2.4 }
-              ].map((dot, i) => (
-                <circle
-                  key={i}
-                  cx={dot.cx}
-                  cy={dot.cy}
-                  r={3}
-                  fill={stellarColor}
-                  style={{
-                    opacity: prefersReducedMotion ? 0.7 : undefined,
-                    animation: prefersReducedMotion ? "none" : `pulse-dot 2.5s ease-in-out infinite`,
-                    animationDelay: `${dot.delay}s`
-                  }}
-                />
-              ))}
-            </svg>
-            
+        {/* ================================================================ */}
+        {/* s3b — NEW/FAMILIAR FORK (PHE-14, fully implemented)              */}
+        {/* ================================================================ */}
+        {step === "fork" && (
+          <div style={{ textAlign: "center", maxWidth: 440 }}>
             <p
               className="animate-fade-in"
               style={{
-                animationDelay: "400ms",
+                fontSize: "10px",
+                color: stellarColor,
+                textTransform: "uppercase",
+                letterSpacing: "0.22em",
+                marginBottom: "20px"
+              }}
+            >
+              before we continue
+            </p>
+
+            <h1
+              className="animate-fade-in"
+              style={{
+                animationDelay: "150ms",
                 animationFillMode: "both",
-                marginTop: "24px",
+                fontSize: "24px",
+                fontWeight: 300,
+                color: "#FFFDFD",
+                letterSpacing: "0.01em",
+                lineHeight: 1.4,
+                marginBottom: "20px"
+              }}
+            >
+              new here, or already know phenyx?
+            </h1>
+
+            <p
+              className="animate-fade-in"
+              style={{
+                animationDelay: "300ms",
+                animationFillMode: "both",
                 fontSize: "14px",
                 fontWeight: 300,
                 color: "#888",
-                letterSpacing: "0.06em"
+                lineHeight: 1.7,
+                marginBottom: "40px"
               }}
             >
-              your constellation is about to form.
+              {"if you've used phenyx before, skip straight to connecting your platforms. otherwise, it's worth a minute to see how this works."}
             </p>
-            
+
+            {/* Primary: show me how it works → manifesto (s4) */}
             <button
-              onClick={() => setStep(-1)}
-              autoFocus
-              aria-label="i am ready to begin my reflection journey"
+              onClick={() => void setOnboardingStep("manifesto")}
+              aria-label="show me how it works"
               className="animate-fade-in"
               style={{
-                animationDelay: "1200ms",
+                animationDelay: "450ms",
                 animationFillMode: "both",
-                marginTop: "32px",
-                background: "transparent",
-                border: "0.5px solid #333",
-                color: "#888",
-                borderRadius: "8px",
-                padding: "10px 28px",
-                fontSize: "13px",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.2s ease"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#FFFDFD";
-                e.currentTarget.style.color = "#0A0A0A";
-                e.currentTarget.style.borderColor = "#FFFDFD";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = "#888";
-                e.currentTarget.style.borderColor = "#333";
-              }}
-            >
-              i&apos;m ready
-            </button>
-          </div>
-        )}
-        
-        {/* STEP -1: Instructions */}
-        {step === -1 && (
-          <div style={{ textAlign: "center" }}>
-            {["you will be asked seven questions.", "there are no right answers.", "write what is true."].map((line, i) => (
-              <p
-                key={i}
-                className="animate-fade-in"
-                style={{
-                  animationDelay: `${i * 1000}ms`,
-                  animationFillMode: "both",
-                  fontSize: "18px",
-                  fontWeight: 300,
-                  color: "#FFFDFD",
-                  margin: "8px 0"
-                }}
-              >
-                {line}
-              </p>
-            ))}
-            
-            <button
-              onClick={() => setStep(-0.5)}
-              autoFocus
-              aria-label="connect your platforms"
-              className="animate-fade-in"
-              style={{
-                animationDelay: "3000ms",
-                animationFillMode: "both",
-                marginTop: "40px",
                 background: "transparent",
                 border: `0.5px solid ${stellarColor}`,
                 color: stellarColor,
                 borderRadius: "8px",
-                padding: "12px 32px",
+                padding: "13px 36px",
                 fontSize: "13px",
                 fontWeight: 500,
                 cursor: "pointer",
@@ -854,48 +410,109 @@ export default function OnboardingPage() {
                 e.currentTarget.style.color = stellarColor;
                 e.currentTarget.style.borderColor = stellarColor;
               }}
+              onFocus={(e) => {
+                e.currentTarget.style.outline = `2px solid ${stellarColor}`;
+                e.currentTarget.style.outlineOffset = "2px";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.outline = "none";
+              }}
             >
-              connect my platforms
+              show me how it works
             </button>
+
+            {/* Skip: connect my platforms → connect (s6), bypassing s4 + s5 */}
+            <div style={{ marginTop: "24px" }}>
+              <button
+                onClick={() => void setOnboardingStep("connect")}
+                aria-label="skip the intro, connect my platforms"
+                className="animate-fade-in"
+                style={{
+                  animationDelay: "600ms",
+                  animationFillMode: "both",
+                  background: "none",
+                  border: "none",
+                  color: "#555",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "color 0.2s ease"
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#999")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
+                onFocus={(e) => {
+                  e.currentTarget.style.outline = `2px solid ${stellarColor}`;
+                  e.currentTarget.style.outlineOffset = "2px";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.outline = "none";
+                }}
+              >
+                skip the intro, connect my platforms
+              </button>
+            </div>
           </div>
         )}
 
-        {/* STEP -0.5: Connect Platforms with Onairos */}
-        {step === -0.5 && (
+        {/* ================================================================ */}
+        {/* PLACEHOLDER screens — replaced wholesale by later tickets.       */}
+        {/* Each advances onboarding_step to the correct next step.          */}
+        {/* ================================================================ */}
+
+        {/* PHE-15 will implement: manifesto (s4A/s4B) */}
+        {step === "manifesto" && (
+          <PlaceholderScreen
+            label="manifesto"
+            stellarColor={stellarColor}
+            ctaLabel="continue"
+            onContinue={advance}
+          />
+        )}
+
+        {/* PHE-16 will implement: polaris_intro (s5A/s5B) */}
+        {step === "polaris_intro" && (
+          <PlaceholderScreen
+            label="polaris_intro"
+            stellarColor={stellarColor}
+            ctaLabel="continue"
+            onContinue={advance}
+          />
+        )}
+
+        {/* PHE-17 will implement: connect (s6 — Onairos platform connect).
+            The OnairosButtonWrapper + handleOnairosComplete are mounted here as
+            the reusable foundation; PHE-17 builds the real framing/copy/gating.
+            For now, "continue" advances to synthesizing. */}
+        {step === "connect" && (
           <div style={{ textAlign: "center", maxWidth: 400, width: "100%" }}>
             <p
               className="animate-fade-in"
-              style={{
-                fontSize: "18px",
-                fontWeight: 300,
-                color: "#FFFDFD",
-                marginBottom: "8px"
-              }}
+              style={{ fontSize: "11px", color: "#444", letterSpacing: "0.15em", marginBottom: "8px" }}
             >
-              connect your platforms
+              PHE-17 PLACEHOLDER
             </p>
             <p
               className="animate-fade-in"
               style={{
-                animationDelay: "400ms",
+                animationDelay: "150ms",
                 animationFillMode: "both",
-                fontSize: "13px",
+                fontSize: "18px",
                 fontWeight: 300,
-                color: "#555",
+                color: "#FFFDFD",
                 marginBottom: "32px"
               }}
             >
-              onairos reads signals from your connected accounts to deepen your constellation. this is optional.
+              connect
             </p>
 
             <div
               className="animate-fade-in"
               style={{
-                animationDelay: "800ms",
+                animationDelay: "300ms",
                 animationFillMode: "both",
                 display: "flex",
                 justifyContent: "center",
-                alignItems: "center"
+                marginBottom: "32px"
               }}
             >
               {!onairosConnected ? (
@@ -905,344 +522,133 @@ export default function OnboardingPage() {
                   buttonType="pill"
                   buttonText="connect with onairos"
                   textColor="white"
-                  onComplete={(result) => {
-                    handleOnairosComplete(result);
-                  }}
+                  onComplete={(result) => handleOnairosComplete(result)}
                 />
               ) : (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stellarColor} strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <span style={{ fontSize: "13px", color: "#666" }}>platforms connected</span>
-                </div>
+                <span style={{ fontSize: "13px", color: "#666" }}>platforms connected</span>
               )}
             </div>
 
             <button
-              onClick={() => setStep(0)}
-              className="animate-fade-in"
+              onClick={advance}
+              aria-label="continue"
               style={{
-                animationDelay: "1200ms",
-                animationFillMode: "both",
-                marginTop: "40px",
-                background: "transparent",
-                border: "none",
-                color: "#333",
-                fontSize: "11px",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "color 0.2s ease"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = "#666"}
-              onMouseLeave={(e) => e.currentTarget.style.color = "#333"}
-            >
-              {onairosConnected ? "continue to reflections" : "skip for now"}
-            </button>
-          </div>
-        )}
-        
-        {/* STEPS 0-6: Reflections */}
-        {step >= 0 && step <= 6 && (
-          <div style={{ textAlign: "center", maxWidth: 520, width: "100%" }}>
-            {/* Prompt lines */}
-            <div style={{ marginBottom: "32px" }}>
-              {PROMPTS[PILLARS[step]].map((line, i) => (
-                <p
-                  key={i}
-                  style={{
-                    fontSize: experienceMode === "signal" ? "22px" : "18px",
-                    fontWeight: 300,
-                    color: "#FFFDFD",
-                    lineHeight: 1.9,
-                    margin: "4px 0",
-                    opacity: visibleLines >= i ? 1 : 0,
-                    transition: "opacity 0.4s ease"
-                  }}
-                >
-                  {line}
-                </p>
-              ))}
-              
-              {experienceMode === "observatory" && showInput && (
-                <p style={{ fontSize: "10px", color: "#2a2a2a", marginTop: "12px" }}>
-                  onairos is reading signals from your connected platforms for this point.
-                </p>
-              )}
-            </div>
-            
-            {/* Input area */}
-            <div
-              style={{
-                opacity: showInput ? 1 : 0,
-                transition: "opacity 0.4s ease",
-                transitionDelay: "400ms",
-                paddingBottom: "120px"
-              }}
-            >
-              <label htmlFor="reflection-input" className="sr-only">
-                write your reflection here
-              </label>
-              <textarea
-                id="reflection-input"
-                aria-label="write your reflection"
-                aria-multiline="true"
-                placeholder="begin here. there is no wrong answer."
-                value={currentReflection}
-                onChange={(e) => setCurrentReflection(e.target.value)}
-                autoFocus={showInput}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  borderRadius: 0,
-                  boxShadow: "none",
-                  outline: "none",
-                  WebkitAppearance: "none",
-                  color: "#FFFDFD",
-                  fontSize: "16px",
-                  fontWeight: 300,
-                  textAlign: "center",
-                  width: "60%",
-                  minWidth: "280px",
-                  maxWidth: "520px",
-                  resize: "none",
-                  minHeight: "120px",
-                  lineHeight: 1.8,
-                  display: "block",
-                  margin: "24px auto 0",
-                  padding: "24px 0",
-                  fontFamily: "inherit"
-                }}
-              />
-              <style>{`
-                #reflection-input::placeholder {
-                  color: #2a2a2a;
-                  text-align: center;
-                }
-                #reflection-input:focus {
-                  background: transparent !important;
-                  border: none !important;
-                  box-shadow: none !important;
-                  outline: none !important;
-                }
-              `}</style>
-            </div>
-            
-            {/* Save button */}
-            {currentReflection.trim() && (
-              <button
-                onClick={handleSaveReflection}
-                aria-label="save this reflection and continue to the next question"
-                className="animate-fade-in"
-                style={{
-                  position: "fixed",
-                  bottom: 48,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  background: "transparent",
-                  border: `0.5px solid color-mix(in srgb, ${stellarColor} 40%, transparent)`,
-                  color: "#888",
-                  borderRadius: "8px",
-                  padding: "8px 24px",
-                  fontSize: "12px",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  transition: "all 0.2s ease"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "#888";
-                  e.currentTarget.style.borderColor = `color-mix(in srgb, ${stellarColor} 40%, transparent)`;
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.outline = `2px solid ${stellarColor}`;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.outline = "none";
-                }}
-              >
-                save and continue
-              </button>
-            )}
-            
-            {/* Skip button */}
-            <button
-              onClick={handleSkipReflection}
-              aria-label="skip this question for now"
-              style={{
-                position: "fixed",
-                bottom: 20,
-                left: "50%",
-                transform: "translateX(-50%)",
-                background: "none",
-                border: "none",
-                fontSize: "11px",
-                color: "#2a2a2a",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "color 0.2s ease"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = "#555"}
-              onMouseLeave={(e) => e.currentTarget.style.color = "#2a2a2a"}
-              onFocus={(e) => {
-                e.currentTarget.style.outline = `2px solid ${stellarColor}`;
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.outline = "none";
-              }}
-            >
-              i&apos;m not ready for this one
-            </button>
-          </div>
-        )}
-        
-        {/* STEP 7: Scheduling */}
-        {step === 7 && (
-          <div style={{ textAlign: "center", maxWidth: 360, width: "100%" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 500, color: "#FFFDFD", marginBottom: "8px" }}>
-              when do you want to reflect?
-            </h2>
-            
-            <p style={{ fontSize: "13px", fontWeight: 300, color: "#666", lineHeight: 1.7, marginBottom: "32px" }}>
-              anchor each to a moment you already have. the platform opens when you are ready. it never pushes.
-            </p>
-            
-            <div style={{ margin: "0 auto" }}>
-              {SCHEDULE_DEFAULTS.map(({ pillar, time, hint }) => (
-                <div
-                  key={pillar}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    marginBottom: "18px",
-                    gap: "12px"
-                  }}
-                >
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <span style={{
-                      fontSize: "10px",
-                      color: stellarColor,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.1em",
-                      fontWeight: 500,
-                      display: "block"
-                    }}>
-                      {pillar}
-                    </span>
-                    <span style={{ fontSize: "10px", color: "#252525", fontStyle: "italic", marginTop: "3px", display: "block" }}>
-                      {hint}
-                    </span>
-                  </div>
-                  <input
-                    type="time"
-                    defaultValue={time}
-                    aria-label={`${pillar} reflection time`}
-                    onChange={(e) => setPromptTimes((prev) => ({ ...prev, [pillar]: e.target.value }))}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      borderBottom: "1px solid #2a2a2a",
-                      color: "#FFFDFD",
-                      fontSize: "11px",
-                      width: "52px",
-                      textAlign: "right",
-                      padding: "2px 0",
-                      outline: "none",
-                      fontFamily: "inherit"
-                    }}
-                    onFocus={(e) => e.target.style.borderBottomColor = stellarColor}
-                    onBlur={(e) => e.target.style.borderBottomColor = "#2a2a2a"}
-                  />
-                </div>
-              ))}
-            </div>
-            
-            {/* Notification toggle */}
-            <div style={{ marginTop: "24px", display: "flex", alignItems: "center", gap: "10px", justifyContent: "center" }}>
-              <span style={{ fontSize: "12px", color: "#444" }}>notify me when my prompt opens</span>
-              <button
-                role="switch"
-                aria-checked={notificationsEnabled}
-                onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                style={{
-                  width: "36px",
-                  height: "20px",
-                  borderRadius: "10px",
-                  background: notificationsEnabled ? stellarColor : "#2a2a2a",
-                  border: "none",
-                  cursor: "pointer",
-                  position: "relative",
-                  transition: "background 0.2s ease"
-                }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    top: "2px",
-                    left: notificationsEnabled ? "18px" : "2px",
-                    width: "16px",
-                    height: "16px",
-                    borderRadius: "50%",
-                    background: "#FFFDFD",
-                    transition: "left 0.2s ease"
-                  }}
-                />
-              </button>
-            </div>
-            
-            {notificationsEnabled && (
-              <p style={{ fontSize: "10px", color: "#333", marginTop: "6px" }}>
-                you can always update this from settings.
-              </p>
-            )}
-            
-            {/* CTA button */}
-            <button
-              onClick={handleScheduleSave}
-              aria-label="save my reflection times and reveal my constellation"
-              style={{
-                marginTop: "28px",
-                width: "100%",
                 background: "transparent",
                 border: `0.5px solid ${stellarColor}`,
                 color: stellarColor,
                 borderRadius: "8px",
-                padding: "13px",
+                padding: "10px 32px",
                 fontSize: "13px",
-                fontWeight: 500,
                 cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.2s ease"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#FFFDFD";
-                e.currentTarget.style.color = "#0A0A0A";
-                e.currentTarget.style.borderColor = "#FFFDFD";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = stellarColor;
-                e.currentTarget.style.borderColor = stellarColor;
+                fontFamily: "inherit"
               }}
             >
-              set my times and see my constellation
+              continue
             </button>
           </div>
         )}
+
+        {/* PHE-18 will implement: synthesizing (background-synthesis UX) */}
+        {step === "synthesizing" && (
+          <PlaceholderScreen
+            label="synthesizing"
+            stellarColor={stellarColor}
+            ctaLabel="continue"
+            onContinue={advance}
+          />
+        )}
+
+        {/* PHE-19 will implement: reveal (constellation reveal scrC).
+            On completion it sets onboarding_step = done and routes to the
+            dashboard. The placeholder does both now. */}
+        {step === "reveal" && (
+          <PlaceholderScreen
+            label="reveal"
+            stellarColor={stellarColor}
+            ctaLabel="finish"
+            onContinue={() => {
+              void setOnboardingStep("done");
+              router.replace("/constellation");
+            }}
+          />
+        )}
       </div>
-      
-      {/* Keyframes for pulsing dots */}
+
       <style>{`
         @keyframes pulse-dot {
           0%, 100% { opacity: 0.4; }
           50% { opacity: 1; }
         }
-        `}</style>
+      `}</style>
     </main>
+  );
+}
+
+// Minimal placeholder for not-yet-built steps. Later tickets replace the whole
+// block above; this just renders the step name + a single advancing CTA so the
+// funnel is navigable end-to-end.
+function PlaceholderScreen({
+  label,
+  stellarColor,
+  ctaLabel,
+  onContinue,
+}: {
+  label: string;
+  stellarColor: string;
+  ctaLabel: string;
+  onContinue: () => void;
+}) {
+  return (
+    <div style={{ textAlign: "center", maxWidth: 420 }}>
+      <p
+        className="animate-fade-in"
+        style={{ fontSize: "11px", color: "#444", letterSpacing: "0.15em", marginBottom: "8px" }}
+      >
+        PLACEHOLDER
+      </p>
+      <p
+        className="animate-fade-in"
+        style={{
+          animationDelay: "150ms",
+          animationFillMode: "both",
+          fontSize: "18px",
+          fontWeight: 300,
+          color: "#FFFDFD",
+          marginBottom: "32px"
+        }}
+      >
+        {label}
+      </p>
+      <button
+        onClick={onContinue}
+        aria-label={ctaLabel}
+        className="animate-fade-in"
+        style={{
+          animationDelay: "300ms",
+          animationFillMode: "both",
+          background: "transparent",
+          border: `0.5px solid ${stellarColor}`,
+          color: stellarColor,
+          borderRadius: "8px",
+          padding: "10px 32px",
+          fontSize: "13px",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          transition: "all 0.2s ease"
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "#FFFDFD";
+          e.currentTarget.style.color = "#0A0A0A";
+          e.currentTarget.style.borderColor = "#FFFDFD";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "transparent";
+          e.currentTarget.style.color = stellarColor;
+          e.currentTarget.style.borderColor = stellarColor;
+        }}
+      >
+        {ctaLabel}
+      </button>
+    </div>
   );
 }
