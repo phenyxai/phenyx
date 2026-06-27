@@ -108,7 +108,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
       >
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
           {/* Col 1 — logo (always visible) */}
-          <div className="flex items-center gap-3 shrink-0 justify-self-start">
+          <div className="col-start-1 flex items-center gap-3 shrink-0 justify-self-start">
             <Image
               src="/brand/phenyx-mark.png"
               alt="PHENYX"
@@ -148,7 +148,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
           </div>
 
           {/* Col 3 — enter (desktop) + hamburger (mobile) */}
-          <div className="flex items-center justify-end justify-self-end">
+          <div className="col-start-3 flex items-center justify-end justify-self-end">
             <button
               onClick={onEnterClick}
               onMouseEnter={() => setIsEnterHovered(true)}
