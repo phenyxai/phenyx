@@ -3,44 +3,38 @@
 import { useEffect, useRef, useState } from "react";
 import { useSessionColor } from "@/contexts/session-color-context";
 
-const cards = [
+const layers = [
   {
-    layer: "layer one",
+    tag: "layer one",
     title: "connect",
-    body: "oauth integrations with instagram, linkedin, tiktok, x, spotify, youtube, github, and more. we read what you have already made, said, and shared across the internet.",
-    radiusDesktop: "12px 0 0 0",
-    radiusMobile: "12px",
+    text: "oauth integrations with instagram, linkedin, pinterest, x, spotify, youtube, github, and more. we read what you have already made, said, and shared, with your permission.",
   },
   {
-    layer: "layer two",
+    tag: "layer two",
     title: "synthesize",
-    body: "our AI analyzes tone, language patterns, content themes, and pivotal moments across all sources. it finds the through-line in everything you have built and maps it to the seven pillars of your identity formation.",
-    radiusDesktop: "0",
-    radiusMobile: "0",
+    text: "our ai analyzes tone, language patterns, content themes, and pivotal moments across all sources. it finds the pattern that ties it all together.",
   },
   {
-    layer: "layer three",
+    tag: "layer three",
     title: "reveal",
-    body: "our agent, polaris, surfaces observations you did not know to look for. new findings drawn from patterns only visible when your whole digital life is seen at once. discover parts of yourself that were always there, now finally named.",
-    radiusDesktop: "0 12px 0 0",
-    radiusMobile: "12px",
+    text: "we surface observations based on your behavior, each one tied to a point on your constellation. polaris, our ai, is connected to all of it, helping you explore what it finds and what it means.",
   },
 ];
 
-const analyzePills = [
+const analyzeTags = [
   "tone and voice",
   "pivotal moments",
   "content evolution",
   "career transitions",
   "creative output",
-  "the people you keep returning to.",
+  "network patterns",
   "language over time",
 ];
 
 const neverDoItems = [
   "store raw platform data. we process and discard. only synthesized insights are retained.",
   "access without consent. every connection is oauth-authorized and revocable at any time.",
-  "assign you a label. PHENYX reflects. it never categorizes.",
+  "assign you a label. the ai reflects. it does not categorize.",
 ];
 
 export function HowItWorksSection() {
@@ -48,19 +42,13 @@ export function HowItWorksSection() {
   const [visibleElements, setVisibleElements] = useState<number[]>([]);
   const elementRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
-    const desktopQuery = window.matchMedia("(min-width: 768px)");
-    setIsDesktop(desktopQuery.matches);
-    const handleDesktopChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    desktopQuery.addEventListener("change", handleDesktopChange);
-
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setPrefersReducedMotion(mediaQuery.matches);
 
     if (mediaQuery.matches) {
-      setVisibleElements([0, 1, 2, 3, 4, 5]);
+      setVisibleElements([0, 1, 2, 3, 4]);
       return;
     }
 
@@ -68,13 +56,13 @@ export function HowItWorksSection() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const index = elementRefs.current.indexOf(entry.target as HTMLDivElement);
+            const index = elementRefs.current.indexOf(
+              entry.target as HTMLDivElement
+            );
             if (index !== -1) {
-              setTimeout(() => {
-                setVisibleElements((prev) => 
-                  prev.includes(index) ? prev : [...prev, index]
-                );
-              }, index * 100);
+              setVisibleElements((prev) =>
+                prev.includes(index) ? prev : [...prev, index]
+              );
             }
           }
         });
@@ -86,10 +74,7 @@ export function HowItWorksSection() {
       if (ref) observer.observe(ref);
     });
 
-    return () => {
-      observer.disconnect();
-      desktopQuery.removeEventListener("change", handleDesktopChange);
-    };
+    return () => observer.disconnect();
   }, []);
 
   const getAnimationStyle = (index: number) => {
@@ -106,6 +91,7 @@ export function HowItWorksSection() {
 
   return (
     <section
+      id="s0-how"
       className="w-full"
       style={{
         backgroundColor: "#0A0A0A",
@@ -113,18 +99,15 @@ export function HowItWorksSection() {
         paddingBottom: "100px",
       }}
     >
-      <div
-        className="mx-auto px-6 md:px-20"
-        style={{ maxWidth: "1100px" }}
-      >
-        {/* Label */}
+      <div className="mx-auto px-6 md:px-20" style={{ maxWidth: "1100px" }}>
+        {/* Eyebrow */}
         <p
           className="uppercase"
           style={{
             fontSize: "11px",
             letterSpacing: "0.2em",
-            color: "rgba(255,253,253,0.6)",
-            marginBottom: "24px",
+            color: "rgba(255,253,253,0.5)",
+            marginBottom: "26px",
           }}
         >
           how it works
@@ -134,108 +117,115 @@ export function HowItWorksSection() {
         <h2
           className="lowercase"
           style={{
-            fontSize: "32px",
-            fontWeight: 300,
+            fontSize: "clamp(32px, 4.6vw, 52px)",
+            fontWeight: 400,
             color: "#FFFDFD",
             lineHeight: 1.2,
-            maxWidth: "600px",
-            marginBottom: "16px",
+            maxWidth: "740px",
+            marginBottom: "24px",
           }}
         >
-          we synthesize who you are across everything you have built.
+          connect. synthesize. reveal.
         </h2>
 
         {/* Subline */}
         <p
           className="lowercase"
           style={{
-            fontSize: "16px",
+            fontSize: "17px",
             fontWeight: 300,
-            color: "rgba(255,253,253,0.5)",
-            maxWidth: "560px",
+            color: "rgba(255,253,253,0.62)",
+            maxWidth: "680px",
             lineHeight: 1.7,
-            marginBottom: "64px",
+            marginBottom: "36px",
           }}
         >
-          connect your platforms or tell us your story. either way <span className="uppercase font-light">PHENYX</span> reads the patterns others miss and reflects back a portrait only you could have.
+          we help you make sense of it all, through three layers.
         </p>
 
-        {/* Three cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-[2px]">
-          {cards.map((card, index) => (
+        {/* Three layers — vertical stack inside one card */}
+        <div
+          style={{
+            background: "#121212",
+            border: "1px solid #2e2e2e",
+            borderRadius: "14px",
+            overflow: "hidden",
+          }}
+        >
+          {layers.map((layer, index) => (
             <div
-              key={card.layer}
+              key={layer.tag}
               ref={(el) => { elementRefs.current[index] = el; }}
               style={{
-                backgroundColor: "#111111",
-                border: "1px solid rgba(255,253,253,0.07)",
-                padding: "32px",
-                borderRadius: isDesktop ? card.radiusDesktop : card.radiusMobile,
+                padding: "40px 44px",
+                borderBottom:
+                  index < layers.length - 1 ? "1px solid #2e2e2e" : "none",
                 ...getAnimationStyle(index),
               }}
-              className="md:rounded-none"
             >
-              {/* Accent line using session color */}
               <div
                 style={{
-                  width: "32px",
+                  width: "24px",
                   height: "1px",
                   backgroundColor: sessionColor,
-                  marginBottom: "24px",
+                  marginBottom: "26px",
                 }}
               />
-
-              {/* Layer label */}
               <p
                 className="uppercase"
                 style={{
                   fontSize: "11px",
-letterSpacing: "0.15em",
-                color: "rgba(255,253,253,0.6)",
-                marginBottom: "12px",
+                  letterSpacing: "0.18em",
+                  color: "rgba(255,253,253,0.5)",
+                  marginBottom: "14px",
                 }}
               >
-                {card.layer}
+                {layer.tag}
               </p>
-
-              {/* Title */}
               <h3
                 className="lowercase"
                 style={{
-                  fontSize: "18px",
-                  fontWeight: 400,
+                  fontSize: "24px",
+                  fontWeight: 500,
                   color: "#FFFDFD",
-                  marginBottom: "16px",
+                  marginBottom: "18px",
                 }}
               >
-                {card.title}
+                {layer.title}
               </h3>
-
-              {/* Body */}
               <p
                 className="lowercase"
                 style={{
-                  fontSize: "14px",
-                  color: "rgba(255,253,253,0.5)",
-                  lineHeight: 1.7,
+                  fontSize: "15px",
+                  color: "rgba(255,253,253,0.62)",
+                  lineHeight: 1.75,
+                  fontWeight: 300,
+                  maxWidth: "760px",
                 }}
               >
-                {card.body}
+                {layer.text}
               </p>
             </div>
           ))}
         </div>
 
-        {/* Two panels below */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-[2px] mt-[2px]">
-          {/* Left panel - What we analyze */}
+        <div style={{ height: "28px" }} />
+
+        {/* Dual stack — what we analyze / what we never do */}
+        <div
+          style={{
+            background: "#121212",
+            border: "1px solid #2e2e2e",
+            borderRadius: "14px",
+            overflow: "hidden",
+          }}
+        >
+          {/* what we analyze */}
           <div
             ref={(el) => { elementRefs.current[3] = el; }}
-            className="md:rounded-bl-[12px]"
             style={{
-              padding: "32px",
-              backgroundColor: "#111111",
-              border: "1px solid rgba(255,253,253,0.07)",
+              padding: "40px 44px",
+              borderBottom: "1px solid #2e2e2e",
               ...getAnimationStyle(3),
             }}
           >
@@ -243,41 +233,38 @@ letterSpacing: "0.15em",
               className="uppercase"
               style={{
                 fontSize: "11px",
-                letterSpacing: "0.12em",
-                color: "rgba(255,253,253,0.6)",
-                marginBottom: "16px",
+                letterSpacing: "0.18em",
+                color: "rgba(255,253,253,0.5)",
+                marginBottom: "24px",
               }}
             >
               what we analyze
             </p>
-
-            <div className="flex flex-wrap gap-2">
-              {analyzePills.map((pill) => (
+            <div className="flex flex-wrap" style={{ gap: "12px" }}>
+              {analyzeTags.map((tag) => (
                 <span
-                  key={pill}
+                  key={tag}
                   className="lowercase"
                   style={{
-                    border: "1px solid rgba(255,253,253,0.12)",
-                    borderRadius: "999px",
-                    padding: "4px 14px",
-                    fontSize: "12px",
-                    color: "rgba(255,253,253,0.55)",
+                    fontSize: "14px",
+                    padding: "11px 22px",
+                    border: "1px solid #2e2e2e",
+                    borderRadius: "24px",
+                    color: "rgba(255,253,253,0.62)",
+                    background: "transparent",
                   }}
                 >
-                  {pill}
+                  {tag}
                 </span>
               ))}
             </div>
           </div>
 
-          {/* Right panel - What we never do */}
+          {/* what we never do */}
           <div
             ref={(el) => { elementRefs.current[4] = el; }}
-            className="md:rounded-br-[12px]"
             style={{
-              padding: "32px",
-              backgroundColor: "#111111",
-              border: "1px solid rgba(255,253,253,0.07)",
+              padding: "40px 44px",
               ...getAnimationStyle(4),
             }}
           >
@@ -285,32 +272,32 @@ letterSpacing: "0.15em",
               className="uppercase"
               style={{
                 fontSize: "11px",
-                letterSpacing: "0.12em",
-                color: "rgba(255,253,253,0.6)",
-                marginBottom: "16px",
+                letterSpacing: "0.18em",
+                color: "rgba(255,253,253,0.5)",
+                marginBottom: "24px",
               }}
             >
               what we never do
             </p>
-
-            <div className="flex flex-col gap-[10px]">
-              {neverDoItems.map((item, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <div
+            <div className="flex flex-col" style={{ gap: "18px" }}>
+              {neverDoItems.map((item, i) => (
+                <div key={i} className="flex items-start" style={{ gap: "16px" }}>
+                  <span
                     style={{
-                      width: "14px",
+                      width: "16px",
                       height: "1px",
-                      backgroundColor: "rgba(232,69,30,0.5)",
-                      marginTop: "10px",
+                      background: "#a26656",
                       flexShrink: 0,
+                      marginTop: "11px",
                     }}
                   />
                   <p
                     className="lowercase"
                     style={{
-                      fontSize: "14px",
-                      color: "rgba(255,253,253,0.5)",
-                      lineHeight: 1.5,
+                      fontSize: "15px",
+                      lineHeight: 1.75,
+                      color: "rgba(255,253,253,0.62)",
+                      fontWeight: 300,
                     }}
                   >
                     {item}

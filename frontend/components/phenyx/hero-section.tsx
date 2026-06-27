@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ScrollIndicator } from "./scroll-indicator";
 import { IdentityParticles } from "./identity-particles";
+import { HeroStarfield } from "./hero-starfield";
 import { useSessionColor } from "@/contexts/session-color-context";
 
 interface HeroSectionProps {
@@ -42,8 +43,10 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
   };
 
   return (
-    <section className="h-screen relative flex flex-col justify-center px-6 md:px-20 py-20 overflow-hidden">
-      <div className="mx-auto w-full grid lg:grid-cols-2 gap-12 lg:gap-8 items-center" style={{ maxWidth: "1100px" }}>
+    <section id="s0-top" className="h-screen relative flex flex-col justify-center px-6 md:px-20 py-20 overflow-hidden">
+      {/* Ambient starfield — sits behind everything (z-0) */}
+      <HeroStarfield />
+      <div className="relative z-[2] mx-auto w-full grid lg:grid-cols-2 gap-12 lg:gap-8 items-center" style={{ maxWidth: "1100px" }}>
         {/* Left content */}
         <div className="flex flex-col gap-6 max-lg:items-center max-lg:text-center lg:text-left">
           {/* Subline - 16px, weight 300, tracking 0.08em, opacity 70% */}
@@ -56,7 +59,7 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
               ...getAnimationStyle(0),
             }}
           >
-            you are not one thing.
+            once you see it, you can&apos;t unsee it.
           </p>
           
           {/* Hero headline - responsive sizing to prevent overflow */}
@@ -83,7 +86,7 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
               ...getAnimationStyle(600),
             }}
           >
-            where identity takes form
+            an identity observatory.
           </p>
           
           {/* Enter button - 13px, weight 400, tracking 0.1em */}
@@ -92,8 +95,10 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
               onClick={handleEnterClick}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              className="px-8 py-3 rounded-full lowercase transition-all"
+              className="inline-flex items-center rounded-full lowercase transition-all"
               style={{
+                gap: isHovered ? "14px" : "10px",
+                padding: "12px 32px",
                 fontSize: "13px",
                 fontWeight: 400,
                 letterSpacing: "0.1em",
@@ -102,13 +107,30 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
                 color: buttonFlash || isHovered ? "#0A0A0A" : "#FFFDFD",
               }}
             >
-              enter
+              <span>enter</span>
+              <span
+                className="inline-flex items-center"
+                style={{
+                  transform: isHovered ? "translateX(3px)" : "translateX(0)",
+                  transition: "transform .3s",
+                }}
+              >
+                <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+                  <path
+                    d="M0.5 5H15M15 5L10.5 0.5M15 5L10.5 9.5"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
             </button>
           </div>
         </div>
         
         {/* Right side - Identity formation particles (hidden on mobile) */}
-        <div className="max-lg:hidden relative h-[500px]" aria-hidden="true">
+        <div className="max-lg:hidden relative z-[1] h-[500px]" aria-hidden="true">
           <IdentityParticles />
         </div>
       </div>
