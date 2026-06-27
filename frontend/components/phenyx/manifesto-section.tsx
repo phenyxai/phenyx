@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { PlatformField } from "./platform-field";
 
-export function ManifestoSection() {
+/**
+ * "a first look" / "who are you, really?" — repurposed from the old manifesto
+ * section. Two-column grid: reference about copy on the left, the floating
+ * platform field on the right. Keeps the IntersectionObserver fade-in.
+ */
+export function AboutSection() {
   const [visibleParagraphs, setVisibleParagraphs] = useState<number[]>([]);
   const paragraphRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -12,7 +18,7 @@ export function ManifestoSection() {
     setPrefersReducedMotion(mediaQuery.matches);
 
     if (mediaQuery.matches) {
-      setVisibleParagraphs([0, 1, 2]);
+      setVisibleParagraphs([0, 1, 2, 3]);
       return;
     }
 
@@ -20,9 +26,13 @@ export function ManifestoSection() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const index = paragraphRefs.current.indexOf(entry.target as HTMLParagraphElement);
-            if (index !== -1 && !visibleParagraphs.includes(index)) {
-              setVisibleParagraphs((prev) => [...prev, index]);
+            const index = paragraphRefs.current.indexOf(
+              entry.target as HTMLParagraphElement
+            );
+            if (index !== -1) {
+              setVisibleParagraphs((prev) =>
+                prev.includes(index) ? prev : [...prev, index]
+              );
             }
           }
         });
@@ -35,7 +45,7 @@ export function ManifestoSection() {
     });
 
     return () => observer.disconnect();
-  }, [visibleParagraphs]);
+  }, []);
 
   const getAnimationStyle = (index: number) => {
     if (prefersReducedMotion) {
@@ -50,64 +60,97 @@ export function ManifestoSection() {
   };
 
   return (
-    <section 
-      id="manifesto" 
-      className="w-full px-6 md:px-20"
-      style={{ 
-        paddingTop: "80px", 
-        paddingBottom: "80px", 
-      }}
-    >
-      <div 
-        className="mx-auto"
-        style={{ maxWidth: "1100px" }}
-      >
-      <div 
-        style={{ maxWidth: "720px" }}
-      >
-        {/* Body paragraphs - 20px, weight 300, line height 1.7, 32px spacing */}
-        <div className="flex flex-col lowercase" style={{ gap: "32px" }}>
-          <p
-            ref={(el) => { paragraphRefs.current[0] = el; }}
-            style={{
-              fontSize: "20px",
-              fontWeight: 300,
-              lineHeight: 1.7,
-              color: "rgba(255,253,253,0.9)",
-              ...getAnimationStyle(0),
-            }}
-          >
-            every platform gave you a box. linkedin made you a professional. instagram made you an aesthetic. tiktok made you a moment. x made you an opinion.
-          </p>
+    <section id="s0-about" className="w-full px-6 md:px-20" style={{ paddingTop: "100px", paddingBottom: "100px" }}>
+      <div className="mx-auto" style={{ maxWidth: "1100px" }}>
+        {/* Eyebrow */}
+        <p
+          className="uppercase"
+          style={{
+            fontSize: "11px",
+            letterSpacing: "0.2em",
+            color: "rgba(255,253,253,0.5)",
+            marginBottom: "26px",
+          }}
+        >
+          a first look
+        </p>
 
-          <p
-            ref={(el) => { paragraphRefs.current[1] = el; }}
-            style={{
-              fontSize: "20px",
-              fontWeight: 300,
-              lineHeight: 1.7,
-              color: "rgba(255,253,253,0.9)",
-              ...getAnimationStyle(1),
-            }}
-          >
-            you have built a life across the internet, but no platform has ever shown you what it adds up to.
-          </p>
+        {/* Headline */}
+        <h2
+          className="lowercase"
+          style={{
+            fontSize: "clamp(32px, 4.6vw, 52px)",
+            fontWeight: 400,
+            lineHeight: 1.16,
+            marginBottom: "24px",
+            maxWidth: "760px",
+            color: "#FFFDFD",
+          }}
+        >
+          who are you, really?
+        </h2>
 
-          {/* Emphasis paragraph - 20px, weight 600 */}
-          <p
-            ref={(el) => { paragraphRefs.current[2] = el; }}
-            style={{
-              fontSize: "20px",
-              fontWeight: 600,
-              lineHeight: 1.7,
-              color: "#FFFDFD",
-              ...getAnimationStyle(2),
-            }}
-          >
-            <span className="uppercase">PHENYX</span> shows you who you are across your digital life.
-          </p>
+        {/* Two-column grid: copy + platform field */}
+        <div className="grid lg:grid-cols-2 gap-10 items-start">
+          <div className="lowercase" style={{ maxWidth: "560px" }}>
+            <p
+              ref={(el) => { paragraphRefs.current[0] = el; }}
+              style={{
+                fontSize: "17px",
+                fontWeight: 300,
+                lineHeight: 1.6,
+                color: "rgba(255,253,253,0.62)",
+                marginBottom: "22px",
+                ...getAnimationStyle(0),
+              }}
+            >
+              every platform gave you a box.
+            </p>
+            <p
+              ref={(el) => { paragraphRefs.current[1] = el; }}
+              style={{
+                fontSize: "17px",
+                fontWeight: 300,
+                lineHeight: 1.6,
+                color: "rgba(255,253,253,0.62)",
+                marginBottom: "22px",
+                ...getAnimationStyle(1),
+              }}
+            >
+              linkedin made you a professional. instagram made you an aesthetic. tiktok made you a moment. x made you an opinion.
+            </p>
+            <p
+              ref={(el) => { paragraphRefs.current[2] = el; }}
+              style={{
+                fontSize: "17px",
+                fontWeight: 300,
+                lineHeight: 1.6,
+                color: "rgba(255,253,253,0.62)",
+                marginBottom: "22px",
+                ...getAnimationStyle(2),
+              }}
+            >
+              you have built a life across the internet, but no one has ever shown you what it all adds up to.
+            </p>
+            <p
+              ref={(el) => { paragraphRefs.current[3] = el; }}
+              style={{
+                fontSize: "17px",
+                fontWeight: 300,
+                lineHeight: 1.6,
+                color: "rgba(255,253,253,0.62)",
+                marginBottom: 0,
+                ...getAnimationStyle(3),
+              }}
+            >
+              <strong style={{ color: "#FFFDFD", fontWeight: 700 }}>
+                <span className="uppercase">PHENYX</span> does.
+              </strong>
+            </p>
+          </div>
+
+          <PlatformField />
         </div>
-      </div>
       </div>
     </section>
   );

@@ -62,21 +62,27 @@ export function Navigation({ onEnterClick }: NavigationProps) {
             </span>
           </div>
 
-          <div className="max-lg:hidden lg:flex items-center gap-4 sm:gap-6 md:gap-10 lg:gap-14">
+          <div className="max-lg:hidden lg:flex items-center gap-4 sm:gap-6 md:gap-8 lg:gap-12">
             <a
-              href="#manifesto"
+              href="#s0-about"
               className="text-[12px] sm:text-[14px] lowercase text-[#FFFDFD]/80 hover:text-[#FFFDFD] transition-colors font-light tracking-wide whitespace-nowrap"
             >
-              about
+              a first look
             </a>
             <a
-              href="#mission"
+              href="#s0-how"
               className="text-[12px] sm:text-[14px] lowercase text-[#FFFDFD]/80 hover:text-[#FFFDFD] transition-colors font-light tracking-wide whitespace-nowrap"
             >
-              our mission
+              how it works
             </a>
             <a
-              href="#footer"
+              href="#s0-mission"
+              className="text-[12px] sm:text-[14px] lowercase text-[#FFFDFD]/80 hover:text-[#FFFDFD] transition-colors font-light tracking-wide whitespace-nowrap"
+            >
+              your constellation
+            </a>
+            <a
+              href="#s0-cta"
               className="text-[12px] sm:text-[14px] lowercase text-[#FFFDFD]/80 hover:text-[#FFFDFD] transition-colors font-light tracking-wide whitespace-nowrap"
             >
               stay connected
@@ -128,21 +134,28 @@ export function Navigation({ onEnterClick }: NavigationProps) {
           onClick={(e) => e.stopPropagation()}
         >
           <a
-            href="#manifesto"
+            href="#s0-about"
             onClick={closeMenu}
             className="text-[22px] lowercase text-[#FFFDFD]/80 hover:text-[#FFFDFD] transition-colors font-light tracking-wide"
           >
-            about
+            a first look
           </a>
           <a
-            href="#mission"
+            href="#s0-how"
             onClick={closeMenu}
             className="text-[22px] lowercase text-[#FFFDFD]/80 hover:text-[#FFFDFD] transition-colors font-light tracking-wide"
           >
-            our mission
+            how it works
           </a>
           <a
-            href="#footer"
+            href="#s0-mission"
+            onClick={closeMenu}
+            className="text-[22px] lowercase text-[#FFFDFD]/80 hover:text-[#FFFDFD] transition-colors font-light tracking-wide"
+          >
+            your constellation
+          </a>
+          <a
+            href="#s0-cta"
             onClick={closeMenu}
             className="text-[22px] lowercase text-[#FFFDFD]/80 hover:text-[#FFFDFD] transition-colors font-light tracking-wide"
           >
