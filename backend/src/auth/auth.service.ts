@@ -254,7 +254,7 @@ export class AuthService {
     const userId = created.user.id;
 
     const { error: profileErr } = await admin.from("user_profiles").insert({
-      user_id: userId,
+      id: userId,
       display_name: draft.name,
       passphrase_hash: draft.passphrase_hash,
       passphrase_algo: PASSPHRASE_ALGO,
@@ -370,7 +370,7 @@ export class AuthService {
       if (ok) {
         matchCount += 1;
         matched = {
-          userId: row.user_id,
+          userId: row.id,
           displayName: row.display_name ?? null,
         };
       }
@@ -389,7 +389,7 @@ export class AuthService {
   /** Case-insensitive exact match on display_name (LIKE metachars escaped). */
   private async loadCandidates(name: string): Promise<
     Array<{
-      user_id: string;
+      id: string;
       display_name: string | null;
       passphrase_hash: string | null;
     }>
@@ -400,7 +400,7 @@ export class AuthService {
     const { data, error } = await this.supabase
       .getClient()
       .from("user_profiles")
-      .select("user_id, display_name, passphrase_hash")
+      .select("id, display_name, passphrase_hash")
       .ilike("display_name", escapeLikePattern(normalized))
       .limit(MAX_NAME_CANDIDATES);
 
@@ -410,7 +410,7 @@ export class AuthService {
       return [];
     }
     return (data ?? []) as Array<{
-      user_id: string;
+      id: string;
       display_name: string | null;
       passphrase_hash: string | null;
     }>;
