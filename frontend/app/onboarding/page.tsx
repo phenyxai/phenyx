@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import type { OnairosCompleteData } from "onairos";
 import { OnairosButtonWrapper } from "@/components/onairos-button-wrapper";
@@ -459,13 +460,17 @@ export default function OnboardingPage() {
         {/* Each advances onboarding_step to the correct next step.          */}
         {/* ================================================================ */}
 
-        {/* PHE-15 will implement: manifesto (s4A/s4B) */}
+        {/* ================================================================ */}
+        {/* s4A/s4B — MANIFESTO MOMENT (PHE-15, fully implemented)           */}
+        {/* Variant is resolved centrally (MANIFESTO_VARIANT = "s4B"); the    */}
+        {/* gentle s4B renders, the staggered s4A ships but is unreachable.   */}
+        {/* ================================================================ */}
         {step === "manifesto" && (
-          <PlaceholderScreen
-            label="manifesto"
+          <ManifestoScreen
             stellarColor={stellarColor}
-            ctaLabel="continue"
-            onContinue={advance}
+            reducedMotion={prefersReducedMotion}
+            onContinue={() => void setOnboardingStep("polaris_intro")}
+            onBack={goBack}
           />
         )}
 
@@ -649,6 +654,293 @@ function PlaceholderScreen({
       >
         {ctaLabel}
       </button>
+    </div>
+  );
+}
+
+// ============================================================================
+// Staggered reveal — reusable mechanism (PHE-15; reused by PHE-16 for s5).
+// ----------------------------------------------------------------------------
+// State-driven (not CSS `.in`-class driven): given an ordered list of `data-d`
+// millisecond offsets, useStaggeredReveal returns a boolean[] of the same
+// length where entry `i` flips true at `offsets[i] + lead` ms after mount.
+// Each rendered element toggles its own opacity/transform off that flag via
+// revealStyle(), and any CTA additionally gates pointer-events on it so it
+// stays inert until its own offset elapses.
+//
+// Re-entry replay: screens mount fresh via the `key={step}` wrapper, so mount
+// === screen entry. The effect still explicitly resets every entry to `false`
+// before scheduling, so a back-then-forward replays from hidden rather than
+// showing a static already-revealed screen. Timers are cleared on unmount to
+// avoid leaks / double-fires.
+//
+// Reduced motion: every entry starts (and stays) true — no timers, no fade-in,
+// CTA enabled immediately — so reduced-motion users are never gated.
+// ============================================================================
+function useStaggeredReveal(
+  offsets: number[],
+  opts: { lead: number; reducedMotion: boolean }
+): boolean[] {
+  const { lead, reducedMotion } = opts;
+  const key = offsets.join(",");
+  const [revealed, setRevealed] = useState<boolean[]>(() =>
+    offsets.map(() => reducedMotion)
+  );
+
+  useEffect(() => {
+    if (reducedMotion) {
+      setRevealed(offsets.map(() => true));
+      return;
+    }
+    // Clear-then-set so re-entry re-fires instead of showing a static screen.
+    setRevealed(offsets.map(() => false));
+    const timers = offsets.map((d, i) =>
+      setTimeout(() => {
+        setRevealed((prev) => {
+          const next = prev.slice();
+          next[i] = true;
+          return next;
+        });
+      }, d + lead)
+    );
+    return () => timers.forEach(clearTimeout);
+    // `key` captures the offsets list by value; offsets identity is irrelevant.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, lead, reducedMotion]);
+
+  return revealed;
+}
+
+// Per-element reveal style: hidden = faded + nudged down; shown = settled in.
+function revealStyle(shown: boolean): CSSProperties {
+  return {
+    opacity: shown ? 1 : 0,
+    transform: shown ? "translateY(0)" : "translateY(8px)",
+    transition: "opacity 0.8s ease, transform 0.8s ease",
+  };
+}
+
+// ============================================================================
+// Manifesto Moment (s4A/s4B) — PHE-15
+// ----------------------------------------------------------------------------
+// Variant selection is centralized here, NOT branched in screen markup: per the
+// locked decision the gentle s4B renders. s4A is retained as data + rendered
+// markup but is unreachable unless MANIFESTO_VARIANT is flipped back to "s4A".
+// ============================================================================
+type ManifestoVariant = "s4A" | "s4B";
+const MANIFESTO_VARIANT: ManifestoVariant = "s4B";
+
+type RevealBlock = {
+  kind: "eyebrow" | "heading" | "body" | "line" | "cta" | "back";
+  text: string;
+  d: number; // data-d ms offset
+  stellar?: boolean;
+};
+
+// s4A (manifesto) — retained-but-unreachable staggered emotional read. Lead +200
+// ports the prototype's animML('#ml4').
+const S4A_BLOCKS: RevealBlock[] = [
+  { kind: "line", text: "you have spent years becoming someone acceptable.", d: 0 },
+  { kind: "line", text: "editing yourself before anyone could see you.", d: 1400 },
+  { kind: "line", text: "waiting until you were ready. until you were enough.", d: 2800 },
+  { kind: "line", text: "you already are.", d: 4400, stellar: true },
+  { kind: "cta", text: "continue", d: 5800 },
+];
+
+// s4B (gentle) — the shipped variant. Lead +150 ports animGR('#s4B').
+const S4B_BLOCKS: RevealBlock[] = [
+  { kind: "eyebrow", text: "what phenyx is", d: 0 },
+  { kind: "heading", text: "a mirror, not a map.", d: 200 },
+  {
+    kind: "body",
+    text:
+      "most identity tools show you who you could become. PHENYX shows you who you already are, using the behavioral signals you leave behind every day without realizing it.",
+    d: 700,
+  },
+  {
+    kind: "body",
+    text:
+      "the patterns you leave behind every day, what you return to, what you avoid, what you cannot stop doing, those are the signals. PHENYX reads them.",
+    d: 1500,
+  },
+  { kind: "cta", text: "continue", d: 3400 },
+  { kind: "back", text: "back", d: 3600 },
+];
+
+const MANIFESTO_CONFIG: Record<ManifestoVariant, { lead: number; blocks: RevealBlock[] }> = {
+  s4A: { lead: 200, blocks: S4A_BLOCKS },
+  s4B: { lead: 150, blocks: S4B_BLOCKS },
+};
+
+function ManifestoScreen({
+  stellarColor,
+  reducedMotion,
+  onContinue,
+  onBack,
+}: {
+  stellarColor: string;
+  reducedMotion: boolean;
+  onContinue: () => void;
+  onBack: () => void;
+}) {
+  const { lead, blocks } = MANIFESTO_CONFIG[MANIFESTO_VARIANT];
+  const revealed = useStaggeredReveal(
+    blocks.map((b) => b.d),
+    { lead, reducedMotion }
+  );
+
+  return (
+    <div style={{ textAlign: "center", maxWidth: 560, width: "100%" }}>
+      {blocks.map((block, i) => {
+        const shown = revealed[i];
+        const reveal = revealStyle(shown);
+
+        switch (block.kind) {
+          case "eyebrow":
+            return (
+              <p
+                key={i}
+                style={{
+                  ...reveal,
+                  fontSize: "10px",
+                  color: stellarColor,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.22em",
+                  marginBottom: "20px",
+                }}
+              >
+                {block.text}
+              </p>
+            );
+
+          case "heading":
+            return (
+              <h1
+                key={i}
+                style={{
+                  ...reveal,
+                  fontSize: "28px",
+                  fontWeight: 300,
+                  color: "#FFFDFD",
+                  letterSpacing: "0.01em",
+                  lineHeight: 1.4,
+                  marginBottom: "28px",
+                }}
+              >
+                {block.text}
+              </h1>
+            );
+
+          case "body":
+          case "line":
+            return (
+              <p
+                key={i}
+                style={{
+                  ...reveal,
+                  fontSize: block.kind === "line" ? "20px" : "15px",
+                  fontWeight: 300,
+                  color: block.stellar ? stellarColor : "#888",
+                  lineHeight: 1.7,
+                  marginBottom: "22px",
+                }}
+              >
+                {block.text}
+              </p>
+            );
+
+          case "cta":
+            // Gated: inert (pointer-events none + disabled) until its own
+            // data-d offset elapses, so the user cannot skip ahead.
+            return (
+              <button
+                key={i}
+                onClick={onContinue}
+                disabled={!shown}
+                aria-label={block.text}
+                style={{
+                  ...reveal,
+                  pointerEvents: shown ? "all" : "none",
+                  marginTop: "16px",
+                  background: "transparent",
+                  border: `0.5px solid ${stellarColor}`,
+                  color: stellarColor,
+                  borderRadius: "8px",
+                  padding: "13px 36px",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  cursor: shown ? "pointer" : "default",
+                  fontFamily: "inherit",
+                  transition:
+                    "opacity 0.8s ease, transform 0.8s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (!shown) return;
+                  e.currentTarget.style.background = "#FFFDFD";
+                  e.currentTarget.style.color = "#0A0A0A";
+                  e.currentTarget.style.borderColor = "#FFFDFD";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = stellarColor;
+                  e.currentTarget.style.borderColor = stellarColor;
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.outline = `2px solid ${stellarColor}`;
+                  e.currentTarget.style.outlineOffset = "2px";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.outline = "none";
+                }}
+              >
+                {block.text}
+              </button>
+            );
+
+          case "back":
+            // Gentle-only "back" link → fork. Also gated on its own offset.
+            return (
+              <div key={i} style={{ marginTop: "24px" }}>
+                <button
+                  onClick={onBack}
+                  disabled={!shown}
+                  aria-label="go back to the previous step"
+                  style={{
+                    ...reveal,
+                    pointerEvents: shown ? "all" : "none",
+                    background: "none",
+                    border: "none",
+                    color: "#555",
+                    fontSize: "12px",
+                    cursor: shown ? "pointer" : "default",
+                    fontFamily: "inherit",
+                    transition:
+                      "opacity 0.8s ease, transform 0.8s ease, color 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!shown) return;
+                    e.currentTarget.style.color = "#999";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#555";
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.outline = `2px solid ${stellarColor}`;
+                    e.currentTarget.style.outlineOffset = "2px";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.outline = "none";
+                  }}
+                >
+                  {block.text}
+                </button>
+              </div>
+            );
+
+          default:
+            return null;
+        }
+      })}
     </div>
   );
 }
