@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { getRandomStellarColor } from "@/lib/stellar";
-import { apiFetch, signupStart } from "@/lib/api-client";
+import { signupStart, otpSend, otpVerify } from "@/lib/api-client";
+import { setSessionFromTokens } from "@/lib/supabase-browser";
 
 // s1 = account creation (name + email + passphrase); s2 = email OTP.
 type Screen = "s1" | "s2";
@@ -138,21 +139,28 @@ export default function JoinPage() {
     setError("");
 
     try {
-      // OTP verify + account creation land in PHE-9. This calls the seam endpoint;
-      // until PHE-9 ships it, verify will surface a generic error.
-      const res = await apiFetch("/auth/otp/verify", {
-        method: "POST",
-        body: JSON.stringify({ draft_id: draftId, code: otp.trim() }),
+      // Verify the code; on success the backend creates the account (signup) and
+      // returns a session the browser adopts so the user is authenticated.
+      const result = await otpVerify({
+        draftId,
+        code: otp.trim(),
+        purpose: "signup",
       });
 
-      if (!res.ok) {
-        setError("that code didn't work. please try again.");
-        setIsLoading(false);
+      if (result.status === "ok" && result.session) {
+        await setSessionFromTokens(result.session);
+        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+        router.push("/welcome");
         return;
       }
 
-      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
-      router.push("/welcome");
+      // Distinct copy for expired vs. wrong (verbatim per spec).
+      setError(
+        result.status === "expired"
+          ? "that code has expired. request a new one below."
+          : "that code didn't work. check it and try again."
+      );
+      setIsLoading(false);
     } catch {
       setError("something went wrong. please try again.");
       setIsLoading(false);
@@ -164,11 +172,9 @@ export default function JoinPage() {
     setError("");
 
     try {
-      // Re-trigger the OTP send for the staged draft. PHE-9 owns this endpoint.
-      await apiFetch("/auth/otp/send", {
-        method: "POST",
-        body: JSON.stringify({ draft_id: draftId, purpose: "signup" }),
-      });
+      // Re-trigger the OTP send for the staged draft — a fresh code invalidates
+      // the prior one server-side.
+      await otpSend({ draftId, purpose: "signup" });
     } catch {
       // swallow — resend is best-effort; the timer is re-armed regardless
     } finally {
@@ -387,7 +393,7 @@ export default function JoinPage() {
                 {isLoading ? "verifying..." : "verify"}
               </button>
 
-              {showResend && (
+              {showResend ? (
                 <button
                   type="button"
                   onClick={handleResendCode}
@@ -406,6 +412,19 @@ export default function JoinPage() {
                 >
                   resend code
                 </button>
+              ) : (
+                // Cooldown state: a fresh code is on its way; resend re-enables in 30s.
+                <p
+                  aria-live="polite"
+                  style={{
+                    fontSize: "11px",
+                    color: "#444",
+                    textAlign: "center",
+                    margin: 0,
+                  }}
+                >
+                  code sent
+                </p>
               )}
 
               <button
