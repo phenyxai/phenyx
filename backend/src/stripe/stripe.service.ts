@@ -16,7 +16,11 @@ export class StripeService {
         throw new Error("Missing STRIPE_SECRET_KEY");
       }
       this.stripe = new StripeSDK(key, {
-        apiVersion: "2026-04-22.dahlia",
+        // Pinned runtime API version. Cast guards against stripe-SDK "apiVersion"
+        // literal-type drift when the lockfile-less install pulls a newer patch
+        // (see project memory: stripe drift). Does not change the version sent.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        apiVersion: "2026-04-22.dahlia" as any,
       });
     }
     return this.stripe;
