@@ -56,13 +56,15 @@ const NEXT_STEP: Record<OnboardingStep, OnboardingStep> = {
   done: "done",
 };
 
-// Back-arrow target for each screen. Placeholder semantics — later tickets
-// (PHE-15/16/17) own the real back behavior for their screens. `connect` goes
-// back to `fork` so the skip-path remains self-contained.
+// Back-arrow target for each screen. On the NORMAL path s6 (connect) follows the
+// Polaris intro, so `back` returns there. The s3b skip-path reaches connect by
+// bypassing manifesto + polaris_intro; if such a user taps back they land on the
+// polaris_intro screen (which they skipped) and the polaris_intro→manifesto→fork
+// chain remains intact — a sensible, non-dead-ending choice (PHE-17 decision).
 const PREV_STEP: Partial<Record<OnboardingStep, OnboardingStep>> = {
   manifesto: "fork",
   polaris_intro: "manifesto",
-  connect: "fork",
+  connect: "polaris_intro",
 };
 
 interface Particle {
@@ -73,6 +75,17 @@ interface Particle {
   radius: number;
   color: string;
   opacity: number;
+}
+
+// Normalized, lowercased platform/source names connected through the Onairos
+// SDK. `connectedSources` is the SDK's Ascend-friendly normalized list; we treat
+// its length as the authoritative count of connected platforms (with the trait
+// summary's accountsCount as a fallback for the >=1 gate in the callback).
+function getConnectedPlatforms(result: OnairosCompleteData): string[] {
+  const sources = Array.isArray(result.connectedSources) ? result.connectedSources : [];
+  return sources
+    .map((s) => (typeof s === "string" ? s.trim().toLowerCase() : ""))
+    .filter((s) => s.length > 0);
 }
 
 export default function OnboardingPage() {
@@ -86,8 +99,9 @@ export default function OnboardingPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
-  // Onairos state (used by the connect placeholder; PHE-17 builds the real s6)
-  const [onairosConnected, setOnairosConnected] = useState(false);
+  // s6 connect notice — shown when the SDK returns 0 connected platforms so the
+  // user stays on s6 and is prompted to connect at least one (PHE-17 gating).
+  const [connectNotice, setConnectNotice] = useState<string | null>(null);
 
   // --------------------------------------------------------------------------
   // Init: stellar color, reduced-motion, user, and resume-on-load.
@@ -228,20 +242,57 @@ export default function OnboardingPage() {
     if (prev) void setOnboardingStep(prev);
   }, [setOnboardingStep, step]);
 
-  // Onairos completion — persist redacted snapshot + fire-and-forget synthesis.
-  // Kept here (reused infra) so PHE-17 can build the real s6 on top of it.
+  // --------------------------------------------------------------------------
+  // s6 Onairos success callback (PHE-17 — the core logic).
+  // ----------------------------------------------------------------------------
+  // Token hygiene (acceptance criterion): the Onairos JWT (`result.token`) is
+  // held in memory ONLY for the duration of this callback / the synthesis
+  // trigger and is NEVER written durably — no localStorage, no onairos_connections,
+  // no user_profiles, no logs/analytics. The redaction step strips it before any
+  // persist; we never log `result.token`.
+  // --------------------------------------------------------------------------
   const handleOnairosComplete = useCallback((result: OnairosCompleteData) => {
-    setOnairosConnected(true);
+    // 1) Validate >= 1 connected platform. A cancel / explicit failure / empty
+    //    connection set must NOT advance — synthesis cannot run on an empty
+    //    trait object, so we keep the user on s6 with a visible prompt.
+    const platforms = getConnectedPlatforms(result);
+    const connectedCount =
+      platforms.length || result.ascendContext?.signalSummary?.accountsCount || 0;
+    if (result.cancelled || result.success === false || connectedCount < 1) {
+      setConnectNotice("connect at least one platform to continue.");
+      return;
+    }
+    setConnectNotice(null);
 
-    if (result.token) {
-      localStorage.setItem("onairos_token", result.token);
+    // 2) Redact (strip JWT/credential fields) before ANY durable persist.
+    const redacted = redactOnairosForProfile(result);
+
+    // 3) Persist per-platform connection rows + redacted snapshot (token-free).
+    //    `onairos_connections` is owned by another lane (PHE-31) and may not
+    //    exist in the DB yet — write defensively so a missing-table/RLS error is
+    //    logged + swallowed but never blocks the flow. Keyed on (user_id, platform).
+    if (userId && platforms.length > 0) {
+      const rows = platforms.map((platform) => ({
+        user_id: userId,
+        platform,
+        status: "connected",
+        redacted_snapshot: redacted,
+      }));
+      void supabase
+        .from("onairos_connections")
+        .upsert(rows, { onConflict: "user_id,platform" })
+        .then(({ error }) => {
+          if (error) {
+            console.warn("[onboarding] onairos_connections upsert:", error.message);
+          }
+        });
     }
 
-    const profilePayload = redactOnairosForProfile(result);
-    if (userId && Object.keys(profilePayload).length > 0) {
+    // Also keep a redacted (token-free) profile snapshot for personalization.
+    if (userId && Object.keys(redacted).length > 0) {
       void supabase
         .from("user_profiles")
-        .upsert({ id: userId, onairos_data: profilePayload })
+        .upsert({ id: userId, onairos_data: redacted })
         .then(({ error }) => {
           if (error) {
             console.warn("[onboarding] user_profiles.onairos_data upsert:", error.message);
@@ -249,7 +300,10 @@ export default function OnboardingPage() {
         });
     }
 
-    if (userId && result) {
+    // 4) Hand the FULL trait object to synthesis (the engine round-trips it
+    //    byte-identical as `onairos_snapshot`). Fire-and-forget — never awaited
+    //    in a way that blocks navigation (PHE-18 refines the loader UX).
+    if (userId) {
       apiFetch("/synthesize-constellation", {
         method: "POST",
         body: JSON.stringify({ userId, onairosData: result })
@@ -259,7 +313,10 @@ export default function OnboardingPage() {
           // Non-blocking — synthesis runs in the background (see spec feature 5).
         });
     }
-  }, [userId]);
+
+    // 5) Persist onboarding_step = synthesizing and advance toward the reveal.
+    void setOnboardingStep("synthesizing");
+  }, [userId, setOnboardingStep]);
 
   if (!mounted) {
     return <div style={{ minHeight: "100vh", background: "#0A0A0A" }} />;
@@ -491,73 +548,22 @@ export default function OnboardingPage() {
           />
         )}
 
-        {/* PHE-17 will implement: connect (s6 — Onairos platform connect).
-            The OnairosButtonWrapper + handleOnairosComplete are mounted here as
-            the reusable foundation; PHE-17 builds the real framing/copy/gating.
-            For now, "continue" advances to synthesizing. */}
+        {/* ================================================================ */}
+        {/* s6 — ONAIROS PLATFORM CONNECT (PHE-17, fully implemented)        */}
+        {/* Self-contained: the s3b skip-path lands here directly without the */}
+        {/* manifesto / polaris_intro having run, so this screen assumes no   */}
+        {/* prior narrative state. The CTA mounts the real Onairos SDK; the   */}
+        {/* success callback (handleOnairosComplete) validates >=1 platform,  */}
+        {/* persists a redacted (token-free) snapshot, fires synthesis, and   */}
+        {/* advances to synthesizing.                                        */}
+        {/* ================================================================ */}
         {step === "connect" && (
-          <div style={{ textAlign: "center", maxWidth: 400, width: "100%" }}>
-            <p
-              className="animate-fade-in"
-              style={{ fontSize: "11px", color: "#444", letterSpacing: "0.15em", marginBottom: "8px" }}
-            >
-              PHE-17 PLACEHOLDER
-            </p>
-            <p
-              className="animate-fade-in"
-              style={{
-                animationDelay: "150ms",
-                animationFillMode: "both",
-                fontSize: "18px",
-                fontWeight: 300,
-                color: "#FFFDFD",
-                marginBottom: "32px"
-              }}
-            >
-              connect
-            </p>
-
-            <div
-              className="animate-fade-in"
-              style={{
-                animationDelay: "300ms",
-                animationFillMode: "both",
-                display: "flex",
-                justifyContent: "center",
-                marginBottom: "32px"
-              }}
-            >
-              {!onairosConnected ? (
-                <OnairosButtonWrapper
-                  webpageName="PHENYX COLLECTIVE"
-                  requestedData={["personality"]}
-                  buttonType="pill"
-                  buttonText="connect with onairos"
-                  textColor="white"
-                  onComplete={(result) => handleOnairosComplete(result)}
-                />
-              ) : (
-                <span style={{ fontSize: "13px", color: "#666" }}>platforms connected</span>
-              )}
-            </div>
-
-            <button
-              onClick={advance}
-              aria-label="continue"
-              style={{
-                background: "transparent",
-                border: `0.5px solid ${stellarColor}`,
-                color: stellarColor,
-                borderRadius: "8px",
-                padding: "10px 32px",
-                fontSize: "13px",
-                cursor: "pointer",
-                fontFamily: "inherit"
-              }}
-            >
-              continue
-            </button>
-          </div>
+          <ConnectScreen
+            stellarColor={stellarColor}
+            notice={connectNotice}
+            onComplete={handleOnairosComplete}
+            onBack={goBack}
+          />
         )}
 
         {/* PHE-18 will implement: synthesizing (background-synthesis UX) */}
@@ -661,6 +667,205 @@ function PlaceholderScreen({
       >
         {ctaLabel}
       </button>
+    </div>
+  );
+}
+
+// ============================================================================
+// s6 Onairos Platform Connect (PHE-17)
+// ----------------------------------------------------------------------------
+// Verbatim, all-lowercase framing + 4 data-point bullets + the "sign in with
+// onairos" CTA (the real Onairos SDK, mounted via OnairosButtonWrapper). The
+// success path (validate >=1 platform → redact → persist → synthesize → advance)
+// lives in the parent's handleOnairosComplete; this screen only renders + wires
+// the SDK and surfaces the 0-platform notice.
+//
+// Self-contained: the s3b skip-path lands here directly, so it assumes no prior
+// manifesto / polaris_intro state.
+//
+// NOTE (.hidden CSS-collision guard, acceptance criterion): the Onairos SDK
+// leaks a global `.hidden` class into the page. PHENYX must NOT rely on a bare
+// `hidden` utility class anywhere or it gets clobbered — use Tailwind responsive
+// (`max-lg:hidden`) / scoped variants instead. Enforced via eslint.config.mjs
+// (no-restricted-syntax) + components/phenyx/CONVENTIONS.md.
+// ============================================================================
+const ONAIROS_BULLETS = [
+  "we never store your raw data. it's processed and immediately discarded.",
+  "everything your constellation produces belongs to you, always.",
+  "you can disconnect any platform at any time, directly through onairos.",
+  "connect at least 3 for the fuller picture, but you can start with one and add more whenever you want.",
+] as const;
+
+function ConnectScreen({
+  stellarColor,
+  notice,
+  onComplete,
+  onBack,
+}: {
+  stellarColor: string;
+  notice: string | null;
+  onComplete: (result: OnairosCompleteData) => void;
+  onBack: () => void;
+}) {
+  return (
+    <div style={{ textAlign: "center", maxWidth: 520, width: "100%" }}>
+      <p
+        className="animate-fade-in"
+        style={{
+          fontSize: "10px",
+          color: stellarColor,
+          textTransform: "uppercase",
+          letterSpacing: "0.22em",
+          marginBottom: "20px",
+        }}
+      >
+        powered by onairos
+      </p>
+
+      <h1
+        className="animate-fade-in"
+        style={{
+          animationDelay: "150ms",
+          animationFillMode: "both",
+          fontSize: "26px",
+          fontWeight: 300,
+          color: "#FFFDFD",
+          letterSpacing: "0.01em",
+          lineHeight: 1.4,
+          marginBottom: "24px",
+        }}
+      >
+        your data is the source of truth.
+      </h1>
+
+      <p
+        className="animate-fade-in"
+        style={{
+          animationDelay: "300ms",
+          animationFillMode: "both",
+          fontSize: "15px",
+          fontWeight: 300,
+          color: "#888",
+          lineHeight: 1.7,
+          marginBottom: "32px",
+        }}
+      >
+        onairos reads the signal layer beneath your platforms. not what you posted, the patterns underneath. what you play at 2am. what you search and don&apos;t act on. what you return to without thinking.
+      </p>
+
+      {/* 4 data-point bullets (exact order) */}
+      <ul
+        className="animate-fade-in"
+        style={{
+          animationDelay: "450ms",
+          animationFillMode: "both",
+          listStyle: "none",
+          padding: 0,
+          margin: "0 auto 32px",
+          maxWidth: 440,
+          textAlign: "left",
+        }}
+      >
+        {ONAIROS_BULLETS.map((bullet, i) => (
+          <li
+            key={i}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "12px",
+              marginBottom: i === ONAIROS_BULLETS.length - 1 ? 0 : "16px",
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                flexShrink: 0,
+                width: "5px",
+                height: "5px",
+                marginTop: "8px",
+                borderRadius: "50%",
+                background: stellarColor,
+              }}
+            />
+            <span
+              style={{
+                fontSize: "13px",
+                fontWeight: 300,
+                color: "#999",
+                lineHeight: 1.6,
+              }}
+            >
+              {bullet}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {/* 0-platform prompt — rendered only when the SDK returned no platforms. */}
+      {notice && (
+        <p
+          role="alert"
+          aria-live="assertive"
+          style={{
+            fontSize: "13px",
+            fontWeight: 400,
+            color: "#E84422",
+            lineHeight: 1.5,
+            marginBottom: "20px",
+          }}
+        >
+          {notice}
+        </p>
+      )}
+
+      {/* CTA — the real Onairos SDK mounts behind "sign in with onairos". */}
+      <div
+        className="animate-fade-in"
+        style={{
+          animationDelay: "600ms",
+          animationFillMode: "both",
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: "24px",
+        }}
+      >
+        <OnairosButtonWrapper
+          webpageName="PHENYX COLLECTIVE"
+          requestedData={["personality"]}
+          buttonType="pill"
+          buttonText="sign in with onairos"
+          textColor="white"
+          onComplete={onComplete}
+        />
+      </div>
+
+      {/* back link → polaris_intro on the normal path (see PREV_STEP). */}
+      <div className="animate-fade-in" style={{ animationDelay: "750ms", animationFillMode: "both" }}>
+        <button
+          onClick={onBack}
+          aria-label="go back to the previous step"
+          style={{
+            background: "none",
+            border: "none",
+            color: "#555",
+            fontSize: "12px",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            transition: "color 0.2s ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#999")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
+          onFocus={(e) => {
+            e.currentTarget.style.outline = `2px solid ${stellarColor}`;
+            e.currentTarget.style.outlineOffset = "2px";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.outline = "none";
+          }}
+        >
+          back
+        </button>
+      </div>
     </div>
   );
 }
