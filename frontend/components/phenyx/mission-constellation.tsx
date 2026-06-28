@@ -83,24 +83,53 @@ export function MissionConstellation({
     const labelLevels = POS.map((_, i) => (i === activeIndex ? 1 : 0));
     let lastFrameT: number | null = null;
 
+    // Width-dependent values recomputed in resize() (rotation/resize-safe).
+    // pt() and findHoveredNode() both read these mutable closure vars so the
+    // drawn geometry and hit-testing always stay in sync.
+    let fontSizeNow = fontSize;
+    let padTop = fontSizeNow + 8;
+    let padBottom = fontSizeNow + 14;
+    let padX = 12;
+
     const HEIGHT_RATIO = heightRatio;
     const maxH = maxHeight;
     const maxHMobile = maxHeightMobile;
+    // Effective mobile cap is raised so the node band (ry 0.12→0.88) isn't
+    // crushed into ~100–140px on short viewports.
+    const MOBILE_HEIGHT_RATIO = 0.72;
+    const MOBILE_MAX_HEIGHT = 360;
+    const MOBILE_FONT_SIZE = 11;
 
     function resize() {
       const dpr = window.devicePixelRatio || 1;
       W = canvas!.offsetWidth;
-      const effectiveMax = window.innerWidth <= 780 ? maxHMobile : maxH;
-      const computedH = Math.min(W * HEIGHT_RATIO, effectiveMax);
+      const isMobile = window.innerWidth <= 780;
+      const ratio = isMobile ? MOBILE_HEIGHT_RATIO : HEIGHT_RATIO;
+      const effectiveMax = isMobile
+        ? Math.max(maxHMobile, MOBILE_MAX_HEIGHT)
+        : maxH;
+      const computedH = Math.min(W * ratio, effectiveMax);
       H = computedH;
+      // Smaller label font on the narrowest viewports.
+      fontSizeNow = window.innerWidth <= 420 ? MOBILE_FONT_SIZE : fontSize;
+      // Paddings reserve room for label extents so insetting keeps labels
+      // (drawn above/below nodes) inside the canvas.
+      padTop = fontSizeNow + 8;
+      padBottom = fontSizeNow + 14;
+      padX = 12;
       canvas!.style.height = computedH + "px";
       canvas!.width = Math.round(W * dpr);
       canvas!.height = Math.round(H * dpr);
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
+    // Map node coords into an inner, label-padded sub-rect (CSS-space px)
+    // instead of edge-to-edge, so nodes + labels never reach the canvas edges.
     function pt(p: { rx: number; ry: number }) {
-      return { x: p.rx * W, y: p.ry * H };
+      return {
+        x: padX + p.rx * (W - 2 * padX),
+        y: padTop + p.ry * (H - padTop - padBottom),
+      };
     }
 
     // ── entrance animation ────────────────────────────────────────────
@@ -256,12 +285,30 @@ export function MissionConstellation({
         labelLevels.forEach((lvl, i) => {
           if (lvl <= 0.03 || nodeRevealProgress(i, now) < 1) return;
           const pos = pt(POS[i]);
-          ctx!.font = `600 ${fontSize}px Plus Jakarta Sans, sans-serif`;
+          const name = PILLAR_NAMES[i];
+          ctx!.font = `600 ${fontSizeNow}px Plus Jakarta Sans, sans-serif`;
           ctx!.fillStyle = `rgba(${rgb},${0.95 * Math.min(1, lvl)})`;
           ctx!.textAlign = "center";
-          const labelY =
-            POS[i].ry > 0.7 ? pos.y + (fontSize + 10) : pos.y - (fontSize + 4);
-          ctx!.fillText(PILLAR_NAMES[i], pos.x, labelY);
+          // Safety-net clamping on top of the inset mapping.
+          const halfTextWidth = ctx!.measureText(name).width / 2;
+          // Clamp X so centered text never overruns left/right edges.
+          const labelX = Math.max(
+            halfTextWidth + 2,
+            Math.min(W - halfTextWidth - 2, pos.x)
+          );
+          const belowY = pos.y + (fontSizeNow + 10);
+          const aboveY = pos.y - (fontSizeNow + 4);
+          let labelY = POS[i].ry > 0.7 ? belowY : aboveY;
+          // Flip a top-label that would clip above; flip a bottom-label that
+          // would clip below.
+          if (labelY - fontSizeNow < 2) {
+            labelY = belowY;
+          } else if (labelY + 4 > H) {
+            labelY = aboveY;
+          }
+          // Final clamp keeps the baseline inside the canvas.
+          labelY = Math.max(fontSizeNow, Math.min(H - 4, labelY));
+          ctx!.fillText(name, labelX, labelY);
         });
       }
       animId = requestAnimationFrame(draw);
@@ -283,11 +330,15 @@ export function MissionConstellation({
       const rect = canvas!.getBoundingClientRect();
       const mx = (e.clientX - rect.left) * (canvas!.width / rect.width);
       const my = (e.clientY - rect.top) * (canvas!.height / rect.height);
+      const dpr = window.devicePixelRatio || 1;
       let closestIdx = -1;
-      let closestDist = 28 * (window.devicePixelRatio || 1);
+      let closestDist = 28 * dpr;
       POS.forEach((p, i) => {
-        const px = p.rx * canvas!.width;
-        const py = p.ry * canvas!.height;
+        // Use the SAME inset mapping as pt() (CSS-space) scaled to device px,
+        // so hit-testing lines up with the drawn nodes.
+        const cs = pt(p);
+        const px = cs.x * dpr;
+        const py = cs.y * dpr;
         const d = Math.sqrt((mx - px) * (mx - px) + (my - py) * (my - py));
         if (d < closestDist) {
           closestDist = d;
