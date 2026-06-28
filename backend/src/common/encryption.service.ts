@@ -46,4 +46,18 @@ export class EncryptionService {
       decipher.final(),
     ]).toString("utf8");
   }
+
+  /**
+   * Keyed HMAC-SHA256 fingerprint (hex) of a value, using ENCRYPTION_KEY.
+   *
+   * Used by PHE-12 to both SIGN and store the passphrase-reset token: the raw
+   * token (high-entropy random) is emailed, and only its HMAC is persisted in
+   * passphrase_reset_tokens.token_hash. The keying means a leaked tokens table
+   * cannot be verified against guessed tokens without the server key, and
+   * recomputing the HMAC at confirm time is the signature check. Deterministic,
+   * so the same token always maps to the same lookup key.
+   */
+  sign(value: string): string {
+    return crypto.createHmac("sha256", this.getKey()).update(value).digest("hex");
+  }
 }

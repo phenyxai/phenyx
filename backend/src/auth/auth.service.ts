@@ -77,6 +77,11 @@ export interface VerifyContext {
   ip?: string;
 }
 
+/** Result of a successful name+passphrase sign-in: a real GoTrue session. */
+export interface SigninResult {
+  session: OtpSession;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -384,6 +389,47 @@ export class AuthService {
 
     this.throttle.recordFailure(name, ctx.ip);
     return null;
+  }
+
+  /**
+   * Returning-user sign-in (PHE-12 wires `POST /auth/signin`). Verifies the
+   * name+passphrase pair (PHE-11), resolves the matched account's email, and
+   * mints a real GoTrue session. Returns null on ANY credential failure so the
+   * route answers with a single generic error — no distinction between an unknown
+   * name and a wrong passphrase, no enumeration. Propagates the 429 that
+   * verifyCredentials throws when the account/IP is locked out.
+   *
+   * The raw passphrase is never logged, echoed, or persisted.
+   */
+  async signin(
+    name: string,
+    passphrase: string,
+    ctx: VerifyContext = {}
+  ): Promise<SigninResult | null> {
+    // Throws 429 on lockout; returns null on unknown name / wrong / ambiguous.
+    const verified = await this.verifyCredentials(name, passphrase, ctx);
+    if (!verified) return null;
+
+    const email = await this.resolveUserEmail(verified.userId);
+    if (!email) {
+      // A matched profile with no resolvable auth user is anomalous; fail closed.
+      this.logger.error(`signin: no email for user ${verified.userId}`);
+      return null;
+    }
+
+    // requireExisting: the account is known, so a failure to mint is generic.
+    const session = await this.mintSession(email, { requireExisting: true });
+    if (!session) return null;
+    return { session };
+  }
+
+  /** Resolve an account's email from its auth.users id (service role). */
+  private async resolveUserEmail(userId: string): Promise<string | null> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .auth.admin.getUserById(userId);
+    if (error || !data?.user?.email) return null;
+    return data.user.email;
   }
 
   /** Case-insensitive exact match on display_name (LIKE metachars escaped). */
