@@ -10,6 +10,12 @@ async function bootstrap() {
     bodyParser: false,
   });
 
+  // Behind Render's reverse proxy: trust the first hop so req.ip is the real
+  // client IP (the X-Forwarded-For left-most), not the proxy. Without this the
+  // per-IP ThrottlerGuard and the per-IP login lockout would bucket ALL traffic
+  // under the proxy's single IP and 429 unrelated users.
+  app.set("trust proxy", 1);
+
   // Stripe webhook needs the raw body for signature verification.
   app.use("/stripe/webhook", express.raw({ type: "application/json" }));
   app.use(express.json());
