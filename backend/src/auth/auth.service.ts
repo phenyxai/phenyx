@@ -1,12 +1,13 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
 } from "@nestjs/common";
 import { randomBytes } from "crypto";
 import { SupabaseService } from "../supabase/supabase.service";
-import { OtpService } from "./otp.service";
-import { PassphraseService } from "./passphrase.service";
+import { OtpService, OtpPurpose, OtpVerifyOutcome } from "./otp.service";
+import { PassphraseService, PASSPHRASE_ALGO } from "./passphrase.service";
 import { LoginThrottleService } from "./login-throttle.service";
 import { SignupStartDto } from "./dto/signup-start.dto";
 
@@ -23,6 +24,46 @@ const MAX_NAME_CANDIDATES = 25;
 export interface SignupStartResult {
   draft_id: string;
   maskedEmail: string;
+}
+
+/** Tokens the browser adopts via supabase.auth.setSession after a verified OTP. */
+export interface OtpSession {
+  access_token: string;
+  refresh_token: string;
+}
+
+/** Request for POST /auth/otp/send (email OR draft_id resolves the recipient). */
+export interface OtpSendRequest {
+  email?: string;
+  draftId?: string;
+  purpose: OtpPurpose;
+}
+
+/** Request for POST /auth/otp/verify. */
+export interface OtpVerifyRequest {
+  email?: string;
+  draftId?: string;
+  code: string;
+  /** Defaulted by the caller: signup when a draft_id is present, else signin. */
+  purpose?: OtpPurpose;
+}
+
+/**
+ * Verify result. `status` mirrors OtpVerifyOutcome so the client can render the
+ * verbatim wrong/expired copy; `session` is present only on `ok`.
+ */
+export interface OtpVerifyResult {
+  status: OtpVerifyOutcome;
+  session?: OtpSession;
+}
+
+/** A staged signup row loaded for the verify path. */
+interface SignupDraftRow {
+  draft_id: string;
+  name: string;
+  email: string;
+  passphrase_hash: string;
+  expires_at: string;
 }
 
 /** Returned to the (future) signin route on a successful name+passphrase match. */
@@ -90,6 +131,198 @@ export class AuthService {
     await this.otp.sendCode({ email: dto.email, purpose: "signup" });
 
     return { draft_id: data.draft_id as string, maskedEmail: maskEmail(dto.email) };
+  }
+
+  /**
+   * Send (or resend) an OTP for an email or staged draft. Always returns a generic
+   * `{ maskedEmail }` regardless of whether an account exists (enumeration
+   * resistance); the OtpService dispatches identically. signup resolves the email
+   * from the draft so a stale draft sends the user back to s1 rather than emailing.
+   */
+  async otpSend(req: OtpSendRequest): Promise<{ maskedEmail: string }> {
+    const email = await this.resolveEmail(req.purpose, req.email, req.draftId);
+    await this.otp.sendCode({ email, purpose: req.purpose });
+    return { maskedEmail: maskEmail(email) };
+  }
+
+  /**
+   * Verify a submitted OTP. On success: signup → materialize the account from the
+   * draft and mint a session; signin → mint a session for the existing account.
+   * Any non-`ok` code outcome (wrong / expired / attempt-cap) is passed straight
+   * through so the client shows the matching verbatim copy. Account resolution
+   * failures map to a generic `invalid` (no enumeration).
+   */
+  async otpVerify(req: OtpVerifyRequest): Promise<OtpVerifyResult> {
+    const purpose: OtpPurpose = req.purpose ?? (req.draftId ? "signup" : "signin");
+
+    if (purpose === "signup") {
+      const draft = await this.loadDraft(req.draftId);
+      // No / expired draft: treat as expired so the UI prompts a fresh start.
+      if (!draft) return { status: "expired" };
+
+      const outcome = await this.otp.verifyCode({
+        email: draft.email,
+        purpose: "signup",
+        code: req.code,
+      });
+      if (outcome !== "ok") return { status: outcome };
+
+      const session = await this.completeSignup(draft);
+      return { status: "ok", session };
+    }
+
+    if (purpose === "signin") {
+      if (!req.email) throw new BadRequestException("email is required");
+
+      const outcome = await this.otp.verifyCode({
+        email: req.email,
+        purpose: "signin",
+        code: req.code,
+      });
+      if (outcome !== "ok") return { status: outcome };
+
+      // Existing-account-only: mintSession returns null for an unknown email,
+      // which we surface as a generic failure (no account-existence leak).
+      const session = await this.mintSession(req.email, { requireExisting: true });
+      if (!session) return { status: "invalid" };
+      return { status: "ok", session };
+    }
+
+    return { status: "invalid" };
+  }
+
+  /**
+   * Resolve the recipient email. signup uses the draft (the email lives there);
+   * signin takes the supplied email. Throws a generic error when neither yields one
+   * (the staged signup expired, or a malformed signin body).
+   */
+  private async resolveEmail(
+    purpose: OtpPurpose,
+    email?: string,
+    draftId?: string
+  ): Promise<string> {
+    if (purpose === "signup") {
+      const draft = await this.loadDraft(draftId);
+      if (!draft) {
+        throw new BadRequestException("this signup session has expired. start over.");
+      }
+      return draft.email;
+    }
+    if (!email) throw new BadRequestException("email is required");
+    return email;
+  }
+
+  /** Load a non-expired signup draft by id, or null. */
+  private async loadDraft(draftId?: string): Promise<SignupDraftRow | null> {
+    if (!draftId) return null;
+    const { data, error } = await this.supabase
+      .getClient()
+      .from("signup_drafts")
+      .select("draft_id, name, email, passphrase_hash, expires_at")
+      .eq("draft_id", draftId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`draft lookup failed: ${error.message}`);
+      return null;
+    }
+    if (!data) return null;
+    const row = data as SignupDraftRow;
+    if (new Date(row.expires_at).getTime() < Date.now()) return null;
+    return row;
+  }
+
+  /**
+   * Materialize an account from a verified draft: create auth.users (email
+   * pre-confirmed — ownership was just proven), insert user_profiles copying the
+   * draft's passphrase_hash + tagging passphrase_algo, with display_name = the
+   * draft name. stellar_color is LEFT NULL deliberately — PHE-13 assigns it. The
+   * draft is consumed and a session minted. Rolls back the orphaned auth user if
+   * the profile insert fails so a retry is clean.
+   */
+  private async completeSignup(draft: SignupDraftRow): Promise<OtpSession> {
+    const admin = this.supabase.getClient();
+
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email: draft.email,
+      email_confirm: true,
+    });
+    if (createErr || !created?.user) {
+      this.logger.error(`account creation failed: ${createErr?.message}`);
+      throw new InternalServerErrorException("could not complete signup");
+    }
+    const userId = created.user.id;
+
+    const { error: profileErr } = await admin.from("user_profiles").insert({
+      id: userId,
+      display_name: draft.name,
+      passphrase_hash: draft.passphrase_hash,
+      passphrase_algo: PASSPHRASE_ALGO,
+      // stellar_color intentionally omitted (NULL) — assigned by PHE-13.
+    });
+    if (profileErr) {
+      this.logger.error(`profile insert failed: ${profileErr.message}`);
+      await admin.auth.admin.deleteUser(userId).catch(() => undefined);
+      throw new InternalServerErrorException("could not complete signup");
+    }
+
+    // Consume the draft (best-effort; it also TTLs out on its own).
+    const { error: delErr } = await admin
+      .from("signup_drafts")
+      .delete()
+      .eq("draft_id", draft.draft_id);
+    if (delErr) this.logger.warn(`draft cleanup failed: ${delErr.message}`);
+
+    const session = await this.mintSession(draft.email, { requireExisting: false });
+    if (!session) {
+      throw new InternalServerErrorException("could not establish a session");
+    }
+    return session;
+  }
+
+  /**
+   * Mint a real GoTrue session (access + refresh tokens) for an email. The
+   * service-role client cannot issue a session, so we admin-generate a one-time
+   * link and immediately exchange its hashed token via the anon client.
+   *
+   * requireExisting=true (signin) uses a `recovery` link, which errors for an
+   * unknown email — returning null lets the caller fail generically WITHOUT
+   * creating an account. requireExisting=false (post-signup, user just created)
+   * uses a `magiclink` and treats failure as a real 500.
+   */
+  private async mintSession(
+    email: string,
+    opts: { requireExisting: boolean }
+  ): Promise<OtpSession | null> {
+    const linkType = opts.requireExisting ? "recovery" : "magiclink";
+    const admin = this.supabase.getClient();
+
+    // Branch the call so each literal narrows the discriminated GenerateLinkParams.
+    const { data: linkData, error: linkErr } = opts.requireExisting
+      ? await admin.auth.admin.generateLink({ type: "recovery", email })
+      : await admin.auth.admin.generateLink({ type: "magiclink", email });
+    const hashedToken = linkData?.properties?.hashed_token;
+    if (linkErr || !hashedToken) {
+      if (opts.requireExisting) return null;
+      this.logger.error(`session link generation failed: ${linkErr?.message}`);
+      throw new InternalServerErrorException("could not establish a session");
+    }
+
+    const anon = this.supabase.getAnonClient();
+    const { data: verifyData, error: verifyErr } = await anon.auth.verifyOtp({
+      token_hash: hashedToken,
+      type: linkType,
+    });
+    if (verifyErr || !verifyData?.session) {
+      if (opts.requireExisting) return null;
+      this.logger.error(`session exchange failed: ${verifyErr?.message}`);
+      throw new InternalServerErrorException("could not establish a session");
+    }
+
+    return {
+      access_token: verifyData.session.access_token,
+      refresh_token: verifyData.session.refresh_token,
+    };
   }
 
   /**

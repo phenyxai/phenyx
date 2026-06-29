@@ -51,3 +51,76 @@ export async function signupStart(input: {
   }
   return res.json()
 }
+
+// ---------------------------------------------------------------------------
+// Email OTP (PHE-9). Shared by the /join signup s2 step and (PHE-12) email
+// sign-in. Both endpoints are pre-auth (no bearer); on a successful verify the
+// backend returns a session the caller adopts via supabase-browser.
+// ---------------------------------------------------------------------------
+
+export type OtpPurpose = "signup" | "signin"
+
+/** Tokens returned on a successful verify; fed to supabase.auth.setSession. */
+export interface OtpSession {
+  access_token: string
+  refresh_token: string
+}
+
+/** `status` mirrors the backend outcome so callers can render the exact copy. */
+export interface OtpVerifyResult {
+  status: "ok" | "invalid" | "expired"
+  session?: OtpSession
+}
+
+/**
+ * Send (or resend) an email OTP. Pass `draftId` for signup or `email` for signin.
+ * Always resolves to a masked email on well-formed input — never reveals whether
+ * an account exists. Throws only on transport / 4xx validation errors.
+ */
+export async function otpSend(input: {
+  purpose: OtpPurpose
+  draftId?: string
+  email?: string
+}): Promise<{ maskedEmail: string }> {
+  const res = await fetch(`${API_BASE}/auth/otp/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      purpose: input.purpose,
+      ...(input.draftId ? { draft_id: input.draftId } : {}),
+      ...(input.email ? { email: input.email } : {}),
+    }),
+  })
+  if (!res.ok) throw new Error("could not send a code. please try again.")
+  return res.json()
+}
+
+/**
+ * Verify a submitted OTP. Returns a discriminated result: `ok` carries the
+ * session; `invalid` / `expired` drive the verbatim wrong/expired copy. The
+ * endpoint answers 200 for all three, so a non-ok HTTP status is a transport
+ * failure and is normalized to `invalid`.
+ */
+export async function otpVerify(input: {
+  code: string
+  draftId?: string
+  email?: string
+  purpose?: OtpPurpose
+}): Promise<OtpVerifyResult> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/otp/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: input.code,
+        ...(input.draftId ? { draft_id: input.draftId } : {}),
+        ...(input.email ? { email: input.email } : {}),
+        ...(input.purpose ? { purpose: input.purpose } : {}),
+      }),
+    })
+    if (!res.ok) return { status: "invalid" }
+    return (await res.json()) as OtpVerifyResult
+  } catch {
+    return { status: "invalid" }
+  }
+}
