@@ -16,3 +16,38 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`
   return fetch(`${API_BASE}${path}`, { ...init, headers })
 }
+
+export interface SignupStartResult {
+  draft_id: string
+  maskedEmail: string
+}
+
+/**
+ * Stage a pending signup (name + email + passphrase). Pre-auth — no bearer is
+ * attached. On success the backend sends an email OTP and returns the draft id +
+ * masked email; the raw passphrase is hashed server-side and never returned.
+ */
+export async function signupStart(input: {
+  name: string
+  email: string
+  passphrase: string
+}): Promise<SignupStartResult> {
+  const res = await fetch(`${API_BASE}/auth/signup/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) {
+    let message = "something went wrong. please try again."
+    try {
+      const body = await res.json()
+      // Nest ValidationPipe returns { message: string | string[] }.
+      if (Array.isArray(body?.message)) message = body.message[0]
+      else if (typeof body?.message === "string") message = body.message
+    } catch {
+      // non-JSON error body — keep the generic message
+    }
+    throw new Error(message)
+  }
+  return res.json()
+}

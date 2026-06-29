@@ -21,6 +21,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.45.0",
+    "argon2": "^0.41.1",
     "class-transformer": "^0.5.0",
     "class-validator": "^0.14.0",
     "express": "^4.21.2",
