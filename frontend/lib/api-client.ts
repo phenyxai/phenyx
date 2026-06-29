@@ -124,3 +124,84 @@ export async function otpVerify(input: {
     return { status: "invalid" }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Sign in + passphrase reset (PHE-12). All pre-auth (no bearer). Each endpoint
+// answers 200 with an `{ ok }`-shaped body so the outcome never leaks via HTTP
+// status, and the caller maps a failure to the single generic copy.
+// ---------------------------------------------------------------------------
+
+/** `ok: true` carries the session to adopt via supabase-browser. */
+export interface SigninResult {
+  ok: boolean
+  session?: OtpSession
+}
+
+/**
+ * Returning-user sign-in with name + passphrase. Resolves to `{ ok: false }` for
+ * any failure — an unknown name, a wrong passphrase, a lockout (429), or a
+ * transport error — so the UI shows one generic message (no enumeration).
+ */
+export async function signin(input: {
+  name: string
+  passphrase: string
+}): Promise<SigninResult> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/signin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+    if (!res.ok) return { ok: false }
+    return (await res.json()) as SigninResult
+  } catch {
+    return { ok: false }
+  }
+}
+
+/**
+ * Request a passphrase reset link. Enumeration-resistant: the backend always
+ * answers 200 whether or not the email maps to an account, and the UI shows the
+ * same success copy regardless. Errors are swallowed for the same reason — the
+ * caller only validates email shape client-side before calling.
+ */
+export async function passphraseResetRequest(input: {
+  email: string
+}): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/auth/passphrase/reset/request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+  } catch {
+    // Best-effort: never reveal delivery/account state to the caller.
+  }
+}
+
+/** `ok: false` covers an invalid, expired, or already-used token (one outcome). */
+export interface ResetConfirmResult {
+  ok: boolean
+}
+
+/**
+ * Confirm a passphrase reset with the single-use token from the emailed link and
+ * a new passphrase. Resolves to `{ ok: false }` for a rejected token or a
+ * transport error so the UI shows one generic "invalid or expired" message.
+ */
+export async function passphraseResetConfirm(input: {
+  token: string
+  newPassphrase: string
+}): Promise<ResetConfirmResult> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/passphrase/reset/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+    if (!res.ok) return { ok: false }
+    return (await res.json()) as ResetConfirmResult
+  } catch {
+    return { ok: false }
+  }
+}

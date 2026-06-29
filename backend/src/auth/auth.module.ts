@@ -5,6 +5,7 @@ import { AuthService } from "./auth.service";
 import { PassphraseService } from "./passphrase.service";
 import { LoginThrottleService } from "./login-throttle.service";
 import { OtpService } from "./otp.service";
+import { PassphraseResetService } from "./passphrase-reset.service";
 
 @Module({
   controllers: [AuthController],
@@ -14,6 +15,7 @@ import { OtpService } from "./otp.service";
     PassphraseService,
     LoginThrottleService,
     OtpService,
+    PassphraseResetService,
   ],
   // PassphraseService/OtpService exported for PHE-9/PHE-11/PHE-12 to reuse.
   // LoginThrottleService exported so PHE-12's signin/reset routes can share the
