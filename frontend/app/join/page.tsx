@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { getRandomStellarColor } from "@/lib/stellar";
+import { STELLAR_DEFAULT } from "@/lib/stellar";
 import { signupStart, otpSend, otpVerify } from "@/lib/api-client";
 import { setSessionFromTokens } from "@/lib/supabase-browser";
 
@@ -46,10 +46,10 @@ export default function JoinPage() {
       setStellarColor(stored);
       document.documentElement.style.setProperty("--color-stellar", stored);
     } else {
-      const color = getRandomStellarColor();
-      setStellarColor(color);
-      localStorage.setItem("phenyx_stellar_color", color);
-      document.documentElement.style.setProperty("--color-stellar", color);
+      // Pre-auth: no persisted identity yet. Use the deterministic default accent
+      // (not random) — the server-assigned color is adopted after account creation.
+      setStellarColor(STELLAR_DEFAULT);
+      document.documentElement.style.setProperty("--color-stellar", STELLAR_DEFAULT);
     }
 
     // Rehydrate a staged draft so refreshing s2 keeps the OTP screen. An expired

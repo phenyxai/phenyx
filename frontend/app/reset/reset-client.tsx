@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { getRandomStellarColor } from "@/lib/stellar";
+import { STELLAR_DEFAULT } from "@/lib/stellar";
 import { passphraseResetConfirm } from "@/lib/api-client";
 
 // form = enter a new passphrase. done = it's set, sign in again. The token comes
@@ -29,10 +29,10 @@ export default function ResetClient() {
       setStellarColor(stored);
       document.documentElement.style.setProperty("--color-stellar", stored);
     } else {
-      const color = getRandomStellarColor();
-      setStellarColor(color);
-      localStorage.setItem("phenyx_stellar_color", color);
-      document.documentElement.style.setProperty("--color-stellar", color);
+      // Pre-auth: no persisted identity yet. Use the deterministic default accent
+      // (not random) rather than inventing an identity color on the client.
+      setStellarColor(STELLAR_DEFAULT);
+      document.documentElement.style.setProperty("--color-stellar", STELLAR_DEFAULT);
     }
   }, []);
 
