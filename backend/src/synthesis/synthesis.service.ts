@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { SupabaseService } from "../supabase/supabase.service";
 import { EncryptionService } from "../common/encryption.service";
 import { CrisisService } from "./crisis.service";
+import { VoiceStandardService } from "../voice-standard/voice-standard.service";
 
 const PILLAR_POSITIONS: Record<string, { x: number; y: number }> = {
   ORIGIN: { x: 0.5, y: 0.88 },
@@ -27,7 +28,8 @@ export class SynthesisService {
     private readonly config: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly encryption: EncryptionService,
-    private readonly crisis: CrisisService
+    private readonly crisis: CrisisService,
+    private readonly voiceStandard: VoiceStandardService
   ) {}
 
   async synthesize(userId: string, body: SynthesizeBody) {
@@ -96,13 +98,13 @@ export class SynthesisService {
       }
     }
 
-    const systemPrompt = `you are the synthesis engine for PHENYX COLLECTIVE — the first identity observatory.
+    // Task-specific instructions only — voice/tone rules come from the shared
+    // Voice Standard block (PHE-20), composed below via buildSystemBlocks().
+    const taskInstructions = `you are the synthesis engine for PHENYX COLLECTIVE — the first identity observatory.
 
 your task: read a written personal reflection and optional platform behavioral signals, then synthesize a single precise emotionally resonant insight that names the pattern the person could not name themselves.
 
 this is not a summary. it is a recognition.
-
-voice: lowercase. poetic but never vague. direct but never clinical. warm but never soft.
 
 ${modeInstruction}
 
@@ -135,6 +137,9 @@ reflection: ${reflectionText}${constellationContext}`;
     };
 
     try {
+      // [Voice Standard] (cached) + [task instructions]; per-request grounding
+      // stays in the user message, after the cached prefix.
+      const system = await this.voiceStandard.buildSystemBlocks(taskInstructions);
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -145,13 +150,15 @@ reflection: ${reflectionText}${constellationContext}`;
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 500,
-          system: systemPrompt,
+          system,
           messages: [{ role: "user", content: userMessage }],
         }),
       });
       const claude: any = await res.json();
       synthesis = JSON.parse(claude.content[0].text.trim());
       if (typeof synthesis.insight !== "string") throw new Error("invalid shape");
+      // Plain-text guard — strip any markup the model slipped in.
+      synthesis.insight = this.voiceStandard.sanitizeProse(synthesis.insight);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error("synthesis error:", e);
