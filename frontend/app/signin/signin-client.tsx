@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { getRandomStellarColor } from "@/lib/stellar";
+import { STELLAR_DEFAULT } from "@/lib/stellar";
 import { signin, otpSend, otpVerify, passphraseResetRequest } from "@/lib/api-client";
 import { supabaseBrowser as supabase, setSessionFromTokens } from "@/lib/supabase-browser";
 
@@ -44,10 +44,10 @@ export default function SignInClient() {
       setStellarColor(stored);
       document.documentElement.style.setProperty("--color-stellar", stored);
     } else {
-      const color = getRandomStellarColor();
-      setStellarColor(color);
-      localStorage.setItem("phenyx_stellar_color", color);
-      document.documentElement.style.setProperty("--color-stellar", color);
+      // Pre-auth: no persisted identity yet. Use the deterministic default accent
+      // (not random); the persisted color is adopted once the user signs in.
+      setStellarColor(STELLAR_DEFAULT);
+      document.documentElement.style.setProperty("--color-stellar", STELLAR_DEFAULT);
     }
   }, []);
 

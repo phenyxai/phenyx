@@ -10,6 +10,7 @@ import { OtpService, OtpPurpose, OtpVerifyOutcome } from "./otp.service";
 import { PassphraseService, PASSPHRASE_ALGO } from "./passphrase.service";
 import { LoginThrottleService } from "./login-throttle.service";
 import { SignupStartDto } from "./dto/signup-start.dto";
+import { stellarColorFor } from "../common/stellar.util";
 
 /** Pending signups live ~15 minutes; an expired draft sends the user back to s1. */
 const DRAFT_TTL_MINUTES = 15;
@@ -241,9 +242,15 @@ export class AuthService {
    * Materialize an account from a verified draft: create auth.users (email
    * pre-confirmed — ownership was just proven), insert user_profiles copying the
    * draft's passphrase_hash + tagging passphrase_algo, with display_name = the
-   * draft name. stellar_color is LEFT NULL deliberately — PHE-13 assigns it. The
-   * draft is consumed and a session minted. Rolls back the orphaned auth user if
-   * the profile insert fails so a retry is clean.
+   * draft name. The draft is consumed and a session minted. Rolls back the
+   * orphaned auth user if the profile insert fails so a retry is clean.
+   *
+   * PHE-13: the row's permanent stellar color is computed here from the immutable
+   * pair `id + created_at` and persisted once. We pin `created_at` explicitly
+   * (rather than relying on the DB `now()` default) so the value we hash is
+   * exactly the value stored — the backfill migration's `stellar_color_for(id,
+   * created_at)` then resolves any row to the identical hex (see stellar.util.ts).
+   * The color is never recomputed or overwritten afterward (immutable identity).
    */
   private async completeSignup(draft: SignupDraftRow): Promise<OtpSession> {
     const admin = this.supabase.getClient();
@@ -258,12 +265,17 @@ export class AuthService {
     }
     const userId = created.user.id;
 
+    // Pin created_at so it is byte-for-byte the string fed into the color hash.
+    const createdAt = new Date().toISOString();
+    const stellarColor = stellarColorFor(userId, createdAt);
+
     const { error: profileErr } = await admin.from("user_profiles").insert({
       id: userId,
       display_name: draft.name,
       passphrase_hash: draft.passphrase_hash,
       passphrase_algo: PASSPHRASE_ALGO,
-      // stellar_color intentionally omitted (NULL) — assigned by PHE-13.
+      created_at: createdAt,
+      stellar_color: stellarColor,
     });
     if (profileErr) {
       this.logger.error(`profile insert failed: ${profileErr.message}`);

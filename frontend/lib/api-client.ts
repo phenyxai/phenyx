@@ -17,6 +17,31 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   return fetch(`${API_BASE}${path}`, { ...init, headers })
 }
 
+// ---------------------------------------------------------------------------
+// Session profile (PHE-13). The signed-in user's persisted identity, including
+// the server-assigned, immutable stellar_color. user_profiles is keyed by `id`
+// (= auth.users.id). Returns null when no one is signed in or the row is missing
+// so callers can fall back to an ambient default without throwing.
+// ---------------------------------------------------------------------------
+
+export interface SessionProfile {
+  id: string
+  display_name: string | null
+  stellar_color: string | null
+}
+
+export async function fetchProfile(): Promise<SessionProfile | null> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("id, display_name, stellar_color")
+    .eq("id", user.id)
+    .maybeSingle()
+  if (error || !data) return null
+  return data as SessionProfile
+}
+
 export interface SignupStartResult {
   draft_id: string
   maskedEmail: string
