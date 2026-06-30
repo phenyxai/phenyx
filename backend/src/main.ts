@@ -21,8 +21,16 @@ async function bootstrap() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // FRONTEND_ORIGIN may carry multiple origins (comma-separated) — staging is
+  // served from both a custom domain and the Render URL. The cors middleware
+  // reflects the matching origin from an array, which works with credentials.
+  const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter((o) => o.length > 0);
+
   app.enableCors({
-    origin: process.env.FRONTEND_ORIGIN,
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "OPTIONS"],
   });

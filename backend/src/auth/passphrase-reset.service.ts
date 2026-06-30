@@ -221,7 +221,11 @@ export class PassphraseResetService {
    * never surfaced — the user can simply request another link.
    */
   private async dispatchResetEmail(email: string, rawToken: string): Promise<void> {
-    const origin = this.config.get<string>("FRONTEND_ORIGIN") ?? "";
+    // FRONTEND_ORIGIN may be a comma-separated list (see main.ts CORS setup).
+    // The reset link needs a single canonical origin — use the first entry.
+    const origin = (this.config.get<string>("FRONTEND_ORIGIN") ?? "")
+      .split(",")[0]
+      .trim();
     const link = `${origin}/reset?token=${encodeURIComponent(rawToken)}`;
 
     const apiKey = this.config.get<string>("RESEND_API_KEY");
