@@ -77,6 +77,29 @@ interface Particle {
   opacity: number;
 }
 
+// ----------------------------------------------------------------------------
+// Synthesis result captured for the reveal's node-glow (PHE-18 → consumed by
+// PHE-19). Mirrors the 4 ACTIVE pillar scores from `constellation_state`
+// (0-100 ints) plus their synthesis paragraphs; the engine round-trips extra
+// fields, so an index signature keeps any additional payload intact. The 3
+// LOCKED pillars (becoming/recognition/transcendence) carry no score.
+//
+// Lifecycle:
+//   - null  → synthesis hasn't landed yet, OR it failed, OR no trigger ran.
+//             The reveal (PHE-19) falls back to neutral/equal glow on the 4
+//             active nodes; the dashboard hydrates the real scores later.
+//   - set   → synthesis resolved before/while the reveal plays; PHE-19 reads
+//             these score fields to scale active-node glow intensity.
+// Node POSITIONS never depend on this — only glow intensity does.
+// ----------------------------------------------------------------------------
+interface ConstellationState {
+  origin_score?: number | null;
+  emergence_score?: number | null;
+  self_creation_score?: number | null;
+  convergence_score?: number | null;
+  [key: string]: unknown;
+}
+
 // Normalized, lowercased platform/source names connected through the Onairos
 // SDK. `connectedSources` is the SDK's Ascend-friendly normalized list; we treat
 // its length as the authoritative count of connected platforms (with the trait
@@ -102,6 +125,19 @@ export default function OnboardingPage() {
   // s6 connect notice — shown when the SDK returns 0 connected platforms so the
   // user stays on s6 and is prompted to connect at least one (PHE-17 gating).
   const [connectNotice, setConnectNotice] = useState<string | null>(null);
+
+  // Synthesis result for the reveal's node-glow (PHE-18). Holds the resolved
+  // `constellation_state` scores IF synthesis lands while the user is still in
+  // the flow; stays null on failure/absence (reveal falls back to neutral glow).
+  // PHE-19 reads this to drive active-node glow intensity.
+  const [constellationState, setConstellationState] = useState<ConstellationState | null>(null);
+
+  // Duplicate-trigger guard (PHE-18). The synthesis POST must fire AT MOST ONCE
+  // per successful connection — a re-render, a double success callback, or a
+  // retry must not double-fire it. This is a CLIENT-side guard only; server-side
+  // idempotency (trigger_event_id + per-user advisory lock) is owned by the
+  // engine lane (06-engine-data.md), not this ticket.
+  const synthesisTriggeredRef = useRef(false);
 
   // --------------------------------------------------------------------------
   // Init: stellar color, reduced-motion, user, and resume-on-load.
@@ -231,16 +267,31 @@ export default function OnboardingPage() {
     }
   }, [userId]);
 
-  // Convenience: advance one step along the linear funnel.
-  const advance = useCallback(() => {
-    void setOnboardingStep(NEXT_STEP[step]);
-  }, [setOnboardingStep, step]);
-
   // Back-arrow handler (placeholder semantics — see PREV_STEP).
   const goBack = useCallback(() => {
     const prev = PREV_STEP[step];
     if (prev) void setOnboardingStep(prev);
   }, [setOnboardingStep, step]);
+
+  // --------------------------------------------------------------------------
+  // synthesizing → reveal handoff (PHE-18).
+  // ----------------------------------------------------------------------------
+  // `synthesizing` is a TRANSIENT step — the user is NEVER parked on it. The
+  // reveal animation (PHE-19) IS the loading experience that masks synthesis
+  // latency, so the moment `synthesizing` mounts we hand off to `reveal` with no
+  // blank/spinner frame in between (the ambient dark canvas stays continuous).
+  //
+  // Crucially this does NOT trigger synthesis — the synthesis POST fires ONLY
+  // from the Onairos success callback (handleOnairosComplete). So a refresh that
+  // resumes at the persisted `synthesizing` step advances straight to the reveal
+  // WITHOUT re-running synthesis (no duplicate trigger). The transition is also
+  // independent of the synthesis promise's success/failure.
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    if (step === "synthesizing") {
+      void setOnboardingStep("reveal");
+    }
+  }, [step, setOnboardingStep]);
 
   // --------------------------------------------------------------------------
   // s6 Onairos success callback (PHE-17 — the core logic).
@@ -304,20 +355,54 @@ export default function OnboardingPage() {
     }
 
     // 4) Hand the FULL trait object to synthesis (the engine round-trips it
-    //    byte-identical as `onairos_snapshot`). Fire-and-forget — never awaited
-    //    in a way that blocks navigation (PHE-18 refines the loader UX).
-    if (userId) {
+    //    byte-identical as `onairos_snapshot`). STRICT FIRE-AND-FORGET (PHE-18):
+    //    the POST is LAUNCHED but NEVER awaited — step 5 below advances the user
+    //    immediately, regardless of synthesis latency or outcome. `apiFetch`
+    //    awaits the Supabase session internally before issuing the request, but
+    //    because we do NOT await `apiFetch` here, that lookup can never delay
+    //    navigation. The promise rejection is swallowed into a non-blocking
+    //    no-op (no unhandled rejection, no UI block). Guarded by
+    //    `synthesisTriggeredRef` so a re-render / double success-callback / retry
+    //    fires synthesis at most once per successful connection.
+    if (userId && !synthesisTriggeredRef.current) {
+      synthesisTriggeredRef.current = true;
       apiFetch("/synthesize-constellation", {
         method: "POST",
         body: JSON.stringify({ userId, onairosData: result })
       })
-        .then((res) => res.json())
+        // `apiFetch` does NOT check `res.ok`, so a 4xx/5xx error body must not be
+        // stored as a non-null constellationState. Only parse on a 2xx response.
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: ConstellationState | null) => {
+          // SUCCESS: if synthesis lands while the user is still in the flow,
+          // capture the scores so the reveal (PHE-19) can glow the active nodes
+          // by intensity. If it never lands in time the reveal just uses the
+          // neutral fallback and the dashboard hydrates later — either is fine.
+          // Only store a score-bearing object: at least one of the four scores
+          // must be a finite number, else honor the "null on failure" contract.
+          if (data && typeof data === "object") {
+            const hasScore = [
+              data.origin_score,
+              data.emergence_score,
+              data.self_creation_score,
+              data.convergence_score,
+            ].some((v) => typeof v === "number" && Number.isFinite(v));
+            if (hasScore) setConstellationState(data);
+          }
+        })
         .catch(() => {
-          // Non-blocking — synthesis runs in the background (see spec feature 5).
+          // FAILURE (network / Claude error / crisis short-circuit / malformed
+          // trait): non-blocking. `constellationState` stays null, the user
+          // still reaches the dashboard via the reveal, and the dashboard shows
+          // its own "still forming" state (owned by 04-dashboard.md). This catch
+          // does NOT alter or block the synthesizing→reveal→done transitions.
         });
     }
 
     // 5) Persist onboarding_step = synthesizing and advance toward the reveal.
+    //    This is NOT gated on the synthesis promise above — the user proceeds
+    //    immediately into the reveal animation (PHE-19), which IS the loading
+    //    experience, so there is never a blank loader/spinner.
     void setOnboardingStep("synthesizing");
   }, [userId, setOnboardingStep]);
 
@@ -569,22 +654,34 @@ export default function OnboardingPage() {
           />
         )}
 
-        {/* PHE-18 will implement: synthesizing (background-synthesis UX) */}
+        {/* ================================================================ */}
+        {/* synthesizing — BACKGROUND SYNTHESIS HANDOFF (PHE-18)             */}
+        {/* ---------------------------------------------------------------- */}
+        {/* Deliberately renders NO spinner and NO blank loader. This is a   */}
+        {/* transient: the handoff effect above immediately advances to      */}
+        {/* `reveal`, and the ambient dark canvas (the fixed particle bg)    */}
+        {/* stays visible the whole time, so the transition into the reveal  */}
+        {/* animation is visually continuous. PHE-19 owns the actual reveal; */}
+        {/* `synthesizing` must hand off to it without a blank frame.        */}
+        {/* ================================================================ */}
         {step === "synthesizing" && (
-          <PlaceholderScreen
-            label="synthesizing"
-            stellarColor={stellarColor}
-            ctaLabel="continue"
-            onContinue={advance}
-          />
+          <div aria-hidden="true" style={{ width: "100%", minHeight: "100vh" }} />
         )}
 
-        {/* PHE-19 will implement: reveal (constellation reveal scrC).
-            On completion it sets onboarding_step = done and routes to the
-            dashboard. The placeholder does both now. */}
+        {/* ================================================================ */}
+        {/* reveal — CONSTELLATION REVEAL scrC (PHE-19 will implement)       */}
+        {/* ---------------------------------------------------------------- */}
+        {/* PHE-19 replaces this placeholder with the 5-phase particle       */}
+        {/* animation (~10s), reading `constellationState` for active-node   */}
+        {/* glow intensity (null → neutral fallback). For now the placeholder */}
+        {/* renders a CTA (not a blank/spinner) and, on completion, sets      */}
+        {/* onboarding_step = done BEFORE routing to /constellation (PHE-14   */}
+        {/* wiring — keep this order so the dashboard never bounces back into */}
+        {/* onboarding). The transition is independent of synthesis outcome.  */}
+        {/* ================================================================ */}
         {step === "reveal" && (
           <PlaceholderScreen
-            label="reveal"
+            label={constellationState ? "reveal (scores ready)" : "reveal"}
             stellarColor={stellarColor}
             ctaLabel="finish"
             onContinue={() => {
