@@ -1077,7 +1077,7 @@ function PolarisIntroScreen({
                 key={i}
                 style={{ ...reveal, display: "flex", justifyContent: "center", marginBottom: "28px" }}
               >
-                <PolarisBadge color={stellarColor} frozen={reducedMotion} />
+                <PolarisBadge frozen={reducedMotion} />
               </div>
             );
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import type { CSSProperties } from "react";
 
 // ============================================================================
@@ -51,6 +52,30 @@ const SIZES = {
   md: { padV: 6, padH: 14, dot: 8, gap: 9, font: 11, radius: 999 },
 } as const;
 
+// Module-level guard so the blink keyframe + reduced-motion freeze CSS is
+// injected into <head> exactly once, regardless of how many badges mount.
+let stylesInjected = false;
+
+function injectPolarisBadgeStyles() {
+  if (stylesInjected || typeof document === "undefined") return;
+  stylesInjected = true;
+  const style = document.createElement("style");
+  style.setAttribute("data-phenyx-polaris-badge", "");
+  style.textContent = `
+    @keyframes phenyx-polaris-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .phenyx-polaris-dot {
+        animation: none !important;
+        opacity: 1 !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 export function PolarisBadge({
   color = DEFAULT_POLARIS_BLUE,
   size = "sm",
@@ -59,6 +84,11 @@ export function PolarisBadge({
   className,
 }: PolarisBadgeProps) {
   const s = SIZES[size];
+
+  // Inject the blink keyframe + reduced-motion freeze CSS once on first mount.
+  useEffect(() => {
+    injectPolarisBadgeStyles();
+  }, []);
 
   return (
     <span
@@ -100,21 +130,6 @@ export function PolarisBadge({
         }}
       />
       <span className="phenyx-polaris-label">POLARIS</span>
-
-      {/* Blink keyframe + reduced-motion freeze — defined ONCE here. Identical
-          @keyframes across multiple mounted badges are idempotent by name. */}
-      <style>{`
-        @keyframes phenyx-polaris-blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.2; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .phenyx-polaris-dot {
-            animation: none !important;
-            opacity: 1 !important;
-          }
-        }
-      `}</style>
     </span>
   );
 }
