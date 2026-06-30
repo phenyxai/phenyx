@@ -70,6 +70,9 @@ export default function WelcomePage() {
   }, []);
 
   const handleContinue = () => {
+    // s3 welcome → onboarding. The onboarding page self-routes via the persisted
+    // onboarding_step (defaulting to the s3b fork when unset), so we just hand
+    // off to /onboarding here — no step is set on this side. (PHE-14)
     router.push("/onboarding");
   };
 
