@@ -241,7 +241,10 @@ export class OtpService {
       this.config.get<string>("RESEND_FROM") ?? "phenyx <noreply@phenyx.app>";
     try {
       if (!this.resendClient) this.resendClient = new Resend(apiKey);
-      await this.resendClient.emails.send({
+      // Resend returns API-level failures in `{ error }` (it does NOT throw),
+      // so check it explicitly — otherwise a bad key / unverified-domain /
+      // test-recipient rejection drops the email silently with no log.
+      const { error } = await this.resendClient.emails.send({
         from,
         to: email,
         subject: "your phenyx code",
@@ -249,6 +252,13 @@ export class OtpService {
           `your 6-digit code is ${code}\n\n` +
           `it expires in 10 minutes. if you didn't request this, you can ignore this email.`,
       });
+      if (error) {
+        this.logger.error(
+          `[otp] resend rejected the send (purpose=${purpose}): ${
+            error.message ?? JSON.stringify(error)
+          }`
+        );
+      }
     } catch (err) {
       this.logger.error(
         `[otp] resend dispatch failed: ${
