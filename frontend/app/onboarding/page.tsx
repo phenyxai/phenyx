@@ -734,11 +734,11 @@ const T_APPEAR = 2000;
 const T_FLOAT_END = 4000;
 const T_CONDENSE = 4000;
 const T_PULL_DUR = 1800;
-const T_NODE_STAG = 2000;
-const T_ALL_NODES = T_CONDENSE + 7 * T_NODE_STAG + T_PULL_DUR; // 19800
-const T_LINES = T_ALL_NODES + 400; // 20200
+const T_NODE_STAG = 300;
+const T_ALL_NODES = T_CONDENSE + 7 * T_NODE_STAG + T_PULL_DUR; // 7900
+const T_LINES = T_ALL_NODES + 400; // 8300
 const T_LINES_DUR = 2400;
-const T_REVEAL = T_LINES + T_LINES_DUR + 1000; // 23600
+const T_REVEAL = T_LINES + T_LINES_DUR + 1000; // 11700
 // T_FLOAT_END marks the FLOAT-phase boundary (kept for completeness of the
 // constant set); label cycling is driven by the 2000ms SLABELS interval.
 void T_FLOAT_END;
@@ -998,7 +998,7 @@ function RevealScreen({
         radius: 0.4 + Math.random() * 1.6,
         birthDelay: Math.random() * 2000,
         condenseDelay:
-          target * 2000 + (target === 3 ? 800 : 0) + Math.random() * 600,
+          target * T_NODE_STAG + (target === 3 ? 800 : 0) + Math.random() * 600,
         target,
         cf: null,
       });
