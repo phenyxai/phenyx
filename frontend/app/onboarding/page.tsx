@@ -370,13 +370,25 @@ export default function OnboardingPage() {
         method: "POST",
         body: JSON.stringify({ userId, onairosData: result })
       })
-        .then((res) => res.json())
+        // `apiFetch` does NOT check `res.ok`, so a 4xx/5xx error body must not be
+        // stored as a non-null constellationState. Only parse on a 2xx response.
+        .then((res) => (res.ok ? res.json() : null))
         .then((data: ConstellationState | null) => {
           // SUCCESS: if synthesis lands while the user is still in the flow,
           // capture the scores so the reveal (PHE-19) can glow the active nodes
           // by intensity. If it never lands in time the reveal just uses the
           // neutral fallback and the dashboard hydrates later — either is fine.
-          if (data && typeof data === "object") setConstellationState(data);
+          // Only store a score-bearing object: at least one of the four scores
+          // must be a finite number, else honor the "null on failure" contract.
+          if (data && typeof data === "object") {
+            const hasScore = [
+              data.origin_score,
+              data.emergence_score,
+              data.self_creation_score,
+              data.convergence_score,
+            ].some((v) => typeof v === "number" && Number.isFinite(v));
+            if (hasScore) setConstellationState(data);
+          }
         })
         .catch(() => {
           // FAILURE (network / Claude error / crisis short-circuit / malformed
