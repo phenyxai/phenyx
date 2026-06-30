@@ -256,9 +256,10 @@ export default function OnboardingPage() {
     //    connection set must NOT advance — synthesis cannot run on an empty
     //    trait object, so we keep the user on s6 with a visible prompt.
     const platforms = getConnectedPlatforms(result);
-    const connectedCount =
-      platforms.length || result.ascendContext?.signalSummary?.accountsCount || 0;
-    if (result.cancelled || result.success === false || connectedCount < 1) {
+    // Gate the advance on the SAME source we persist (`platforms`, which feeds
+    // the onairos_connections upsert) so we never advance with zero rows written.
+    const connectedCount = platforms.length;
+    if (result.cancelled || result.success === false || !!result.error || connectedCount < 1) {
       setConnectNotice("connect at least one platform to continue.");
       return;
     }
@@ -277,6 +278,8 @@ export default function OnboardingPage() {
         platform,
         status: "connected",
         redacted_snapshot: redacted,
+        // A reconnect must clear any stale disconnect timestamp.
+        disconnected_at: null,
       }));
       void supabase
         .from("onairos_connections")
