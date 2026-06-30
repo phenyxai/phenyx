@@ -241,7 +241,10 @@ export class PassphraseResetService {
       this.config.get<string>("RESEND_FROM") ?? "phenyx <noreply@phenyx.app>";
     try {
       if (!this.resendClient) this.resendClient = new Resend(apiKey);
-      await this.resendClient.emails.send({
+      // Resend returns API-level failures in `{ error }` (it does NOT throw),
+      // so check it explicitly — otherwise a bad key / unverified-domain /
+      // test-recipient rejection drops the email silently with no log.
+      const { error } = await this.resendClient.emails.send({
         from,
         to: email,
         subject: "reset your phenyx passphrase",
@@ -250,6 +253,13 @@ export class PassphraseResetService {
           `set a new one here (the link expires in 45 minutes):\n${link}\n\n` +
           `if this wasn't you, you can ignore this email — nothing has changed.`,
       });
+      if (error) {
+        this.logger.error(
+          `[reset] resend rejected the send: ${
+            error.message ?? JSON.stringify(error)
+          }`
+        );
+      }
     } catch (err) {
       this.logger.error(
         `[reset] resend dispatch failed: ${
