@@ -669,22 +669,28 @@ export default function OnboardingPage() {
         )}
 
         {/* ================================================================ */}
-        {/* reveal — CONSTELLATION REVEAL scrC (PHE-19 will implement)       */}
+        {/* reveal — CONSTELLATION REVEAL scrC (PHE-19, fully implemented)   */}
         {/* ---------------------------------------------------------------- */}
-        {/* PHE-19 replaces this placeholder with the 5-phase particle       */}
-        {/* animation (~10s), reading `constellationState` for active-node   */}
-        {/* glow intensity (null → neutral fallback). For now the placeholder */}
-        {/* renders a CTA (not a blank/spinner) and, on completion, sets      */}
-        {/* onboarding_step = done BEFORE routing to /constellation (PHE-14   */}
-        {/* wiring — keep this order so the dashboard never bounces back into */}
-        {/* onboarding). The transition is independent of synthesis outcome.  */}
+        {/* The cinematic payoff: a full-viewport canvas particle animation   */}
+        {/* that materializes the constellation in 5 phases                  */}
+        {/* (APPEAR→FLOAT→CONDENSE→LINES→REVEAL) into 7 nodes + 7 canonical    */}
+        {/* edges, lands the reveal line, and AUTO-ADVANCES to the dashboard. */}
+        {/* It reads `constellationState` for active-node glow intensity      */}
+        {/* (null → neutral fallback). `prefers-reduced-motion` snaps the     */}
+        {/* finished constellation + line in ≤2s. On auto-advance it sets     */}
+        {/* onboarding_step = done BEFORE routing to /constellation (keep this */}
+        {/* order so the dashboard never bounces back into onboarding); the   */}
+        {/* transition is independent of synthesis outcome. RevealScreen owns  */}
+        {/* its own full-screen canvas + rAF loop + label interval and cleans  */}
+        {/* them up on unmount.                                              */}
         {/* ================================================================ */}
         {step === "reveal" && (
-          <PlaceholderScreen
-            label={constellationState ? "reveal (scores ready)" : "reveal"}
+          <RevealScreen
             stellarColor={stellarColor}
-            ctaLabel="finish"
-            onContinue={() => {
+            reducedMotion={prefersReducedMotion}
+            constellationState={constellationState}
+            onConfirmMount={() => void setOnboardingStep("reveal")}
+            onDone={() => {
               void setOnboardingStep("done");
               router.replace("/constellation");
             }}
@@ -702,71 +708,485 @@ export default function OnboardingPage() {
   );
 }
 
-// Minimal placeholder for not-yet-built steps. Later tickets replace the whole
-// block above; this just renders the step name + a single advancing CTA so the
-// funnel is navigable end-to-end.
-function PlaceholderScreen({
-  label,
+// ============================================================================
+// Constellation Reveal scrC (PHE-19)
+// ----------------------------------------------------------------------------
+// Self-contained, full-viewport canvas reveal. Owns its OWN canvas + rAF loop +
+// SLABELS interval + reveal-sequence timers (the ambient background particle
+// canvas in the parent is separate and untouched). All loops/intervals/timers
+// are cancelled on unmount (React strict-mode double-mount safe). Fresh canvas
+// implementation rather than reusing constellation.tsx — that component is an
+// SVG / React-state build, a fundamentally different paradigm from this
+// imperative particle-system rAF loop (200 particles condensing into 7 nodes).
+//
+// Canonical Pillar Model (spec 03-onboarding-reveal.md "Pillar Model"):
+//   idx 0-3 ACTIVE  (ORIGIN, EMERGENCE, SELF-CREATION, CONVERGENCE) — glow in
+//                    stellarColor, intensity ∝ synthesis score.
+//   idx 4-6 LOCKED  (BECOMING, RECOGNITION, TRANSCENDENCE) — render dim always.
+// Node POSITIONS are fixed (never depend on score) — only glow intensity does.
+// ============================================================================
+
+// The exact reveal line (note "what", NOT "who" — changed from v1).
+const REVEAL_LINE = "this is what you have always been.";
+
+// Phase timing constants (verbatim from the ticket / prototype :1834-1843).
+const T_APPEAR = 2000;
+const T_FLOAT_END = 4000;
+const T_CONDENSE = 4000;
+const T_PULL_DUR = 1800;
+const T_NODE_STAG = 300;
+const T_ALL_NODES = T_CONDENSE + 7 * T_NODE_STAG + T_PULL_DUR; // 7900
+const T_LINES = T_ALL_NODES + 400; // 8300
+const T_LINES_DUR = 2400;
+const T_REVEAL = T_LINES + T_LINES_DUR + 1000; // 11700
+// T_FLOAT_END marks the FLOAT-phase boundary (kept for completeness of the
+// constant set); label cycling is driven by the 2000ms SLABELS interval.
+void T_FLOAT_END;
+
+// Reveal-sequence sub-timings (REVEAL phase, from start-of-animation).
+const REVEAL_LOAD_FADE = 800; // fade rcLoad out
+const REVEAL_IN = 2200; // fade rc (reveal line) in
+const REVEAL_HOLD = 3600; // hold the landed line
+const SCREEN_FADE = 1800; // fade scrC out, then auto-advance
+
+// Canonical 7 pillars (index 0-6). nx/ny are fractions of the viewport.
+// ORIGIN bottom anchor; EMERGENCE+SELF-CREATION form a diamond into the
+// CONVERGENCE hub; a vertical chain rises through the 3 locked to TRANSCENDENCE.
+const PILLARS: { nx: number; ny: number; active: boolean; baseR: number }[] = [
+  { nx: 0.5, ny: 0.9, active: true, baseR: 4 }, // 0 ORIGIN
+  { nx: 0.33, ny: 0.72, active: true, baseR: 4 }, // 1 EMERGENCE
+  { nx: 0.67, ny: 0.72, active: true, baseR: 4 }, // 2 SELF-CREATION
+  { nx: 0.5, ny: 0.56, active: true, baseR: 5.5 }, // 3 CONVERGENCE (hub — larger)
+  { nx: 0.5, ny: 0.41, active: false, baseR: 4 }, // 4 BECOMING (locked)
+  { nx: 0.5, ny: 0.26, active: false, baseR: 4 }, // 5 RECOGNITION (locked)
+  { nx: 0.5, ny: 0.11, active: false, baseR: 4 }, // 6 TRANSCENDENCE (locked)
+];
+
+// Canonical 7-edge list (draw order). Each edge draws only once BOTH its
+// endpoint nodes are locked.
+const CLINES: [number, number][] = [
+  [0, 1],
+  [0, 2],
+  [1, 3],
+  [2, 3],
+  [3, 4],
+  [4, 5],
+  [5, 6],
+];
+
+// SLABELS — cycling FLOAT labels (one per pillar) + the closing label.
+const SLABELS = [
+  "where it all begins",
+  "what pulled you forward",
+  "what you made yourself into",
+  "where everything meets",
+  "who you are becoming",
+  "how the world sees you",
+  "what you are reaching for",
+  "it's all here",
+];
+
+// Maps active-pillar index → its `constellation_state` score field.
+const SCORE_FIELDS = [
+  "origin_score",
+  "emergence_score",
+  "self_creation_score",
+  "convergence_score",
+] as const;
+
+function clamp01(v: number): number {
+  return v < 0 ? 0 : v > 1 ? 1 : v;
+}
+function easeInOut(t: number): number {
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+}
+function easeOut(t: number): number {
+  return 1 - (1 - t) * (1 - t);
+}
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  const f = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = parseInt(f, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+interface RevealParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  birthDelay: number;
+  condenseDelay: number;
+  target: number;
+  cf: { x: number; y: number } | null; // captured drift pos at condense start
+}
+
+function RevealScreen({
   stellarColor,
-  ctaLabel,
-  onContinue,
+  reducedMotion,
+  constellationState,
+  onConfirmMount,
+  onDone,
 }: {
-  label: string;
   stellarColor: string;
-  ctaLabel: string;
-  onContinue: () => void;
+  reducedMotion: boolean;
+  constellationState: ConstellationState | null;
+  onConfirmMount: () => void;
+  onDone: () => void;
 }) {
+  const cvsRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef<number>(0);
+  const labelIntervalRef = useRef<number | null>(null);
+  const timersRef = useRef<number[]>([]);
+  const doneRef = useRef(false);
+
+  // Text overlays + screen fade (rcLoad / rc / scrC).
+  const [loadText, setLoadText] = useState(SLABELS[0]);
+  const [loadVisible, setLoadVisible] = useState(false);
+  const [loadFade, setLoadFade] = useState(false); // final rcLoad fade-out
+  const [revealText, setRevealText] = useState("");
+  const [revealVisible, setRevealVisible] = useState(false);
+  const [intro, setIntro] = useState(false); // canvas+screen fade-in
+  const [screenFade, setScreenFade] = useState(false); // scrC fade-out
+
+  useEffect(() => {
+    // Confirm the persisted step is `reveal` on mount (idempotent). The
+    // synthesizing→reveal handoff / resume may already have set it.
+    onConfirmMount();
+    setIntro(true);
+
+    const canvas = cvsRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    let W = 0;
+    let H = 0;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const sizeCanvas = () => {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      canvas.style.width = `${W}px`;
+      canvas.style.height = `${H}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    sizeCanvas();
+    window.addEventListener("resize", sizeCanvas);
+
+    const [sr, sg, sb] = hexToRgb(stellarColor);
+    const LOCKED: [number, number, number] = [96, 106, 122]; // dim grey-blue
+
+    // Per-pillar glow alpha from synthesis score. Active: 0.30..0.92 by score;
+    // null/absent score → neutral fallback (0.6 norm). Locked: fixed dim.
+    const glow = PILLARS.map((p, i) => {
+      if (!p.active) return { rgb: LOCKED, alpha: 0.16, norm: 0 };
+      const raw = constellationState
+        ? (constellationState[SCORE_FIELDS[i]] as number | null | undefined)
+        : null;
+      const norm = typeof raw === "number" ? clamp01(raw / 100) : 0.6;
+      return { rgb: [sr, sg, sb] as [number, number, number], alpha: 0.3 + norm * 0.62, norm };
+    });
+
+    const nodePos = () => PILLARS.map((p) => ({ x: p.nx * W, y: p.ny * H }));
+
+    const drawNode = (
+      x: number,
+      y: number,
+      baseR: number,
+      rgb: [number, number, number],
+      alpha: number,
+      active: boolean,
+      t: number,
+      i: number,
+    ) => {
+      const [r, g, b] = rgb;
+      // Subtle breathing pulse on active nodes only.
+      const a = active ? alpha * (0.86 + 0.14 * Math.sin(t / 600 + i)) : alpha;
+      // Outer radial glow.
+      let grad = ctx.createRadialGradient(x, y, 0, x, y, baseR * 7);
+      grad.addColorStop(0, `rgba(${r},${g},${b},${a * 0.42})`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, baseR * 7, 0, Math.PI * 2);
+      ctx.fill();
+      // Inner radial glow.
+      grad = ctx.createRadialGradient(x, y, 0, x, y, baseR * 2.6);
+      grad.addColorStop(0, `rgba(${r},${g},${b},${Math.min(1, a * 0.9)})`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, baseR * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      // Core.
+      ctx.fillStyle = `rgba(${r},${g},${b},${Math.min(1, a + 0.2)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, baseR, 0, Math.PI * 2);
+      ctx.fill();
+      // Bright center dot.
+      ctx.fillStyle = `rgba(255,253,253,${Math.min(1, 0.5 + a * 0.5)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, baseR * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    const drawEdge = (
+      ax: number,
+      ay: number,
+      bx: number,
+      by: number,
+      progress: number,
+    ) => {
+      const x2 = ax + (bx - ax) * progress;
+      const y2 = ay + (by - ay) * progress;
+      ctx.strokeStyle = `rgba(${sr},${sg},${sb},0.34)`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    };
+
+    const nodeLocked = (i: number, t: number) =>
+      t - T_CONDENSE >= i * T_NODE_STAG + T_PULL_DUR;
+
+    // ----------------------------------------------------------------------
+    // Reduced-motion: bypass the rAF loop entirely. Snap all 7 locked nodes +
+    // 7 full edges into place, fade the reveal line in, ≤2s total, auto-advance.
+    // ----------------------------------------------------------------------
+    if (reducedMotion) {
+      const np = nodePos();
+      ctx.clearRect(0, 0, W, H);
+      CLINES.forEach(([i, j]) => drawEdge(np[i].x, np[i].y, np[j].x, np[j].y, 1));
+      PILLARS.forEach((p, i) =>
+        drawNode(np[i].x, np[i].y, p.baseR, glow[i].rgb, glow[i].alpha, p.active, 0, i),
+      );
+      setLoadVisible(false);
+      setRevealText(REVEAL_LINE);
+      setRevealVisible(true);
+      timersRef.current.push(window.setTimeout(() => setScreenFade(true), 1200));
+      timersRef.current.push(
+        window.setTimeout(() => {
+          if (!doneRef.current) {
+            doneRef.current = true;
+            onDone();
+          }
+        }, 1800),
+      );
+      return () => {
+        window.removeEventListener("resize", sizeCanvas);
+        timersRef.current.forEach((id) => clearTimeout(id));
+        timersRef.current = [];
+      };
+    }
+
+    // ----------------------------------------------------------------------
+    // Full animated path — build 200 particles, run the 5-phase rAF loop.
+    // ----------------------------------------------------------------------
+    const N = 200;
+    const M = 60; // inset margin
+    const particles: RevealParticle[] = [];
+    for (let i = 0; i < N; i++) {
+      const target = i % 7;
+      particles.push({
+        x: M + Math.random() * Math.max(1, W - 2 * M),
+        y: M + Math.random() * Math.max(1, H - 2 * M),
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        radius: 0.4 + Math.random() * 1.6,
+        birthDelay: Math.random() * 2000,
+        condenseDelay:
+          target * T_NODE_STAG + (target === 3 ? 800 : 0) + Math.random() * 600,
+        target,
+        cf: null,
+      });
+    }
+
+    // SLABELS cycling — every 2000ms with a short cross-fade; clamps on the
+    // closing label; interval cleared at REVEAL (and on unmount).
+    setLoadVisible(true);
+    let labelIdx = 0;
+    const advanceLabel = () => {
+      setLoadVisible(false);
+      timersRef.current.push(
+        window.setTimeout(() => {
+          labelIdx = Math.min(labelIdx + 1, SLABELS.length - 1);
+          setLoadText(SLABELS[labelIdx]);
+          setLoadVisible(true);
+        }, 350),
+      );
+    };
+    labelIntervalRef.current = window.setInterval(advanceLabel, 2000);
+
+    // Reveal sequence timers (absolute offsets from animation start).
+    timersRef.current.push(
+      window.setTimeout(() => {
+        if (labelIntervalRef.current !== null) {
+          clearInterval(labelIntervalRef.current);
+          labelIntervalRef.current = null;
+        }
+        setLoadFade(true);
+      }, T_REVEAL),
+    );
+    timersRef.current.push(
+      window.setTimeout(() => {
+        setRevealText(REVEAL_LINE);
+        setRevealVisible(true);
+      }, T_REVEAL + REVEAL_LOAD_FADE),
+    );
+    timersRef.current.push(
+      window.setTimeout(
+        () => setScreenFade(true),
+        T_REVEAL + REVEAL_LOAD_FADE + REVEAL_IN + REVEAL_HOLD,
+      ),
+    );
+    timersRef.current.push(
+      window.setTimeout(() => {
+        if (!doneRef.current) {
+          doneRef.current = true;
+          onDone();
+        }
+      }, T_REVEAL + REVEAL_LOAD_FADE + REVEAL_IN + REVEAL_HOLD + SCREEN_FADE),
+    );
+
+    const start = performance.now();
+    const loop = (now: number) => {
+      const t = now - start;
+      const np = nodePos();
+      ctx.clearRect(0, 0, W, H);
+
+      // Particles (APPEAR fade-in → FLOAT drift → CONDENSE pull into nodes).
+      for (const p of particles) {
+        const cStart = T_CONDENSE + p.condenseDelay;
+        let cx: number;
+        let cy: number;
+        if (t < cStart) {
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < M || p.x > W - M) p.vx *= -1;
+          if (p.y < M || p.y > H - M) p.vy *= -1;
+          p.x = Math.max(M, Math.min(W - M, p.x));
+          p.y = Math.max(M, Math.min(H - M, p.y));
+          cx = p.x;
+          cy = p.y;
+        } else {
+          if (!p.cf) p.cf = { x: p.x, y: p.y };
+          const prog = clamp01((t - cStart) / T_PULL_DUR);
+          const e = easeInOut(prog);
+          const node = np[p.target];
+          cx = p.cf.x + (node.x - p.cf.x) * e;
+          cy = p.cf.y + (node.y - p.cf.y) * e;
+        }
+        const birth = clamp01((t - p.birthDelay) / T_APPEAR);
+        let alpha = (0.45 + p.radius * 0.18) * birth;
+        if (t >= cStart) {
+          // Dim as it merges so the node glow takes over.
+          alpha *= 1 - clamp01((t - cStart) / T_PULL_DUR) * 0.6;
+        }
+        if (alpha > 0.002) {
+          ctx.globalAlpha = Math.min(1, alpha);
+          ctx.fillStyle = stellarColor;
+          ctx.beginPath();
+          ctx.arc(cx, cy, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+
+      // Edges (LINES) — staggered, each gated on BOTH endpoints locked.
+      CLINES.forEach(([i, j], li) => {
+        if (!nodeLocked(i, t) || !nodeLocked(j, t)) return;
+        const prog = clamp01((t - (T_LINES + li * 300)) / T_LINES_DUR);
+        if (prog <= 0) return;
+        drawEdge(np[i].x, np[i].y, np[j].x, np[j].y, easeOut(prog));
+      });
+
+      // Nodes (CONDENSE) — draw only locked nodes.
+      PILLARS.forEach((p, i) => {
+        if (!nodeLocked(i, t)) return;
+        drawNode(np[i].x, np[i].y, p.baseR, glow[i].rgb, glow[i].alpha, p.active, t, i);
+      });
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      window.removeEventListener("resize", sizeCanvas);
+      cancelAnimationFrame(rafRef.current);
+      if (labelIntervalRef.current !== null) {
+        clearInterval(labelIntervalRef.current);
+        labelIntervalRef.current = null;
+      }
+      timersRef.current.forEach((id) => clearTimeout(id));
+      timersRef.current = [];
+    };
+    // Animation params are captured once at mount; props are stable for the
+    // lifetime of the reveal step (constellationState may resolve once, but a
+    // mid-flight re-glow is intentionally not required — see ticket).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <div style={{ textAlign: "center", maxWidth: 420 }}>
-      <p
-        className="animate-fade-in"
-        style={{ fontSize: "11px", color: "#444", letterSpacing: "0.15em", marginBottom: "8px" }}
-      >
-        PLACEHOLDER
-      </p>
-      <p
-        className="animate-fade-in"
+    <div
+      aria-hidden="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 5,
+        background: "#0A0A0A",
+        opacity: !intro ? 0 : screenFade ? 0 : 1,
+        transition: `opacity ${screenFade ? SCREEN_FADE : 800}ms ease`,
+        pointerEvents: "none",
+      }}
+    >
+      <canvas
+        ref={cvsRef}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      />
+
+      {/* rcLoad — cycling phase labels under the canvas. */}
+      <div
         style={{
-          animationDelay: "150ms",
-          animationFillMode: "both",
-          fontSize: "18px",
-          fontWeight: 300,
-          color: "#FFFDFD",
-          marginBottom: "32px"
-        }}
-      >
-        {label}
-      </p>
-      <button
-        onClick={onContinue}
-        aria-label={ctaLabel}
-        className="animate-fade-in"
-        style={{
-          animationDelay: "300ms",
-          animationFillMode: "both",
-          background: "transparent",
-          border: `0.5px solid ${stellarColor}`,
-          color: stellarColor,
-          borderRadius: "8px",
-          padding: "10px 32px",
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: "12%",
+          textAlign: "center",
           fontSize: "13px",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          transition: "all 0.2s ease"
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "#FFFDFD";
-          e.currentTarget.style.color = "#0A0A0A";
-          e.currentTarget.style.borderColor = "#FFFDFD";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = stellarColor;
-          e.currentTarget.style.borderColor = stellarColor;
+          fontWeight: 300,
+          letterSpacing: "0.18em",
+          textTransform: "lowercase",
+          color: "#888",
+          opacity: loadFade || !loadVisible ? 0 : 0.85,
+          transition: `opacity ${loadFade ? REVEAL_LOAD_FADE : 450}ms ease`,
         }}
       >
-        {ctaLabel}
-      </button>
+        {loadText}
+      </div>
+
+      {/* rc — the final reveal line. */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "50%",
+          transform: "translateY(-50%)",
+          textAlign: "center",
+          padding: "0 24px",
+          fontSize: "22px",
+          fontWeight: 300,
+          letterSpacing: "0.01em",
+          color: "#FFFDFD",
+          opacity: revealVisible ? 1 : 0,
+          transition: `opacity ${reducedMotion ? 600 : REVEAL_IN}ms ease`,
+        }}
+      >
+        {revealText}
+      </div>
     </div>
   );
 }
