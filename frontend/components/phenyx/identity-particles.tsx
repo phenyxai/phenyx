@@ -1,11 +1,50 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useSessionColor } from '@/contexts/session-color-context'
 
-export function IdentityParticles() {
+// PHE-6: the hero particle field. ~30 periwinkle particles drift ambiently
+// around fixed "home" positions and loosely gather toward the cursor when it
+// enters the field. Colour is the spec'd periwinkle (#9DBCEF), independent of
+// the session/stellar colour — this is a fixed ambient treatment behind the
+// hero, not a per-user accent. The whole field is decorative (aria-hidden on
+// the host wrapper) so it carries no semantic weight.
+
+const PARTICLE_COUNT = 30
+const PARTICLE_RGB = '157,188,239' // #9DBCEF periwinkle
+const GATHER_RADIUS = 260
+const GATHER_STRENGTH = 0.05
+const RETURN_STRENGTH = 0.025
+// Below this width (and on coarse pointers) we skip cursor-follow entirely.
+const CURSOR_FOLLOW_MIN_WIDTH = 780
+
+function rand(min: number, max: number) {
+  return min + Math.random() * (max - min)
+}
+
+interface Particle {
+  // Home is stored as a fraction of the field so it survives resizes.
+  fx: number
+  fy: number
+  homeX: number
+  homeY: number
+  x: number
+  y: number
+  r: number
+  alpha: number
+  driftPhase: number
+  driftSpeed: number
+  driftAmpX: number
+  driftAmpY: number
+  // Per-particle lag so the cursor trail is loose rather than uniform.
+  gatherLag: number
+}
+
+interface IdentityParticlesProps {
+  prefersReducedMotion?: boolean
+}
+
+export function IdentityParticles({ prefersReducedMotion = false }: IdentityParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const { sessionColor } = useSessionColor()
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -13,101 +52,138 @@ export function IdentityParticles() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const W = canvas.offsetWidth
-    const H = canvas.offsetHeight
-    canvas.width = W
-    canvas.height = H
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    let W = 0
+    let H = 0
 
-    const COUNT = 100
-    const particles = Array.from({ length: COUNT }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      r: 1 + Math.random() * 1.5,
-      baseOpacity: 0.15 + Math.random() * 0.3,
-      opacity: 0.15 + Math.random() * 0.3,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      pulseOffset: Math.random() * Math.PI * 2,
-      pulseSpeed: 0.003 + Math.random() * 0.005,
+    const particles: Particle[] = Array.from({ length: PARTICLE_COUNT }, () => ({
+      fx: Math.random(),
+      fy: Math.random(),
+      homeX: 0,
+      homeY: 0,
+      x: 0,
+      y: 0,
+      r: rand(1.1, 2.6),
+      alpha: rand(0.25, 0.7),
+      driftPhase: Math.random() * Math.PI * 2,
+      driftSpeed: rand(0.4, 1.1),
+      driftAmpX: rand(8, 22),
+      driftAmpY: rand(6, 16),
+      gatherLag: rand(0.6, 1.4),
     }))
 
-    let mouse: { x: number; y: number } | null = null
-    let animId: number
+    const syncHomes = () => {
+      for (const p of particles) {
+        p.homeX = p.fx * W
+        p.homeY = p.fy * H
+      }
+    }
 
+    const resize = () => {
+      W = canvas.clientWidth
+      H = canvas.clientHeight
+      canvas.width = Math.round(W * dpr)
+      canvas.height = Math.round(H * dpr)
+      // Draw in CSS pixels; the backing store handles device-pixel scaling.
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      syncHomes()
+    }
+
+    resize()
+    for (const p of particles) {
+      p.x = p.homeX
+      p.y = p.homeY
+    }
+
+    const drawStatic = () => {
+      ctx.clearRect(0, 0, W, H)
+      for (const p of particles) {
+        ctx.beginPath()
+        ctx.arc(p.homeX, p.homeY, p.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${PARTICLE_RGB},${p.alpha})`
+        ctx.fill()
+      }
+    }
+
+    // Reduced motion: render a single static scatter, no RAF, no listeners.
+    if (prefersReducedMotion) {
+      drawStatic()
+      const ro = new ResizeObserver(() => {
+        resize()
+        drawStatic()
+      })
+      ro.observe(canvas)
+      return () => ro.disconnect()
+    }
+
+    // Cursor-follow is skipped on coarse pointers and narrow viewports.
+    const canFollow =
+      window.matchMedia('(pointer: fine)').matches &&
+      window.innerWidth > CURSOR_FOLLOW_MIN_WIDTH
+
+    let mouse: { x: number; y: number } | null = null
     const onMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect()
       mouse = { x: e.clientX - rect.left, y: e.clientY - rect.top }
     }
-    const onLeave = () => { mouse = null }
-
-    canvas.addEventListener('mousemove', onMove)
-    canvas.addEventListener('mouseleave', onLeave)
-
-    function hexToRgb(hex: string) {
-      const r = parseInt(hex.slice(1,3),16)
-      const g = parseInt(hex.slice(3,5),16)
-      const b = parseInt(hex.slice(5,7),16)
-      return `${r},${g},${b}`
+    const onLeave = () => {
+      mouse = null
     }
 
-    const rgb = hexToRgb(sessionColor || '#FFFDFD')
+    if (canFollow) {
+      canvas.addEventListener('mousemove', onMove)
+      canvas.addEventListener('mouseleave', onLeave)
+    }
 
-    function tick() {
-      ctx!.clearRect(0, 0, W, H)
+    const ro = new ResizeObserver(() => resize())
+    ro.observe(canvas)
 
-      particles.forEach(p => {
-        p.pulseOffset += p.pulseSpeed
-        const pulse = (Math.sin(p.pulseOffset) + 1) / 2
-        
+    let raf = 0
+    const start = performance.now()
+
+    const tick = (now: number) => {
+      const t = (now - start) / 1000
+      ctx.clearRect(0, 0, W, H)
+
+      for (const p of particles) {
+        // Ambient target: gentle sine/cosine orbit around the home position.
+        let targetX = p.homeX + Math.sin(t * p.driftSpeed + p.driftPhase) * p.driftAmpX
+        let targetY = p.homeY + Math.cos(t * p.driftSpeed + p.driftPhase) * p.driftAmpY
+        let strength = RETURN_STRENGTH
+
         if (mouse) {
           const dx = mouse.x - p.x
           const dy = mouse.y - p.y
-          const dist = Math.sqrt(dx*dx + dy*dy)
-          if (dist < 150 && dist > 20) {
-            const force = (150 - dist) / 150 * 0.8
-            p.vx += (dx / dist) * force * 0.1
-            p.vy += (dy / dist) * force * 0.1
+          const dist = Math.hypot(dx, dy)
+          if (dist < GATHER_RADIUS) {
+            // Within gather range: ease toward the cursor with per-particle lag.
+            targetX = mouse.x
+            targetY = mouse.y
+            strength = GATHER_STRENGTH * p.gatherLag
           }
-          p.opacity = p.baseOpacity + (0.9 - p.baseOpacity) * Math.max(0, (150 - (Math.sqrt((mouse.x-p.x)**2+(mouse.y-p.y)**2))) / 150)
-        } else {
-          p.opacity = p.baseOpacity + pulse * 0.2
-          p.vx *= 0.98
-          p.vy *= 0.98
         }
 
-        p.vx = Math.max(-1.5, Math.min(1.5, p.vx))
-        p.vy = Math.max(-1.5, Math.min(1.5, p.vy))
+        p.x += (targetX - p.x) * strength
+        p.y += (targetY - p.y) * strength
 
-        p.x += p.vx
-        p.y += p.vy
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${PARTICLE_RGB},${p.alpha})`
+        ctx.fill()
+      }
 
-        if (p.x < 0) p.x = W
-        if (p.x > W) p.x = 0
-        if (p.y < 0) p.y = H
-        if (p.y > H) p.y = 0
-
-        ctx!.beginPath()
-        ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx!.fillStyle = `rgba(${rgb},${p.opacity})`
-        ctx!.fill()
-      })
-
-      animId = requestAnimationFrame(tick)
+      raf = requestAnimationFrame(tick)
     }
 
-    tick()
+    raf = requestAnimationFrame(tick)
 
     return () => {
-      cancelAnimationFrame(animId)
+      cancelAnimationFrame(raf)
+      ro.disconnect()
       canvas.removeEventListener('mousemove', onMove)
       canvas.removeEventListener('mouseleave', onLeave)
     }
-  }, [sessionColor])
+  }, [prefersReducedMotion])
 
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ width: '100%', height: '100%', display: 'block' }}
-    />
-  )
+  return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
 }

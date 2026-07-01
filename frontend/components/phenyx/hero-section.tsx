@@ -110,7 +110,7 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
         
         {/* Right side - Identity formation particles (hidden on mobile) */}
         <div className="max-lg:hidden relative h-[500px]" aria-hidden="true">
-          <IdentityParticles />
+          <IdentityParticles prefersReducedMotion={prefersReducedMotion} />
         </div>
       </div>
       
