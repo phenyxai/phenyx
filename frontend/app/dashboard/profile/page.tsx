@@ -9,6 +9,7 @@ import {
 } from "@/components/phenyx/settings-modals/modal-host";
 import { fetchProfileOverview, type ProfileOverview } from "@/lib/api-client";
 import { ProfileTierCard } from "@/components/phenyx/profile-tier-card";
+import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 
 const CONTACT_EMAIL = "contact@phenyxcollective.com";
 
@@ -70,8 +71,16 @@ export default function ProfileTabPage() {
   const foresight = overview?.foresight?.trim() ?? "";
 
   return (
-    <section className="flex flex-col gap-10 p-10 lg:flex-row">
-      {/* Main column */}
+    <>
+      {/* PHE-33 first-visit intro banner, full-width above the two-column layout. */}
+      <IntroBanner
+        tab="profile"
+        copy={INTRO_COPY.profile}
+        className="mx-10 mt-10"
+      />
+
+      <section className="flex flex-col gap-10 p-10 lg:flex-row">
+        {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col gap-10">
         {/* Header card — display name + connected-platform badges. */}
         <div className="rounded-xl border border-[#1C1C1C] bg-[#0E0E0E] p-6">
@@ -175,6 +184,7 @@ export default function ProfileTabPage() {
           </div>
         )}
       </aside>
-    </section>
+      </section>
+    </>
   );
 }

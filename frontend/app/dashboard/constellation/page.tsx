@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 import { ConstellationCanvas } from "@/components/phenyx/constellation-canvas";
 import { ConstellationPanel } from "@/components/phenyx/constellation-panel";
+import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 import {
   fetchConstellation,
   type ConstellationData,
@@ -34,7 +35,12 @@ export default function ConstellationTabPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      {/* PHE-33 intro banner mounts above the two-column region. */}
+      {/* PHE-33 first-visit intro banner, above the two-column region. */}
+      <IntroBanner
+        tab="constellation"
+        copy={INTRO_COPY.constellation}
+        className="mx-6 mt-6 shrink-0"
+      />
       <div className="flex min-h-0 flex-1">
         {/* Canvas column. The parent is the sizing box the canvas measures. */}
         <div className="relative min-w-0 flex-1">
