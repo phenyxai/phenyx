@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { manifestoCopy, BRAND, SECTION_IDS } from "@/lib/landing-copy";
+import { PlatformField } from "./platform-field";
 
 export function ManifestoSection() {
   const [visibleParagraphs, setVisibleParagraphs] = useState<number[]>([]);
@@ -60,10 +61,12 @@ export function ManifestoSection() {
       }}
     >
       <div
-        className="mx-auto"
+        className="mx-auto flex flex-col gap-12 min-[781px]:flex-row min-[781px]:items-center min-[781px]:gap-16"
         style={{ maxWidth: "1100px" }}
       >
+      {/* Text column — DOM-first, but ordered below the platform field at ≤780px */}
       <div
+        className="order-2 min-[781px]:order-1 min-[781px]:flex-1"
         style={{ maxWidth: "720px" }}
       >
         {/* Eyebrow */}
@@ -111,6 +114,12 @@ export function ManifestoSection() {
             <span className="uppercase">{BRAND}</span> {manifestoCopy.emphasisSuffix}
           </p>
         </div>
+      </div>
+
+      {/* Floating platform-icon field — a 260px block above the text at ≤780px,
+          the right column at >780px. Decorative (aria-hidden lives inside). */}
+      <div className="order-1 min-[781px]:order-2 w-full h-[260px] min-[781px]:w-[380px] min-[781px]:h-[420px] shrink-0">
+        <PlatformField prefersReducedMotion={prefersReducedMotion} />
       </div>
       </div>
     </section>
