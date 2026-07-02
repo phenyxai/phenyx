@@ -8,6 +8,8 @@ import { useTier } from "@/lib/use-tier";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { DailyHeader } from "@/components/phenyx/daily-header";
 import { ObservationCard, type Observation } from "@/components/phenyx/observation-card";
+import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
+import { useDailySignpost } from "@/lib/first-visit";
 
 // ============================================================================
 // Daily tab — Observations feed (PHE-26)
@@ -62,6 +64,7 @@ export default function DailyTabPage() {
   const router = useRouter();
   const { isPro } = useTier();
   const { openModal } = useSettingsModals();
+  const showSignpost = useDailySignpost();
 
   const [loading, setLoading] = useState(true);
   const [mantra, setMantra] = useState<DailyFeedResponse["mantra"]>(null);
@@ -119,13 +122,32 @@ export default function DailyTabPage() {
 
   return (
     <section style={{ maxWidth: 640, margin: "0 auto", padding: "48px 24px 80px" }}>
+      {/* First-visit intro banner for the Daily tab (PHE-33). */}
+      <IntroBanner tab="daily" copy={INTRO_COPY.daily} className="mb-6" />
+
       <DailyHeader
         mantra={mantra}
         tokenLabel={tokenLabel}
         onAskPolaris={goToPolaris}
-        // First-visit signpost is PHE-33 (Wave 3): it owns the one-time
-        // localStorage flag and passes its node in here. Null for now.
-        signpost={null}
+        // First-visit signpost (PHE-33) — one-time, keyed independently of the
+        // Daily intro banner. Rendered only until it has been seen once.
+        signpost={
+          showSignpost ? (
+            <p
+              className="animate-fade-in"
+              style={{
+                fontSize: 14,
+                fontWeight: 300,
+                lineHeight: 1.5,
+                color: "rgba(255,253,253,0.5)",
+                margin: 0,
+                marginBottom: 20,
+              }}
+            >
+              start with daily to see what emerged this week.
+            </p>
+          ) : null
+        }
       />
 
       {/* OBSERVATIONS section header with the pulsing live dot. */}
