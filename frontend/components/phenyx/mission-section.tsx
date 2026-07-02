@@ -1,4 +1,5 @@
 import { Constellation } from "./constellation";
+import { AskPolarisWidget } from "./ask-polaris-widget";
 import { constellationCopy, BRAND, SECTION_IDS } from "@/lib/landing-copy";
 
 export function MissionSection() {
@@ -48,25 +49,16 @@ export function MissionSection() {
 
           {/*
             Ask-Polaris Q&A widget mount point (PHE-25). This section owns the
-            placement/layout only — PHE-25 replaces the placeholder below with the
-            interactive rotating-question widget. Do not build the behavior here.
+            placement/layout only; the rotating-question behavior + curated
+            content live in AskPolarisWidget. The widget renders the seeded lead
+            copy (`constellationCopy.polarisLead`) as its own heading.
           */}
           <div
             id="ask-polaris-mount"
             className="pt-4"
             style={{ borderTop: "1px solid rgba(255,253,253,0.06)" }}
           >
-            <p
-              className="lowercase"
-              style={{
-                fontSize: "13px",
-                letterSpacing: "0.08em",
-                color: "rgba(255,253,253,0.55)",
-                paddingTop: "24px",
-              }}
-            >
-              {constellationCopy.polarisLead}
-            </p>
+            <AskPolarisWidget />
           </div>
         </div>
 
