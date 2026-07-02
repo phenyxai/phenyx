@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter, useSelectedLayoutSegment } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { useTier, applyTierUI } from "@/lib/use-tier";
+import { trackTabVisit, trackTabDuration } from "@/lib/analytics";
 
 /**
  * Nav items in fixed product order. Rendered in array order — never sorted.
@@ -37,6 +38,15 @@ export function DashboardSidebar() {
   const upgradeRef = useRef<HTMLButtonElement>(null);
   const badgeRef = useRef<HTMLSpanElement>(null);
 
+  // Engagement instrumentation (PHE-35). The sidebar persists and observes the
+  // active route segment, so its segment change is the single source of truth
+  // for tab_visit/tab_duration — instrumenting here fires on EVERY navigation
+  // (sidebar click, back/forward, programmatic) exactly once, and avoids the
+  // double-count a per-link onClick would cause. Refs hold the tab we're on and
+  // when we entered it so we can emit the duration for the tab being left.
+  const activeTabRef = useRef<string | null>(null);
+  const enteredAtRef = useRef<number>(Date.now());
+
   // Authenticated shell: bounce to sign-in if there is no session. Runs once on
   // mount of the persistent sidebar (does not re-run on tab change).
   useEffect(() => {
@@ -55,6 +65,23 @@ export function DashboardSidebar() {
   useEffect(() => {
     applyTierUI(tier, { upgradeButton: upgradeRef.current, badge: badgeRef.current });
   }, [tier]);
+
+  // Tab engagement: on each segment change, emit a tab_duration for the tab
+  // being left, then a tab_visit for the newly-active tab. The first run (mount)
+  // emits the landing tab_visit with previous=null and no duration. Fires on
+  // segment change only — not on mount of individual tab content.
+  useEffect(() => {
+    const tab = segment ?? "daily";
+    const previous = activeTabRef.current;
+    if (previous === tab) return;
+    if (previous !== null) {
+      const seconds = Math.max(0, Math.round((Date.now() - enteredAtRef.current) / 1000));
+      trackTabDuration(previous, seconds);
+    }
+    trackTabVisit(tab, previous);
+    activeTabRef.current = tab;
+    enteredAtRef.current = Date.now();
+  }, [segment]);
 
   return (
     <nav
