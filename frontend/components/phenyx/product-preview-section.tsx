@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSessionColor } from "@/contexts/session-color-context";
+import { constellationCopy } from "@/lib/landing-copy";
 
 // Same node data as the waitlist modal
 const nodes = [
@@ -190,19 +191,6 @@ export function ProductPreviewSection() {
         className="mx-auto px-6 md:px-20"
         style={{ maxWidth: "1100px", ...animationStyle }}
       >
-        {/* Label */}
-        <p
-          className="uppercase"
-          style={{
-            fontSize: "11px",
-            letterSpacing: "0.2em",
-            color: "rgba(255,253,253,0.6)",
-            marginBottom: "24px",
-          }}
-        >
-          a first look
-        </p>
-
         {/* Headline */}
         <h2
           className="lowercase"
@@ -213,7 +201,7 @@ export function ProductPreviewSection() {
             marginBottom: "12px",
           }}
         >
-          your identity. finally in one place.
+          {constellationCopy.previewHeadline}
         </h2>
 
         {/* Subline */}
@@ -226,7 +214,7 @@ export function ProductPreviewSection() {
             marginBottom: "48px",
           }}
         >
-          we help you connect it all through moments of reflection.
+          {constellationCopy.previewSubline}
         </p>
 
         {/* Product preview frame */}
@@ -249,7 +237,7 @@ export function ProductPreviewSection() {
                 color: "rgba(255,253,253,0.6)",
               }}
             >
-              PHENYX COLLECTIVE
+              {constellationCopy.previewBrandLabel}
             </span>
             <span
               className="lowercase"
@@ -258,7 +246,7 @@ export function ProductPreviewSection() {
                 color: "rgba(255,253,253,0.6)",
               }}
             >
-              your constellation
+              {constellationCopy.previewConstellationLabel}
             </span>
           </div>
 
@@ -319,7 +307,7 @@ export function ProductPreviewSection() {
                   paddingTop: "20px",
                 }}
               >
-                reflect.
+                {constellationCopy.reflectLabel}
               </span>
             </div>
 

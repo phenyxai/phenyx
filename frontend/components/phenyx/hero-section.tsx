@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ScrollIndicator } from "./scroll-indicator";
 import { IdentityParticles } from "./identity-particles";
 import { useSessionColor } from "@/contexts/session-color-context";
+import { heroCopy } from "@/lib/landing-copy";
 
 interface HeroSectionProps {
   onEnterClick: () => void;
@@ -56,13 +57,13 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
               ...getAnimationStyle(0),
             }}
           >
-            you are not one thing.
+            {heroCopy.preHeadline}
           </p>
-          
+
           {/* Hero headline - responsive sizing to prevent overflow */}
-          <h1 
+          <h1
             className="text-[36px] sm:text-[48px] md:text-[60px] lg:text-[72px] uppercase"
-            style={{ 
+            style={{
               fontWeight: 700,
               lineHeight: 0.95,
               letterSpacing: "-0.02em",
@@ -70,20 +71,20 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
               ...getAnimationStyle(300),
             }}
           >
-            PHENYX<br />COLLECTIVE
+            {heroCopy.brand}
           </h1>
-          
+
           {/* Tagline - 12px, weight 300, tracking 0.18em, opacity 50% */}
-          <p 
+          <p
             className="text-[12px] lowercase"
-            style={{ 
+            style={{
               fontWeight: 300,
               letterSpacing: "0.18em",
               color: "rgba(255,253,253,0.5)",
               ...getAnimationStyle(600),
             }}
           >
-            where identity takes form
+            {heroCopy.tagline}
           </p>
           
           {/* Enter button - 13px, weight 400, tracking 0.1em */}
@@ -102,7 +103,7 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
                 color: buttonFlash || isHovered ? "#0A0A0A" : "#FFFDFD",
               }}
             >
-              enter
+              {heroCopy.enter}
             </button>
           </div>
         </div>

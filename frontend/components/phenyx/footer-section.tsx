@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
+import { footerCopy, BRAND, SECTION_IDS } from "@/lib/landing-copy";
 
 export function FooterSection() {
   const [email, setEmail] = useState("");
@@ -70,7 +71,7 @@ export function FooterSection() {
   const isValid = validateEmail(email);
 
   return (
-    <footer id="footer">
+    <footer id={SECTION_IDS.footer}>
       {/* Zone 1 - Main content - 80px padding top */}
       <div 
         className="flex flex-col items-center px-6 md:px-12 lg:px-20"
@@ -88,22 +89,22 @@ export function FooterSection() {
               opacity: isFading ? 0 : 1,
             }}
           >
-            you{"'"}re following the build.
+            {footerCopy.followingSuccess}
           </p>
         ) : status === "already_following" ? (
-          <p 
-            className="text-[18px] font-light lowercase text-center transition-opacity duration-500" 
-            style={{ 
+          <p
+            className="text-[18px] font-light lowercase text-center transition-opacity duration-500"
+            style={{
               color: "rgba(255,253,253,0.7)",
               opacity: isFading ? 0 : 1,
             }}
           >
-            you{"'"}re following.
+            {footerCopy.followingAlready}
           </p>
         ) : status === "error" ? (
           <div className="text-center">
             <p className="text-[18px] lowercase mb-4" style={{ color: "rgba(255,253,253,0.7)" }}>
-              something went wrong. try again.
+              {footerCopy.errorMessage}
             </p>
             <button
               onClick={() => setStatus("idle")}
@@ -112,22 +113,22 @@ export function FooterSection() {
               onMouseEnter={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.8)"}
               onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.5)"}
             >
-              try again
+              {footerCopy.errorRetry}
             </button>
           </div>
         ) : (
           <>
-            <h2 
+            <h2
               className="text-[42px] font-light lowercase text-center mb-2"
               style={{ color: "#FFFDFD" }}
             >
-              follow the build.
+              {footerCopy.headline}
             </h2>
-            <p 
+            <p
               className="text-[14px] text-center mb-10"
               style={{ color: "rgba(255,253,253,0.65)" }}
             >
-              updates from inside the making of PHENYX COLLECTIVE.
+              {footerCopy.sublinePrefix}<span className="uppercase">{BRAND}</span>{footerCopy.sublineSuffix}
             </p>
             
             <form onSubmit={handleSubmit} className="flex items-center gap-3">
@@ -136,7 +137,7 @@ export function FooterSection() {
                 <input
                   id="footer-email"
                   type="email"
-                  placeholder="your email"
+                  placeholder={footerCopy.emailPlaceholder}
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -180,7 +181,7 @@ export function FooterSection() {
                   e.currentTarget.style.color = "#FFFDFD";
                 }}
               >
-                {status === "loading" ? "..." : "i'm in"}
+                {status === "loading" ? footerCopy.submitLoading : footerCopy.submitIdle}
               </button>
             </form>
           </>
@@ -198,10 +199,10 @@ export function FooterSection() {
       >
         {/* Logo - absolutely positioned left on desktop */}
         <div className="md:absolute md:left-6 lg:left-20 flex-shrink-0 order-first md:order-none">
-          <Image 
-            src="/phenyx-logo.png" 
-            alt="PHENYX" 
-            width={20} 
+          <Image
+            src="/phenyx-logo.png"
+            alt={footerCopy.logoAlt}
+            width={20}
             height={20}
             className="w-5 h-5 opacity-40"
           />
@@ -216,19 +217,16 @@ export function FooterSection() {
             color: "rgba(255,253,253,0.6)",
           }}
         >
-          © 2026 PHENYX COLLECTIVE
+          {footerCopy.copyright}
         </p>
-        
-        {/* Contact email - absolutely positioned right on desktop */}
-        <a 
-          href="mailto:contact@phenyxcollective.com"
-          className="md:absolute md:right-6 lg:right-20 text-[11px] lowercase transition-colors flex-shrink-0 order-1 md:order-none"
+
+        {/* Contact email - static string (not a mailto), positioned right on desktop */}
+        <span
+          className="md:absolute md:right-6 lg:right-20 text-[11px] lowercase flex-shrink-0 order-1 md:order-none"
           style={{ color: "rgba(255,253,253,0.6)" }}
-          onMouseEnter={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.9)"}
-          onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.6)"}
         >
-          contact@phenyxcollective.com
-        </a>
+          {footerCopy.contactEmail}
+        </span>
       </div>
     </footer>
   );

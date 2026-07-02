@@ -2,46 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSessionColor } from "@/contexts/session-color-context";
+import { howItWorksCopy, BRAND, SECTION_IDS } from "@/lib/landing-copy";
 
-const cards = [
-  {
-    layer: "layer one",
-    title: "connect",
-    body: "oauth integrations with instagram, linkedin, tiktok, x, spotify, youtube, github, and more. we read what you have already made, said, and shared across the internet.",
-    radiusDesktop: "12px 0 0 0",
-    radiusMobile: "12px",
-  },
-  {
-    layer: "layer two",
-    title: "synthesize",
-    body: "our AI analyzes tone, language patterns, content themes, and pivotal moments across all sources. it finds the through-line in everything you have built and maps it to the seven pillars of your identity formation.",
-    radiusDesktop: "0",
-    radiusMobile: "0",
-  },
-  {
-    layer: "layer three",
-    title: "reflect",
-    body: "the AI returns not a summary but a pattern. something that lands as i did not have words for that until now. it asks questions earned from your data, not generated from a template.",
-    radiusDesktop: "0 12px 0 0",
-    radiusMobile: "12px",
-  },
-];
-
-const analyzePills = [
-  "tone and voice",
-  "pivotal moments",
-  "content evolution",
-  "career transitions",
-  "creative output",
-  "the people you keep returning to.",
-  "language over time",
-];
-
-const neverDoItems = [
-  "store raw platform data. we process and discard. only synthesized insights are retained.",
-  "access without consent. every connection is oauth-authorized and revocable at any time.",
-  "assign you a label. PHENYX reflects. it never categorizes.",
-];
+const { cards, analyzePills, neverDoItems } = howItWorksCopy;
 
 export function HowItWorksSection() {
   const { sessionColor } = useSessionColor();
@@ -106,6 +69,7 @@ export function HowItWorksSection() {
 
   return (
     <section
+      id={SECTION_IDS.how}
       className="w-full"
       style={{
         backgroundColor: "#0A0A0A",
@@ -127,7 +91,7 @@ export function HowItWorksSection() {
             marginBottom: "24px",
           }}
         >
-          how it works
+          {howItWorksCopy.eyebrow}
         </p>
 
         {/* Headline */}
@@ -142,7 +106,7 @@ export function HowItWorksSection() {
             marginBottom: "16px",
           }}
         >
-          we synthesize who you are across everything you have built.
+          {howItWorksCopy.headline}
         </h2>
 
         {/* Subline */}
@@ -157,7 +121,7 @@ export function HowItWorksSection() {
             marginBottom: "64px",
           }}
         >
-          connect your platforms or tell us your story. either way <span className="uppercase font-light">PHENYX COLLECTIVE</span> reads the patterns others miss and reflects back a portrait only you could have.
+          {howItWorksCopy.sublinePrefix}<span className="uppercase font-light">{BRAND}</span>{howItWorksCopy.sublineSuffix}
         </p>
 
         {/* Three cards */}
@@ -248,7 +212,7 @@ letterSpacing: "0.15em",
                 marginBottom: "16px",
               }}
             >
-              what we analyze
+              {howItWorksCopy.analyzeLabel}
             </p>
 
             <div className="flex flex-wrap gap-2">
@@ -290,7 +254,7 @@ letterSpacing: "0.15em",
                 marginBottom: "16px",
               }}
             >
-              what we never do
+              {howItWorksCopy.neverDoLabel}
             </p>
 
             <div className="flex flex-col gap-[10px]">
