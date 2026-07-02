@@ -42,6 +42,64 @@ export async function fetchProfile(): Promise<SessionProfile | null> {
   return data as SessionProfile
 }
 
+// ---------------------------------------------------------------------------
+// Profile tab overview (PHE-30 surface / PHE-38 engine). Everything the Profile
+// tab renders that is NOT the tier (tier comes from useTier): the display name,
+// connected-platform badges, the 3-item WHAT WE HAVE SEEN behavioral snapshot,
+// and the WHAT PHENYX FORESEES line.
+//
+// The engine-backed endpoint (`/profile/overview`, PHE-38) is the source of
+// truth once live. Until then we fall back to a supabase-direct read so the
+// header (name + platforms) still renders; the engine-generated snapshot and
+// foresight are simply absent (the tab renders their empty states). Every path
+// resolves without throwing so the tab never crashes on missing data.
+// ---------------------------------------------------------------------------
+
+/** One WHAT WE HAVE SEEN item: a pillar label + a single sentence. */
+export interface ProfileSnapshotItem {
+  pillar_label: string
+  sentence: string
+}
+
+export interface ProfileOverview {
+  display_name: string | null
+  /** Platform slugs for the header badges; empty when nothing is connected. */
+  connected_platforms: string[]
+  /** Behavioral snapshot — the engine returns exactly 3 items. */
+  snapshot: ProfileSnapshotItem[]
+  /** Forward-looking foresight line; null until the engine has generated one. */
+  foresight: string | null
+}
+
+export async function fetchProfileOverview(): Promise<ProfileOverview | null> {
+  // Prefer the engine-backed endpoint; it carries name, platforms, snapshot,
+  // and foresight in one payload.
+  try {
+    const res = await apiFetch("/profile/overview")
+    if (res.ok) return (await res.json()) as ProfileOverview
+  } catch {
+    // endpoint not live yet — fall through to the supabase-direct read
+  }
+
+  // Fallback while PHE-38 is not live: read what the signed-in client can see
+  // directly. Header renders; engine-generated snapshot/foresight stay empty.
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const [{ data: profile }, { data: persona }] = await Promise.all([
+    supabase.from("user_profiles").select("display_name").eq("id", user.id).maybeSingle(),
+    supabase.from("user_persona").select("connected_platforms").eq("user_id", user.id).maybeSingle(),
+  ])
+
+  return {
+    display_name: (profile as { display_name: string | null } | null)?.display_name ?? null,
+    connected_platforms:
+      (persona as { connected_platforms: string[] | null } | null)?.connected_platforms ?? [],
+    snapshot: [],
+    foresight: null,
+  }
+}
+
 export interface SignupStartResult {
   draft_id: string
   maskedEmail: string
