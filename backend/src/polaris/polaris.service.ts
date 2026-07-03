@@ -68,6 +68,31 @@ export interface PolarisUsage {
   total_tokens: number;
 }
 
+/** One PREVIOUS CONVERSATIONS row. `preview` is the (decrypted) first user
+ * message, truncated, so the list reads as something more than a bare date. */
+export interface PolarisThreadSummary {
+  id: string;
+  title: string | null;
+  preview: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** One BASED ON WHAT WE SEE suggestion: a question + the pillar it grounds on. */
+export interface SuggestedQuestion {
+  text: string;
+  pillar_tag: Pillar;
+}
+
+/** A single turn returned when a thread is reloaded (body decrypted for render). */
+export interface PolarisMessageView {
+  id: string;
+  role: "user" | "assistant";
+  body: string;
+  pillar_tag: Pillar | null;
+  created_at: string;
+}
+
 @Injectable()
 export class PolarisService {
   constructor(
@@ -276,6 +301,114 @@ export class PolarisService {
     };
   }
 
+  // ---- chat surface reads (PHE-23) -----------------------------------------
+
+  /**
+   * Main-view payload: the user's past threads (most-recent first, hidden by the
+   * client when empty) plus server-computed suggested questions from their top
+   * pillars. Ownership is enforced by the `user_id` filter (service-role client
+   * bypasses RLS). `preview` decrypts each thread's first user message.
+   */
+  async listThreads(
+    userId: string
+  ): Promise<{
+    threads: PolarisThreadSummary[];
+    suggested_questions: SuggestedQuestion[];
+  }> {
+    const supabase = this.supabaseService.getClient();
+
+    const [{ data: conversations }, { data: constellation }] = await Promise.all(
+      [
+        supabase
+          .from("polaris_conversations")
+          .select("id, title, created_at, updated_at")
+          .eq("user_id", userId)
+          .order("updated_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("constellation_state")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle(),
+      ]
+    );
+
+    const rows = conversations ?? [];
+    const threads = await Promise.all(
+      rows.map(async (row) => ({
+        id: row.id as string,
+        title: (row.title as string | null) ?? null,
+        preview: await this.firstMessagePreview(userId, row.id as string),
+        created_at: row.created_at as string,
+        updated_at: row.updated_at as string,
+      }))
+    );
+
+    return {
+      threads,
+      suggested_questions: computeSuggestedQuestions(constellation),
+    };
+  }
+
+  /**
+   * Reload a single thread's messages (oldest-first) with each `body` decrypted
+   * for plain-text render. Ownership-checked exactly like `ask`: a thread the
+   * caller does not own (or that does not exist) is a 404 — never another user's
+   * conversation.
+   */
+  async getThread(
+    userId: string,
+    threadId: string
+  ): Promise<{ thread_id: string; messages: PolarisMessageView[] }> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: conversation } = await supabase
+      .from("polaris_conversations")
+      .select("id, user_id")
+      .eq("id", threadId)
+      .maybeSingle();
+    if (!conversation || conversation.user_id !== userId) {
+      throw new HttpException({ error: "thread not found" }, 404);
+    }
+
+    const { data: messageRows } = await supabase
+      .from("polaris_messages")
+      .select("id, role, body, pillar_tag, created_at")
+      .eq("conversation_id", threadId)
+      .order("created_at", { ascending: true });
+
+    const messages: PolarisMessageView[] = (messageRows ?? []).map((m) => ({
+      id: m.id as string,
+      role: m.role as "user" | "assistant",
+      body: this.encryption.decrypt(m.body as string),
+      pillar_tag: (m.pillar_tag as Pillar | null) ?? null,
+      created_at: m.created_at as string,
+    }));
+
+    return { thread_id: threadId, messages };
+  }
+
+  /** Decrypt the earliest user message of a thread, truncated for the list
+   * preview. Null when the thread has no user turn yet. */
+  private async firstMessagePreview(
+    userId: string,
+    conversationId: string
+  ): Promise<string | null> {
+    const supabase = this.supabaseService.getClient();
+    const { data } = await supabase
+      .from("polaris_messages")
+      .select("body")
+      .eq("conversation_id", conversationId)
+      .eq("user_id", userId)
+      .eq("role", "user")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (!data?.body) return null;
+    const text = this.encryption.decrypt(data.body as string).trim();
+    return text.length > 80 ? `${text.slice(0, 80).trimEnd()}…` : text;
+  }
+
   // ---- persistence helpers -------------------------------------------------
 
   /** Return the caller's conversation id, creating one when `threadId` is absent or
@@ -411,6 +544,59 @@ export function isoWeekStart(now: Date): string {
   const diff = (day + 6) % 7; // days since Monday
   d.setUTCDate(d.getUTCDate() - diff);
   return d.toISOString().slice(0, 10);
+}
+
+// One suggested question per pillar (BASED ON WHAT WE SEE). Lowercase, in voice;
+// each is grounded on its pillar so tapping it routes cleanly through the ask
+// pipeline's keyword/top-pillar cascade.
+const PILLAR_QUESTIONS: Record<Pillar, string> = {
+  origin: "what pulled me toward the things i started with?",
+  emergence: "what were people noticing about me before i noticed it myself?",
+  self_creation: "what does the way i make things say about me?",
+  convergence: "where do my different worlds actually meet?",
+  becoming: "who am i becoming when no one is watching?",
+  recognition: "how do people actually experience me?",
+  transcendence: "where is all of this quietly heading?",
+};
+
+// Default suggestions when the constellation has no scores yet — the first three
+// active pillars, so the main view always renders three questions (AC1).
+const DEFAULT_SUGGESTED_PILLARS: Pillar[] = [
+  "origin",
+  "emergence",
+  "self_creation",
+];
+
+/**
+ * Compute the three BASED ON WHAT WE SEE suggestions from the user's top-scoring
+ * pillars. Ranks every pillar by its constellation score, takes the top three,
+ * and falls back to the default active pillars when the constellation is empty —
+ * so the section is always populated with one question per pillar.
+ */
+export function computeSuggestedQuestions(
+  constellation: Record<string, unknown> | null | undefined
+): SuggestedQuestion[] {
+  const pillars = topScoringPillars(constellation, 3);
+  const chosen = pillars.length > 0 ? pillars : DEFAULT_SUGGESTED_PILLARS;
+  return chosen.map((pillar) => ({
+    text: PILLAR_QUESTIONS[pillar],
+    pillar_tag: pillar,
+  }));
+}
+
+/** Top-N pillars by constellation score (desc). Empty when no numeric scores. */
+function topScoringPillars(
+  constellation: Record<string, unknown> | null | undefined,
+  n: number
+): Pillar[] {
+  if (!constellation) return [];
+  const scored: Array<{ pillar: Pillar; score: number }> = [];
+  for (const pillar of ALL_PILLARS) {
+    const score = constellation[CONSTELLATION_SCORE_COLUMNS[pillar]];
+    if (typeof score === "number") scored.push({ pillar, score });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, n).map((s) => s.pillar);
 }
 
 /** Highest-scoring pillar from a constellation_state row, or null if no scores. */

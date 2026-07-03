@@ -142,6 +142,69 @@ export async function askPolaris(
   return (await res.json()) as PolarisAnswer
 }
 
+// ---------------------------------------------------------------------------
+// Polaris chat surface reads (PHE-23). The main view loads `getPolarisThreads()`
+// (past conversations + suggested questions from the user's top pillars); tapping
+// a past conversation calls `getPolarisThread(id)` to reload its decrypted
+// messages. Sending is `askPolaris` above — these two are read-only.
+// ---------------------------------------------------------------------------
+
+/** One BASED ON WHAT WE SEE suggestion: a question + the pillar it grounds on. */
+export interface SuggestedQuestion {
+  text: string
+  pillar_tag: string
+}
+
+/** One PREVIOUS CONVERSATIONS row; `preview` is the thread's first user message. */
+export interface PolarisThreadSummary {
+  id: string
+  title: string | null
+  preview: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PolarisThreadsResponse {
+  threads: PolarisThreadSummary[]
+  suggested_questions: SuggestedQuestion[]
+}
+
+/** A single reloaded turn; `body` is decrypted server-side, rendered plain-text. */
+export interface PolarisMessageView {
+  id: string
+  role: "user" | "assistant"
+  body: string
+  pillar_tag: string | null
+  created_at: string
+}
+
+export interface PolarisThreadDetail {
+  thread_id: string
+  messages: PolarisMessageView[]
+}
+
+/**
+ * Load the Polaris main view: past conversations (most-recent first; the section
+ * is hidden client-side when empty) and the suggested questions. Throws on a
+ * non-2xx so the caller can fall back to an empty main view.
+ */
+export async function getPolarisThreads(): Promise<PolarisThreadsResponse> {
+  const res = await apiFetch("/api/polaris/threads")
+  if (!res.ok) throw new Error("could not load polaris threads")
+  return (await res.json()) as PolarisThreadsResponse
+}
+
+/**
+ * Reload one thread's messages (decrypted, oldest-first). Throws on a non-2xx
+ * (e.g. a 404 for a thread the caller does not own) so the caller can surface a
+ * retry affordance.
+ */
+export async function getPolarisThread(id: string): Promise<PolarisThreadDetail> {
+  const res = await apiFetch(`/api/polaris/threads/${id}`)
+  if (!res.ok) throw new Error("could not load this conversation")
+  return (await res.json()) as PolarisThreadDetail
+}
+
 export interface SignupStartResult {
   draft_id: string
   maskedEmail: string
