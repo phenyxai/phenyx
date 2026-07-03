@@ -218,3 +218,20 @@ export interface AnalyticsEvent {
   occurred_at: string;
   created_at: string;
 }
+
+// ============================================================================
+// PHE-39: Crisis pre-flight
+// Mirrors /supabase/migrations/20260703120000_phe39_crisis_events.sql.
+// ============================================================================
+
+/**
+ * Append-only audit of crisis pre-flight triggers. `text_hash` is sha256 of the
+ * user text (hex) — the plaintext is NEVER persisted or logged.
+ */
+export interface CrisisEvent {
+  id: string;
+  user_id: string;
+  category: string | null;
+  text_hash: string;
+  occurred_at: string; // ISO timestamptz
+}

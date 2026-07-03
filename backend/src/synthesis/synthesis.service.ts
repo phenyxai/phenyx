@@ -214,14 +214,20 @@ export class SynthesisService {
       throw new HttpException({ error: "trait_object required" }, 400);
     }
 
-    // Crisis pre-flight — fail closed. PHE-39 will upgrade CrisisService.detect
-    // to async; this call site stays a single boolean check.
-    if (intention && this.crisis.detect(intention)) {
-      return {
-        isCrisis: true,
-        insight: this.crisis.response.insight,
-        resources: this.crisis.response.resources,
-      };
+    // Crisis pre-flight — fail closed. PHE-39: regex fast-path + Haiku semantic
+    // gate; any timeout/error inside detectCrisis is treated as triggered. On a
+    // trigger no Claude synthesis runs and no constellation_state is written; a
+    // hashed crisis_events row is persisted best-effort (never the raw text).
+    if (intention) {
+      const crisis = await this.crisis.detectCrisis(intention);
+      if (crisis.triggered) {
+        await this.crisis.recordCrisisEvent(userId, intention, crisis.category);
+        return {
+          isCrisis: true,
+          insight: this.crisis.response.insight,
+          resources: this.crisis.response.resources,
+        };
+      }
     }
 
     const userMessage = `onairos trait object:
