@@ -8,5 +8,7 @@ import { OnairosSnapshotService } from "./onairos-snapshot.service";
   imports: [AuthModule],
   controllers: [PersonaController],
   providers: [PersonaService, OnairosSnapshotService],
+  // Exported so PHE-40's OnairosModule reuses the same redaction + synthesis.
+  exports: [PersonaService, OnairosSnapshotService],
 })
 export class PersonaModule {}

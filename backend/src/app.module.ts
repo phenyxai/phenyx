@@ -14,6 +14,7 @@ import { SynthesisModule } from "./synthesis/synthesis.module";
 import { PersonaModule } from "./persona/persona.module";
 import { EventsModule } from "./events/events.module";
 import { ObservationsModule } from "./observations/observations.module";
+import { OnairosModule } from "./onairos/onairos.module";
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ObservationsModule } from "./observations/observations.module";
     PersonaModule,
     EventsModule,
     ObservationsModule,
+    OnairosModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
