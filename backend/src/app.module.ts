@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { ScheduleModule } from "@nestjs/schedule";
 import { HealthController } from "./health/health.controller";
 import { AuthModule } from "./auth/auth.module";
 import { SupabaseModule } from "./supabase/supabase.module";
@@ -12,6 +13,7 @@ import { StripeModule } from "./stripe/stripe.module";
 import { SynthesisModule } from "./synthesis/synthesis.module";
 import { PersonaModule } from "./persona/persona.module";
 import { EventsModule } from "./events/events.module";
+import { ObservationsModule } from "./observations/observations.module";
 
 @Module({
   imports: [
@@ -21,6 +23,7 @@ import { EventsModule } from "./events/events.module";
     // Baseline global cap; PHE-12 should add a tighter @Throttle on POST /auth/signin
     // (e.g. { limit: 5, ttl: 60000 }) for the brute-force-sensitive verify route.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
+    ScheduleModule.forRoot(),
     CommonModule,
     SupabaseModule,
     PrismaModule,
@@ -30,6 +33,7 @@ import { EventsModule } from "./events/events.module";
     SynthesisModule,
     PersonaModule,
     EventsModule,
+    ObservationsModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
