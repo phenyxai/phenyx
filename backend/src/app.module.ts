@@ -12,6 +12,7 @@ import { VoiceStandardModule } from "./voice-standard/voice-standard.module";
 import { StripeModule } from "./stripe/stripe.module";
 import { SynthesisModule } from "./synthesis/synthesis.module";
 import { PersonaModule } from "./persona/persona.module";
+import { EventsModule } from "./events/events.module";
 import { ObservationsModule } from "./observations/observations.module";
 
 @Module({
@@ -31,6 +32,7 @@ import { ObservationsModule } from "./observations/observations.module";
     StripeModule,
     SynthesisModule,
     PersonaModule,
+    EventsModule,
     ObservationsModule,
   ],
   controllers: [HealthController],
