@@ -129,14 +129,22 @@ export type ObservationSource =
   | 'reddit'
   | 'pinterest';
 
-/** Optional DB-level enum for analytics event types (column stays `text`). */
+/**
+ * Analytics event types (column stays `text`). Mirrors the PHE-35 client queue's
+ * actual names plus the PHE-43 ingest allowlist. `upgrade`/`downgrade` are kept
+ * as accepted compatibility aliases; `observation_unlock` predates PHE-35.
+ */
 export type EventType =
   | 'tab_visit'
   | 'tab_duration'
+  | 'days_since_last_visit'
+  | 'polaris_message'
   | 'login'
+  | 'upgrade_to_pro'
+  | 'downgrade_to_free'
   | 'upgrade'
-  | 'observation_unlock'
-  | 'polaris_message';
+  | 'downgrade'
+  | 'observation_unlock';
 
 export type PolarisRole = 'user' | 'assistant';
 
@@ -213,4 +221,6 @@ export interface AnalyticsEvent {
   props: Record<string, unknown>;
   occurred_at: string;
   created_at: string;
+  // PHE-43: optional client-supplied idempotency key; unique per (user_id, event_id).
+  event_id: string | null;
 }
