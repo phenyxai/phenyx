@@ -11,6 +11,7 @@ import { VoiceStandardModule } from "./voice-standard/voice-standard.module";
 import { StripeModule } from "./stripe/stripe.module";
 import { SynthesisModule } from "./synthesis/synthesis.module";
 import { PersonaModule } from "./persona/persona.module";
+import { EventsModule } from "./events/events.module";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PersonaModule } from "./persona/persona.module";
     StripeModule,
     SynthesisModule,
     PersonaModule,
+    EventsModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
