@@ -2,6 +2,7 @@ import { HttpException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { SupabaseService } from "../supabase/supabase.service";
 import { CrisisService } from "./crisis.service";
+import { TraitProfileService } from "./trait-profile.service";
 import {
   SystemBlock,
   VoiceStandardService,
@@ -192,7 +193,8 @@ export class SynthesisService {
     private readonly config: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly crisis: CrisisService,
-    private readonly voiceStandard: VoiceStandardService
+    private readonly voiceStandard: VoiceStandardService,
+    private readonly traitProfile: TraitProfileService
   ) {}
 
   /**
@@ -307,13 +309,23 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
     if (!idempotent) {
       this.enqueue("mantra", () => this.generateMantra(userId, version));
       this.enqueue("foresight", () => this.generateForesight(userId, version));
-      // PHE-37 observation generation is built separately; this is the enqueue
-      // seam it will consume. Logged so the hand-off point is observable.
-      this.enqueue("observation", async () =>
-        this.logger.log(
-          `observation generation enqueued for ${userId} v${version}`
-        )
+      // PHE-24 — this synthesize() call IS the Onairos-analysis-complete seam (the
+      // Onairos trait object arrives here). Generate the trait-level grounding rows
+      // from the same snapshot, tagged with the new version. Runs as its own pass
+      // and dedups against existing insights, so it never re-stores the trait
+      // grounding the apply RPC already wrote for this constellation.
+      this.enqueue("trait-profile", () =>
+        this.traitProfile.generateTraitProfile(userId, trait_object, version)
       );
+      // PHE-37 observation generation is built separately; this is the enqueue
+      // seam it will consume. PHE-24 attaches the trait-grounding block here so the
+      // observation generator has it ready as grounding once it lands.
+      this.enqueue("observation", async () => {
+        const grounding = await this.traitProfile.buildGroundingBlock(userId);
+        this.logger.log(
+          `observation generation enqueued for ${userId} v${version} (trait grounding: ${grounding ? "attached" : "none"})`
+        );
+      });
     }
 
     return {
