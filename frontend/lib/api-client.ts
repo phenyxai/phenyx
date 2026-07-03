@@ -95,6 +95,53 @@ export async function fetchProfileOverview(): Promise<ProfileOverview | null> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Polaris answer engine (PHE-22 engine / PHE-23 chat surface). One authed
+// question → exactly one grounded Claude call. `pillar_tag` is the routed pillar;
+// `sparse` flags a thin constellation; `limit_reached` short-circuits over the
+// weekly budget (no answer); `is_crisis` carries the crisis response + resources.
+// ---------------------------------------------------------------------------
+
+export interface PolarisUsage {
+  input_tokens: number
+  output_tokens: number
+  cache_read_input_tokens: number
+  cache_creation_input_tokens: number
+  total_tokens: number
+}
+
+export interface PolarisAnswer {
+  /** null when limit_reached is true (no Claude call was made). */
+  answer: string | null
+  pillar_tag: string | null
+  thread_id: string
+  message_id: string | null
+  usage: PolarisUsage
+  sparse?: boolean
+  limit_reached?: boolean
+  is_crisis?: boolean
+  resources?: { us: string; text: string; international: string }
+}
+
+/**
+ * Ask Polaris a question. Pass `threadId` to continue an existing conversation;
+ * omit it to start a new one (the returned `thread_id` is the id to reuse). Throws
+ * on a non-2xx response so callers can surface a retry affordance.
+ */
+export async function askPolaris(
+  question: string,
+  threadId?: string,
+): Promise<PolarisAnswer> {
+  const res = await apiFetch("/api/polaris/ask", {
+    method: "POST",
+    body: JSON.stringify({ question, ...(threadId ? { thread_id: threadId } : {}) }),
+  })
+  if (!res.ok) {
+    throw new Error("polaris is unavailable right now. please try again.")
+  }
+  return (await res.json()) as PolarisAnswer
+}
+
 export interface SignupStartResult {
   draft_id: string
   maskedEmail: string
