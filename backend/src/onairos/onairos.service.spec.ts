@@ -136,7 +136,7 @@ test("connect is idempotent on event_id — synthesis fires once for identical p
     platforms: ["spotify"],
     trait_object: { personality: { openness: 0.5 } },
     token: TOKEN,
-  } as const;
+  };
 
   const first = await service.connect("user-1", { ...payload });
   const second = await service.connect("user-1", { ...payload });
