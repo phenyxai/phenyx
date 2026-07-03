@@ -91,6 +91,10 @@ export interface ConstellationState {
   // PHE-31: forward-looking one-liner + Daily-tab 2-line mantra (1:1 with version).
   foresight: string | null;
   mantra: string | null;
+
+  // PHE-34: idempotency key — the trigger_event_id of the last applied synthesis.
+  // A repeat of the same trigger returns current state without bumping version.
+  last_trigger_event_id: string | null;
 }
 
 // PHE-20: versioned, DB-backed Polaris Voice Standard. One row is active at a time
@@ -213,4 +217,21 @@ export interface AnalyticsEvent {
   props: Record<string, unknown>;
   occurred_at: string;
   created_at: string;
+}
+
+// ============================================================================
+// PHE-39: Crisis pre-flight
+// Mirrors /supabase/migrations/20260703120000_phe39_crisis_events.sql.
+// ============================================================================
+
+/**
+ * Append-only audit of crisis pre-flight triggers. `text_hash` is sha256 of the
+ * user text (hex) — the plaintext is NEVER persisted or logged.
+ */
+export interface CrisisEvent {
+  id: string;
+  user_id: string;
+  category: string | null;
+  text_hash: string;
+  occurred_at: string; // ISO timestamptz
 }
