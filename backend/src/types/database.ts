@@ -91,6 +91,10 @@ export interface ConstellationState {
   // PHE-31: forward-looking one-liner + Daily-tab 2-line mantra (1:1 with version).
   foresight: string | null;
   mantra: string | null;
+
+  // PHE-34: idempotency key — the trigger_event_id of the last applied synthesis.
+  // A repeat of the same trigger returns current state without bumping version.
+  last_trigger_event_id: string | null;
 }
 
 // PHE-20: versioned, DB-backed Polaris Voice Standard. One row is active at a time
