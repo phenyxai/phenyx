@@ -110,6 +110,19 @@ export interface PolarisUsage {
   total_tokens: number
 }
 
+/** Weekly Polaris token allowance snapshot (PHE-27), returned alongside each ask. */
+export interface PolarisAllowance {
+  /** ISO week start (Monday) in UTC — the polaris_token_usage.week key. */
+  week: string
+  /** Tokens debited this week so far. */
+  used: number
+  /** Tier-derived weekly limit (80 free / 8000 pro|gifted). */
+  limit: number
+  /** max(0, limit - used). */
+  remaining: number
+  limit_reached: boolean
+}
+
 export interface PolarisAnswer {
   /** null when limit_reached is true (no Claude call was made). */
   answer: string | null
@@ -119,6 +132,12 @@ export interface PolarisAnswer {
   usage: PolarisUsage
   sparse?: boolean
   limit_reached?: boolean
+  /** Verbatim at-limit copy on the over-budget short-circuit (PHE-27). */
+  message?: string
+  /** True on the over-budget short-circuit — surface the upgrade CTA (PHE-27). */
+  upgrade_cta?: boolean
+  /** Remaining weekly allowance for display (PHE-27). */
+  allowance?: PolarisAllowance
   is_crisis?: boolean
   resources?: { us: string; text: string; international: string }
 }

@@ -10,6 +10,7 @@ import {
   type SuggestedQuestion,
 } from "@/lib/api-client";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
+import { trackPolarisMessage } from "@/lib/analytics";
 
 // ============================================================================
 // PolarisTab — the dashboard Polaris chat surface (PHE-23)
@@ -94,6 +95,10 @@ export function PolarisTab() {
   // stale closure value.
   const threadIdRef = useRef<string | undefined>(undefined);
   threadIdRef.current = threadId;
+  // PHE-29: running count of answered Polaris messages this dashboard session, sent
+  // as `count` on the privacy-first `polaris_message` topic event. Persists across
+  // the main/chat view toggle (the component stays mounted); resets on remount.
+  const sessionMessageCountRef = useRef(0);
 
   // Load the main view (past threads + suggested questions). Fails soft: on any
   // error the main view still renders (empty threads, empty suggestions).
@@ -158,6 +163,20 @@ export function PolarisTab() {
               resources: (res.resources as CrisisResources | undefined) ?? null,
             },
           ]);
+
+          // PHE-29: topic-tag this answered turn and emit the privacy-first
+          // `polaris_message` event through the standard analytics pipeline —
+          // reusing the server-computed `pillar_tag` (matches PHE-22 routing) and
+          // carrying only { count, pillar_tag, message_length }, never the text.
+          // Crisis turns short-circuit before a real exchange, so they don't emit.
+          if (!res.is_crisis) {
+            sessionMessageCountRef.current += 1;
+            trackPolarisMessage({
+              count: sessionMessageCountRef.current,
+              pillar_tag: res.pillar_tag,
+              message: q,
+            });
+          }
         }
       } catch {
         setError("polaris is unavailable right now. please try again.");

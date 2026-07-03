@@ -6,6 +6,7 @@ import { VoiceStandardService } from "../voice-standard/voice-standard.service";
 import { CrisisService } from "../synthesis/crisis.service";
 import type { Pillar } from "../types/database";
 import { inferPillarFromKeywords } from "./pillar-keyword.map";
+import { AT_LIMIT_MESSAGE, TokenBudgetService } from "./token-budget.service";
 
 // Sonnet-tier for chat latency (reality check: claude-sonnet-4-6, NOT an older id).
 const POLARIS_MODEL = "claude-sonnet-4-6";
@@ -17,13 +18,6 @@ const MAX_TOKENS = 400;
 // appended server-side so its wording is guaranteed byte-exact (AC3).
 const SPARSE_NUDGE =
   "the more you connect, the clearer this gets. ask again as your constellation fills in.";
-
-// Provisional weekly token budget by access tier. PHE-27 owns the real budget/tier
-// policy + upgrade CTA; this is a minimal self-contained gate so the endpoint can
-// short-circuit before a Claude call and debit actuals after. Numbers are placeholders.
-// TODO(PHE-27): replace with the shipped budget policy + graceful upgrade CTA.
-const WEEKLY_TOKEN_BUDGET_FREE = 50_000;
-const WEEKLY_TOKEN_BUDGET_FULL = 500_000;
 
 const CONSTELLATION_SYNTHESIS_COLUMNS: Record<Pillar, string> = {
   origin: "origin_synthesis",
@@ -100,7 +94,8 @@ export class PolarisService {
     private readonly supabaseService: SupabaseService,
     private readonly encryption: EncryptionService,
     private readonly voiceStandard: VoiceStandardService,
-    private readonly crisis: CrisisService
+    private readonly crisis: CrisisService,
+    private readonly tokenBudget: TokenBudgetService
   ) {}
 
   async ask(userId: string, body: AskBody) {
@@ -139,13 +134,10 @@ export class PolarisService {
       };
     }
 
-    // (2) Token gate — short-circuit if over the weekly budget (no Claude call, no debit).
-    const week = isoWeekStart(new Date());
-    const [tokensUsed, budget] = await Promise.all([
-      this.readWeeklyTokens(userId, week),
-      this.readWeeklyBudget(userId),
-    ]);
-    if (tokensUsed >= budget) {
+    // (2) Token gate (PHE-27) — short-circuit if over the weekly budget (no Claude
+    // call, no debit). The limit is derived from the live tier at check time.
+    const allowance = await this.tokenBudget.check(userId);
+    if (allowance.limit_reached) {
       const threadId = await this.resolveConversation(userId, body.thread_id);
       return {
         answer: null,
@@ -154,6 +146,9 @@ export class PolarisService {
         message_id: null,
         usage: this.emptyUsage(),
         limit_reached: true,
+        message: AT_LIMIT_MESSAGE,
+        upgrade_cta: true,
+        allowance,
       };
     }
 
@@ -289,7 +284,12 @@ export class PolarisService {
       usage.output_tokens
     );
     await this.touchConversation(threadId);
-    await this.debitWeeklyTokens(userId, week, usage.total_tokens);
+    const debited = await this.tokenBudget.debit(
+      userId,
+      allowance.week,
+      allowance.limit,
+      usage.total_tokens
+    );
 
     return {
       answer,
@@ -298,6 +298,7 @@ export class PolarisService {
       message_id: aiMessageId,
       usage,
       sparse,
+      allowance: debited,
     };
   }
 
@@ -473,53 +474,6 @@ export class PolarisService {
       .eq("id", conversationId);
   }
 
-  // ---- token accounting (provisional; PHE-27 owns the real policy) ----------
-
-  private async readWeeklyTokens(userId: string, week: string): Promise<number> {
-    const supabase = this.supabaseService.getClient();
-    const { data } = await supabase
-      .from("polaris_token_usage")
-      .select("tokens_used")
-      .eq("user_id", userId)
-      .eq("week", week)
-      .maybeSingle();
-    return (data?.tokens_used as number) ?? 0;
-  }
-
-  private async readWeeklyBudget(userId: string): Promise<number> {
-    const supabase = this.supabaseService.getClient();
-    const { data } = await supabase
-      .from("user_profiles")
-      .select("tier")
-      .eq("id", userId)
-      .maybeSingle();
-    const tier = (data?.tier as string | undefined) ?? "free";
-    return tier === "pro" || tier === "gifted"
-      ? WEEKLY_TOKEN_BUDGET_FULL
-      : WEEKLY_TOKEN_BUDGET_FREE;
-  }
-
-  /** Read-modify-write increment of the weekly meter. Single-user/low-concurrency
-   * for MVP; PHE-27 may swap in an atomic RPC. */
-  private async debitWeeklyTokens(
-    userId: string,
-    week: string,
-    delta: number
-  ): Promise<void> {
-    if (delta <= 0) return;
-    const supabase = this.supabaseService.getClient();
-    const current = await this.readWeeklyTokens(userId, week);
-    await supabase.from("polaris_token_usage").upsert(
-      {
-        user_id: userId,
-        week,
-        tokens_used: current + delta,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,week" }
-    );
-  }
-
   private emptyUsage(): PolarisUsage {
     return {
       input_tokens: 0,
@@ -532,19 +486,6 @@ export class PolarisService {
 }
 
 // ---- pure helpers (no DI; unit-testable) -----------------------------------
-
-/** ISO week start (Monday) in UTC, as a YYYY-MM-DD date string — matches
- * polaris_token_usage.week (date, Monday week start, UTC). */
-export function isoWeekStart(now: Date): string {
-  const d = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  );
-  // getUTCDay: 0=Sun..6=Sat. Shift so Monday is the week start.
-  const day = d.getUTCDay();
-  const diff = (day + 6) % 7; // days since Monday
-  d.setUTCDate(d.getUTCDate() - diff);
-  return d.toISOString().slice(0, 10);
-}
 
 // One suggested question per pillar (BASED ON WHAT WE SEE). Lowercase, in voice;
 // each is grounded on its pillar so tapping it routes cleanly through the ask
