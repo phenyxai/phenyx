@@ -54,3 +54,28 @@ export async function initializeOnairos(): Promise<void> {
 export function isOnairosInitialized(): boolean {
   return initialized;
 }
+
+// localStorage keys the Onairos SDK writes on completion. `onairos_user_token`
+// holds the raw JWT and `onairosUser` holds a user object that embeds it.
+const ONAIROS_TOKEN_KEYS = [
+  "onairos_user_token",
+  "onairosUser",
+  "onairos_user_email",
+] as const;
+
+/**
+ * PHE-40: purge the raw Onairos JWT the SDK persists in localStorage. The token
+ * is verified server-side per connect and is never reused client-side, so it must
+ * not linger in browser storage. Safe to call anytime (no-op on the server / when
+ * the keys are absent).
+ */
+export function clearOnairosClientToken(): void {
+  if (typeof window === "undefined") return;
+  try {
+    for (const key of ONAIROS_TOKEN_KEYS) {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // localStorage unavailable (private mode / disabled) — nothing to purge.
+  }
+}

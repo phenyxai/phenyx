@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import type { OnairosCompleteData } from "onairos";
 import { OnairosButtonWrapper } from "@/components/onairos-button-wrapper";
+import { clearOnairosClientToken } from "@/lib/onairos";
 import { PolarisBadge } from "@/components/phenyx/polaris-badge";
 import { redactOnairosForProfile } from "@/lib/onairos-snapshot";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
@@ -130,7 +131,11 @@ export default function OnboardingPage() {
   // `constellation_state` scores IF synthesis lands while the user is still in
   // the flow; stays null on failure/absence (reveal falls back to neutral glow).
   // PHE-19 reads this to drive active-node glow intensity.
-  const [constellationState, setConstellationState] = useState<ConstellationState | null>(null);
+  // Reveal-glow scores (PHE-19). Synthesis now runs server-side via the verified
+  // /onairos/connect callback (PHE-40) rather than a client round-trip, so these
+  // scores are not fetched inline; the reveal uses its neutral fallback glow and
+  // the dashboard hydrates the constellation once synthesis lands.
+  const [constellationState] = useState<ConstellationState | null>(null);
 
   // Duplicate-trigger guard (PHE-18). The synthesis POST must fire AT MOST ONCE
   // per successful connection — a re-render, a double success callback, or a
@@ -319,27 +324,33 @@ export default function OnboardingPage() {
     // 2) Redact (strip JWT/credential fields) before ANY durable persist.
     const redacted = redactOnairosForProfile(result);
 
-    // 3) Persist per-platform connection rows + redacted snapshot (token-free).
-    //    `onairos_connections` is owned by another lane (PHE-31) and may not
-    //    exist in the DB yet — write defensively so a missing-table/RLS error is
-    //    logged + swallowed but never blocks the flow. Keyed on (user_id, platform).
-    if (userId && platforms.length > 0) {
-      const rows = platforms.map((platform) => ({
-        user_id: userId,
-        platform,
-        status: "connected",
-        redacted_snapshot: redacted,
-        // A reconnect must clear any stale disconnect timestamp.
-        disconnected_at: null,
-      }));
-      void supabase
-        .from("onairos_connections")
-        .upsert(rows, { onConflict: "user_id,platform" })
-        .then(({ error }) => {
-          if (error) {
-            console.warn("[onboarding] onairos_connections upsert:", error.message);
-          }
-        });
+    // 3) Route connect through the verified server callback (PHE-40). The server
+    //    re-verifies the Onairos token, DISCARDS it, redacts the trait object,
+    //    upserts onairos_connections on (user_id, platform), and enqueues
+    //    synthesis exactly once — so the raw token never touches our DB and the
+    //    connection state is server-authoritative (not a client-direct write).
+    //    STRICT FIRE-AND-FORGET (PHE-18): the POST is LAUNCHED but NEVER awaited,
+    //    so step 5 advances the user into the reveal regardless of synthesis
+    //    latency or outcome. Guarded by `synthesisTriggeredRef` so a re-render /
+    //    double success-callback / retry connects at most once per success.
+    if (userId && !synthesisTriggeredRef.current) {
+      synthesisTriggeredRef.current = true;
+      apiFetch("/onairos/connect", {
+        method: "POST",
+        body: JSON.stringify({
+          platforms,
+          trait_object: redacted,
+          // The Onairos JWT is sent ONCE to our own verified callback for
+          // server-side verification, then discarded server-side. It is never
+          // stored client-side (purged from localStorage in step 4 below).
+          token: (result as { token?: string }).token,
+          trigger: "onboarding",
+        }),
+      }).catch(() => {
+        // Non-blocking: a failed connect leaves the user in the reveal with the
+        // neutral fallback glow; the dashboard hydrates connection state later.
+        // Does NOT alter or block the synthesizing→reveal→done transitions.
+      });
     }
 
     // Also keep a redacted (token-free) profile snapshot for personalization.
@@ -354,50 +365,9 @@ export default function OnboardingPage() {
         });
     }
 
-    // 4) Hand the FULL trait object to synthesis (the engine round-trips it
-    //    byte-identical as `onairos_snapshot`). STRICT FIRE-AND-FORGET (PHE-18):
-    //    the POST is LAUNCHED but NEVER awaited — step 5 below advances the user
-    //    immediately, regardless of synthesis latency or outcome. `apiFetch`
-    //    awaits the Supabase session internally before issuing the request, but
-    //    because we do NOT await `apiFetch` here, that lookup can never delay
-    //    navigation. The promise rejection is swallowed into a non-blocking
-    //    no-op (no unhandled rejection, no UI block). Guarded by
-    //    `synthesisTriggeredRef` so a re-render / double success-callback / retry
-    //    fires synthesis at most once per successful connection.
-    if (userId && !synthesisTriggeredRef.current) {
-      synthesisTriggeredRef.current = true;
-      apiFetch("/synthesize-constellation", {
-        method: "POST",
-        body: JSON.stringify({ userId, onairosData: result })
-      })
-        // `apiFetch` does NOT check `res.ok`, so a 4xx/5xx error body must not be
-        // stored as a non-null constellationState. Only parse on a 2xx response.
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data: ConstellationState | null) => {
-          // SUCCESS: if synthesis lands while the user is still in the flow,
-          // capture the scores so the reveal (PHE-19) can glow the active nodes
-          // by intensity. If it never lands in time the reveal just uses the
-          // neutral fallback and the dashboard hydrates later — either is fine.
-          // Only store a score-bearing object: at least one of the four scores
-          // must be a finite number, else honor the "null on failure" contract.
-          if (data && typeof data === "object") {
-            const hasScore = [
-              data.origin_score,
-              data.emergence_score,
-              data.self_creation_score,
-              data.convergence_score,
-            ].some((v) => typeof v === "number" && Number.isFinite(v));
-            if (hasScore) setConstellationState(data);
-          }
-        })
-        .catch(() => {
-          // FAILURE (network / Claude error / crisis short-circuit / malformed
-          // trait): non-blocking. `constellationState` stays null, the user
-          // still reaches the dashboard via the reveal, and the dashboard shows
-          // its own "still forming" state (owned by 04-dashboard.md). This catch
-          // does NOT alter or block the synthesizing→reveal→done transitions.
-        });
-    }
+    // 4) Purge the raw Onairos JWT the SDK persisted in localStorage. The token is
+    //    verified server-side per connect; nothing client-side reuses it (PHE-40).
+    clearOnairosClientToken();
 
     // 5) Persist onboarding_step = synthesizing and advance toward the reveal.
     //    This is NOT gated on the synthesis promise above — the user proceeds
