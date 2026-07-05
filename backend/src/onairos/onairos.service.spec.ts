@@ -21,7 +21,7 @@ function makeThenable(result: unknown) {
   return chain;
 }
 
-function makeHarness() {
+function makeHarness(opts: { frozen?: boolean } = {}) {
   const dbWrites: unknown[] = [];
   const logs: string[] = [];
   const synthesisCalls: Array<{ userId?: string; onairosData?: unknown }> = [];
@@ -29,8 +29,8 @@ function makeHarness() {
   const fakeClient = {
     from(table: string) {
       return {
-        upsert(rows: unknown, opts: unknown) {
-          dbWrites.push({ table, op: "upsert", rows, opts });
+        upsert(rows: unknown, o: unknown) {
+          dbWrites.push({ table, op: "upsert", rows, opts: o });
           return Promise.resolve({ error: null });
         },
         update(patch: unknown) {
@@ -38,7 +38,16 @@ function makeHarness() {
           return makeThenable({ error: null });
         },
         select() {
-          return makeThenable({ data: [], error: null });
+          // user_profiles frozen lookup terminates in .maybeSingle(); every other
+          // read stays a thenable resolving to an empty list.
+          const frozenRow = { data: { frozen: opts.frozen === true }, error: null };
+          const chain: any = {
+            eq: () => chain,
+            maybeSingle: () => Promise.resolve(frozenRow),
+            then: (onF: any, onR: any) =>
+              Promise.resolve({ data: [], error: null }).then(onF, onR),
+          };
+          return chain;
         },
       };
     },
@@ -166,6 +175,33 @@ test("connect with no token still records the connection (bare reconnect)", asyn
   assert.ok(write, "connection row written");
   assert.equal(write.rows[0].redacted_snapshot, undefined, "no snapshot overwrite on bare reconnect");
   assert.equal(synthesisCalls.length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// PHE-42 — a frozen account never triggers a new synthesis pull.
+// ---------------------------------------------------------------------------
+test("connect on a frozen account records the connection but skips synthesis", async () => {
+  const { service, dbWrites, logs, synthesisCalls } = makeHarness({ frozen: true });
+
+  const result = await service.connect("user-frozen", {
+    platforms: ["spotify"],
+    trait_object: { personality: { openness: 0.7 } },
+    token: TOKEN,
+    trigger: "platform_refresh",
+  });
+
+  // The connection row is still upserted — freeze retains data, it just pauses
+  // ingestion of NEW synthesis.
+  assert.equal(result.status, "connected");
+  assert.equal(result.synthesisEnqueued, false, "frozen account does not enqueue synthesis");
+  const write: any = dbWrites.find((w: any) => w.table === "onairos_connections");
+  assert.ok(write, "connection still recorded while frozen");
+  assert.equal(synthesisCalls.length, 0, "no synthesis fired for a frozen account");
+
+  // Structural skip audit emitted, carrying no token.
+  const skip = logs.find((l) => l.includes("onairos_synthesis_skipped_frozen"));
+  assert.ok(skip, "frozen-skip audit emitted");
+  assert.ok(!skip!.includes(TOKEN), "skip audit carries no token");
 });
 
 // ---------------------------------------------------------------------------
