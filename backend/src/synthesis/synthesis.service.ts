@@ -210,6 +210,14 @@ export class SynthesisService {
    * (PHE-37) generation are then enqueued.
    */
   async synthesize(userId: string, body: SynthesizeBody) {
+    // PHE-42 trigger boundary: freeze pauses synthesis triggers. A frozen account
+    // keeps and still serves its existing constellation, but no new synthesis runs
+    // while frozen — skip here before any Claude call or write. Unfreeze restores.
+    if (await this.isAccountFrozen(userId)) {
+      this.logger.log(`synthesis skipped — account frozen: ${userId}`);
+      return { skipped: true as const, reason: "frozen" as const };
+    }
+
     const { trait_object, archetype, intention, trigger_event_id } = body;
 
     if (trait_object === undefined || trait_object === null) {
@@ -577,6 +585,25 @@ identity portrait: ${portraitProse}`;
       throw new Error(`no ${opts.tool.name} tool_use block in response`);
     }
     return toolUse.input as T;
+  }
+
+  /**
+   * PHE-42 account-freeze lookup (keyed by `user_profiles.id` = auth.users.id).
+   * Fail-open on a read error so a transient lookup failure never silently drops
+   * a legitimate synthesis.
+   */
+  private async isAccountFrozen(userId: string): Promise<boolean> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("frozen")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) {
+      this.logger.error(`frozen lookup failed for ${userId}: ${error.message}`);
+      return false;
+    }
+    return data?.frozen === true;
   }
 
   private clampScore(n: unknown): number {

@@ -33,6 +33,10 @@ export interface UserProfile {
   user_intention: string | null;
   constellation_version: number;
   onairos_data: Record<string, unknown> | null;
+  // PHE-42: account-lifecycle freeze flag. When true, Onairos pulls, the weekly
+  // observation cron, and synthesis triggers all skip this user while every row
+  // is retained and still served.
+  frozen: boolean;
   created_at: string; // ISO timestamptz
   updated_at: string; // ISO timestamptz
 }

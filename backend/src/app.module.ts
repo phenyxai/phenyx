@@ -16,6 +16,7 @@ import { PolarisModule } from "./polaris/polaris.module";
 import { EventsModule } from "./events/events.module";
 import { ObservationsModule } from "./observations/observations.module";
 import { OnairosModule } from "./onairos/onairos.module";
+import { AccountModule } from "./account/account.module";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { OnairosModule } from "./onairos/onairos.module";
     EventsModule,
     ObservationsModule,
     OnairosModule,
+    AccountModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
