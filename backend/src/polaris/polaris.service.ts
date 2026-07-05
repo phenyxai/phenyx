@@ -4,6 +4,7 @@ import { SupabaseService } from "../supabase/supabase.service";
 import { EncryptionService } from "../common/encryption.service";
 import { VoiceStandardService } from "../voice-standard/voice-standard.service";
 import { CrisisService } from "../synthesis/crisis.service";
+import { TraitProfileService } from "../synthesis/trait-profile.service";
 import type { Pillar } from "../types/database";
 import { inferPillarFromKeywords } from "./pillar-keyword.map";
 import { AT_LIMIT_MESSAGE, TokenBudgetService } from "./token-budget.service";
@@ -95,7 +96,8 @@ export class PolarisService {
     private readonly encryption: EncryptionService,
     private readonly voiceStandard: VoiceStandardService,
     private readonly crisis: CrisisService,
-    private readonly tokenBudget: TokenBudgetService
+    private readonly tokenBudget: TokenBudgetService,
+    private readonly traitProfile: TraitProfileService
   ) {}
 
   async ask(userId: string, body: AskBody) {
@@ -106,9 +108,13 @@ export class PolarisService {
 
     const supabase = this.supabaseService.getClient();
 
-    // (1) Crisis pre-flight over the question BEFORE any Claude call or token debit.
-    // TODO(PHE-39): swap to async detectCrisis once the async chain is merged.
-    if (this.crisis.detect(question)) {
+    // (1) Crisis pre-flight (PHE-39) over the question BEFORE the token gate or any
+    // Claude answer call — no Polaris tokens are ever spent on a crisis turn. The
+    // async gate fails closed (any timeout/HTTP/parse/missing-key error → triggered).
+    const crisisResult = await this.crisis.detectCrisis(question);
+    if (crisisResult.triggered) {
+      // Best-effort, never throws — persists a sha256 hash of the text only.
+      await this.crisis.recordCrisisEvent(userId, question, crisisResult.category);
       const threadId = await this.resolveConversation(userId, body.thread_id);
       await this.persistMessage(userId, threadId, "user", question, null, 0);
       const crisisAnswer = this.voiceStandard.sanitizeProse(
@@ -167,29 +173,38 @@ export class PolarisService {
     }
 
     // (3b) Assemble the grounding block: routed pillar's synthesis + matching trait
-    // insights + most recent observations. `user_traits` is read directly (PHE-24
-    // may not have populated it yet — empty is handled gracefully).
+    // insights + most recent observations. Trait insights come from PHE-24's ranked
+    // `inferTraitInsight`; the direct `user_traits` read is kept as a fallback for
+    // when that returns no match (empty is handled gracefully either way).
     const synthesis: string | null =
       (constellation?.[CONSTELLATION_SYNTHESIS_COLUMNS[pillar]] as
         | string
         | null) ?? null;
 
-    const [{ data: traitRows }, { data: observationRows }] = await Promise.all([
-      supabase
-        .from("user_traits")
-        .select("insight, keyword_tags")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(20),
-      supabase
-        .from("observations")
-        .select("body, pillar, surfaced_at")
-        .eq("user_id", userId)
-        .order("surfaced_at", { ascending: false })
-        .limit(5),
-    ]);
+    const [traitMatches, { data: traitRows }, { data: observationRows }] =
+      await Promise.all([
+        this.traitProfile.inferTraitInsight(question, userId),
+        supabase
+          .from("user_traits")
+          .select("insight, keyword_tags")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        supabase
+          .from("observations")
+          .select("body, pillar, surfaced_at")
+          .eq("user_id", userId)
+          .order("surfaced_at", { ascending: false })
+          .limit(5),
+      ]);
 
-    const traitInsights = matchTraitInsights(traitRows ?? [], question, pillar);
+    // Only `insight` is renderable — keywordTags/score are internal and never
+    // reach the grounding block or the client. Fall back to the direct read's
+    // keyword match when PHE-24 surfaces no ranked insight.
+    const traitInsights =
+      traitMatches.length > 0
+        ? traitMatches.map((m) => m.insight)
+        : matchTraitInsights(traitRows ?? [], question, pillar);
     const observations = (observationRows ?? [])
       .map((o) => (o.body as string | null)?.trim())
       .filter((b): b is string => !!b);
