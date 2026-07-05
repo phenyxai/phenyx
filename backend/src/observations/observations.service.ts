@@ -494,8 +494,10 @@ Surface only genuinely novel observations via emit_observations.`;
 
   /**
    * Active users eligible for the weekly cron: those with at least one connected
-   * Onairos platform. PHE-42 SEAM: add a `frozen`-flag filter here so frozen
-   * accounts are skipped (the column does not exist yet on this branch).
+   * Onairos platform, minus frozen accounts. PHE-42: a frozen user retains and can
+   * still read their data, but the cron must not generate new observations for
+   * them — so the frozen ids among the active set are subtracted in one batched
+   * `user_profiles` lookup (keyed by `id` = auth.users.id).
    */
   private async selectActiveUserIds(): Promise<string[]> {
     const supabase = this.supabaseService.getClient();
@@ -505,6 +507,15 @@ Surface only genuinely novel observations via emit_observations.`;
       .eq("status", "connected");
     const ids = new Set<string>();
     for (const row of (data ?? []) as { user_id: string }[]) ids.add(row.user_id);
+    if (ids.size === 0) return [];
+
+    const { data: frozenRows } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("frozen", true)
+      .in("id", [...ids]);
+    for (const row of (frozenRows ?? []) as { id: string }[]) ids.delete(row.id);
+
     return [...ids];
   }
 

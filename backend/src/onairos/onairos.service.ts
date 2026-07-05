@@ -92,7 +92,7 @@ export class OnairosService {
     //    re-synthesize.
     let synthesisEnqueued = false;
     if (redacted) {
-      synthesisEnqueued = this.enqueueSynthesis({
+      synthesisEnqueued = await this.enqueueSynthesis({
         userId,
         platforms,
         trigger: dto.trigger ?? "platform_refresh",
@@ -145,7 +145,7 @@ export class OnairosService {
   // --------------------------------------------------------------------------
   // Synthesis enqueue (idempotent) + seams.
   // --------------------------------------------------------------------------
-  private enqueueSynthesis(input: EnqueueInput): boolean {
+  private async enqueueSynthesis(input: EnqueueInput): Promise<boolean> {
     const eventId = this.synthesisEventId(
       input.userId,
       input.platforms,
@@ -156,11 +156,9 @@ export class OnairosService {
     }
     this.processedSynthesisEvents.add(eventId);
 
-    // SEAM (PHE-42 "Onairos refresh skip-frozen"): a frozen / exported account
-    // must NOT trigger new synthesis pulls (its patterns are retained, but no new
-    // data is ingested). PHE-42 wires the real freeze lookup here; today it is a
-    // documented no-op so nothing is ever skipped.
-    if (this.isAccountFrozen(input.userId)) {
+    // PHE-42 "Onairos refresh skip-frozen": a frozen account must NOT trigger new
+    // synthesis pulls (its patterns are retained, but no new data is ingested).
+    if (await this.isAccountFrozen(input.userId)) {
       this.audit("onairos_synthesis_skipped_frozen", {
         platforms: input.platforms,
       });
@@ -195,9 +193,24 @@ export class OnairosService {
     return typeof token === "string" && token.trim().length > 0;
   }
 
-  /** SEAM (PHE-42): replace with the real account-freeze lookup. */
-  private isAccountFrozen(_userId: string): boolean {
-    return false;
+  /**
+   * PHE-42 account-freeze lookup. A frozen account retains its data but ingests
+   * nothing new, so no Onairos-driven synthesis fires while frozen. Keyed by
+   * `user_profiles.id` (= auth.users.id). Fail-open on a read error — a transient
+   * lookup failure must not silently drop a legitimate synthesis.
+   */
+  private async isAccountFrozen(userId: string): Promise<boolean> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("frozen")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) {
+      this.logger.error(`frozen lookup failed for ${userId}: ${error.message}`);
+      return false;
+    }
+    return data?.frozen === true;
   }
 
   private normalizePlatforms(dto: OnairosConnectDto): string[] {

@@ -14,6 +14,7 @@ import {
   groupTimelineByPillar,
   isValidPillar,
 } from "./gating";
+import { ObservationsService } from "./observations.service";
 
 // ---------------------------------------------------------------------------
 // signal_hash — dedup / novelty key
@@ -175,4 +176,63 @@ test("groupTimelineByPillar groups by pillar and preserves exactly-one-free-unlo
   assert.deepEqual(groups.map((g) => g.pillar), ["origin", "emergence"]);
   const unlocked = groups.flatMap((g) => g.observations).filter((o) => o.locked === false);
   assert.equal(unlocked.length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// PHE-42 — weekly cron skips frozen accounts (selectActiveUserIds filter).
+// ---------------------------------------------------------------------------
+
+/**
+ * Fake Supabase whose reads are table-scoped: connected onairos users vs. the
+ * frozen ids among them. Each query terminates by awaiting a thenable chain
+ * (select → eq → in → then), matching selectActiveUserIds' call shape.
+ */
+function makeSupabase(connectedUserIds: string[], frozenIds: string[]) {
+  return {
+    getClient() {
+      return {
+        from(table: string) {
+          const data =
+            table === "onairos_connections"
+              ? connectedUserIds.map((user_id) => ({ user_id }))
+              : frozenIds.map((id) => ({ id }));
+          const chain: any = {
+            select: () => chain,
+            eq: () => chain,
+            in: () => chain,
+            then: (onF: any, onR: any) =>
+              Promise.resolve({ data, error: null }).then(onF, onR),
+          };
+          return chain;
+        },
+      };
+    },
+  };
+}
+
+function makeObservationsService(connectedUserIds: string[], frozenIds: string[]) {
+  return new ObservationsService(
+    { get: () => undefined } as any,
+    makeSupabase(connectedUserIds, frozenIds) as any,
+    {} as any,
+    {} as any
+  );
+}
+
+test("selectActiveUserIds excludes frozen users from the active set", async () => {
+  const service = makeObservationsService(["a", "b", "c"], ["b"]);
+  const ids = await (service as any).selectActiveUserIds();
+  assert.deepEqual([...ids].sort(), ["a", "c"], "frozen user 'b' is filtered out");
+});
+
+test("selectActiveUserIds returns all when none are frozen", async () => {
+  const service = makeObservationsService(["a", "b"], []);
+  const ids = await (service as any).selectActiveUserIds();
+  assert.deepEqual([...ids].sort(), ["a", "b"]);
+});
+
+test("selectActiveUserIds returns empty (no frozen lookup) when no active users", async () => {
+  const service = makeObservationsService([], ["z"]);
+  const ids = await (service as any).selectActiveUserIds();
+  assert.deepEqual(ids, []);
 });
