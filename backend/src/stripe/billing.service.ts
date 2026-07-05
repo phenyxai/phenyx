@@ -20,7 +20,7 @@ export interface TierCapabilities {
    * read gate can express "all" as `index < observationsUnlocked`.
    */
   observationsUnlocked: number;
-  /** Weekly Polaris token budget (see {@link PolarisBudgetService}). */
+  /** Weekly Polaris token budget (consumed by the Polaris lane's TokenBudgetService). */
   polarisWeeklyTokens: number;
   /** Whether served observation payloads include `source_platforms` citations. */
   crossPlatformCitations: boolean;
