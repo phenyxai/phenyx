@@ -3,11 +3,11 @@ import { SupabaseService } from "../supabase/supabase.service";
 import { BillingService } from "../stripe/billing.service";
 
 // PHE-27 — weekly Polaris token allowance by access tier (05-polaris.md). Free is
-// metered tightly; pro/gifted get the full weekly budget. These are the shipped
-// budget numbers: 80 tokens/week free, 8000/week pro|gifted. The limit is derived
-// at CHECK time from the live tier, so a mid-week upgrade widens it immediately.
-export const WEEKLY_TOKEN_BUDGET_FREE = 80;
-export const WEEKLY_TOKEN_BUDGET_FULL = 8000;
+// metered tightly; pro/gifted get the full weekly budget. The budget numbers
+// (80 free / 8000 pro|gifted) live in ONE authority —
+// BillingService.capabilitiesFor(tier).polarisWeeklyTokens (PHE-41) — and are read
+// at CHECK time from the live tier, so a mid-week upgrade widens the ceiling on the
+// very next ask.
 
 // Verbatim graceful at-limit copy (ticket §6). Returned on the over-budget
 // short-circuit; the chat surface also renders this line at its at-limit mount.
@@ -70,9 +70,8 @@ export class TokenBudgetService {
       .select("tier")
       .eq("id", userId)
       .maybeSingle();
-    return this.billing.hasFullAccess(data?.tier as string | null | undefined)
-      ? WEEKLY_TOKEN_BUDGET_FULL
-      : WEEKLY_TOKEN_BUDGET_FREE;
+    return this.billing.capabilitiesFor(data?.tier as string | null | undefined)
+      .polarisWeeklyTokens;
   }
 
   /** Tokens debited so far for a user's week (0 when the week has no row yet). */

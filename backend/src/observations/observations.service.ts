@@ -87,7 +87,7 @@ export class ObservationsService {
   /** Daily feed — the envelope `frontend/app/dashboard/daily/page.tsx` consumes. */
   async getDailyFeed(userId: string): Promise<DailyFeedResponse> {
     const supabase = this.supabaseService.getClient();
-    const hasFullAccess = this.billing.hasFullAccess(await this.getUserTier(userId));
+    const capabilities = this.billing.capabilitiesFor(await this.getUserTier(userId));
 
     const [{ data: rows }, { data: state }] = await Promise.all([
       supabase
@@ -106,14 +106,14 @@ export class ObservationsService {
 
     return {
       mantra: (state?.mantra as string | null) ?? null,
-      observations: applyReadGate((rows ?? []) as ObservationRow[], hasFullAccess),
+      observations: applyReadGate((rows ?? []) as ObservationRow[], capabilities),
     };
   }
 
   /** Constellation timeline — grouped by pillar, freshest-first within a group. */
   async getTimeline(userId: string): Promise<TimelineResponse> {
     const supabase = this.supabaseService.getClient();
-    const hasFullAccess = this.billing.hasFullAccess(await this.getUserTier(userId));
+    const capabilities = this.billing.capabilitiesFor(await this.getUserTier(userId));
 
     const { data: rows } = await supabase
       .from("observations")
@@ -123,7 +123,7 @@ export class ObservationsService {
       .eq("user_id", userId)
       .order("surfaced_at", { ascending: false });
 
-    return { pillars: groupTimelineByPillar((rows ?? []) as ObservationRow[], hasFullAccess) };
+    return { pillars: groupTimelineByPillar((rows ?? []) as ObservationRow[], capabilities) };
   }
 
   // -------------------------------------------------------------------------

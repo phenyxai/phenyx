@@ -1,4 +1,5 @@
 import { computeSignalHash, normalizePillar, normalizeSignalKey } from "./signal-hash";
+import type { TierCapabilities } from "../stripe/billing.service";
 
 /**
  * Free-tier gating + deterministic ordering + read-time redaction for the
@@ -166,28 +167,34 @@ export function redactedHint(row: ObservationRow): string {
 }
 
 /**
- * Authoritative serve-time tier gate. `rows` MUST be ordered `surfaced_at DESC`
- * (freshest first) — that ordering is what makes the single free unlock land at
- * index 0, matching the belt-and-suspenders client gate in
- * `frontend/app/dashboard/daily/page.tsx` (`locked = !isPro && index > 0`).
+ * Authoritative serve-time tier gate, driven by {@link TierCapabilities}
+ * (PHE-41). `rows` MUST be ordered `surfaced_at DESC` (freshest first) — that
+ * ordering is what makes the free unlock land at index 0, matching the
+ * belt-and-suspenders client gate in `frontend/app/dashboard/daily/page.tsx`
+ * (`locked = !isPro && index > 0`).
  *
- * Free tier: exactly the freshest observation is unlocked; every other row is
- * served locked with `body`/`sources` stripped and a `hint` in their place.
- * Pro/gifted: all unlocked, `source_platforms` present.
+ * Free (`observationsUnlocked: 1`): exactly the freshest observation is served
+ * with its `body`, but with `source_platforms` and provenance (`meta_label`)
+ * STRIPPED — those are stored, never sent, so an upgrade reveals them with no
+ * re-generation. Every other row is served locked with `body`/`sources` omitted
+ * and a `hint` in their place.
+ * Pro/gifted (`observationsUnlocked: Infinity`): all unlocked, citations +
+ * provenance present.
  */
 export function applyReadGate(
   rows: ObservationRow[],
-  hasFullAccess: boolean
+  capabilities: TierCapabilities
 ): ServedObservation[] {
   return rows.map((row, index) => {
-    const unlocked = hasFullAccess || index === 0;
+    const unlocked = index < capabilities.observationsUnlocked;
     if (unlocked) {
       return {
         id: row.id,
         pillar_tag: row.pillar,
         body: row.body,
-        sources: row.source_platforms,
-        meta_line: row.meta_label,
+        // Stripped for free even on the single unlocked card (still stored).
+        sources: capabilities.crossPlatformCitations ? row.source_platforms : undefined,
+        meta_line: capabilities.fullProvenance ? row.meta_label : undefined,
         is_new: row.is_new,
         locked: false,
       };
@@ -214,9 +221,9 @@ export interface TimelineGroup {
  */
 export function groupTimelineByPillar(
   rows: ObservationRow[],
-  hasFullAccess: boolean
+  capabilities: TierCapabilities
 ): TimelineGroup[] {
-  const served = applyReadGate(rows, hasFullAccess);
+  const served = applyReadGate(rows, capabilities);
   const byPillar = new Map<string, ServedObservation[]>();
   served.forEach((obs) => {
     const key = obs.pillar_tag;

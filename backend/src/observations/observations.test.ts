@@ -14,7 +14,14 @@ import {
   groupTimelineByPillar,
   isValidPillar,
 } from "./gating";
+import { BillingService } from "../stripe/billing.service";
 import { ObservationsService } from "./observations.service";
+
+// The read gate now consumes TierCapabilities (PHE-41). Resolve them from the
+// real BillingService so the gate tests and the resolver can't silently drift.
+const billing = new BillingService();
+const FREE = billing.capabilitiesFor("free");
+const PRO = billing.capabilitiesFor("pro");
 
 // ---------------------------------------------------------------------------
 // signal_hash — dedup / novelty key
@@ -140,16 +147,18 @@ function row(overrides: Partial<ObservationRow>): ObservationRow {
   };
 }
 
-test("applyReadGate free tier: exactly one unlocked at index 0, rest redacted", () => {
+test("applyReadGate free tier: one unlocked at index 0, but citations + provenance stripped", () => {
   const served = applyReadGate(
     [row({ id: "fresh" }), row({ id: "older" }), row({ id: "oldest" })],
-    false
+    FREE
   );
   assert.equal(served.filter((o) => o.locked === false).length, 1);
-  // Freshest (index 0) unlocked with body + sources.
+  // Freshest (index 0) unlocked with body — but source_platforms + provenance
+  // are stripped for free even on the single unlocked card (still stored).
   assert.equal(served[0].locked, false);
   assert.equal(served[0].body, "the body");
-  assert.deepEqual(served[0].sources, ["linkedin", "spotify"]);
+  assert.equal(served[0].sources, undefined);
+  assert.equal(served[0].meta_line, undefined);
   // Locked rows never carry body/sources; they carry a hint.
   assert.equal(served[1].locked, true);
   assert.equal(served[1].body, undefined);
@@ -157,10 +166,11 @@ test("applyReadGate free tier: exactly one unlocked at index 0, rest redacted", 
   assert.ok(served[1].hint && served[1].hint.length > 0);
 });
 
-test("applyReadGate pro/gifted: all unlocked with source_platforms present", () => {
-  const served = applyReadGate([row({ id: "a" }), row({ id: "b" })], true);
+test("applyReadGate pro/gifted: all unlocked with source_platforms + provenance present", () => {
+  const served = applyReadGate([row({ id: "a" }), row({ id: "b" })], PRO);
   assert.ok(served.every((o) => o.locked === false));
   assert.ok(served.every((o) => Array.isArray(o.sources) && o.sources!.length === 2));
+  assert.ok(served.every((o) => o.meta_line === "cross-platform pattern / 6 months"));
 });
 
 test("groupTimelineByPillar groups by pillar and preserves exactly-one-free-unlock", () => {
@@ -170,7 +180,7 @@ test("groupTimelineByPillar groups by pillar and preserves exactly-one-free-unlo
       row({ id: "2", pillar: "emergence" }),
       row({ id: "3", pillar: "origin" }),
     ],
-    false
+    FREE
   );
   // Groups emitted in pillar-priority order: origin before emergence.
   assert.deepEqual(groups.map((g) => g.pillar), ["origin", "emergence"]);
