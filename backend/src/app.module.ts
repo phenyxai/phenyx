@@ -12,6 +12,7 @@ import { VoiceStandardModule } from "./voice-standard/voice-standard.module";
 import { StripeModule } from "./stripe/stripe.module";
 import { SynthesisModule } from "./synthesis/synthesis.module";
 import { PersonaModule } from "./persona/persona.module";
+import { PolarisModule } from "./polaris/polaris.module";
 import { EventsModule } from "./events/events.module";
 import { ObservationsModule } from "./observations/observations.module";
 import { OnairosModule } from "./onairos/onairos.module";
@@ -33,6 +34,7 @@ import { OnairosModule } from "./onairos/onairos.module";
     StripeModule,
     SynthesisModule,
     PersonaModule,
+    PolarisModule,
     EventsModule,
     ObservationsModule,
     OnairosModule,
