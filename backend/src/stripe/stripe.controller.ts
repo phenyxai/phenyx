@@ -4,6 +4,7 @@ import {
   Headers,
   HttpCode,
   HttpException,
+  Logger,
   Post,
   Req,
 } from "@nestjs/common";
@@ -27,6 +28,8 @@ interface BillingPortalBody {
 
 @Controller("stripe")
 export class StripeController {
+  private readonly logger = new Logger(StripeController.name);
+
   constructor(
     private readonly stripeService: StripeService,
     private readonly supabaseService: SupabaseService,
@@ -150,8 +153,7 @@ export class StripeController {
       };
     } catch (err) {
       if (err instanceof HttpException) throw err;
-      // eslint-disable-next-line no-console
-      console.error("[Stripe Checkout] Error:", err);
+      this.logger.error({ msg: "checkout_failed", err: String(err) });
       throw new HttpException(
         { error: "Failed to create checkout session" },
         500
@@ -187,8 +189,10 @@ export class StripeController {
         webhookSecret as string
       );
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[Stripe Webhook] Signature verification failed:", err);
+      this.logger.error({
+        msg: "webhook_signature_verification_failed",
+        err: String(err),
+      });
       throw new HttpException({ error: "Invalid signature" }, 400);
     }
 
@@ -213,8 +217,11 @@ export class StripeController {
           const customerId = session.customer as string | null;
 
           if (!userId) {
-            // eslint-disable-next-line no-console
-            console.error("[Stripe Webhook] No userId in session");
+            this.logger.error({
+              msg: "webhook_missing_user_id",
+              event_id: event.id,
+              event_type: event.type,
+            });
             break;
           }
 
@@ -239,10 +246,13 @@ export class StripeController {
               })
               .eq("id", userId);
 
-            // eslint-disable-next-line no-console
-            console.log(
-              `[Stripe Webhook] User ${userId} checkout subscription → ${tier}`
-            );
+            this.logger.log({
+              msg: "webhook_checkout_subscription",
+              event_id: event.id,
+              user_id: userId,
+              tier,
+              status: subscription.status,
+            });
             break;
           }
 
@@ -277,10 +287,12 @@ export class StripeController {
               })
               .eq("id", userId);
 
-            // eslint-disable-next-line no-console
-            console.log(
-              `[Stripe Webhook] User ${userId} checkout payment → ${tier}`
-            );
+            this.logger.log({
+              msg: "webhook_checkout_payment",
+              event_id: event.id,
+              user_id: userId,
+              tier,
+            });
           }
           break;
         }
@@ -348,10 +360,12 @@ export class StripeController {
               })
               .eq("id", profile.id);
 
-            // eslint-disable-next-line no-console
-            console.log(
-              `[Stripe Webhook] User ${profile.id} subscription ended → free`
-            );
+            this.logger.log({
+              msg: "webhook_subscription_ended",
+              event_id: event.id,
+              user_id: profile.id,
+              tier: "free",
+            });
           }
           break;
         }
@@ -379,14 +393,21 @@ export class StripeController {
         }
 
         default:
-          // eslint-disable-next-line no-console
-          console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
+          this.logger.log({
+            msg: "webhook_unhandled_event",
+            event_id: event.id,
+            event_type: event.type,
+          });
       }
 
       return { received: true };
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[Stripe Webhook] Error processing event:", err);
+      this.logger.error({
+        msg: "webhook_processing_failed",
+        event_id: event.id,
+        event_type: event.type,
+        err: String(err),
+      });
       throw new HttpException({ error: "Webhook handler failed" }, 500);
     }
   }
@@ -427,8 +448,7 @@ export class StripeController {
       return { url: session.url };
     } catch (e) {
       if (e instanceof HttpException) throw e;
-      // eslint-disable-next-line no-console
-      console.error("[billing-portal]", e);
+      this.logger.error({ msg: "billing_portal_failed", err: String(e) });
       throw new HttpException({ error: "Portal failed" }, 500);
     }
   }
