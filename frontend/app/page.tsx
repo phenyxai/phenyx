@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { SessionColorProvider } from "@/contexts/session-color-context";
 import { Navigation } from "@/components/phenyx/navigation";
 import { HeroSection } from "@/components/phenyx/hero-section";
 import { ManifestoSection } from "@/components/phenyx/manifesto-section";
@@ -22,7 +21,7 @@ export default function Home() {
   const closeEntryModal = () => setIsModalOpen(false);
 
   return (
-    <SessionColorProvider>
+    <>
       <CustomCursor />
       <main className="min-h-screen bg-[#0a0a0a]">
         <Navigation onEnterClick={openEntryModal} />
@@ -43,6 +42,6 @@ export default function Home() {
 
         <EntryModal isOpen={isModalOpen} onClose={closeEntryModal} />
       </main>
-    </SessionColorProvider>
+    </>
   );
 }

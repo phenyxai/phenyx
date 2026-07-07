@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { SessionColorProvider } from '@/contexts/session-color-context'
 import './globals.css'
 import 'onairos/onairos.css'
 
@@ -83,7 +84,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className={`${plusJakartaSans.variable} antialiased bg-[#0A0A0A] text-[#FFFDFD]`}>
-        {children}
+        <SessionColorProvider>
+          {children}
+        </SessionColorProvider>
         <Analytics />
       </body>
     </html>
