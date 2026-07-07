@@ -17,6 +17,8 @@ import { EventsModule } from "./events/events.module";
 import { ObservationsModule } from "./observations/observations.module";
 import { OnairosModule } from "./onairos/onairos.module";
 import { AccountModule } from "./account/account.module";
+import { ConstellationModule } from "./constellation/constellation.module";
+import { ProfileModule } from "./profile/profile.module";
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { AccountModule } from "./account/account.module";
     ObservationsModule,
     OnairosModule,
     AccountModule,
+    ConstellationModule,
+    ProfileModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
