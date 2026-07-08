@@ -76,7 +76,7 @@ export default function SignInClient() {
         .select("id")
         .eq("user_id", user.id)
         .limit(1);
-      router.push(personaData && personaData.length > 0 ? "/constellation" : "/onboarding");
+      router.push(personaData && personaData.length > 0 ? "/dashboard" : "/onboarding");
     } else {
       router.push("/onboarding");
     }

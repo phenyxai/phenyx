@@ -105,7 +105,7 @@ export default function UpgradePage() {
     >
       <header className="flex items-center justify-between px-6 py-4">
         <Link
-          href="/constellation"
+          href="/dashboard/constellation"
           className="flex items-center gap-2 opacity-90 hover:opacity-100 transition-opacity"
         >
           <Image src="/phenyx-logo.png" alt="PHENYX" width={20} height={20} />
@@ -121,7 +121,7 @@ export default function UpgradePage() {
           </span>
         </Link>
         <Link
-          href="/constellation"
+          href="/dashboard/constellation"
           style={{ fontSize: "11px", color: "#555" }}
           className="hover:text-white transition-colors"
         >
