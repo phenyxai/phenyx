@@ -17,7 +17,7 @@ export default function UpgradeSuccessPage() {
 
     // Redirect to constellation after 5 seconds
     const timeout = setTimeout(() => {
-      router.push("/constellation");
+      router.push("/dashboard/constellation");
     }, 5000);
 
     return () => clearTimeout(timeout);
@@ -64,7 +64,7 @@ export default function UpgradeSuccessPage() {
       </p>
 
       <Link
-        href="/constellation"
+        href="/dashboard/constellation"
         className="px-8 py-3 rounded-lg text-sm transition-all"
         style={{
           background: "transparent",

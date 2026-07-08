@@ -181,7 +181,7 @@ export default function OnboardingPage() {
         const saved = profile?.onboarding_step as OnboardingStep | null | undefined;
         if (saved === "done") {
           // Onboarding already complete — go straight to the dashboard surface.
-          router.replace("/constellation");
+          router.replace("/dashboard");
           return;
         }
         // Unset/null or the welcome sentinel both resolve to the fork (s3b).
@@ -662,7 +662,7 @@ export default function OnboardingPage() {
             onConfirmMount={() => void setOnboardingStep("reveal")}
             onDone={() => {
               void setOnboardingStep("done");
-              router.replace("/constellation");
+              router.replace("/dashboard");
             }}
           />
         )}

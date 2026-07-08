@@ -240,7 +240,7 @@ export default function SettingsPage() {
         }}
       >
         <button
-          onClick={() => router.push("/daily")}
+          onClick={() => router.push("/dashboard/daily")}
           aria-label="go back to daily"
           style={{
             background: "none",
@@ -603,7 +603,7 @@ export default function SettingsPage() {
               localStorage.removeItem("orbo_tour_constellation");
               localStorage.removeItem("orbo_tour_daily");
               localStorage.removeItem("orbo_tour_settings");
-              router.push("/constellation");
+              router.push("/dashboard/constellation");
             }}
             style={ghostButtonStyle}
             onMouseEnter={(e) => { e.currentTarget.style.background = "#FFFDFD"; e.currentTarget.style.color = "#0A0A0A"; }}

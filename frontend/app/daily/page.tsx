@@ -275,7 +275,7 @@ export default function DailyPage() {
           {completionState.nodeCount} node{completionState.nodeCount !== 1 ? "s" : ""} in your constellation
         </p>
         <button
-          onClick={() => router.push("/constellation")}
+          onClick={() => router.push("/dashboard/constellation")}
           style={{
             background: "transparent",
             border: `0.5px solid ${stellarColor}`,
@@ -329,7 +329,7 @@ export default function DailyPage() {
           background: "#0A0A0A"
         }}>
           <button
-            onClick={() => router.push("/constellation")}
+            onClick={() => router.push("/dashboard/constellation")}
             aria-label="go back to constellation"
             style={{ background: "none", border: "none", color: "#666", fontSize: 18, cursor: "pointer", padding: 0, marginRight: 12 }}
           >
@@ -371,7 +371,7 @@ export default function DailyPage() {
         borderBottom: "0.5px solid #1a1a1a"
       }}>
         <button
-          onClick={() => router.push("/constellation")}
+          onClick={() => router.push("/dashboard/constellation")}
           aria-label="go back to constellation"
           style={{ background: "none", border: "none", color: "#666", fontSize: 18, cursor: "pointer", padding: 0, marginRight: 12 }}
         >
