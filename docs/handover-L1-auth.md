@@ -28,7 +28,7 @@ L1 (PHE-7, 11, 9, 12, 13) is complete: account creation, passphrase storage/veri
 - **Session model:** the service-role client can't issue sessions, so the backend admin-`generateLink`s (magiclink for signup, recovery for signin/reset-existence) and exchanges the hashed token via an **anon** client (`SupabaseService.getAnonClient()`) → `{access_token, refresh_token}`. The frontend adopts it via `setSessionFromTokens()` in `frontend/lib/supabase-browser.ts`. `apiFetch()` (`frontend/lib/api-client.ts`) attaches the bearer on authed calls.
 
 ## 3. Integration contract — what the next lane MUST know
-1. **`user_profiles` is keyed by `id` (= `auth.users.id`), NOT `user_id`.** The phe5 migrations declare `user_id`; the live DB + all app code use `id`. A reconcile migration (`20260604110000`) aligns fresh DBs. **Every profile read/write uses `id`.**
+1. **`user_profiles` is keyed by `id` (= `auth.users.id`), NOT `user_id`.** The phe5 migrations declare `user_id`; the live DB + all app code use `id`. A reconcile migration (`20260603120250`) aligns fresh DBs. **Every profile read/write uses `id`.**
 2. **Signed-in identity:** a logged-in user has a Supabase session on the browser client (read via the supabase browser client / `getSession`). Their `user_profiles` row carries `display_name`, `passphrase_hash`, `passphrase_algo`, `stellar_color` (+ pre-existing columns).
 3. **Stellar color (the identity accent) — deterministic, immutable, persisted.**
    - Source of truth: `user_profiles.stellar_color` (hex). Computed once at account creation from `sha256(id + created_at)` → 14-color `STELLAR` palette.

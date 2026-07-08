@@ -12,17 +12,19 @@ alter table public.waitlist             enable row level security;
 -- ============================================================================
 -- user_profiles: owner can SELECT / INSERT / UPDATE own row. No DELETE policy.
 -- ============================================================================
+-- user_profiles keys by `id` (= auth.users.id) — the 20260603120250 reconcile
+-- guarantees the column is named `id` on every environment before this runs.
 drop policy if exists user_profiles_select_own on public.user_profiles;
 create policy user_profiles_select_own on public.user_profiles
-  for select using (auth.uid() = user_id);
+  for select using (auth.uid() = id);
 
 drop policy if exists user_profiles_insert_own on public.user_profiles;
 create policy user_profiles_insert_own on public.user_profiles
-  for insert with check (auth.uid() = user_id);
+  for insert with check (auth.uid() = id);
 
 drop policy if exists user_profiles_update_own on public.user_profiles;
 create policy user_profiles_update_own on public.user_profiles
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for update using (auth.uid() = id) with check (auth.uid() = id);
 
 -- ============================================================================
 -- user_persona: owner SELECT / INSERT / UPDATE. No DELETE policy.

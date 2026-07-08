@@ -7,7 +7,7 @@
 -- Sections run sequentially; each is independently idempotent.
 -- =============================================================================
 
--- ===== 20260604110000_user_profiles_id_pk_reconcile.sql =====
+-- ===== 20260603120250_user_profiles_id_pk_reconcile.sql =====
 -- Reconcile user_profiles primary-key column to `id` (= auth.users.id).
 --
 -- The baseline (20260501) and phe5 (20260603) migrations create user_profiles

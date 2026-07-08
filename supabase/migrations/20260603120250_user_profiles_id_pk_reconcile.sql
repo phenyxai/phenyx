@@ -10,8 +10,9 @@
 -- triggers automatically on RENAME (they bind by attribute number, not name), so
 -- no policy/constraint recreation is needed.
 --
--- Runs after phe5 (20260603120300) and before the auth column-adds (20260604120000),
--- so the whole auth chain operates on `id`.
+-- Runs after the phe5 tables/triggers (20260603120200) and before the phe5 RLS
+-- policies (20260603120300), so the policies — and the whole auth chain after
+-- them — operate on `id` on every environment.
 do $$
 begin
   if exists (
