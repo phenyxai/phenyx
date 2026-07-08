@@ -1,0 +1,99 @@
+# Render Blueprint (Infrastructure-as-Code) for PHENYX.
+#
+# This documents the two staging web services that already exist in Render and
+# deploy from `mvp`. It is a REFERENCE blueprint — review before applying via
+# Render → Blueprints. Service names match the existing services so a blueprint
+# sync adopts them rather than creating duplicates.
+#
+# Secrets use `sync: false`: Render will NOT read their values from this file —
+# you set them in the dashboard (or `render env`). Never commit secret values.
+# See DEPLOYMENT.md for the full env-var reference and how to generate each one.
+
+services:
+  # ---------------------------------------------------------------------------
+  # Backend — NestJS API (api.staging.phenyxcollective.com)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: phenyxcollective-backend-staging
+    runtime: node
+    region: oregon
+    plan: free # scale=1 required: auth throttle + OTP ledgers are in-memory.
+    branch: mvp
+    rootDir: backend
+    buildCommand: npm install && npm run build # postinstall runs `prisma generate`
+    startCommand: npm run start:prod # node dist/main
+    healthCheckPath: /health
+    numInstances: 1 # do NOT scale up until throttle/OTP state is externalized
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Render provides PORT automatically; main.ts binds process.env.PORT ?? 4000.
+      - key: FRONTEND_ORIGIN # comma-separated frontend origins (drives CORS)
+        sync: false
+      # --- Supabase ---
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY # secret — backend admin client
+        sync: false
+      # --- Postgres (Prisma introspection / migrations) ---
+      - key: DATABASE_URL # transaction pooler :6543 ?pgbouncer=true
+        sync: false
+      - key: DIRECT_URL # session pooler :5432 (migrations / db pull)
+        sync: false
+      # --- AI ---
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # --- Email (Resend) — required for OTP + passphrase-reset emails ---
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      # --- Onairos ---
+      - key: ONAIROS_API_SECRET
+        sync: false
+      # --- Stripe ---
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET # from the {backend}/stripe/webhook endpoint
+        sync: false
+      - key: STRIPE_PRO_MONTHLY_PRICE_ID
+        sync: false
+      - key: STRIPE_PRO_YEARLY_PRICE_ID
+        sync: false
+      - key: STRIPE_GIFT_PRICE_ID
+        sync: false
+      # --- Crypto ---
+      # 64 hex chars (32 bytes) for AES-256-GCM: `openssl rand -hex 32`.
+      # MUST be stable across restarts/instances forever — see DEPLOYMENT.md.
+      - key: ENCRYPTION_KEY
+        sync: false
+
+  # ---------------------------------------------------------------------------
+  # Frontend — Next.js (staging.phenyxcollective.com)
+  # NOTE: NEXT_PUBLIC_* are inlined at BUILD time — they must be set before the
+  # build runs (Render injects service env vars into the build step).
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: phenyxcollective-frontend-staging
+    runtime: node
+    region: oregon
+    plan: free
+    branch: mvp
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start # next start (respects PORT)
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NEXT_PUBLIC_API_BASE_URL # = the backend service URL
+        sync: false
+      - key: NEXT_PUBLIC_ONAIROS_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_ADMIN_PASSWORD # gates /admin (page-level only)
+        sync: false
