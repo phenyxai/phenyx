@@ -1,0 +1,41 @@
+name: Render backend keep-alive
+
+# Render free-tier web services sleep after ~15 min of inactivity, causing a
+# ~30-60s cold start on the next request. This pings the staging backend's
+# public /health endpoint every 5 minutes so Render never sees 15 min idle and
+# the service stays warm 24/7. Free now that the repo is public (public repos
+# get unlimited GitHub Actions minutes).
+#
+# IMPORTANT: scheduled workflows only fire from the DEFAULT branch (main), so
+# this file lives on main even though it targets the mvp/staging backend.
+#
+# 5-min cadence (not 10) gives ~3 attempts per 15-min window, so the service
+# stays warm even when GitHub delays a scheduled run under load. The ping does
+# not fail the job on a non-200 (a cold service may be mid-wake) — the request
+# itself is what warms it.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {} # manual "Run workflow" button
+
+concurrency:
+  group: render-keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend /health
+        env:
+          # Public health URL — not a secret. Change here if the backend moves.
+          BACKEND_HEALTH_URL: "https://phenyxcollective-backend-staging.onrender.com/health"
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "$BACKEND_HEALTH_URL")
+          echo "Backend /health -> HTTP ${code}"
+          if [ "${code}" = "200" ]; then
+            echo "Backend is warm."
+          else
+            echo "::warning::Non-200 (${code}) — service was likely cold and is now warming, or is down. This ping still resets the idle timer."
+          fi
