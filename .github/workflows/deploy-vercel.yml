@@ -1,0 +1,50 @@
+name: Deploy frontend to Vercel
+
+# Auto-deploys the Next.js frontend to Vercel on every push to main.
+# Native Vercel Git integration is unavailable on the Hobby (free) plan for
+# org-owned private repos, so we drive `vercel deploy` from CI instead.
+#
+# Required repo secrets (Settings -> Secrets and variables -> Actions):
+#   VERCEL_TOKEN      - account token from https://vercel.com/account/tokens
+#   VERCEL_ORG_ID     - already set (team_NXNZrcWlXTfKsjEh7dxQC3SP)
+#   VERCEL_PROJECT_ID - already set (prj_mWZAAH1bfaZof7tXEonKhPpcsW7Z)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-vercel.yml"
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+concurrency:
+  group: vercel-prod-deploy
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      # Root Directory is `frontend`; run all Vercel commands from there so the
+      # monorepo's frontend package is treated as the project root.
+      - name: Pull Vercel project settings (production)
+        working-directory: frontend
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build
+        working-directory: frontend
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy to production
+        working-directory: frontend
+        run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
