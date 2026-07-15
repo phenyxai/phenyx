@@ -242,7 +242,8 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
       setWaitlistId(data.id);
       setStep(2);
       setStatus("idle");
-    } catch {
+    } catch (err) {
+      console.error("Waitlist signup failed (step 1):", err);
       setStatus("error");
     }
   };
@@ -265,7 +266,8 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
       if (error) throw error;
 
       setStatus("success");
-    } catch {
+    } catch (err) {
+      console.error("Waitlist detail update failed (step 2):", err);
       setStatus("error");
     }
   };
