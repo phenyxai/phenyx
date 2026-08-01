@@ -8,6 +8,7 @@ import { OnairosButtonWrapper } from "@/components/onairos-button-wrapper";
 import { clearOnairosClientToken } from "@/lib/onairos";
 import { PolarisBadge } from "@/components/phenyx/polaris-badge";
 import { redactOnairosForProfile } from "@/lib/onairos-snapshot";
+import { normalizeOnairosResult, buildOnairosTraitObject } from "@/lib/onairos-result";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { apiFetch } from "@/lib/api-client";
 
@@ -99,17 +100,6 @@ interface ConstellationState {
   self_creation_score?: number | null;
   convergence_score?: number | null;
   [key: string]: unknown;
-}
-
-// Normalized, lowercased platform/source names connected through the Onairos
-// SDK. `connectedSources` is the SDK's Ascend-friendly normalized list; we treat
-// its length as the authoritative count of connected platforms (with the trait
-// summary's accountsCount as a fallback for the >=1 gate in the callback).
-function getConnectedPlatforms(result: OnairosCompleteData): string[] {
-  const sources = Array.isArray(result.connectedSources) ? result.connectedSources : [];
-  return sources
-    .map((s) => (typeof s === "string" ? s.trim().toLowerCase() : ""))
-    .filter((s) => s.length > 0);
 }
 
 export default function OnboardingPage() {
@@ -308,21 +298,29 @@ export default function OnboardingPage() {
   // persist; we never log `result.token`.
   // --------------------------------------------------------------------------
   const handleOnairosComplete = useCallback((result: OnairosCompleteData) => {
-    // 1) Validate >= 1 connected platform. A cancel / explicit failure / empty
-    //    connection set must NOT advance — synthesis cannot run on an empty
-    //    trait object, so we keep the user on s6 with a visible prompt.
-    const platforms = getConnectedPlatforms(result);
-    // Gate the advance on the SAME source we persist (`platforms`, which feeds
-    // the onairos_connections upsert) so we never advance with zero rows written.
-    const connectedCount = platforms.length;
-    if (result.cancelled || result.success === false || !!result.error || connectedCount < 1) {
+    // 1) Normalize the SDK payload before judging it. The completion object is
+    //    schema-loose and, with `autoFetch`, the traits/platform body lands under
+    //    `result.apiResponse` — NOT on the result root — so the shape has to be
+    //    probed rather than assumed (see lib/onairos-result.ts).
+    const normalized = normalizeOnairosResult(result);
+    const platforms = normalized.platforms;
+
+    // A cancel / explicit failure must NOT advance. Neither must a genuinely
+    // empty connection — synthesis cannot run on an empty trait object.
+    // `hasTraits` is a second, independent proof of connection: a trained trait
+    // payload cannot exist unless at least one platform was connected, so a
+    // payload that carries traits but omits the platform NAMES still advances
+    // (blocking there was the bug — the user connected, we just failed to read it).
+    if (!normalized.ok || (platforms.length < 1 && !normalized.hasTraits)) {
       setConnectNotice("connect at least one platform to continue.");
       return;
     }
     setConnectNotice(null);
 
-    // 2) Redact (strip JWT/credential fields) before ANY durable persist.
-    const redacted = redactOnairosForProfile(result);
+    // 2) Build the compact, allowlisted trait object, then redact (strip
+    //    JWT/credential fields) before ANY durable persist. The allowlist means
+    //    redaction is a belt-and-braces pass, not the only barrier.
+    const redacted = redactOnairosForProfile(buildOnairosTraitObject(normalized));
 
     // 3) Route connect through the verified server callback (PHE-40). The server
     //    re-verifies the Onairos token, DISCARDS it, redacts the trait object,
@@ -333,7 +331,16 @@ export default function OnboardingPage() {
     //    so step 5 advances the user into the reveal regardless of synthesis
     //    latency or outcome. Guarded by `synthesisTriggeredRef` so a re-render /
     //    double success-callback / retry connects at most once per success.
-    if (userId && !synthesisTriggeredRef.current) {
+    //    Requires at least one NAMED platform — `onairos_connections` is keyed on
+    //    (user_id, platform), so there is no row to write without one. The
+    //    traits-but-no-names case still advances (above) and still persists the
+    //    profile snapshot below; it just cannot record the connection row.
+    if (userId && platforms.length < 1) {
+      console.warn(
+        "[onboarding] onairos returned traits but no platform names — skipping /onairos/connect"
+      );
+    }
+    if (userId && platforms.length >= 1 && !synthesisTriggeredRef.current) {
       synthesisTriggeredRef.current = true;
       apiFetch("/onairos/connect", {
         method: "POST",
