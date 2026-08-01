@@ -135,8 +135,8 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       onairos:
-        specifier: ^8.1.9
-        version: 8.1.9(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.4)
+        specifier: ^8.5.4
+        version: 8.5.4(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.4)
       react:
         specifier: 19.2.4
         version: 19.2.4
@@ -1805,8 +1805,8 @@ packages:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
 
-  onairos@8.1.9:
-    resolution: {integrity: sha512-C6DALwKz36LaABXC3fr8mw2Dt2vmRVedRgh+6ouquN2U3bwYWOeLe9ClXWTSn/q9sSX6Zb9cY96DfTkmf7rIcw==}
+  onairos@8.5.4:
+    resolution: {integrity: sha512-blwsCUD979TAzEGvvN1A6dk//aq6H/OjIfsBBNGUlaOSKaQLXhiicGkjKQyAuRowbgMiD2vg5Vfu1SQNP0gqIg==}
     engines: {node: '>=20 <25'}
     peerDependencies:
       react: ^18.2.0 || ^19.0.0
@@ -3570,7 +3570,7 @@ snapshots:
 
   object-assign@4.1.1: {}
 
-  onairos@8.1.9(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.4):
+  onairos@8.5.4(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.4):
     dependencies:
       '@capacitor/app': 8.1.0(@capacitor/core@8.3.1)
       '@capacitor/browser': 8.0.3(@capacitor/core@8.3.1)
