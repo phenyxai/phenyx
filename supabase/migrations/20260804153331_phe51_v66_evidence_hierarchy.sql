@@ -275,6 +275,19 @@ create table public.underneath_readings (
     references public.generation_runs(id, user_id) on delete no action deferrable initially deferred
 );
 
+-- Enable RLS before the compatibility backfill queues any deferred foreign-key
+-- trigger events. PostgreSQL rejects ALTER TABLE while such events are pending.
+alter table public.generation_runs enable row level security;
+alter table public.source_records enable row level security;
+alter table public.signals enable row level security;
+alter table public.signal_source_records enable row level security;
+alter table public.areas enable row level security;
+alter table public.area_signal_memberships enable row level security;
+alter table public.observation_signals enable row level security;
+alter table public.generated_artifacts enable row level security;
+alter table public.artifact_observations enable row level security;
+alter table public.underneath_readings enable row level security;
+
 -- Every FK and every owner/time access path has an explicit supporting index.
 create index generation_runs_user_created_idx on public.generation_runs (user_id, created_at desc);
 create index source_records_user_ingested_idx on public.source_records (user_id, ingested_at desc);
@@ -422,9 +435,11 @@ join public.signals s
  and s.version = 1
 on conflict do nothing;
 
--- PHE-31's append-only trigger protects normal writes. Disable it only for this
--- controlled one-time metadata backfill, then restore it immediately.
-alter table public.observations disable trigger observations_no_update;
+-- PHE-31's append-only trigger protects normal writes. Drop it transactionally
+-- for this controlled one-time metadata backfill, then recreate it. Unlike
+-- ALTER TABLE ... ENABLE TRIGGER, CREATE TRIGGER is safe after the backfill has
+-- queued deferred foreign-key trigger events.
+drop trigger observations_no_update on public.observations;
 update public.observations o
 set
   area_id = a.id,
@@ -451,7 +466,9 @@ where a.user_id = o.user_id
   and r.input_hash = 'phe31-legacy-import'
   and r.prompt_version = 'legacy/phe31'
   and r.model = 'legacy/import';
-alter table public.observations enable trigger observations_no_update;
+create trigger observations_no_update
+  before update or delete on public.observations
+  for each row execute function public.phe31_append_only();
 
 insert into public.observation_signals (observation_id, signal_id, user_id)
 select o.id, s.id, o.user_id
@@ -462,16 +479,6 @@ join public.signals s
  and s.extractor_version = 'legacy/phe31'
  and s.version = 1
 on conflict do nothing;
-
-alter table public.observations
-  alter column area_id set not null,
-  alter column generation_run_id set not null,
-  alter column schema_version set not null,
-  alter column points set not null,
-  alter column record_count set not null,
-  alter column sources set not null,
-  alter column prompt_version set not null,
-  alter column model_version set not null;
 
 -- Old-shaped INSERTs receive a compatibility chain in the database. This helper
 -- is deliberately outside the exposed public schema and cannot be called directly.
@@ -833,19 +840,8 @@ begin
 end;
 $$;
 
--- Every new public table is RLS-protected. Authenticated clients can read only
--- their rows; ingestion and generation writes stay service-controlled.
-alter table public.generation_runs enable row level security;
-alter table public.source_records enable row level security;
-alter table public.signals enable row level security;
-alter table public.signal_source_records enable row level security;
-alter table public.areas enable row level security;
-alter table public.area_signal_memberships enable row level security;
-alter table public.observation_signals enable row level security;
-alter table public.generated_artifacts enable row level security;
-alter table public.artifact_observations enable row level security;
-alter table public.underneath_readings enable row level security;
-
+-- Authenticated clients can read only their rows; ingestion and generation
+-- writes stay service-controlled.
 create policy generation_runs_select_own on public.generation_runs
   for select to authenticated using ((select auth.uid()) = user_id);
 create policy source_records_select_own on public.source_records
