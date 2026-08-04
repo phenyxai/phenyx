@@ -1,71 +1,27 @@
 import { Constellation } from "./constellation";
 import { AskPolarisWidget } from "./ask-polaris-widget";
-import { constellationCopy, BRAND, SECTION_IDS } from "@/lib/landing-copy";
+import { constellationCopy, SECTION_IDS } from "@/lib/landing-copy";
 
 export function MissionSection() {
   return (
-    <section id={SECTION_IDS.mission} className="px-6 md:px-20" style={{ paddingTop: "100px", paddingBottom: "100px" }}>
-      <div className="mx-auto grid lg:grid-cols-2 gap-16 lg:gap-24 items-start" style={{ maxWidth: "1100px" }}>
-        {/* Left column - Text */}
-        <div className="space-y-8">
-          {/* Eyebrow */}
-          <p
-            className="uppercase"
-            style={{
-              fontSize: "11px",
-              letterSpacing: "0.2em",
-              color: "rgba(255,253,253,0.6)",
-            }}
-          >
-            {constellationCopy.eyebrow}
-          </p>
-
-          <div className="lowercase space-y-6">
-            {/* Body text - 20px, weight 300, line height 1.7 */}
-            {constellationCopy.missionParagraphs.map((paragraph, index) => (
-              <p
-                key={index}
-                style={{
-                  fontSize: "20px",
-                  fontWeight: 300,
-                  lineHeight: 1.7,
-                  color: "rgba(255,253,253,0.9)",
-                }}
-              >
-                {paragraph}
-              </p>
+    <section id={SECTION_IDS.mission} className="landing-v66__identity-section">
+      <div className="landing-v66__inner">
+        <p className="landing-v66__eyebrow">{constellationCopy.eyebrow}</p>
+        <h2 className="landing-v66__section-headline">{constellationCopy.headline}</h2>
+        <div className="landing-v66__identity-grid">
+          <div className="landing-v66__identity-copy">
+            {constellationCopy.lines.map((line, index) => (
+              <p key={line}>{index === constellationCopy.lines.length - 1 ? <strong>{line}</strong> : line}</p>
             ))}
-            <p
-              style={{
-                fontSize: "20px",
-                fontWeight: 400,
-                lineHeight: 1.7,
-                color: "#FFFDFD",
-              }}
-            >
-              <span className="uppercase">{BRAND}</span> {constellationCopy.missionEmphasisSuffix}
-            </p>
           </div>
-
-          {/*
-            Ask-Polaris Q&A widget mount point (PHE-25). This section owns the
-            placement/layout only; the rotating-question behavior + curated
-            content live in AskPolarisWidget. The widget renders the seeded lead
-            copy (`constellationCopy.polarisLead`) as its own heading.
-          */}
-          <div
-            id="ask-polaris-mount"
-            className="pt-4"
-            style={{ borderTop: "1px solid rgba(255,253,253,0.06)" }}
-          >
-            <AskPolarisWidget />
+          <div className="landing-v66__constellation" aria-hidden="true">
+            <Constellation />
           </div>
         </div>
 
-        {/* Right column - Constellation */}
-        <div>
-          <Constellation />
-        </div>
+        <h3 className="landing-v66__polaris-heading">{constellationCopy.polarisHeading}</h3>
+        <p className="landing-v66__polaris-lead">{constellationCopy.polarisLead}</p>
+        <AskPolarisWidget />
       </div>
     </section>
   );

@@ -6,11 +6,9 @@ import { HeroSection } from "@/components/phenyx/hero-section";
 import { ManifestoSection } from "@/components/phenyx/manifesto-section";
 import { HowItWorksSection } from "@/components/phenyx/how-it-works-section";
 import { MissionSection } from "@/components/phenyx/mission-section";
-import { ProductPreviewSection } from "@/components/phenyx/product-preview-section";
 import { CtaSection } from "@/components/phenyx/cta-section";
 import { FooterSection } from "@/components/phenyx/footer-section";
 import { EntryModal } from "@/components/phenyx/entry-modal";
-import { CustomCursor } from "@/components/phenyx/custom-cursor";
 
 export default function Home() {
   // Page-level modal state is the single source of truth: every `enter` source
@@ -22,8 +20,7 @@ export default function Home() {
 
   return (
     <>
-      <CustomCursor />
-      <main className="min-h-screen bg-[#0a0a0a]">
+      <main className="landing-v66">
         <Navigation onEnterClick={openEntryModal} />
 
         <HeroSection onEnterClick={openEntryModal} />
@@ -33,8 +30,6 @@ export default function Home() {
         <HowItWorksSection />
 
         <MissionSection />
-
-        <ProductPreviewSection />
 
         <CtaSection onEnterClick={openEntryModal} />
 
