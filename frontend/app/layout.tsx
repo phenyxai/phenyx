@@ -13,27 +13,27 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'PHENYX COLLECTIVE — where identity takes form',
-  description: 'PHENYX COLLECTIVE. where identity takes form. an ai that synthesizes who you are across everything you have built.',
-  keywords: ['identity', 'self discovery', 'personal development', 'identity platform', 'creator community', 'phenyx collective', 'identity formation', 'identity observatory'],
+  title: 'PHENYX — an identity observatory',
+  description: 'PHENYX is an identity observatory that connects the evidence you have left across the internet and reveals the pattern it forms.',
+  keywords: ['identity', 'self discovery', 'personal development', 'identity platform', 'identity formation', 'identity observatory'],
   authors: [{ name: 'Janesse Liang' }],
-  creator: 'PHENYX COLLECTIVE',
-  publisher: 'PHENYX COLLECTIVE',
+  creator: 'PHENYX',
+  publisher: 'PHENYX',
   metadataBase: new URL('https://phenyxcollective.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: 'PHENYX COLLECTIVE — where identity takes form',
-    description: 'PHENYX COLLECTIVE. where identity takes form. an ai that synthesizes who you are across everything you have built.',
+    title: 'PHENYX — an identity observatory',
+    description: 'Connect the evidence you have left across the internet and reveal the pattern it forms.',
     url: 'https://phenyxcollective.com',
-    siteName: 'PHENYX COLLECTIVE',
+    siteName: 'PHENYX',
     images: [
       {
-        url: '/og-image.png',
+        url: '/phenyx-opengraph.png',
         width: 1200,
         height: 630,
-        alt: 'PHENYX COLLECTIVE — where identity takes form',
+        alt: 'PHENYX — an identity observatory',
       },
     ],
     locale: 'en_US',
@@ -41,11 +41,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PHENYX COLLECTIVE — where identity takes form',
-    description: 'PHENYX COLLECTIVE. where identity takes form. an ai that synthesizes who you are across everything you have built.',
+    title: 'PHENYX — an identity observatory',
+    description: 'Connect the evidence you have left across the internet and reveal the pattern it forms.',
     creator: '@phenyxcollect',
     site: '@phenyxcollect',
-    images: ['/og-image.png'],
+    images: ['/phenyx-opengraph.png'],
   },
   robots: {
     index: true,

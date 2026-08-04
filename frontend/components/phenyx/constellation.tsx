@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSessionColor } from "@/contexts/session-color-context";
+import { constellationCopy } from "@/lib/landing-copy";
 
 // Elegant asymmetric star map shape - positions per specification
 const nodes = [
@@ -401,7 +402,7 @@ export function Constellation() {
         className="text-xs text-center lowercase"
         style={{ color: "rgba(255,253,253,0.6)", marginTop: "8px" }}
       >
-        constellation — seven points of identity
+        {constellationCopy.visualizationLabel}
       </p>
     </div>
   );
