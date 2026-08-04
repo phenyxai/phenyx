@@ -3,7 +3,8 @@
  *
  * TypeScript shapes for the constellation data model. Mirrors the schema defined in
  * /supabase/migrations/20260603120000_phe5_enums_and_tables.sql (PHE-5) and
- * /supabase/migrations/20260625120000_phe31_observation_polaris_model.sql (PHE-31).
+ * /supabase/migrations/20260625120000_phe31_observation_polaris_model.sql (PHE-31),
+ * extended by the v66 evidence hierarchy in PHE-51.
  */
 
 export type Pillar =
@@ -156,6 +157,32 @@ export type EventType =
 
 export type PolarisRole = 'user' | 'assistant';
 
+export type SignalType =
+  | 'frequency'
+  | 'timing'
+  | 'duration'
+  | 'sequence'
+  | 'recurrence'
+  | 'vocabulary'
+  | 'ratio'
+  | 'absence'
+  | 'convergence'
+  | 'divergence';
+
+export type GenerationRunStatus =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'rejected'
+  | 'cancelled';
+
+export type GeneratedArtifactType =
+  | 'area_synthesis'
+  | 'pillar_narrative'
+  | 'opening_portrait'
+  | 'daily_line';
+
 /** Append-only feed of "what your data revealed" — many rows per pillar over time. */
 export interface Observation {
   id: string;
@@ -169,6 +196,159 @@ export interface Observation {
   signal_hash: string;
   surfaced_at: string; // ISO timestamptz
   created_at: string; // ISO timestamptz
+  area_id: string;
+  generation_run_id: string;
+  schema_version: number;
+  points: string[];
+  /** Null only for explicitly marked PHE-31 compatibility provenance. */
+  signal_type: SignalType | null;
+  evidence_n: number | null;
+  evidence_span: string | null;
+  span_start: string | null;
+  span_end: string | null;
+  record_count: number;
+  sources: string[];
+  prompt_version: string;
+  model_version: string;
+}
+
+// ============================================================================
+// PHE-51: v66 evidence hierarchy
+// source record -> signal -> observation -> area -> pillar
+// ============================================================================
+
+export interface GenerationRun {
+  id: string;
+  user_id: string;
+  generation_system: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  prompt_version: string;
+  model: string;
+  input_hash: string;
+  status: GenerationRunStatus;
+  started_at: string | null;
+  completed_at: string | null;
+  error_information: Record<string, unknown> | null;
+  usage_input: number | null;
+  usage_output: number | null;
+  validator_results: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface SourceRecord {
+  id: string;
+  user_id: string;
+  platform: string;
+  external_record_id: string;
+  record_type: string;
+  occurred_at: string | null;
+  ingested_at: string;
+  payload_ciphertext: string | null; // PostgREST bytea representation
+  encryption_version: number | null;
+  encryption_metadata: Record<string, unknown> | null;
+  content_hash: string;
+  dedupe_key: string;
+  schema_version: number;
+  provenance_status: 'retained_source' | 'legacy_import';
+  created_at: string;
+}
+
+export interface Signal {
+  id: string;
+  user_id: string;
+  /** Null only when is_legacy_compatibility is true. */
+  signal_type: SignalType | null;
+  extractor_version: string;
+  deterministic_dedupe_key: string;
+  metric_value: Record<string, unknown>;
+  evidence_n: number | null;
+  span_start: string | null;
+  span_end: string | null;
+  canonical_span: string | null;
+  record_count: number;
+  sources: string[];
+  version: number;
+  supersedes_signal_id: string | null;
+  generation_run_id: string | null;
+  schema_version: number;
+  is_legacy_compatibility: boolean;
+  created_at: string;
+}
+
+export interface SignalSourceRecord {
+  signal_id: string;
+  source_record_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface Area {
+  id: string;
+  user_id: string;
+  pillar: Pillar;
+  label: string;
+  ordinal: 1 | 2 | 3;
+  generation_run_id: string | null;
+  generation_version: number;
+  schema_version: number;
+  is_legacy_compatibility: boolean;
+  supersedes_area_id: string | null;
+  created_at: string;
+}
+
+export interface AreaSignalMembership {
+  area_id: string;
+  signal_id: string;
+  user_id: string;
+  ordinal: number;
+  created_at: string;
+}
+
+export interface ObservationSignal {
+  observation_id: string;
+  signal_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface GeneratedArtifact {
+  id: string;
+  user_id: string;
+  artifact_type: GeneratedArtifactType;
+  pillar: Pillar | null;
+  area_id: string | null;
+  generation_run_id: string;
+  output: Record<string, unknown>;
+  version: number;
+  schema_version: number;
+  supersedes_artifact_id: string | null;
+  created_at: string;
+}
+
+export interface ArtifactObservation {
+  artifact_id: string;
+  observation_id: string;
+  user_id: string;
+  ordinal: number;
+  created_at: string;
+}
+
+export interface UnderneathReading {
+  id: string;
+  user_id: string;
+  observation_id: string;
+  generation_run_id: string;
+  headline: string;
+  belief: { said: string; n: number; where: string };
+  record_evidence: Array<{ src: string; what: string }>;
+  gap: string;
+  mechanism: string;
+  tell: string;
+  basis: string;
+  hedge: string;
+  feedback_status: 'accepted' | 'rejected' | null;
+  feedback_at: string | null;
+  schema_version: number;
+  created_at: string;
 }
 
 /** Append-only, versioned trait-grounding store. Internal; never surfaced raw. */
