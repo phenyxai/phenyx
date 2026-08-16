@@ -12,13 +12,13 @@ import {
   StatusLine,
 } from './modal-host'
 
-/** Verbatim pro feature lines, each prefixed with ✦ (literal … preserved). */
+/** Verbatim pro feature lines from v67 (`phenyx_product_v67.html` MODAL_CONTENT.pro). */
 const FEATURES = [
-  'all observations, not just the first',
-  'cross-platform citations…',
-  'polaris with 8000 tokens a week, not 80',
-  'constellation tracking over time',
-  'full data provenance',
+  'every observation traced to the individual entries behind it, with dates and sources',
+  'the reading underneath an observation, and what it rests on',
+  'polaris: ask about any observation, grounded in your own signals',
+  'a weekly synthesis of how your constellation moved',
+  'your yearly recap, built from every week',
 ]
 
 /**
@@ -66,7 +66,10 @@ export function UpgradeModal() {
 
   return (
     <SettingsDialogContent aria-describedby={undefined}>
-      <ModalHeading title="upgrade to pro" />
+      <ModalHeading title="phenyx pro" />
+      <p className="mb-4 text-[12.5px] leading-relaxed text-[#888]">
+        the full observation layer on top of your constellation.
+      </p>
 
       <ul className="flex flex-col gap-3">
         {FEATURES.map((feature) => (
@@ -83,9 +86,11 @@ export function UpgradeModal() {
 
       <div className="flex flex-col gap-2">
         <PrimaryButton onClick={handleUpgrade} disabled={loading}>
-          {loading ? 'loading…' : 'upgrade to pro, $20/month'}
+          {loading ? 'loading…' : 'go pro, $12.99/month'}
         </PrimaryButton>
-        <p className="text-center text-[11px] text-[#555]">cancel any time.</p>
+        <p className="text-center text-[11.5px] text-[#888]">
+          or $99/year. your first month is free. cancel any time.
+        </p>
         {error && <StatusLine message={error} tone="error" />}
       </div>
     </SettingsDialogContent>

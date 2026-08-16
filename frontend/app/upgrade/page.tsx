@@ -9,12 +9,6 @@ import { apiFetch } from "@/lib/api-client";
 
 type BillingPeriod = "monthly" | "yearly";
 
-/** Display prices align with Stripe products (yearly billed once as $192). */
-const PRICING = {
-  pro: { monthly: 20, yearly: 192 },
-  gift: 75,
-};
-
 export default function UpgradePage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -245,24 +239,31 @@ export default function UpgradePage() {
               full access · signal & observatory experience modes in settings
             </p>
             <div style={{ fontSize: "32px", fontWeight: 300, marginBottom: "24px" }}>
-              $
-              {billingPeriod === "yearly"
-                ? Math.round(PRICING.pro.yearly / 12)
-                : PRICING.pro.monthly}
-              <span style={{ fontSize: "12px", color: "#555" }}>/month</span>
-              {billingPeriod === "yearly" && (
-                <span style={{ fontSize: "11px", color: "#555", display: "block", marginTop: "4px" }}>
-                  ${PRICING.pro.yearly} billed once for the year
-                </span>
+              {billingPeriod === "yearly" ? (
+                <>
+                  $99
+                  <span style={{ fontSize: "12px", color: "#555" }}>/year</span>
+                  <span style={{ fontSize: "11px", color: "#555", display: "block", marginTop: "4px" }}>
+                    first month free
+                  </span>
+                </>
+              ) : (
+                <>
+                  $12.99
+                  <span style={{ fontSize: "12px", color: "#555" }}>/month</span>
+                  <span style={{ fontSize: "11px", color: "#555", display: "block", marginTop: "4px" }}>
+                    or $99/year. first month free
+                  </span>
+                </>
               )}
             </div>
             <ul className="space-y-3 mb-6">
               {[
-                "two reflections per session",
-                "source signals behind constellation points",
-                "faster constellation development",
-                "signal & observatory modes (in settings)",
-                "manage subscription (monthly) from settings",
+                "every observation traced to the entries behind it",
+                "the reading underneath an observation",
+                "polaris, 800 weekly tokens",
+                "weekly synthesis and yearly recap",
+                "first month free. cancel any time.",
               ].map((feature, i) => (
                 <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "#FFFDFD" }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={stellarColor} strokeWidth="2">
@@ -306,72 +307,32 @@ export default function UpgradePage() {
                   e.currentTarget.style.borderColor = stellarColor;
                 }}
               >
-                {isLoading ? "loading..." : "subscribe to pro"}
+                {isLoading ? "loading..." : "go pro, $12.99/month"}
               </button>
             )}
           </div>
 
-          {/* Gift */}
+          {/* Grandfathered gifted grant — v67 does not sell new gifted plans. */}
+          {currentTier === "gifted" && (
           <div
             className="flex-1 p-6 rounded-2xl"
             style={{
               background: "#0E0E0E",
-              border: currentTier === "gifted" ? `1px solid ${stellarColor}` : "0.5px solid #1e1e1e",
+              border: `1px solid ${stellarColor}`,
             }}
           >
-            <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>gifted constellation</h3>
-            <p style={{ fontSize: "11px", color: "#555", marginBottom: "16px" }}>one-time · full pro access</p>
-            <div style={{ fontSize: "32px", fontWeight: 300, marginBottom: "24px" }}>
-              ${PRICING.gift}
-              <span style={{ fontSize: "12px", color: "#555" }}> once</span>
+            <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>pro</h3>
+            <p style={{ fontSize: "11px", color: "#555", marginBottom: "16px" }}>
+              your account already has full access
+            </p>
+            <div
+              className="w-full py-3 rounded-lg text-center text-xs"
+              style={{ background: "#1a1a1a", color: "#666" }}
+            >
+              current plan
             </div>
-            <ul className="space-y-3 mb-6">
-              {[
-                "same full access as pro",
-                "no recurring charge",
-                "perfect as a gift",
-              ].map((feature, i) => (
-                <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "#FFFDFD" }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={stellarColor} strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  {feature}
-                </li>
-              ))}
-            </ul>
-            {currentTier === "gifted" ? (
-              <div
-                className="w-full py-3 rounded-lg text-center text-xs"
-                style={{ background: "#1a1a1a", color: "#666" }}
-              >
-                you have gifted access
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => checkout("gift")}
-                disabled={isLoading}
-                className="w-full py-3 rounded-lg text-xs transition-all"
-                style={{
-                  background: "transparent",
-                  border: `0.5px solid ${stellarColor}`,
-                  color: stellarColor,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.borderColor = stellarColor;
-                  e.currentTarget.style.color = stellarColor;
-                }}
-              >
-                {isLoading ? "loading..." : `buy gifted constellation · $${PRICING.gift}`}
-              </button>
-            )}
           </div>
+          )}
         </div>
 
         {error && (
@@ -385,7 +346,7 @@ export default function UpgradePage() {
           <Link href="/settings" style={{ color: stellarColor }} className="hover:underline">
             settings
           </Link>
-          {" — available on pro or gifted constellation."}
+          {" — available on pro."}
         </p>
 
         <p style={{ fontSize: "11px", color: "#444", marginTop: "16px", textAlign: "center" }}>

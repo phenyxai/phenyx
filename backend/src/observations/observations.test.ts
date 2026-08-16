@@ -98,11 +98,11 @@ test("orderCandidates sorts by pillar priority, then confidence desc", () => {
 // Generation-time gating
 // ---------------------------------------------------------------------------
 
-test("computeLockedForFree: free tier unlocks exactly one (the top-ranked)", () => {
+test("computeLockedForFree: free tier unlocks the first two traces", () => {
   const ordered = [cand({ signal_key: "a" }), cand({ signal_key: "b" }), cand({ signal_key: "c" })];
   const flags = computeLockedForFree(ordered, false);
-  assert.deepEqual(flags, [false, true, true]);
-  assert.equal(flags.filter((f) => f === false).length, 1);
+  assert.deepEqual(flags, [false, false, true]);
+  assert.equal(flags.filter((f) => f === false).length, 2);
 });
 
 test("computeLockedForFree: pro/gifted unlocks all", () => {
@@ -123,8 +123,8 @@ test("buildInsertRows sets is_new, gating flags, hashes, and dedups within batch
   // "dup" and "DUP" collapse to one row; the higher-confidence one wins ordering.
   assert.equal(rows.length, 2);
   assert.ok(rows.every((r) => r.is_new === true));
-  // Exactly one unlocked for free.
-  assert.equal(rows.filter((r) => r.locked_for_free === false).length, 1);
+  // First two unlocked for free (v67 evidence budget).
+  assert.equal(rows.filter((r) => r.locked_for_free === false).length, 2);
   assert.equal(rows[0].locked_for_free, false);
   assert.ok(rows.every((r) => /^[0-9a-f]{64}$/.test(r.signal_hash)));
 });
@@ -147,23 +147,24 @@ function row(overrides: Partial<ObservationRow>): ObservationRow {
   };
 }
 
-test("applyReadGate free tier: one unlocked at index 0, but citations + provenance stripped", () => {
+test("applyReadGate free tier: all bodies, traces only on first two of the day", () => {
   const served = applyReadGate(
     [row({ id: "fresh" }), row({ id: "older" }), row({ id: "oldest" })],
     FREE
   );
-  assert.equal(served.filter((o) => o.locked === false).length, 1);
-  // Freshest (index 0) unlocked with body — but source_platforms + provenance
-  // are stripped for free even on the single unlocked card (still stored).
+  assert.equal(served.length, 3);
+  assert.ok(served.every((o) => o.body === "the body"));
+  // First two of the local day carry citations + provenance.
   assert.equal(served[0].locked, false);
-  assert.equal(served[0].body, "the body");
-  assert.equal(served[0].sources, undefined);
-  assert.equal(served[0].meta_line, undefined);
-  // Locked rows never carry body/sources; they carry a hint.
-  assert.equal(served[1].locked, true);
-  assert.equal(served[1].body, undefined);
-  assert.equal(served[1].sources, undefined);
-  assert.ok(served[1].hint && served[1].hint.length > 0);
+  assert.deepEqual(served[0].sources, ["linkedin", "spotify"]);
+  assert.equal(served[0].meta_line, "cross-platform pattern / 6 months");
+  assert.equal(served[1].locked, false);
+  assert.deepEqual(served[1].sources, ["linkedin", "spotify"]);
+  // Third+ keep the sentence; traces are withheld.
+  assert.equal(served[2].locked, true);
+  assert.equal(served[2].body, "the body");
+  assert.equal(served[2].sources, undefined);
+  assert.equal(served[2].meta_line, undefined);
 });
 
 test("applyReadGate pro/gifted: all unlocked with source_platforms + provenance present", () => {
@@ -173,7 +174,7 @@ test("applyReadGate pro/gifted: all unlocked with source_platforms + provenance 
   assert.ok(served.every((o) => o.meta_line === "cross-platform pattern / 6 months"));
 });
 
-test("groupTimelineByPillar groups by pillar and preserves exactly-one-free-unlock", () => {
+test("groupTimelineByPillar groups by pillar and keeps every body for free", () => {
   const groups = groupTimelineByPillar(
     [
       row({ id: "1", pillar: "origin" }),
@@ -184,8 +185,10 @@ test("groupTimelineByPillar groups by pillar and preserves exactly-one-free-unlo
   );
   // Groups emitted in pillar-priority order: origin before emergence.
   assert.deepEqual(groups.map((g) => g.pillar), ["origin", "emergence"]);
-  const unlocked = groups.flatMap((g) => g.observations).filter((o) => o.locked === false);
-  assert.equal(unlocked.length, 1);
+  const served = groups.flatMap((g) => g.observations);
+  assert.equal(served.length, 3);
+  assert.ok(served.every((o) => o.body === "the body"));
+  assert.equal(served.filter((o) => o.locked === true).length, 1);
 });
 
 // ---------------------------------------------------------------------------

@@ -23,10 +23,9 @@ import { useDailySignpost } from "@/lib/first-visit";
 // 06-engine-data.md) via `apiFetch("/observations")`. That endpoint may not be
 // live yet, so the read fails soft: any error renders the empty state.
 //
-// Gating: pro/gifted see every card unlocked; free sees exactly the freshest
-// card (index 0) unlocked and the rest as locked cards. Locked bodies/sources
-// are redacted server-side — the client never receives them — and the client
-// gate here (tier + index) is the belt-and-suspenders match to the AC.
+// Gating: every tier sees observation bodies. Free sees evidence traces on the
+// first two of the local day; the rest keep the sentence and lock the trace
+// (PHE-69). Do not client-hide bodies.
 // ============================================================================
 
 interface DailyFeedResponse {
@@ -113,12 +112,12 @@ export default function DailyTabPage() {
     router.push("/dashboard/polaris");
   };
 
-  // Token label is the weekly Polaris allowance by tier (05-polaris.md); Daily
-  // only displays it. Verbatim per AC: "80 tokens" (free) / "8000 tokens" (pro).
-  const tokenLabel = isPro ? "8000 tokens" : "80 tokens";
+  // Token label is the weekly Polaris allowance (v67): 800 for pro, lock copy for free.
+  const tokenLabel = isPro ? "800 weekly tokens" : "polaris is on pro";
 
-  // Free gating: index 0 unlocked, the rest locked. Pro/gifted: all unlocked.
-  const lockedCount = isPro ? 0 : Math.max(0, observations.length - 1);
+  // v67: observation bodies are never locked. `observation.locked` means the
+  // evidence trace is behind the free daily budget (PHE-69 / PHE-71).
+  const lockedTraceCount = observations.filter((o) => o.locked).length;
 
   return (
     <section style={{ maxWidth: 640, margin: "0 auto", padding: "48px 24px 80px" }}>
@@ -189,17 +188,17 @@ export default function DailyTabPage() {
       ) : (
         <>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {observations.map((obs, index) => (
+            {observations.map((obs) => (
               <ObservationCard
                 key={obs.id}
                 observation={obs}
-                locked={!isPro && index > 0}
+                locked={false}
                 onUpgrade={openUpgrade}
               />
             ))}
           </div>
 
-          {lockedCount > 0 && (
+          {lockedTraceCount > 0 && (
             <button
               type="button"
               onClick={openUpgrade}
@@ -219,7 +218,7 @@ export default function DailyTabPage() {
                 textUnderlineOffset: 3,
               }}
             >
-              {lockedCount} observations locked. upgrade to unlock
+              more traces on pro
             </button>
           )}
         </>
