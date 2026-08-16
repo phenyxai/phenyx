@@ -155,6 +155,7 @@ export interface ObservationRow {
   evidence_span?: string | null;
   span_start?: string | null;
   span_end?: string | null;
+  /** v66 pattern type; used by PHE-72 analytics, never the observation body. */
   signal_type?: string | null;
   evidence_n?: number | null;
   record_count?: number | null;
@@ -197,6 +198,10 @@ export interface ServedObservation {
    */
   under?: boolean;
   underneath?: Underneath | null;
+  /** v66 pattern type for analytics (PHE-72). */
+  signal_type?: string | null;
+  /** Persisted `does this land?` state; null when the user has not touched it. */
+  feedback?: { verdict: "new" | "known" | "reading" | null; opened: boolean } | null;
 }
 
 /** First sentence of an observation body (collapsed Daily card). */
@@ -268,6 +273,7 @@ export function applyReadGate(
         evidence: evidence ? redactEvidence(evidence, false) : null,
         under,
         underneath: null,
+        signal_type: row.signal_type ?? null,
       };
     }
     return {
@@ -285,6 +291,7 @@ export function applyReadGate(
       evidence,
       under,
       underneath,
+      signal_type: row.signal_type ?? null,
     };
   });
 }

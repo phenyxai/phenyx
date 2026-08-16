@@ -415,3 +415,43 @@ export async function passphraseResetConfirm(input: {
     return { ok: false }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Observation feedback (PHE-72). Persist `does this land?` verdicts and the
+// passive evidence-opened flag. Never sends the observation body.
+// ---------------------------------------------------------------------------
+
+export type ObservationVerdict = "new" | "known" | "reading"
+
+export interface ObservationFeedbackPayload {
+  verdict?: ObservationVerdict | null
+  opened?: boolean
+}
+
+export interface ObservationFeedbackResult {
+  verdict: ObservationVerdict | null
+  opened: boolean
+}
+
+/**
+ * POST /observations/:id/feedback. Returns the persisted state, or `undefined`
+ * on transport / 4xx so the card can fail open (buttons stay / restore).
+ */
+export async function postObservationFeedback(
+  observationId: string,
+  body: ObservationFeedbackPayload,
+): Promise<ObservationFeedbackResult | undefined> {
+  try {
+    const res = await apiFetch(
+      `/observations/${encodeURIComponent(observationId)}/feedback`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    )
+    if (!res.ok) return undefined
+    return (await res.json()) as ObservationFeedbackResult
+  } catch {
+    return undefined
+  }
+}

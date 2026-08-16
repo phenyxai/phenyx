@@ -15,6 +15,11 @@ import {
   isValidPillar,
   firstSentence,
 } from "./gating";
+import {
+  parseFeedbackBody,
+  attachFeedback,
+  applyFeedbackRanking,
+} from "./feedback";
 import { BillingService } from "../stripe/billing.service";
 import { ObservationsService } from "./observations.service";
 import {
@@ -390,6 +395,59 @@ test("pickUnderneathOfDay is stable for a given date and set", () => {
   assert.equal(first, again);
   assert.equal(pickUnderneathOfDay([], 10), null);
   assert.ok(ids.includes(pickUnderneathOfDay(ids, 0)!));
+});
+
+// ---------------------------------------------------------------------------
+// PHE-72 — feedback parse / attach / writer ranking
+// ---------------------------------------------------------------------------
+
+test("parseFeedbackBody accepts verdicts, null, and opened", () => {
+  assert.deepEqual(parseFeedbackBody({ verdict: "new" }), {
+    ok: true,
+    value: { verdict: "new" },
+  });
+  assert.deepEqual(parseFeedbackBody({ verdict: null }), {
+    ok: true,
+    value: { verdict: null },
+  });
+  assert.deepEqual(parseFeedbackBody({ opened: true }), {
+    ok: true,
+    value: { opened: true },
+  });
+  assert.equal(parseFeedbackBody({}).ok, false);
+  assert.equal(parseFeedbackBody({ verdict: "data" }).ok, false);
+  assert.equal(parseFeedbackBody({ opened: "yes" }).ok, false);
+});
+
+test("attachFeedback maps rows onto served observations; missing → null", () => {
+  const served = applyReadGate([row({ id: "a" }), row({ id: "b" })], PRO);
+  const attached = attachFeedback(served, [
+    { observation_id: "a", verdict: "known", opened: true },
+  ]);
+  assert.deepEqual(attached[0].feedback, { verdict: "known", opened: true });
+  assert.equal(attached[1].feedback, null);
+});
+
+test("applyFeedbackRanking skips reading hashes and deprioritizes known pillars", () => {
+  const userId = "user-1";
+  const readingKey = "skip-me";
+  const readingHash = computeSignalHash(userId, "origin", readingKey);
+  const ranked = applyFeedbackRanking(
+    userId,
+    [
+      cand({ pillar: "origin", signal_key: readingKey, confidence: 0.99 }),
+      cand({ pillar: "origin", signal_key: "keep-origin", confidence: 0.5 }),
+      cand({ pillar: "emergence", signal_key: "keep-em", confidence: 0.4 }),
+    ],
+    [
+      { signal_hash: readingHash, pillar: "origin", verdict: "reading" },
+      { signal_hash: "other", pillar: "origin", verdict: "known" },
+    ]
+  );
+  assert.deepEqual(
+    ranked.map((c) => c.signal_key),
+    ["keep-em", "keep-origin"]
+  );
 });
 
 // ---------------------------------------------------------------------------

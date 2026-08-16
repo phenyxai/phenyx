@@ -89,6 +89,7 @@ test("all frontend queue event names are on the allowlist", () => {
     "login",
     "upgrade_to_pro",
     "downgrade_to_free",
+    "observation_feedback",
   ]) {
     assert.ok(
       (ALLOWED_EVENT_TYPES as readonly string[]).includes(name),
@@ -104,6 +105,35 @@ test("bare upgrade/downgrade compatibility aliases are accepted", () => {
     const res = sanitizeEvent({ event_type: name, props: {} }, USER, clock);
     assert.equal(res.ok, true, `${name} alias should validate`);
   }
+});
+
+test("observation_feedback strips body/text and keeps pillar + signal_type", () => {
+  const secret = "a private observation body that must never be persisted";
+  const res = sanitizeEvent(
+    {
+      event_type: "observation_feedback",
+      props: {
+        pillar: "origin",
+        signal_type: "timing",
+        verdict: "new",
+        opened: true,
+        body: secret,
+        text: secret,
+        content: secret,
+      },
+    },
+    USER,
+    clock,
+  );
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.deepEqual(Object.keys(res.row.props).sort(), [
+    "opened",
+    "pillar",
+    "signal_type",
+    "verdict",
+  ]);
+  assert.ok(!JSON.stringify(res.row.props).includes(secret), "observation body leaked into props");
 });
 
 test("unknown prop keys are stripped for a known event type", () => {

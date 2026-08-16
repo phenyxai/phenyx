@@ -32,7 +32,8 @@ export type EventType =
   | "polaris_message"
   | "login"
   | "upgrade_to_pro"
-  | "downgrade_to_free";
+  | "downgrade_to_free"
+  | "observation_feedback";
 
 /** Empty-props marker: `{}` with no allowable keys. */
 export type EmptyProps = Record<string, never>;
@@ -46,6 +47,16 @@ export interface EventPropsMap {
   login: EmptyProps;
   upgrade_to_pro: EmptyProps;
   downgrade_to_free: EmptyProps;
+  /**
+   * Pillar + signal type + verdict/opened only. NEVER the observation body.
+   * `signal_type` is the v66 pattern kind (frequency, timing, …), not prose.
+   */
+  observation_feedback: {
+    pillar: string;
+    signal_type: string | null;
+    verdict?: "new" | "known" | "reading" | null;
+    opened?: boolean;
+  };
 }
 
 /** The wire shape of every queued/persisted event. */
@@ -274,6 +285,35 @@ export function trackPolarisMessage(input: {
   message: string;
 }): void {
   track("polaris_message", makePolarisMessageProps(input));
+}
+
+/**
+ * Build `observation_feedback` props. The observation body is not a parameter
+ * and cannot leak into the event — only pillar, signal type, and the verdict.
+ */
+export function makeObservationFeedbackProps(input: {
+  pillar: string;
+  signal_type: string | null;
+  verdict?: "new" | "known" | "reading" | null;
+  opened?: boolean;
+}): EventPropsMap["observation_feedback"] {
+  const props: EventPropsMap["observation_feedback"] = {
+    pillar: input.pillar,
+    signal_type: input.signal_type,
+  };
+  if (input.verdict !== undefined) props.verdict = input.verdict;
+  if (input.opened !== undefined) props.opened = input.opened;
+  return props;
+}
+
+/** PHE-72 seam. Never pass the observation body into this function. */
+export function trackObservationFeedback(input: {
+  pillar: string;
+  signal_type: string | null;
+  verdict?: "new" | "known" | "reading" | null;
+  opened?: boolean;
+}): void {
+  track("observation_feedback", makeObservationFeedbackProps(input));
 }
 
 /**

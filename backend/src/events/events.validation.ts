@@ -27,6 +27,7 @@ export const ALLOWED_EVENT_TYPES = [
   "login",
   "upgrade_to_pro",
   "downgrade_to_free",
+  "observation_feedback",
   // Compatibility aliases (ticket body spelling).
   "upgrade",
   "downgrade",
@@ -51,6 +52,7 @@ export const ALLOWED_PROP_KEYS: Record<AllowedEventType, readonly string[]> = {
   login: [],
   upgrade_to_pro: [],
   downgrade_to_free: [],
+  observation_feedback: ["pillar", "signal_type", "verdict", "opened"],
   upgrade: [],
   downgrade: [],
 };

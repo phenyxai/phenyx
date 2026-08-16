@@ -153,7 +153,8 @@ export type EventType =
   | 'downgrade_to_free'
   | 'upgrade'
   | 'downgrade'
-  | 'observation_unlock';
+  | 'observation_unlock'
+  | 'observation_feedback';
 
 export type PolarisRole = 'user' | 'assistant';
 
@@ -210,6 +211,17 @@ export interface Observation {
   sources: string[];
   prompt_version: string;
   model_version: string;
+}
+
+/** PHE-72: one `does this land?` row per user per observation. Never stores body. */
+export interface ObservationFeedback {
+  id: string;
+  user_id: string;
+  observation_id: string;
+  verdict: 'new' | 'known' | 'reading' | null;
+  opened: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============================================================================
