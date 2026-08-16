@@ -335,7 +335,7 @@ export default function DailyPage() {
           >
             ←
           </button>
-          <Link href="/" aria-label="PHENYX COLLECTIVE">
+          <Link href="/" aria-label="PHENYX">
             <Image src="/phenyx-logo.png" alt="" width={20} height={20} style={{ opacity: 0.9 }} />
           </Link>
         </header>
@@ -377,7 +377,7 @@ export default function DailyPage() {
         >
           ←
         </button>
-        <Link href="/" aria-label="PHENYX COLLECTIVE">
+        <Link href="/" aria-label="PHENYX">
           <Image src="/phenyx-logo.png" alt="" width={20} height={20} style={{ opacity: 0.9 }} />
         </Link>
       </header>

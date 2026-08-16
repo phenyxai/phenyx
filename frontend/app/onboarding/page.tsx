@@ -1327,7 +1327,7 @@ function ConnectScreen({
         }}
       >
         <OnairosButtonWrapper
-          webpageName="PHENYX COLLECTIVE"
+          webpageName="PHENYX"
           requestedData={["personality"]}
           buttonType="pill"
           buttonText="sign in with onairos"

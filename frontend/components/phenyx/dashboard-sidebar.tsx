@@ -123,7 +123,7 @@ export function DashboardSidebar() {
       {/* Footer: PHENYX logo + tier badge. Badge text + data-tier owned by
           applyTierUI; the static "free" / data-tier here is the pre-load default. */}
       <footer className="mt-auto flex items-center gap-2.5 pt-6">
-        <Image src="/phenyx-logo.png" alt="PHENYX COLLECTIVE" width={20} height={20} className="opacity-90" />
+        <Image src="/phenyx-logo.png" alt="PHENYX" width={20} height={20} className="opacity-90" />
         <span
           ref={badgeRef}
           data-tier="free"

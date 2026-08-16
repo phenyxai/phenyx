@@ -311,7 +311,7 @@ export default function SignInClient() {
         <Link href="/" className="flex items-center" style={{ gap: "8px" }}>
           <Image
             src="/phenyx-logo.png"
-            alt="PHENYX COLLECTIVE"
+            alt="PHENYX"
             width={20}
             height={20}
             style={{ opacity: 0.9 }}
@@ -325,7 +325,7 @@ export default function SignInClient() {
               opacity: 0.9,
             }}
           >
-            PHENYX COLLECTIVE
+            PHENYX
           </span>
         </Link>
         <div className="flex items-center gap-2" style={{ fontSize: "11px" }}>

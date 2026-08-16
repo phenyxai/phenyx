@@ -11,7 +11,7 @@ import { fetchProfileOverview, type ProfileOverview } from "@/lib/api-client";
 import { ProfileTierCard } from "@/components/phenyx/profile-tier-card";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 
-const CONTACT_EMAIL = "contact@phenyxcollective.com";
+const CONTACT_EMAIL = "contact@phenyxai.com";
 
 /**
  * SETTINGS rows in fixed product order. Each row's `id` is the modal it opens

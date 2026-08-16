@@ -19,7 +19,7 @@ export function MissionSection() {
           </div>
         </div>
 
-        <h3 className="landing-v66__polaris-heading">{constellationCopy.polarisHeading}</h3>
+        <h3 id={SECTION_IDS.polaris} className="landing-v66__polaris-heading">{constellationCopy.polarisHeading}</h3>
         <p className="landing-v66__polaris-lead">{constellationCopy.polarisLead}</p>
         <AskPolarisWidget />
       </div>

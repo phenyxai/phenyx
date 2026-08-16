@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 Disallow: /admin
-Sitemap: https://phenyxcollective.com/sitemap.xml
+Sitemap: https://phenyxai.com/sitemap.xml
