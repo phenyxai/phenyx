@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import { useRouter } from "next/navigation";
 
 import {
   askPolaris,
@@ -9,51 +18,59 @@ import {
   type PolarisThreadSummary,
   type SuggestedQuestion,
 } from "@/lib/api-client";
+import { V67_PRICING } from "@/lib/billing";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { trackPolarisMessage } from "@/lib/analytics";
 import { useTier } from "@/lib/use-tier";
 
 // ============================================================================
-// PolarisTab — the dashboard Polaris chat surface (PHE-23)
+// PolarisTab: v67 idle + chat surfaces (PHE-73)
 // ----------------------------------------------------------------------------
-// Two views behind one component (mirrors the prototype's polStartChat/polBack):
+// Two views behind one flex-column panel (never display:block, which unpins
+// the composer from the foot):
 //
-//   • MAIN — hero, three suggested questions from the user's top pillars
-//     (BASED ON WHAT WE SEE), explore chips (EXPLORE FURTHER), and past
-//     conversations (PREVIOUS CONVERSATIONS, hidden until ≥1 exists). The input
-//     row is read-only here — clicking it opens a blank chat.
-//   • CHAT — a "← back to polaris" control, the message thread (user bubbles
-//     right, ai bubbles left, all PLAIN TEXT via React text nodes — never
-//     innerHTML), and an input with a star (✦) send.
+//   • IDLE: hero + live composer + three explore tabs (questions from your
+//     record, starting points, your chats). Token pill sits on the hero row.
+//   • CHAT: ← · polaris · <pillar> · token pill · new. Messages fill the
+//     panel; composer is pinned to the foot.
 //
-// Every answer comes from `askPolaris` (PHE-22, non-streaming JSON). Threads
-// persist server-side, so `PREVIOUS CONVERSATIONS` reloads a decrypted thread
-// via `getPolarisThread`. The response can also be an at-limit short-circuit
-// (`limit_reached`) or a crisis response (`is_crisis`) — both handled below.
+// Free users see a lock that opens the Pro modal. Threads and askPolaris are
+// not fetched or called. Deep-link `/dashboard/polaris?q=...&pillar=...`
+// starts chat with that as the first user turn.
 // ============================================================================
 
-// Accent used for the star + pillar tags. The dashboard shell does not mount the
-// SessionColorProvider, so we read the persisted stellar CSS var when present and
-// fall back to the deterministic default rather than importing the landing-only
-// context. (var(--s) is set by the provider on the landing side and persisted.)
 const ACCENT = "var(--s, #5599FF)";
 
-// EXPLORE FURTHER chips (verbatim, lowercase). Each seeds a chat with a question.
-const EXPLORE_CHIPS: ReadonlyArray<{ label: string; seed: string }> = [
-  { label: "my work", seed: "what does my work say about who i am?" },
-  { label: "how i come across", seed: "how do i actually come across to people?" },
-  { label: "where i am going", seed: "where am i quietly heading next?" },
+const TOKEN_NOTE =
+  "a shared weekly amount, not a count of questions. longer conversations use more.";
+
+const COMPOSER_PLACEHOLDER = "ask anything. it already has your context.";
+
+/** v67 starting-point chips (verbatim). Each seeds a chat with its label + pillar. */
+const STARTING_CHIPS: ReadonlyArray<{ label: string; pillar: string }> = [
+  { label: "my work", pillar: "self-creation" },
+  { label: "how i come across", pillar: "recognition" },
+  { label: "where i am going", pillar: "transcendence" },
+  { label: "what lands", pillar: "recognition" },
+  { label: "what i hold back", pillar: "self-creation" },
+  { label: "2am", pillar: "becoming" },
+  { label: "what i keep starting", pillar: "becoming" },
+  { label: "what i return to", pillar: "origin" },
+  { label: "the year it changed", pillar: "origin" },
+  { label: "what i finish", pillar: "self-creation" },
+  { label: "who i sound like", pillar: "recognition" },
+  { label: "what i am circling", pillar: "convergence" },
 ];
 
-// A crisis payload shape (PHE-22 returns it on `is_crisis`).
+type ExploreTab = "record" | "starts" | "chats";
+type View = "idle" | "chat";
+
 interface CrisisResources {
   us: string;
   text: string;
   international: string;
 }
 
-// One rendered turn in the chat thread. `id` is the server message id when known,
-// otherwise a local key. `resources` rides along on a crisis answer.
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -62,9 +79,9 @@ interface ChatMessage {
   resources?: CrisisResources | null;
 }
 
-type View = "main" | "chat";
+/** Guard so a Strict-Mode remount does not double-send a deep-link question. */
+const consumedDeepLinks = new Set<string>();
 
-/** dd mmm — a quiet dated label for PREVIOUS CONVERSATIONS rows. */
 function datedLabel(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -73,42 +90,67 @@ function datedLabel(iso: string): string {
     .toLowerCase();
 }
 
-export function PolarisTab() {
+function displayPillar(pillar: string | null | undefined): string {
+  if (!pillar) return "";
+  return pillar.replace(/_/g, "-");
+}
+
+function weeklyTokenCopy(n: number): string {
+  return `${n} weekly tokens`;
+}
+
+function autosize(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+}
+
+export function PolarisTab({
+  initialQuestion,
+  initialPillar,
+}: {
+  initialQuestion?: string;
+  initialPillar?: string;
+} = {}) {
+  const router = useRouter();
   const { openModal } = useSettingsModals();
   const { isPro } = useTier();
 
-  const [view, setView] = useState<View>("main");
+  const [view, setView] = useState<View>("idle");
+  const [explore, setExplore] = useState<ExploreTab>("record");
+  const [topupOpen, setTopupOpen] = useState(false);
 
-  // Main-view data.
   const [threads, setThreads] = useState<PolarisThreadSummary[]>([]);
   const [suggested, setSuggested] = useState<SuggestedQuestion[]>([]);
+  const [remaining, setRemaining] = useState<number>(V67_PRICING.polarisWeeklyTokens);
 
-  // Chat-view state.
   const [threadId, setThreadId] = useState<string | undefined>(undefined);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatFocus, setChatFocus] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const idleInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  // Timer-safe view of the current thread id so a rapid seed submit never reads a
-  // stale closure value.
   const threadIdRef = useRef<string | undefined>(undefined);
   threadIdRef.current = threadId;
-  // PHE-29: running count of answered Polaris messages this dashboard session, sent
-  // as `count` on the privacy-first `polaris_message` topic event. Persists across
-  // the main/chat view toggle (the component stays mounted); resets on remount.
   const sessionMessageCountRef = useRef(0);
 
-  // Load the main view (past threads + suggested questions). Fails soft: on any
-  // error the main view still renders (empty threads, empty suggestions).
-  const loadMain = useCallback(async () => {
+  const openTopup = useCallback(() => setTopupOpen(true), []);
+  const openUpgrade = useCallback(() => openModal("upgrade"), [openModal]);
+
+  const loadIdle = useCallback(async () => {
     try {
       const data = await getPolarisThreads();
       setThreads(data.threads ?? []);
       setSuggested(data.suggested_questions ?? []);
+      if (typeof data.allowance?.remaining === "number") {
+        setRemaining(data.allowance.remaining);
+        setLimitReached(data.allowance.limit_reached);
+      }
     } catch {
       setThreads([]);
       setSuggested([]);
@@ -117,22 +159,23 @@ export function PolarisTab() {
 
   useEffect(() => {
     if (!isPro) return;
-    void loadMain();
-  }, [loadMain, isPro]);
+    void loadIdle();
+  }, [loadIdle, isPro]);
 
-  // Autofocus the chat input whenever the chat view opens.
   useEffect(() => {
-    if (view === "chat") inputRef.current?.focus();
+    if (view === "chat") {
+      chatInputRef.current?.focus();
+      autosize(chatInputRef.current);
+    } else {
+      idleInputRef.current?.focus();
+      autosize(idleInputRef.current);
+    }
   }, [view]);
 
-  // Auto-scroll to the newest message as the thread grows / a send is in flight.
   useEffect(() => {
     if (view === "chat") bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages, sending, view]);
 
-  // Core send: append the user turn, call askPolaris, then append the ai answer
-  // (or surface the at-limit / crisis shapes). `seedThreadId` lets a fresh chat
-  // send its first question before `threadId` state has settled.
   const sendQuestion = useCallback(
     async (question: string, seedThreadId?: string) => {
       const q = question.trim();
@@ -150,11 +193,15 @@ export function PolarisTab() {
         const res = await askPolaris(q, seedThreadId ?? threadIdRef.current);
         setThreadId(res.thread_id);
         threadIdRef.current = res.thread_id;
+        if (res.pillar_tag) setChatFocus(displayPillar(res.pillar_tag));
+        if (typeof res.allowance?.remaining === "number") {
+          setRemaining(res.allowance.remaining);
+        }
 
         if (res.limit_reached) {
-          // Over the weekly budget: no ai bubble — the at-limit notice renders
-          // below the thread instead. PHE-27 owns the full upgrade treatment.
           setLimitReached(true);
+          setRemaining(0);
+          openTopup();
         } else if (res.answer != null) {
           setMessages((prev) => [
             ...prev,
@@ -167,11 +214,6 @@ export function PolarisTab() {
             },
           ]);
 
-          // PHE-29: topic-tag this answered turn and emit the privacy-first
-          // `polaris_message` event through the standard analytics pipeline —
-          // reusing the server-computed `pillar_tag` (matches PHE-22 routing) and
-          // carrying only { count, pillar_tag, message_length }, never the text.
-          // Crisis turns short-circuit before a real exchange, so they don't emit.
           if (!res.is_crisis) {
             sessionMessageCountRef.current += 1;
             trackPolarisMessage({
@@ -187,26 +229,24 @@ export function PolarisTab() {
         setSending(false);
       }
     },
-    [sending]
+    [sending, openTopup]
   );
 
-  // MAIN → CHAT. Opens a fresh thread; when a seed is given it is submitted
-  // immediately (suggested question or explore chip).
   const openChat = useCallback(
-    (seed?: string) => {
+    (seed?: string, pillar?: string | null) => {
       setMessages([]);
       setThreadId(undefined);
       threadIdRef.current = undefined;
       setLimitReached(false);
       setError(null);
       setInput("");
+      setChatFocus(displayPillar(pillar) || null);
       setView("chat");
       if (seed) void sendQuestion(seed, undefined);
     },
     [sendQuestion]
   );
 
-  // PREVIOUS CONVERSATIONS → CHAT. Reloads a persisted thread's messages.
   const openThread = useCallback(async (id: string) => {
     setError(null);
     setLimitReached(false);
@@ -222,312 +262,534 @@ export function PolarisTab() {
           body: m.body,
         }))
       );
+      const tagged = detail.messages.find((m) => m.pillar_tag);
+      setChatFocus(displayPillar(tagged?.pillar_tag) || null);
     } catch {
       setMessages([]);
+      setChatFocus(null);
       setError("could not load this conversation. please try again.");
     }
   }, []);
 
-  // CHAT → MAIN. Refresh the thread list so a just-created thread appears under
-  // PREVIOUS CONVERSATIONS.
-  const back = useCallback(() => {
-    setView("main");
-    void loadMain();
-  }, [loadMain]);
+  const backToIdle = useCallback(() => {
+    setView("idle");
+    setChatFocus(null);
+    setInput("");
+    void loadIdle();
+  }, [loadIdle]);
 
   const submitInput = useCallback(() => {
     const q = input.trim();
     if (!q) return;
+    if (remaining <= 0) {
+      openTopup();
+      return;
+    }
     setInput("");
+    if (view !== "chat") {
+      setMessages([]);
+      setThreadId(undefined);
+      threadIdRef.current = undefined;
+      setError(null);
+      setChatFocus(null);
+      setView("chat");
+    }
     void sendQuestion(q);
-  }, [input, sendQuestion]);
+  }, [input, sendQuestion, remaining, openTopup, view]);
+
+  useEffect(() => {
+    if (!isPro) return;
+    const q = initialQuestion?.trim();
+    if (!q) return;
+    const key = `${q}|${initialPillar ?? ""}`;
+    if (consumedDeepLinks.has(key)) return;
+    consumedDeepLinks.add(key);
+    openChat(q, initialPillar);
+    router.replace("/dashboard/polaris", { scroll: false });
+    // Deep-link fires once per question; openChat is intentionally omitted so a
+    // remaining-token update cannot re-seed the same turn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPro, initialQuestion, initialPillar, router]);
 
   if (!isPro) {
-    return (
-      <section style={{ maxWidth: 560, margin: "0 auto", padding: "72px 24px" }}>
-        <p
-          style={{
-            fontSize: 21,
-            fontWeight: 300,
-            letterSpacing: "-0.02em",
-            color: "#FFFDFD",
-            margin: 0,
-            marginBottom: 12,
-          }}
-        >
-          polaris
-        </p>
-        <p
-          style={{
-            fontSize: 15,
-            fontWeight: 300,
-            lineHeight: 1.6,
-            color: "rgba(255,253,253,0.55)",
-            margin: 0,
-            marginBottom: 28,
-          }}
-        >
-          ask about any observation, grounded in your own record. polaris is on pro.
-        </p>
-        <button
-          type="button"
-          onClick={() => openModal("upgrade")}
-          style={{
-            background: "transparent",
-            border: "0.5px solid rgba(255,253,253,0.35)",
-            borderRadius: 999,
-            padding: "10px 18px",
-            fontSize: 13,
-            color: "#FFFDFD",
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          go pro, $12.99/month
-        </button>
-      </section>
-    );
-  }
-
-  if (view === "chat") {
-    return (
-      <ChatView
-        messages={messages}
-        input={input}
-        sending={sending}
-        limitReached={limitReached}
-        error={error}
-        inputRef={inputRef}
-        bottomRef={bottomRef}
-        onBack={back}
-        onInputChange={setInput}
-        onSubmit={submitInput}
-        onUpgrade={() => openModal("upgrade")}
-      />
-    );
+    return <PolarisLock onUpgrade={openUpgrade} />;
   }
 
   return (
-    <MainView
-      suggested={suggested}
-      threads={threads}
-      onOpenChat={openChat}
-      onOpenThread={openThread}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main view
-// ---------------------------------------------------------------------------
-
-function MainView({
-  suggested,
-  threads,
-  onOpenChat,
-  onOpenThread,
-}: {
-  suggested: SuggestedQuestion[];
-  threads: PolarisThreadSummary[];
-  onOpenChat: (seed?: string) => void;
-  onOpenThread: (id: string) => void;
-}) {
-  return (
-    <div style={{ height: "100%", overflowY: "auto" }}>
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "56px 24px 96px" }}>
-        {/* Hero */}
-      <div style={{ marginBottom: 48 }}>
-        <h1
-          className="uppercase"
-          style={{
-            fontSize: 15,
-            fontWeight: 600,
-            letterSpacing: "0.24em",
-            color: "#FFFDFD",
-            margin: 0,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <span aria-hidden="true" style={{ color: ACCENT }}>
-            ✦
-          </span>
-          polaris
-        </h1>
-        <p
-          style={{
-            fontSize: 20,
-            fontWeight: 300,
-            lineHeight: 1.5,
-            color: "rgba(255,253,253,0.55)",
-            margin: 0,
-            marginTop: 16,
-          }}
-        >
-          ask what you cannot stop thinking about.
-        </p>
-      </div>
-
-      {/* BASED ON WHAT WE SEE — suggested questions from top pillars */}
-      {suggested.length > 0 && (
-        <section style={{ marginBottom: 40 }}>
-          <SectionHeading>based on what we see</SectionHeading>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {suggested.map((s) => (
-              <button
-                key={s.pillar_tag + s.text}
-                type="button"
-                onClick={() => onOpenChat(s.text)}
-                style={suggestionStyle}
-                className="motion-reduce:transition-none"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(255,253,253,0.28)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(255,253,253,0.1)";
-                }}
-              >
-                <span
-                  className="uppercase"
-                  style={{
-                    fontSize: 9,
-                    fontWeight: 600,
-                    letterSpacing: "0.14em",
-                    color: ACCENT,
-                    display: "block",
-                    marginBottom: 8,
-                  }}
-                >
-                  {s.pillar_tag.replace(/_/g, " ")}
-                </span>
-                <span
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 300,
-                    lineHeight: 1.5,
-                    color: "#FFFDFD",
-                  }}
-                >
-                  {s.text}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+    <div
+      data-testid="polaris-panel"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+      }}
+    >
+      <style>{`
+        [data-testid="polaris-panel"] textarea[aria-label="ask polaris"]::placeholder {
+          color: rgba(255,253,253,0.52);
+        }
+      `}</style>
+      {view === "idle" ? (
+        <IdleView
+          suggested={suggested}
+          threads={threads}
+          remaining={remaining}
+          input={input}
+          sending={sending}
+          explore={explore}
+          inputRef={idleInputRef}
+          onExplore={setExplore}
+          onInputChange={setInput}
+          onSubmit={submitInput}
+          onOpenChat={openChat}
+          onOpenThread={openThread}
+          onTopup={openTopup}
+        />
+      ) : (
+        <ChatView
+          messages={messages}
+          input={input}
+          sending={sending}
+          limitReached={limitReached}
+          error={error}
+          remaining={remaining}
+          chatFocus={chatFocus}
+          inputRef={chatInputRef}
+          bottomRef={bottomRef}
+          onBack={backToIdle}
+          onInputChange={setInput}
+          onSubmit={submitInput}
+          onTopup={openTopup}
+        />
       )}
 
-      {/* EXPLORE FURTHER — chips */}
-      <section style={{ marginBottom: 40 }}>
-        <SectionHeading>explore further</SectionHeading>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {EXPLORE_CHIPS.map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={() => onOpenChat(chip.seed)}
-              style={chipStyle}
-              className="motion-reduce:transition-none"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255,253,253,0.4)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255,253,253,0.18)";
-              }}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* PREVIOUS CONVERSATIONS — hidden until at least one thread exists */}
-      {threads.length > 0 && (
-        <section style={{ marginBottom: 40 }}>
-          <SectionHeading>previous conversations</SectionHeading>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {threads.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => onOpenThread(t.id)}
-                style={threadRowStyle}
-                className="motion-reduce:transition-none"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(255,253,253,0.03)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 300,
-                    color: "rgba(255,253,253,0.75)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    minWidth: 0,
-                  }}
-                >
-                  {t.title ?? t.preview ?? "conversation"}
-                </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: "rgba(255,253,253,0.35)",
-                    flexShrink: 0,
-                    marginLeft: 16,
-                  }}
-                >
-                  {datedLabel(t.updated_at)}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+      {topupOpen && (
+        <TopupSheet remaining={remaining} onClose={() => setTopupOpen(false)} />
       )}
-
-      {/* Input row — read-only in the main view; clicking opens a blank chat. */}
-      <button
-        type="button"
-        onClick={() => onOpenChat()}
-        aria-label="what do you want us to reveal?"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          width: "100%",
-          background: "#0D0D0C",
-          border: "1px solid rgba(255,253,253,0.1)",
-          borderRadius: 14,
-          padding: "16px 18px",
-          cursor: "text",
-          fontFamily: "inherit",
-          textAlign: "left",
-        }}
-      >
-        <span
-          style={{
-            fontSize: 15,
-            fontWeight: 300,
-            color: "rgba(255,253,253,0.35)",
-          }}
-        >
-          what do you want us to reveal?
-        </span>
-        <span aria-hidden="true" style={{ marginLeft: "auto", color: ACCENT }}>
-          ✦
-        </span>
-      </button>
-      </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Chat view
+// Free lock
+// ---------------------------------------------------------------------------
+
+function PolarisLock({ onUpgrade }: { onUpgrade: () => void }) {
+  return (
+    <section
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        maxWidth: 480,
+        margin: "0 auto",
+        padding: "48px 24px",
+        textAlign: "center",
+      }}
+    >
+      <span aria-hidden="true" style={{ color: ACCENT, fontSize: 22, marginBottom: 16 }}>
+        ✦
+      </span>
+      <p
+        style={{
+          fontSize: 21,
+          fontWeight: 300,
+          letterSpacing: "-0.02em",
+          color: "#FFFDFD",
+          margin: 0,
+          marginBottom: 18,
+        }}
+      >
+        polaris
+      </p>
+      <button
+        type="button"
+        onClick={onUpgrade}
+        aria-label="polaris is on pro"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 14,
+          background: "transparent",
+          border: "1px solid rgba(255,253,253,0.12)",
+          borderRadius: 16,
+          padding: "28px 32px",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          width: "100%",
+        }}
+      >
+        <LockIcon />
+        <span
+          style={{
+            fontSize: 14,
+            fontWeight: 300,
+            lineHeight: 1.6,
+            color: "rgba(255,253,253,0.55)",
+          }}
+        >
+          polaris is on pro. ask about any observation, grounded in your own record.
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onUpgrade}
+        style={{
+          marginTop: 22,
+          background: "transparent",
+          border: "0.5px solid rgba(255,253,253,0.35)",
+          borderRadius: 999,
+          padding: "10px 18px",
+          fontSize: 13,
+          color: "#FFFDFD",
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}
+      >
+        go pro, ${V67_PRICING.monthly}/month
+      </button>
+    </section>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="rgba(255,253,253,0.45)"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Idle
+// ---------------------------------------------------------------------------
+
+function IdleView({
+  suggested,
+  threads,
+  remaining,
+  input,
+  sending,
+  explore,
+  inputRef,
+  onExplore,
+  onInputChange,
+  onSubmit,
+  onOpenChat,
+  onOpenThread,
+  onTopup,
+}: {
+  suggested: SuggestedQuestion[];
+  threads: PolarisThreadSummary[];
+  remaining: number;
+  input: string;
+  sending: boolean;
+  explore: ExploreTab;
+  inputRef: RefObject<HTMLTextAreaElement | null>;
+  onExplore: (tab: ExploreTab) => void;
+  onInputChange: (v: string) => void;
+  onSubmit: () => void;
+  onOpenChat: (seed?: string, pillar?: string | null) => void;
+  onOpenThread: (id: string) => void;
+  onTopup: () => void;
+}) {
+  const showChats = threads.length > 0;
+  const active = explore === "chats" && !showChats ? "record" : explore;
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: "auto",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: "24px 24px 40px",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 760, margin: "0 auto" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            gap: 14,
+            marginBottom: 26,
+            position: "relative",
+            paddingRight: 150,
+            flexWrap: "wrap",
+            rowGap: 10,
+          }}
+        >
+          <span aria-hidden="true" style={{ fontSize: 26, color: ACCENT, flexShrink: 0 }}>
+            ✦
+          </span>
+          <p
+            style={{
+              fontSize: "clamp(15px, 1.5vw, 19px)",
+              fontWeight: 300,
+              color: "rgba(255,253,253,0.94)",
+              lineHeight: 1.35,
+              letterSpacing: "-0.01em",
+              margin: 0,
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            what do you want to understand today?
+          </p>
+          <div style={{ marginLeft: "auto" }}>
+            <TokenPill remaining={remaining} onTopup={onTopup} />
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: "rgba(255,253,253,0.018)",
+            border: "1px solid #232323",
+            borderRadius: 18,
+            padding: "18px 20px 12px",
+            marginBottom: 26,
+          }}
+        >
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => {
+              onInputChange(e.target.value);
+              autosize(e.currentTarget);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
+            aria-label="ask polaris"
+            placeholder={COMPOSER_PLACEHOLDER}
+            rows={1}
+            disabled={sending}
+            style={textareaStyle}
+          />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              marginTop: 8,
+            }}
+          >
+            <SendButton onClick={onSubmit} disabled={sending || !input.trim()} />
+          </div>
+        </div>
+
+        <div style={{ marginTop: 4 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 2,
+              justifyContent: "flex-start",
+              marginBottom: 20,
+              marginLeft: -14,
+            }}
+          >
+            <ExploreTabButton
+              active={active === "record"}
+              onClick={() => onExplore("record")}
+            >
+              questions from your record
+            </ExploreTabButton>
+            <ExploreTabButton
+              active={active === "starts"}
+              onClick={() => onExplore("starts")}
+            >
+              starting points
+            </ExploreTabButton>
+            {showChats && (
+              <ExploreTabButton
+                active={active === "chats"}
+                onClick={() => onExplore("chats")}
+              >
+                your chats
+              </ExploreTabButton>
+            )}
+          </div>
+
+          {active === "record" && (
+            <div>
+              {suggested.map((s) => (
+                <button
+                  key={s.pillar_tag + s.text}
+                  type="button"
+                  onClick={() => onOpenChat(s.text, s.pillar_tag)}
+                  className="motion-reduce:transition-none"
+                  style={questionCardStyle}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(85,153,255,0.4)";
+                    e.currentTarget.style.background = "#0c0c0c";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "#171717";
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: 11.5,
+                      letterSpacing: "0.1em",
+                      color: ACCENT,
+                      textTransform: "uppercase",
+                      margin: "0 0 5px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {displayPillar(s.pillar_tag)}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: 13.5,
+                      color: "rgba(255,253,253,0.8)",
+                      lineHeight: 1.5,
+                      fontWeight: 300,
+                      margin: 0,
+                    }}
+                  >
+                    {s.text}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {active === "starts" && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 7,
+                justifyContent: "flex-start",
+              }}
+            >
+              {STARTING_CHIPS.map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => onOpenChat(chip.label, chip.pillar)}
+                  className="motion-reduce:transition-none"
+                  style={chipStyle}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(85,153,255,0.4)";
+                    e.currentTarget.style.color = "rgba(255,253,253,0.78)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "#1e1e1e";
+                    e.currentTarget.style.color = "rgba(255,253,253,0.5)";
+                  }}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {active === "chats" && showChats && (
+            <div>
+              {threads.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => onOpenThread(t.id)}
+                  className="motion-reduce:transition-none"
+                  style={threadRowStyle}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "#242424";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "#1a1a1a";
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: 11,
+                      color: "rgba(255,253,253,0.5)",
+                      letterSpacing: "0.06em",
+                      margin: "0 0 4px",
+                    }}
+                  >
+                    {datedLabel(t.updated_at)}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "rgba(255,253,253,0.5)",
+                      fontWeight: 300,
+                      margin: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {t.title ?? t.preview ?? "conversation"}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExploreTabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="motion-reduce:transition-none"
+      style={{
+        fontFamily: "inherit",
+        fontSize: 12,
+        letterSpacing: "0.02em",
+        color: active ? ACCENT : "rgba(255,253,253,0.52)",
+        background: "none",
+        border: "none",
+        padding: "7px 14px",
+        cursor: "pointer",
+        borderRadius: 16,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Chat
 // ---------------------------------------------------------------------------
 
 function ChatView({
@@ -536,24 +798,28 @@ function ChatView({
   sending,
   limitReached,
   error,
+  remaining,
+  chatFocus,
   inputRef,
   bottomRef,
   onBack,
   onInputChange,
   onSubmit,
-  onUpgrade,
+  onTopup,
 }: {
   messages: ChatMessage[];
   input: string;
   sending: boolean;
   limitReached: boolean;
   error: string | null;
-  inputRef: React.RefObject<HTMLInputElement | null>;
-  bottomRef: React.RefObject<HTMLDivElement | null>;
+  remaining: number;
+  chatFocus: string | null;
+  inputRef: RefObject<HTMLTextAreaElement | null>;
+  bottomRef: RefObject<HTMLDivElement | null>;
   onBack: () => void;
   onInputChange: (v: string) => void;
   onSubmit: () => void;
-  onUpgrade: () => void;
+  onTopup: () => void;
 }) {
   return (
     <div
@@ -561,62 +827,124 @@ function ChatView({
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        maxWidth: 640,
+        minHeight: 0,
+        maxWidth: 760,
+        width: "100%",
         margin: "0 auto",
-        padding: "24px 24px 0",
+        padding: "20px 24px 0",
       }}
     >
-      {/* Back control */}
-      <button
-        type="button"
-        onClick={onBack}
+      <div
         style={{
-          alignSelf: "flex-start",
-          background: "none",
-          border: "none",
-          padding: "4px 0",
-          fontSize: 13,
-          fontWeight: 300,
-          color: "rgba(255,253,253,0.5)",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          marginBottom: 12,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingBottom: 16,
+          flexShrink: 0,
+          gap: 10,
+          flexWrap: "wrap",
         }}
       >
-        ← back to polaris
-      </button>
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="back to polaris"
+          style={headerTextBtn}
+        >
+          ←
+        </button>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+            minWidth: 0,
+            flexWrap: "wrap",
+            flex: 1,
+          }}
+        >
+          <span aria-hidden="true" style={{ fontSize: 12, color: ACCENT }}>
+            ✦
+          </span>
+          <span
+            style={{
+              fontSize: 11.5,
+              letterSpacing: "0.14em",
+              color: ACCENT,
+              textTransform: "uppercase",
+              fontWeight: 600,
+            }}
+          >
+            polaris
+          </span>
+          {chatFocus && (
+            <span
+              style={{
+                fontSize: 11,
+                color: ACCENT,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                fontWeight: 600,
+                minWidth: 0,
+                overflowWrap: "anywhere",
+              }}
+            >
+              · {chatFocus}
+            </span>
+          )}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            flexShrink: 0,
+          }}
+        >
+          <TokenPill remaining={remaining} onTopup={onTopup} />
+          <button type="button" onClick={onBack} style={headerTextBtn}>
+            new
+          </button>
+        </div>
+      </div>
 
-      {/* Message thread */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", paddingBottom: 8 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          padding: "4px 0 12px",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            marginBottom: 14,
+          }}
+        >
           {messages.map((m) => (
             <MessageBubble key={m.id} message={m} />
           ))}
 
-          {/* In-flight indicator while awaiting an answer. */}
           {sending && (
-            <div style={{ alignSelf: "flex-start", maxWidth: "82%" }}>
-              <p
-                style={{
-                  fontSize: 14,
-                  fontWeight: 300,
-                  color: "rgba(255,253,253,0.35)",
-                  margin: 0,
-                  padding: "10px 14px",
-                }}
-              >
-                polaris is looking…
-              </p>
-            </div>
+            <p
+              style={{
+                alignSelf: "flex-start",
+                fontSize: 14,
+                fontWeight: 300,
+                color: "rgba(255,253,253,0.35)",
+                margin: 0,
+                padding: "10px 14px",
+              }}
+            >
+              polaris is looking…
+            </p>
           )}
 
-          {/*
-            At-limit notice (PHE-27 mount point). When askPolaris returns
-            `limit_reached`, no ai bubble renders — this honest message + upgrade
-            CTA takes its place. PHE-27 owns the final at-limit treatment (copy,
-            token-remaining detail, richer CTA); this is the seam to replace.
-            TODO(PHE-27): swap for the shipped at-limit upgrade surface.
-          */}
           {limitReached && (
             <div
               style={{
@@ -636,12 +964,11 @@ function ChatView({
                   margin: 0,
                 }}
               >
-                you&apos;ve reached this week&apos;s polaris limit — upgrade for
-                more
+                you&apos;ve reached this week&apos;s polaris limit. add more to keep going.
               </p>
               <button
                 type="button"
-                onClick={onUpgrade}
+                onClick={onTopup}
                 style={{
                   marginTop: 12,
                   background: "none",
@@ -655,7 +982,7 @@ function ChatView({
                   textUnderlineOffset: 3,
                 }}
               >
-                upgrade
+                add more for ${V67_PRICING.topup}
               </button>
             </div>
           )}
@@ -678,184 +1005,367 @@ function ChatView({
         </div>
       </div>
 
-      {/* Input + star send */}
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          borderTop: "1px solid rgba(255,253,253,0.08)",
-          padding: "14px 0 20px",
+          borderTop: "1px solid #141414",
+          paddingTop: 16,
+          paddingBottom: 20,
+          flexShrink: 0,
         }}
       >
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => onInputChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              onSubmit();
-            }
-          }}
-          placeholder="what do you want us to reveal?"
-          disabled={sending}
+        <div
           style={{
-            flex: 1,
-            background: "#0D0D0C",
-            border: "1px solid rgba(255,253,253,0.1)",
-            borderRadius: 12,
-            padding: "14px 16px",
-            fontSize: 15,
-            fontWeight: 300,
-            color: "#FFFDFD",
-            fontFamily: "inherit",
-            outline: "none",
-          }}
-        />
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={sending || !input.trim()}
-          aria-label="send"
-          style={{
-            display: "inline-flex",
+            display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            width: 46,
-            height: 46,
-            flexShrink: 0,
-            borderRadius: 12,
-            border: "1px solid rgba(255,253,253,0.1)",
-            background: "#0D0D0C",
-            color: ACCENT,
-            fontSize: 18,
-            cursor: sending || !input.trim() ? "default" : "pointer",
-            opacity: sending || !input.trim() ? 0.4 : 1,
-            fontFamily: "inherit",
+            gap: 10,
+            background: "#0c0c0c",
+            border: "1px solid #1e1e1e",
+            borderRadius: 14,
+            padding: "10px 14px",
           }}
         >
-          ✦
-        </button>
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => {
+              onInputChange(e.target.value);
+              autosize(e.currentTarget);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
+            aria-label="ask polaris"
+            placeholder={COMPOSER_PLACEHOLDER}
+            rows={1}
+            disabled={sending}
+            style={{ ...textareaStyle, maxHeight: 110 }}
+          />
+          <SendButton
+            onClick={onSubmit}
+            disabled={sending || !input.trim()}
+            testId="polaris-send"
+          />
+        </div>
       </div>
     </div>
   );
 }
 
-/** One message bubble. User turns align right; ai turns align left. Body is a
- * plain React text node (textContent-equivalent) — never innerHTML. */
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
   return (
     <div
       style={{
         alignSelf: isUser ? "flex-end" : "flex-start",
-        maxWidth: "82%",
+        maxWidth: "88%",
         display: "flex",
         flexDirection: "column",
         gap: 8,
+        padding: "14px 18px",
+        fontSize: 14,
+        lineHeight: 1.7,
+        fontWeight: 300,
+        color: isUser ? "rgba(255,253,253,0.9)" : "rgba(255,253,253,0.72)",
+        background: isUser ? "rgba(85,153,255,0.08)" : "#0c0c0c",
+        border: isUser
+          ? "1px solid rgba(85,153,255,0.18)"
+          : "1px solid #1e1e1e",
+        borderRadius: isUser ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
+        textAlign: isUser ? "right" : "left",
+        whiteSpace: "pre-wrap",
       }}
     >
-      <p
-        style={{
-          margin: 0,
-          padding: "10px 14px",
-          borderRadius: 14,
-          fontSize: 15,
-          fontWeight: 300,
-          lineHeight: 1.6,
-          color: isUser ? "#FFFDFD" : "rgba(255,253,253,0.85)",
-          background: isUser ? "rgba(255,253,253,0.08)" : "#0D0D0C",
-          border: isUser ? "none" : "1px solid rgba(255,253,253,0.08)",
-          whiteSpace: "pre-wrap",
-        }}
-      >
-        {message.body}
-      </p>
-
-      {/* Crisis resources ride along beneath the crisis answer (PHE-22). */}
+      {message.body}
       {message.isCrisis && message.resources && (
-        <div
+        <span
           style={{
             display: "flex",
             flexDirection: "column",
             gap: 4,
-            padding: "0 14px",
             fontSize: 13,
             fontWeight: 300,
             color: "rgba(255,253,253,0.6)",
+            textAlign: "left",
           }}
         >
           <span>{message.resources.us}</span>
           <span>{message.resources.text}</span>
           <span>{message.resources.international}</span>
-        </div>
+        </span>
       )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Shared bits
+// Token pill + top-up sheet
 // ---------------------------------------------------------------------------
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function TokenPill({
+  remaining,
+  onTopup,
+}: {
+  remaining: number;
+  onTopup: () => void;
+}) {
   return (
-    <h2
-      className="uppercase"
+    <button
+      type="button"
+      onClick={onTopup}
+      title={TOKEN_NOTE}
+      aria-label={`${weeklyTokenCopy(remaining)}. ${TOKEN_NOTE}`}
+      className="motion-reduce:transition-none"
       style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        fontFamily: "inherit",
         fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: "0.2em",
-        color: "rgba(255,253,253,0.45)",
-        margin: 0,
-        marginBottom: 16,
+        lineHeight: 1,
+        letterSpacing: "0.02em",
+        color: "rgba(255,253,253,0.5)",
+        padding: "4px 5px 4px 11px",
+        border: "1px solid #242424",
+        borderRadius: 20,
+        whiteSpace: "nowrap",
+        background: "transparent",
+        cursor: "pointer",
       }}
     >
-      {children}
-    </h2>
+      <span>{weeklyTokenCopy(remaining)}</span>
+      <span
+        aria-hidden="true"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 14,
+          height: 14,
+          color: "rgba(255,253,253,0.6)",
+          flexShrink: 0,
+        }}
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </span>
+    </button>
   );
 }
 
-const suggestionStyle: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  textAlign: "left",
-  background: "#0D0D0C",
-  border: "1px solid rgba(255,253,253,0.1)",
-  borderRadius: 14,
-  padding: "16px 18px",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  transition: "border-color 0.2s ease",
-};
+function TopupSheet({
+  remaining,
+  onClose,
+}: {
+  remaining: number;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="polaris-topup-title"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        background: "rgba(0,0,0,0.55)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: 420,
+          background: "#0E0E0E",
+          border: "1px solid #1C1C1C",
+          borderRadius: 14,
+          padding: 28,
+          color: "#FFFDFD",
+        }}
+      >
+        <p
+          id="polaris-topup-title"
+          style={{
+            fontSize: 16,
+            fontWeight: 500,
+            margin: "0 0 10px",
+          }}
+        >
+          add more this week
+        </p>
+        <p
+          style={{
+            fontSize: 12.5,
+            lineHeight: 1.6,
+            color: "#888",
+            margin: "0 0 12px",
+          }}
+        >
+          your weekly amount resets on its own. if you need more before then, you can add extra.
+        </p>
+        <p
+          style={{
+            fontSize: 12.5,
+            lineHeight: 1.6,
+            color: "rgba(255,253,253,0.65)",
+            margin: "0 0 18px",
+          }}
+        >
+          {TOKEN_NOTE}
+        </p>
+        <p
+          style={{
+            fontSize: 12,
+            color: "rgba(255,253,253,0.4)",
+            margin: "0 0 18px",
+          }}
+        >
+          {weeklyTokenCopy(remaining)} remaining
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            width: "100%",
+            border: "none",
+            borderRadius: 10,
+            padding: "12px 16px",
+            background: ACCENT,
+            color: "#06060a",
+            fontSize: 13,
+            fontFamily: "inherit",
+            cursor: "pointer",
+          }}
+        >
+          add more for ${V67_PRICING.topup}
+        </button>
+        <p
+          style={{
+            fontSize: 11.5,
+            color: "#888",
+            textAlign: "center",
+            marginTop: 10,
+            lineHeight: 1.6,
+          }}
+        >
+          one-time. your weekly amount still resets on schedule either way.
+        </p>
+      </div>
+    </div>
+  );
+}
 
-const chipStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "0.5px solid rgba(255,253,253,0.18)",
-  borderRadius: 999,
-  padding: "9px 16px",
-  fontSize: 13,
-  fontWeight: 300,
-  color: "rgba(255,253,253,0.8)",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  transition: "border-color 0.2s ease",
-};
+function SendButton({
+  onClick,
+  disabled,
+  testId,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  testId?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      data-testid={testId}
+      aria-label="send"
+      style={{
+        background: ACCENT,
+        border: "none",
+        borderRadius: "50%",
+        width: 30,
+        height: 30,
+        color: "#06060a",
+        fontSize: 14,
+        cursor: disabled ? "default" : "pointer",
+        flexShrink: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 900,
+        lineHeight: 1,
+        opacity: disabled ? 0.4 : 1,
+        fontFamily: "inherit",
+      }}
+    >
+      ✦
+    </button>
+  );
+}
 
-const threadRowStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
+const textareaStyle: CSSProperties = {
   width: "100%",
-  background: "transparent",
+  background: "none",
   border: "none",
-  borderRadius: 8,
-  padding: "12px 10px",
-  cursor: "pointer",
+  outline: "none",
+  resize: "none",
   fontFamily: "inherit",
+  fontSize: 14,
+  color: "rgba(255,253,253,0.92)",
+  lineHeight: 1.5,
+  maxHeight: 200,
+  overflowY: "auto",
+  padding: "2px 0",
+};
+
+const questionCardStyle: CSSProperties = {
+  padding: "14px 16px",
+  border: "1px solid #171717",
+  borderRadius: 10,
+  background: "transparent",
+  cursor: "pointer",
+  marginBottom: 6,
   textAlign: "left",
-  transition: "background 0.15s ease",
+  width: "100%",
+  fontFamily: "inherit",
+  transition: "border-color 0.2s ease, background 0.2s ease",
+};
+
+const chipStyle: CSSProperties = {
+  fontFamily: "inherit",
+  fontSize: 13,
+  padding: "7px 15px",
+  border: "1px solid #1e1e1e",
+  borderRadius: 20,
+  background: "transparent",
+  color: "rgba(255,253,253,0.5)",
+  cursor: "pointer",
+  transition: "border-color 0.2s ease, color 0.2s ease",
+};
+
+const threadRowStyle: CSSProperties = {
+  padding: "12px 16px",
+  border: "1px solid #1a1a1a",
+  borderRadius: 9,
+  background: "#090909",
+  cursor: "pointer",
+  marginBottom: 6,
+  width: "100%",
+  textAlign: "left",
+  fontFamily: "inherit",
+  transition: "border-color 0.2s ease",
+};
+
+const headerTextBtn: CSSProperties = {
+  background: "none",
+  border: "none",
+  fontFamily: "inherit",
+  fontSize: 11,
+  color: "rgba(255,253,253,0.5)",
+  cursor: "pointer",
+  padding: 0,
+  letterSpacing: "0.04em",
 };
 
 export default PolarisTab;

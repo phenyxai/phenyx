@@ -168,7 +168,7 @@ export async function askPolaris(
 // messages. Sending is `askPolaris` above — these two are read-only.
 // ---------------------------------------------------------------------------
 
-/** One BASED ON WHAT WE SEE suggestion: a question + the pillar it grounds on. */
+/** One question-from-your-record card: a question + the pillar it grounds on. */
 export interface SuggestedQuestion {
   text: string
   pillar_tag: string
@@ -186,6 +186,8 @@ export interface PolarisThreadSummary {
 export interface PolarisThreadsResponse {
   threads: PolarisThreadSummary[]
   suggested_questions: SuggestedQuestion[]
+  /** Live weekly token snapshot for the idle/chat token pill. */
+  allowance?: PolarisAllowance
 }
 
 /** A single reloaded turn; `body` is decrypted server-side, rendered plain-text. */
@@ -203,9 +205,10 @@ export interface PolarisThreadDetail {
 }
 
 /**
- * Load the Polaris main view: past conversations (most-recent first; the section
- * is hidden client-side when empty) and the suggested questions. Throws on a
- * non-2xx so the caller can fall back to an empty main view.
+ * Load the Polaris idle view: past conversations (the "your chats" tab is hidden
+ * client-side when empty), four pillar-tagged questions, and the weekly
+ * allowance. Throws on a non-2xx so the caller can fall back to an empty idle
+ * view.
  */
 export async function getPolarisThreads(): Promise<PolarisThreadsResponse> {
   const res = await apiFetch("/api/polaris/threads")
