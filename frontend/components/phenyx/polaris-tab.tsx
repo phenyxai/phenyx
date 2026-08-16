@@ -9,7 +9,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import {
   askPolaris,
@@ -99,20 +99,28 @@ function weeklyTokenCopy(n: number): string {
   return `${n} weekly tokens`;
 }
 
+function readExploreDeepLink(searchParams: { get: (key: string) => string | null }): {
+  q: string;
+  pillar: string | null;
+} {
+  let q = searchParams.get("q")?.trim() ?? "";
+  let pillar = searchParams.get("pillar")?.trim() || null;
+  if (!q && typeof window !== "undefined") {
+    const live = new URLSearchParams(window.location.search);
+    q = live.get("q")?.trim() ?? "";
+    if (!pillar) pillar = live.get("pillar")?.trim() || null;
+  }
+  return { q, pillar };
+}
+
 function autosize(el: HTMLTextAreaElement | null) {
   if (!el) return;
   el.style.height = "auto";
   el.style.height = `${el.scrollHeight}px`;
 }
 
-export function PolarisTab({
-  initialQuestion,
-  initialPillar,
-}: {
-  initialQuestion?: string;
-  initialPillar?: string;
-} = {}) {
-  const router = useRouter();
+export function PolarisTab() {
+  const searchParams = useSearchParams();
   const { openModal } = useSettingsModals();
   const { isPro } = useTier();
 
@@ -297,19 +305,23 @@ export function PolarisTab({
     void sendQuestion(q);
   }, [input, sendQuestion, remaining, openTopup, view]);
 
+  // Daily ✦ explore (PHE-70) routes Pro users here with ?q=&pillar=. Read the
+  // query on the client so a client-side `router.push` from Daily is picked up
+  // even if this tab was already in the tree. Strip the query with
+  // history.replaceState (not router.replace) so Next does not remount the
+  // tab and drop the chat that just started.
   useEffect(() => {
     if (!isPro) return;
-    const q = initialQuestion?.trim();
+    const { q, pillar } = readExploreDeepLink(searchParams);
     if (!q) return;
-    const key = `${q}|${initialPillar ?? ""}`;
+    const key = `${q}|${pillar ?? ""}`;
     if (consumedDeepLinks.has(key)) return;
     consumedDeepLinks.add(key);
-    openChat(q, initialPillar);
-    router.replace("/dashboard/polaris", { scroll: false });
-    // Deep-link fires once per question; openChat is intentionally omitted so a
-    // remaining-token update cannot re-seed the same turn.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPro, initialQuestion, initialPillar, router]);
+    openChat(q, pillar);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", "/dashboard/polaris");
+    }
+  }, [isPro, searchParams, openChat]);
 
   if (!isPro) {
     return <PolarisLock onUpgrade={openUpgrade} />;
