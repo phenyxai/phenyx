@@ -7,14 +7,13 @@ import {
   findCredentialLeak,
   isCredentialKey,
 } from "./account.redaction";
-import { isDeleteConfirmed } from "./account.dto";
+import {
+  closeAccountError,
+  isDeleteConfirmed,
+  passphraseChangeError,
+} from "./account.dto";
 
-// A distinctive credential string asserted to never survive into the bundle.
 const TOKEN = "eyJ.SECRET-SESSION-JWT.value";
-
-// ---------------------------------------------------------------------------
-// Credential scrub / scan (pure helpers)
-// ---------------------------------------------------------------------------
 
 test("isCredentialKey matches token/jwt-shaped keys case-insensitively", () => {
   for (const k of ["token", "JWT", "Access_Token", "apiKey", "authorization", "bearer", "password"]) {
@@ -43,17 +42,10 @@ test("findCredentialLeak pinpoints a surviving credential key", () => {
   assert.equal(findCredentialLeak({ a: 1, b: [2, 3] }), null);
 });
 
-// ---------------------------------------------------------------------------
-// Export — assembles the bundle, decrypts Polaris owner-side, never leaks a token
-// ---------------------------------------------------------------------------
-
-/** Table-scoped fake Supabase. Single-row reads terminate in .maybeSingle(). */
 function makeExportSupabase() {
   const tableData: Record<string, unknown> = {
     user_profiles: { id: "user-1", display_name: "Ada", frozen: false, tier: "pro" },
     user_persona: { user_id: "user-1", archetype: "the-architect" },
-    // onairos_snapshot is the verbatim trait object the synthesize endpoint stored
-    // — it can carry a raw token, so the bundle-wide scrub must catch it here too.
     constellation_state: {
       user_id: "user-1",
       archetype: "the-architect",
@@ -63,7 +55,6 @@ function makeExportSupabase() {
     constellation_points: [{ id: "p1", user_id: "user-1", pillar: "origin" }],
     observations: [{ id: "o1", user_id: "user-1", pillar: "origin", body: "surfaced" }],
     user_traits: [{ id: "t1", user_id: "user-1", keyword_tags: ["builder"] }],
-    // Onairos snapshot deliberately carries a token — the export must strip it.
     onairos_connections: [
       { id: "c1", user_id: "user-1", platform: "spotify", redacted_snapshot: { token: TOKEN, openness: 0.9 } },
     ],
@@ -72,6 +63,9 @@ function makeExportSupabase() {
       { id: "m1", user_id: "user-1", conversation_id: "conv1", role: "user", body: "ENCRYPTED::hello" },
     ],
     events: [{ id: "e1", user_id: "user-1", event_type: "login" }],
+    source_records: [{ id: "sr1", user_id: "user-1" }],
+    signals: [{ id: "sig1", user_id: "user-1" }],
+    underneath_readings: [{ id: "u1", user_id: "user-1" }],
   };
 
   return {
@@ -94,17 +88,22 @@ function makeExportSupabase() {
   };
 }
 
-// Fake EncryptionService: strips the "ENCRYPTED::" prefix to prove owner-side
-// decryption happens (and that we never ship the ciphertext).
 const fakeEncryption = {
   decrypt: (payload: string) => payload.replace(/^ENCRYPTED::/, ""),
 } as any;
 
-test("exportAccount returns a single bundle with all sections and never a token", async () => {
-  const service = new AccountService(makeExportSupabase() as any, fakeEncryption);
-  const bundle = await service.exportAccount("user-1");
+const fakePassphrase = {
+  verify: async (_hash: string, passphrase: string) => passphrase === "correct-phrase",
+  hash: async (value: string) => `hashed:${value}`,
+} as any;
 
-  // All documented sections present.
+function makeService(supabase: any, passphrase: any = fakePassphrase) {
+  return new AccountService(supabase, fakeEncryption, passphrase);
+}
+
+test("exportAccount returns a single bundle with all sections and never a token", async () => {
+  const bundle = await makeService(makeExportSupabase()).exportAccount("user-1");
+
   for (const key of [
     "export_metadata",
     "profile",
@@ -114,116 +113,175 @@ test("exportAccount returns a single bundle with all sections and never a token"
     "onairos_connections",
     "polaris_messages",
     "events",
+    "source_records",
   ]) {
     assert.ok(key in bundle, `bundle contains ${key}`);
   }
 
-  // Hard invariant: the whole bundle carries no token/JWT-shaped key OR value.
   const leak = findCredentialLeak(bundle);
   assert.equal(leak, null, `no credential key survived (offender: ${leak})`);
   assert.ok(!JSON.stringify(bundle).includes(TOKEN), "token value stripped from the onairos snapshot");
 
-  // Polaris body decrypted owner-side (ciphertext prefix gone).
   const messages = bundle.polaris_messages as Array<Record<string, unknown>>;
   assert.equal(messages[0].body, "hello", "polaris body decrypted for the owner");
 });
 
-// ---------------------------------------------------------------------------
-// Delete — confirmation gate
-// ---------------------------------------------------------------------------
-
-test("isDeleteConfirmed requires the exact typed phrase", () => {
-  assert.ok(isDeleteConfirmed({ confirmation: "DELETE" }));
-  assert.ok(!isDeleteConfirmed({ confirmation: "delete" }));
+test("isDeleteConfirmed requires the typed phrase, lowercased and trimmed", () => {
+  assert.ok(isDeleteConfirmed({ confirmation: "delete my account" }));
+  assert.ok(isDeleteConfirmed({ confirmation: "  DELETE MY ACCOUNT  " }));
+  assert.ok(!isDeleteConfirmed({ confirmation: "DELETE" }));
   assert.ok(!isDeleteConfirmed({ confirmation: "" }));
   assert.ok(!isDeleteConfirmed({}));
   assert.ok(!isDeleteConfirmed(undefined));
 });
 
-test("deleteAccount rejects without confirmation and never calls admin.deleteUser", async () => {
+test("closeAccountError runs in fill order: passphrase then phrase", () => {
+  assert.equal(
+    closeAccountError("", ""),
+    "enter your passphrase to confirm it is you."
+  );
+  assert.equal(
+    closeAccountError("secret", ""),
+    "type delete my account exactly, to confirm."
+  );
+  assert.equal(
+    closeAccountError("secret", "delete my account"),
+    null
+  );
+});
+
+test("passphraseChangeError covers the four invalid cases", () => {
+  assert.equal(
+    passphraseChangeError("", "new", "new"),
+    "enter your current passphrase to confirm it is you."
+  );
+  assert.equal(
+    passphraseChangeError("old", "", ""),
+    "enter a new passphrase."
+  );
+  assert.equal(
+    passphraseChangeError("old", "new", "other"),
+    "the two new passphrases do not match."
+  );
+  assert.equal(
+    passphraseChangeError("same", "same", "same"),
+    "that is your current passphrase. choose a different one."
+  );
+  assert.equal(passphraseChangeError("old", "new", "new"), null);
+});
+
+test("closeAccount rejects without passphrase and never calls admin.deleteUser", async () => {
   let deleteCalled = false;
   const supabase = {
     getClient: () => ({
+      from() {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: { passphrase_hash: "h" }, error: null }),
+            }),
+          }),
+        };
+      },
       auth: { admin: { deleteUser: async () => { deleteCalled = true; return { error: null }; } } },
     }),
   } as any;
-  const service = new AccountService(supabase, fakeEncryption);
 
   await assert.rejects(
-    () => service.deleteAccount("user-1", {}),
+    () => makeService(supabase).closeAccount("user-1", { confirmation: "delete my account" }),
     (err: any) => err?.getStatus?.() === 400,
-    "missing confirmation is a 400"
+    "missing passphrase is a 400"
   );
-  assert.equal(deleteCalled, false, "no deletion attempted without confirmation");
+  assert.equal(deleteCalled, false, "no deletion attempted without passphrase");
 });
 
-test("deleteAccount with confirmation deletes the auth user (cascade path)", async () => {
+test("closeAccount rejects a wrong phrase even when the passphrase is present", async () => {
+  let deleteCalled = false;
+  const supabase = {
+    getClient: () => ({
+      from() {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: { passphrase_hash: "h" }, error: null }),
+            }),
+          }),
+        };
+      },
+      auth: { admin: { deleteUser: async () => { deleteCalled = true; return { error: null }; } } },
+    }),
+  } as any;
+
+  await assert.rejects(
+    () =>
+      makeService(supabase).closeAccount("user-1", {
+        passphrase: "correct-phrase",
+        confirmation: "please delete",
+      }),
+    (err: any) => err?.getStatus?.() === 400
+  );
+  assert.equal(deleteCalled, false);
+});
+
+test("closeAccount with both gates deletes the auth user", async () => {
   const deletedIds: string[] = [];
   const supabase = {
     getClient: () => ({
+      from() {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: { passphrase_hash: "h" }, error: null }),
+            }),
+          }),
+        };
+      },
       auth: {
         admin: {
-          deleteUser: async (id: string) => { deletedIds.push(id); return { error: null }; },
+          deleteUser: async (id: string) => {
+            deletedIds.push(id);
+            return { error: null };
+          },
         },
       },
     }),
   } as any;
-  const service = new AccountService(supabase, fakeEncryption);
 
-  const res = await service.deleteAccount("user-1", { confirmation: "DELETE" });
+  const res = await makeService(supabase).closeAccount("user-1", {
+    passphrase: "correct-phrase",
+    confirmation: "delete my account",
+  });
   assert.deepEqual(res, { deleted: true });
-  assert.deepEqual(deletedIds, ["user-1"], "service-role delete targets the token user id");
+  assert.deepEqual(deletedIds, ["user-1"]);
 });
 
-// ---------------------------------------------------------------------------
-// Freeze / unfreeze — idempotency
-// ---------------------------------------------------------------------------
+test("changePassphrase rejects new-equals-current before writing", async () => {
+  let updated = false;
+  const supabase = {
+    getClient: () => ({
+      from() {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: { passphrase_hash: "h" }, error: null }),
+            }),
+          }),
+          update: () => {
+            updated = true;
+            return { eq: async () => ({ error: null }) };
+          },
+        };
+      },
+    }),
+  } as any;
 
-/** Fake profile store: reads current frozen, records any update. */
-function makeFreezeSupabase(initialFrozen: boolean) {
-  const updates: Array<{ frozen: boolean }> = [];
-  const client = {
-    from(_table: string) {
-      const chain: any = {
-        _op: "read" as "read" | "update",
-        _patch: null as { frozen: boolean } | null,
-        select() { chain._op = "read"; return chain; },
-        update(patch: { frozen: boolean }) {
-          chain._op = "update";
-          chain._patch = patch;
-          updates.push(patch);
-          return chain;
-        },
-        eq() { return chain; },
-        maybeSingle: () => Promise.resolve({ data: { frozen: initialFrozen }, error: null }),
-        then: (onF: any, onR: any) => Promise.resolve({ error: null }).then(onF, onR),
-      };
-      return chain;
-    },
-  };
-  return { supabase: { getClient: () => client }, updates };
-}
-
-test("setFrozen(true) on an active account flips frozen and reports changed", async () => {
-  const { supabase, updates } = makeFreezeSupabase(false);
-  const service = new AccountService(supabase as any, fakeEncryption);
-  const res = await service.setFrozen("user-1", true);
-  assert.deepEqual(res, { frozen: true, changed: true });
-  assert.deepEqual(updates, [{ frozen: true }], "an update was issued");
-});
-
-test("setFrozen(true) on an already-frozen account is an idempotent no-op", async () => {
-  const { supabase, updates } = makeFreezeSupabase(true);
-  const service = new AccountService(supabase as any, fakeEncryption);
-  const res = await service.setFrozen("user-1", true);
-  assert.deepEqual(res, { frozen: true, changed: false });
-  assert.equal(updates.length, 0, "no update issued when already in the requested state");
-});
-
-test("setFrozen(false) on an already-active account is an idempotent no-op", async () => {
-  const { supabase, updates } = makeFreezeSupabase(false);
-  const service = new AccountService(supabase as any, fakeEncryption);
-  const res = await service.setFrozen("user-1", false);
-  assert.deepEqual(res, { frozen: false, changed: false });
-  assert.equal(updates.length, 0);
+  await assert.rejects(
+    () =>
+      makeService(supabase).changePassphrase("user-1", {
+        currentPassphrase: "same",
+        newPassphrase: "same",
+      }),
+    (err: any) => err?.getStatus?.() === 400
+  );
+  assert.equal(updated, false);
 });

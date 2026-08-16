@@ -5,7 +5,6 @@ import * as React from 'react'
 import { Switch } from '@/components/ui/switch'
 import { apiFetch } from '@/lib/api-client'
 import {
-  GhostButton,
   ModalHeading,
   SettingsDialogContent,
   StatusLine,
@@ -13,48 +12,64 @@ import {
 
 /**
  * Default toggle order + state is load-bearing: on / on / off / on, in exactly
- * this sequence. Do not reorder.
+ * this sequence. Do not reorder. polaris observations is off; the rest are on.
  */
 const NOTIFICATION_DEFAULTS: { key: string; label: string; on: boolean }[] = [
   { key: 'new_observations', label: 'new observations', on: true },
   { key: 'weekly_constellation_update', label: 'weekly constellation update', on: true },
-  { key: 'polaris_insights', label: 'polaris insights', on: false },
+  { key: 'polaris_observations', label: 'polaris observations', on: false },
   { key: 'platform_connection_alerts', label: 'platform connection alerts', on: true },
 ]
 
 /**
- * notifications modal — four toggles, local until "save". Closing without saving
- * discards changes.
+ * notifications modal — four toggles persist on change. Closing does not
+ * discard a toggle that already saved.
  */
 export function NotificationsModal() {
   const [prefs, setPrefs] = React.useState<Record<string, boolean>>(() =>
     Object.fromEntries(NOTIFICATION_DEFAULTS.map((n) => [n.key, n.on])),
   )
-  const [saving, setSaving] = React.useState(false)
-  const [status, setStatus] = React.useState('')
   const [error, setError] = React.useState('')
 
-  const handleSave = async () => {
-    setSaving(true)
-    setStatus('')
+  React.useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const res = await apiFetch('/profile/notifications')
+        if (!res.ok) return
+        const body = (await res.json()) as {
+          notification_prefs?: Record<string, boolean>
+        }
+        if (!active || !body.notification_prefs) return
+        setPrefs((prev) => ({ ...prev, ...body.notification_prefs }))
+      } catch {
+        // defaults already applied
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const persist = async (next: Record<string, boolean>) => {
     setError('')
     try {
-      const res = await apiFetch('/me/notifications', {
+      const res = await apiFetch('/profile/notifications', {
         method: 'POST',
-        body: JSON.stringify({ notification_prefs: prefs }),
+        body: JSON.stringify({ notification_prefs: next }),
       })
       if (!res.ok) throw new Error('failed')
-      setStatus('your notification preferences have been saved.')
     } catch {
       setError('could not save your preferences. please try again.')
-    } finally {
-      setSaving(false)
     }
   }
 
   return (
-    <SettingsDialogContent aria-describedby={undefined}>
-      <ModalHeading title="notifications" />
+    <SettingsDialogContent>
+      <ModalHeading
+        title="notifications"
+        subtitle="choose what PHENYX can surface to you."
+      />
       <div className="flex flex-col gap-3">
         {NOTIFICATION_DEFAULTS.map(({ key, label }) => (
           <label
@@ -64,21 +79,17 @@ export function NotificationsModal() {
             <span className="text-xs text-[#aaa]">{label}</span>
             <Switch
               checked={prefs[key]}
-              onCheckedChange={(checked) =>
-                setPrefs((prev) => ({ ...prev, [key]: checked }))
-              }
+              onCheckedChange={(checked) => {
+                const next = { ...prefs, [key]: checked }
+                setPrefs(next)
+                void persist(next)
+              }}
               className="data-[state=checked]:bg-[var(--stellar)]"
             />
           </label>
         ))}
       </div>
-      <div className="flex flex-col gap-3">
-        <GhostButton onClick={handleSave} disabled={saving} className="self-start">
-          {saving ? 'saving…' : 'save'}
-        </GhostButton>
-        {status && <StatusLine message={status} />}
-        {error && <StatusLine message={error} tone="error" />}
-      </div>
+      {error && <StatusLine message={error} tone="error" />}
     </SettingsDialogContent>
   )
 }

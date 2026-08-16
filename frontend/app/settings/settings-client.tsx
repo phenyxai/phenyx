@@ -1,228 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
-import { OrboGuide } from "@/components/OrboGuide";
-import { hasFullAccess } from "@/lib/billing";
-import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { apiFetch } from "@/lib/api-client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-const PILLAR_ORDER = ["ORIGIN", "EMERGENCE", "SELF-CREATION", "CONVERGENCE", "BECOMING", "RECOGNITION", "TRANSCENDENCE"];
-const PILLAR_HINTS: Record<string, string> = {
-  ORIGIN: "morning ritual",
-  EMERGENCE: "mid morning",
-  "SELF-CREATION": "midday",
-  CONVERGENCE: "afternoon",
-  BECOMING: "end of day",
-  RECOGNITION: "evening",
-  TRANSCENDENCE: "before sleep",
-};
-
-const DEFAULT_TIMES: Record<string, string> = {
-  ORIGIN: "07:00",
-  EMERGENCE: "09:30",
-  "SELF-CREATION": "12:00",
-  CONVERGENCE: "14:30",
-  BECOMING: "17:00",
-  RECOGNITION: "19:00",
-  TRANSCENDENCE: "21:00",
-};
-
-export default function SettingsPage() {
+/**
+ * Legacy /settings surface. v67 settings live on Profile; this route
+ * forwards so gifted/pause copy is no longer reachable.
+ */
+export default function SettingsClient() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [mounted, setMounted] = useState(false);
-  const [stellarColor, setStellarColor] = useState("#5599FF");
-  const [profile, setProfile] = useState<any>(null);
-  const [userEmail, setUserEmail] = useState("");
-  
-  // Edit states
-  const [editingName, setEditingName] = useState(false);
-  const [displayName, setDisplayName] = useState("");
-  const [tempName, setTempName] = useState("");
-  
-  // Reflection times
-  const [promptTimes, setPromptTimes] = useState<Record<string, string>>(DEFAULT_TIMES);
-  const [timesMessage, setTimesMessage] = useState("");
-  
-  // Experience mode
-  const [experienceMode, setExperienceMode] = useState("reflection");
-  const [modeMessage, setModeMessage] = useState("");
-  
-  // Notifications
-  const [notifyPrompt, setNotifyPrompt] = useState(false);
-  const [weeklySummary, setWeeklySummary] = useState(true);
-  const [notifMessage, setNotifMessage] = useState("");
-  
-  // Upgrade
-  const [upgradeLoading, setUpgradeLoading] = useState(false);
-  const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false);
-  
-  // Delete dialog
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) setStellarColor(stored);
-    
-    if (searchParams.get("upgraded") === "true") {
-      setShowUpgradeSuccess(true);
-      window.history.replaceState({}, "", "/settings");
-    }
-    
-    fetchData();
-    setMounted(true);
-  }, [searchParams]);
-
-  const fetchData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/signin");
-      return;
-    }
-    
-    setUserEmail(user.email || "");
-    
-    const { data: profileData } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    
-    if (profileData) {
-      setProfile(profileData);
-      setDisplayName(profileData.display_name || "");
-      let mode = profileData.experience_mode || "reflection";
-      if (
-        !hasFullAccess(profileData.tier) &&
-        (mode === "signal" || mode === "observatory")
-      ) {
-        mode = "reflection";
-      }
-      setExperienceMode(mode);
-      if (profileData.prompt_times) {
-        setPromptTimes({ ...DEFAULT_TIMES, ...profileData.prompt_times });
-      }
-      if (profileData.notification_prefs) {
-        setNotifyPrompt(profileData.notification_prefs.prompt_open ?? false);
-        setWeeklySummary(profileData.notification_prefs.weekly_summary ?? true);
-      }
-    }
-  };
-
-  const handleSaveName = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    
-    await supabase.from("user_profiles").update({ display_name: tempName }).eq("id", user.id);
-    setDisplayName(tempName);
-    setEditingName(false);
-  };
-
-  const handleSaveTimes = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    
-    await supabase.from("user_profiles").update({ prompt_times: promptTimes }).eq("id", user.id);
-    setTimesMessage("your reflection times have been updated.");
-    setTimeout(() => setTimesMessage(""), 3000);
-  };
-
-  const handleSaveMode = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    if (
-      !hasFullAccess(profile?.tier) &&
-      (experienceMode === "signal" || experienceMode === "observatory")
-    ) {
-      setModeMessage("upgrade to pro or gifted constellation on the upgrade page to use signal or observatory.");
-      setTimeout(() => setModeMessage(""), 4000);
-      return;
-    }
-
-    await supabase.from("user_profiles").update({ experience_mode: experienceMode }).eq("id", user.id);
-    setModeMessage("your experience mode has been updated.");
-    setTimeout(() => setModeMessage(""), 3000);
-  };
-
-  const handleSaveNotifications = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    
-    await supabase.from("user_profiles").update({
-      notification_prefs: { prompt_open: notifyPrompt, weekly_summary: weeklySummary }
-    }).eq("id", user.id);
-    setNotifMessage("your notification preferences have been updated.");
-    setTimeout(() => setNotifMessage(""), 3000);
-  };
-
-  const handleUpgradeClick = () => {
-    setUpgradeLoading(false);
-    router.push("/upgrade");
-  };
-
-  const handleManageBilling = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    setUpgradeLoading(true);
-    try {
-      const res = await apiFetch("/stripe/billing-portal", {
-        method: "POST",
-        body: JSON.stringify({ userId: user.id }),
-      });
-      const json = (await res.json()) as { url?: string };
-      if (json.url) {
-        window.location.href = json.url;
-        return;
-      }
-    } finally {
-      setUpgradeLoading(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    
-    await supabase.from("user_persona").delete().eq("user_id", user.id);
-    await supabase.from("constellation_points").delete().eq("user_id", user.id);
-    await supabase.from("user_profiles").delete().eq("id", user.id);
-    await supabase.auth.signOut();
-    router.push("/");
-  };
-
-  if (!mounted) return null;
-
-  const sectionHeadingStyle = {
-    fontSize: 10,
-    color: stellarColor,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.12em",
-    fontWeight: 500,
-    marginBottom: 12,
-  };
-
-  const ghostButtonStyle = {
-    background: "transparent",
-    border: `0.5px solid ${stellarColor}`,
-    color: stellarColor,
-    borderRadius: 8,
-    padding: "10px 24px",
-    fontSize: 12,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    transition: "all 0.2s ease",
-  };
+    router.replace("/dashboard/profile");
+  }, [router]);
 
   return (
     <main
       aria-label="your settings"
+<<<<<<< HEAD
       style={{
         minHeight: "100vh",
         background: "#0A0A0A",
@@ -708,5 +503,9 @@ export default function SettingsPage() {
       {/* Orbo Guide */}
       <OrboGuide page="settings" stellarColor={stellarColor} motivation={profile?.motivation} />
     </main>
+=======
+      className="flex min-h-screen items-center justify-center bg-[#0A0A0A]"
+    />
+>>>>>>> 82b5df2 (PHE-75: v67 Profile, what has held, settings groups, close account)
   );
 }

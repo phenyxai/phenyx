@@ -2,7 +2,6 @@
 
 import * as React from 'react'
 
-import { Switch } from '@/components/ui/switch'
 import { apiFetch } from '@/lib/api-client'
 import {
   DangerButton,
@@ -14,38 +13,13 @@ import {
 } from './modal-host'
 
 /**
- * data management modal — behavioural-reading + cross-platform-correlation
- * toggles (local until save), an export action, and a danger action to delete
- * constellation data behind an explicit confirm step.
+ * your data — export or delete the constellation. The title is the only
+ * allowed "data" UI string. No pause/freeze toggles.
  */
 export function DataManagementModal() {
-  const [behavioralReading, setBehavioralReading] = React.useState(true)
-  const [crossPlatform, setCrossPlatform] = React.useState(true)
-  const [saving, setSaving] = React.useState(false)
   const [exporting, setExporting] = React.useState(false)
   const [status, setStatus] = React.useState('')
   const [error, setError] = React.useState('')
-
-  const handleSave = async () => {
-    setSaving(true)
-    setStatus('')
-    setError('')
-    try {
-      const res = await apiFetch('/me/data-preferences', {
-        method: 'POST',
-        body: JSON.stringify({
-          behavioral_reading: behavioralReading,
-          cross_platform_correlation: crossPlatform,
-        }),
-      })
-      if (!res.ok) throw new Error('failed')
-      setStatus('your data preferences have been saved.')
-    } catch {
-      setError('could not save your preferences. please try again.')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const handleExport = async () => {
     setExporting(true)
@@ -58,84 +32,64 @@ export function DataManagementModal() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'phenyx-data.json'
+      link.download = 'phenyx-export.json'
       document.body.appendChild(link)
       link.click()
       link.remove()
       URL.revokeObjectURL(url)
-      setStatus('your data export has started downloading.')
+      setStatus('your export has started downloading.')
     } catch {
-      setError('could not export your data. please try again.')
+      setError('could not export. please try again.')
     } finally {
       setExporting(false)
     }
   }
 
-  const handleDeleteConstellationData = async () => {
+  const handleDeleteConstellation = async () => {
     setStatus('')
     setError('')
     try {
-      const res = await apiFetch('/account/constellation', { method: 'DELETE' })
+      const res = await apiFetch('/account/constellation', { method: 'POST' })
       if (!res.ok) throw new Error('failed')
-      setStatus('your constellation data is being deleted.')
+      setStatus('your constellation is being removed.')
     } catch {
-      setError('could not delete your constellation data. please try again.')
+      setError('could not remove your constellation. please try again.')
     }
   }
 
   return (
     <SettingsDialogContent>
       <ModalHeading
-        title="data management"
-        subtitle="your data belongs to you. what onairos reads is processed and discarded. we never store raw platform data."
+        title="your data"
+        subtitle="everything PHENYX has observed belongs to you. raw signals are never stored."
       />
 
-      <div className="flex flex-col gap-3">
-        <label className="flex cursor-pointer items-center justify-between gap-4">
-          <span className="text-xs text-[#aaa]">behavioral reading</span>
-          <Switch
-            checked={behavioralReading}
-            onCheckedChange={setBehavioralReading}
-            className="data-[state=checked]:bg-[var(--stellar)]"
-          />
-        </label>
-        <label className="flex cursor-pointer items-center justify-between gap-4">
-          <span className="text-xs text-[#aaa]">cross-platform correlation</span>
-          <Switch
-            checked={crossPlatform}
-            onCheckedChange={setCrossPlatform}
-            className="data-[state=checked]:bg-[var(--stellar)]"
-          />
-        </label>
-        <GhostButton onClick={handleSave} disabled={saving} className="self-start">
-          {saving ? 'saving…' : 'save'}
-        </GhostButton>
-      </div>
-
-      <div className="flex flex-col gap-2 border-t border-[#1C1C1C] pt-4">
+      <div>
+        <p className="mb-2 text-[11px] text-[#FFFDFD]/85">take it with you</p>
+        <p className="mb-3.5 text-[11.5px] leading-relaxed text-[#FFFDFD]/60">
+          your constellation, observations and polaris history, in a portable format.
+        </p>
         <GhostButton
           onClick={handleExport}
           disabled={exporting}
-          className="self-start"
+          className="self-start border-[#282828] text-[#ccc]"
         >
-          {exporting ? 'preparing…' : 'export my data'}
+          {exporting ? 'preparing…' : 'export everything'}
         </GhostButton>
-        <p className="text-[11px] leading-relaxed text-[#555]">
-          download a portable copy of everything phenyx has observed for you.
-        </p>
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-[#1C1C1C] pt-4">
+      <div className="mt-2 border-t border-[#1c1414] pt-4">
+        <p className="mb-3 text-[11.5px] font-semibold tracking-[0.12em] text-[#a06054] uppercase">
+          danger zone
+        </p>
         <DangerConfirm
-          title="delete my constellation data?"
+          title="delete my constellation?"
           description="this permanently removes your observations and synthesized patterns. your account remains. this cannot be undone."
-          confirmLabel="delete constellation data"
-          cancelLabel="keep my data"
-          onConfirm={handleDeleteConstellationData}
+          confirmLabel="delete my constellation"
+          cancelLabel="keep my constellation"
+          onConfirm={handleDeleteConstellation}
         >
-          <DangerButton className="self-start">
-            delete my constellation data
-          </DangerButton>
+          <DangerButton className="self-start">delete my constellation</DangerButton>
         </DangerConfirm>
       </div>
 
