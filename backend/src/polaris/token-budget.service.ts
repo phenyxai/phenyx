@@ -11,7 +11,7 @@ import { BillingService } from "../stripe/billing.service";
 // Verbatim graceful at-limit copy (ticket §6). Returned on the over-budget
 // short-circuit; the chat surface also renders this line at its at-limit mount.
 export const AT_LIMIT_MESSAGE =
-  "you've reached this week's polaris limit — upgrade for more";
+  "you've reached this week's polaris limit. upgrade for more";
 
 /** A snapshot of a user's weekly Polaris allowance, surfaced to the client. */
 export interface WeeklyAllowance {

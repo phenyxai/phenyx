@@ -7,7 +7,11 @@ import { CrisisService } from "../synthesis/crisis.service";
 import { TraitProfileService } from "../synthesis/trait-profile.service";
 import type { Pillar } from "../types/database";
 import { inferPillarFromKeywords } from "./pillar-keyword.map";
-import { AT_LIMIT_MESSAGE, TokenBudgetService } from "./token-budget.service";
+import {
+  AT_LIMIT_MESSAGE,
+  TokenBudgetService,
+  type WeeklyAllowance,
+} from "./token-budget.service";
 
 // Sonnet-tier for chat latency (reality check: claude-sonnet-4-6, NOT an older id).
 const POLARIS_MODEL = "claude-sonnet-4-6";
@@ -320,21 +324,23 @@ export class PolarisService {
   // ---- chat surface reads (PHE-23) -----------------------------------------
 
   /**
-   * Main-view payload: the user's past threads (most-recent first, hidden by the
-   * client when empty) plus server-computed suggested questions from their top
-   * pillars. Ownership is enforced by the `user_id` filter (service-role client
-   * bypasses RLS). `preview` decrypts each thread's first user message.
+   * Idle-view payload: past threads (most-recent first; the client hides "your
+   * chats" when empty), four pillar-tagged questions from the top-scoring
+   * pillars, and the live weekly token allowance for the token pill.
+   * Ownership is enforced by the `user_id` filter (service-role client bypasses
+   * RLS). `preview` decrypts each thread's first user message.
    */
   async listThreads(
     userId: string
   ): Promise<{
     threads: PolarisThreadSummary[];
     suggested_questions: SuggestedQuestion[];
+    allowance: WeeklyAllowance;
   }> {
     const supabase = this.supabaseService.getClient();
 
-    const [{ data: conversations }, { data: constellation }] = await Promise.all(
-      [
+    const [{ data: conversations }, { data: constellation }, allowance] =
+      await Promise.all([
         supabase
           .from("polaris_conversations")
           .select("id, title, created_at, updated_at")
@@ -346,8 +352,8 @@ export class PolarisService {
           .select("*")
           .eq("user_id", userId)
           .maybeSingle(),
-      ]
-    );
+        this.tokenBudget.check(userId),
+      ]);
 
     const rows = conversations ?? [];
     const threads = await Promise.all(
@@ -363,6 +369,7 @@ export class PolarisService {
     return {
       threads,
       suggested_questions: computeSuggestedQuestions(constellation),
+      allowance,
     };
   }
 
@@ -515,25 +522,34 @@ const PILLAR_QUESTIONS: Record<Pillar, string> = {
   transcendence: "where is all of this quietly heading?",
 };
 
-// Default suggestions when the constellation has no scores yet — the first three
-// active pillars, so the main view always renders three questions (AC1).
+// Default suggestions when the constellation has no scores yet — four active
+// pillars so idle "questions from your record" always has four cards.
 const DEFAULT_SUGGESTED_PILLARS: Pillar[] = [
   "origin",
   "emergence",
   "self_creation",
+  "convergence",
 ];
 
 /**
- * Compute the three BASED ON WHAT WE SEE suggestions from the user's top-scoring
- * pillars. Ranks every pillar by its constellation score, takes the top three,
- * and falls back to the default active pillars when the constellation is empty —
- * so the section is always populated with one question per pillar.
+ * Compute the four questions-from-your-record suggestions from the user's
+ * top-scoring pillars. Ranks every pillar by constellation score, takes the
+ * top four, and pads with the default active pillars when scores are thin
+ * so the idle tab always has four pillar-tagged questions.
  */
 export function computeSuggestedQuestions(
   constellation: Record<string, unknown> | null | undefined
 ): SuggestedQuestion[] {
-  const pillars = topScoringPillars(constellation, 3);
-  const chosen = pillars.length > 0 ? pillars : DEFAULT_SUGGESTED_PILLARS;
+  const ranked = topScoringPillars(constellation, ALL_PILLARS.length);
+  const chosen: Pillar[] = [];
+  for (const pillar of ranked) {
+    if (chosen.length >= 4) break;
+    chosen.push(pillar);
+  }
+  for (const pillar of DEFAULT_SUGGESTED_PILLARS) {
+    if (chosen.length >= 4) break;
+    if (!chosen.includes(pillar)) chosen.push(pillar);
+  }
   return chosen.map((pillar) => ({
     text: PILLAR_QUESTIONS[pillar],
     pillar_tag: pillar,
@@ -605,7 +621,8 @@ rules — never break these:
 - two to three sentences. sure tone, personal-first, plain language.
 - ground every answer ONLY in the constellation grounding block provided below. never invent a trait, pattern, platform, or signal you were not given.
 - if the supplied grounding does not support an answer, do NOT guess. return the honest-limits line exactly as instructed in the grounding block.
-- no diagnostic or clinical language. no advice framed as therapy.`;
+- no diagnostic or clinical language. no advice framed as therapy.
+- never ask who the person is. you already have their record. start from the grounding, not from introductions.`;
 
 /** Build the per-user grounding block that anchors the Claude call. Byte-stable for a
  * given (pillar, synthesis, traits, observations) so it caches across identical

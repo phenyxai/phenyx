@@ -32,9 +32,9 @@ export class PolarisController {
   }
 
   /**
-   * GET /api/polaris/threads — main-view payload: the caller's past conversations
-   * (most-recent first; the client hides the section when empty) plus the
-   * server-computed suggested questions derived from their top pillars.
+   * GET /api/polaris/threads — idle-view payload: past conversations, four
+   * pillar-tagged questions from the caller's top pillars, and the weekly
+   * token allowance for the token pill.
    */
   @Get("threads")
   @UseGuards(SupabaseAuthGuard)

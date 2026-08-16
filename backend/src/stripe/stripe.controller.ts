@@ -263,12 +263,33 @@ export class StripeController {
             const line = expanded.line_items?.data[0];
             const priceId = line?.price?.id;
             const giftId = giftPriceId();
-            let tier: "pro" | "gifted" | "free" = "free";
+            const topupId = this.config.get<string>("STRIPE_POLARIS_TOPUP_PRICE_ID");
 
+            // One-time Polaris top-ups must not touch `user_profiles.tier`.
+            // Unknown prices used to fall through to `free` and wipe Pro.
+            if (topupId && priceId === topupId) {
+              this.logger.log({
+                msg: "webhook_checkout_topup_no_tier_change",
+                event_id: event.id,
+                user_id: userId,
+                price_id: priceId,
+              });
+              break;
+            }
+
+            let tier: "pro" | "gifted" | "free" | null = null;
             if (giftId && priceId === giftId) {
               tier = "gifted";
             } else if (priceId && proPriceIds().has(priceId)) {
               tier = "pro";
+            } else {
+              this.logger.error({
+                msg: "webhook_checkout_payment_unknown_price",
+                event_id: event.id,
+                user_id: userId,
+                price_id: priceId,
+              });
+              break;
             }
 
             await supabaseAdmin
