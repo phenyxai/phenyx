@@ -11,7 +11,7 @@ import { ObservationsService } from "./observations.service";
 export class ObservationsController {
   constructor(private readonly observations: ObservationsService) {}
 
-  /** Daily feed — `{ mantra, observations }` the dashboard consumes. */
+  /** Daily feed — `{ mantra, observations }` with v67 card fields (sentence, points, span, explore_prompt). */
   @Get()
   @UseGuards(SupabaseAuthGuard)
   async feed(@Req() req: Request) {

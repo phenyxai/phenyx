@@ -93,7 +93,7 @@ export class ObservationsService {
       supabase
         .from("observations")
         .select(
-          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at"
+          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at,points,evidence_span,span_start,span_end"
         )
         .eq("user_id", userId)
         .order("surfaced_at", { ascending: false }),
