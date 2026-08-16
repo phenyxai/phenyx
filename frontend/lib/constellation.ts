@@ -14,6 +14,7 @@
 import { apiFetch } from "@/lib/api-client";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { STELLAR_DEFAULT } from "@/lib/stellar";
+import type { Evidence } from "@/components/phenyx/evidence-trace";
 
 // ---------------------------------------------------------------------------
 // Pillar model
@@ -84,14 +85,27 @@ export const EDGES: [Pillar, Pillar][] = [
 // Normalized shapes consumed by the canvas + panel
 // ---------------------------------------------------------------------------
 
-export interface TimelineEntry {
+export interface ClusterObservation {
   id: string;
-  /** Voice-Standard prose. `null` when the server redacted a locked entry. */
   body: string | null;
-  /** e.g. "cross-platform pattern / 6 months". */
-  meta_label: string | null;
+  points?: string[] | null;
+  sources?: string[] | null;
+  span?: string | null;
   surfaced_at: string;
   is_new: boolean;
+  /** Trace withheld (free). The sentence still ships. */
+  locked?: boolean;
+  evidence?: Evidence | null;
+}
+
+export interface Cluster {
+  id: string;
+  label: string;
+  preview: string | null;
+  observation_count: number;
+  has_new: boolean;
+  source_platforms: string[];
+  observations: ClusterObservation[];
 }
 
 export interface PillarDetail {
@@ -102,12 +116,61 @@ export interface PillarDetail {
   synthesis: string | null;
   observation_count: number;
   has_new: boolean;
-  /** Platform badges for the sources block (pro/gifted; omitted for free). */
   source_platforms: string[];
-  /** Single source-insight paragraph shown under the platform badges. */
   source_insight: string | null;
-  /** Dated entries, newest-first. */
-  timeline: TimelineEntry[];
+  clusters: Cluster[];
+}
+
+export interface CanvasPoint {
+  pillar: Pillar;
+  x: number;
+  y: number;
+  z: number;
+  active: boolean;
+  has_new: boolean;
+}
+
+export interface RecordTimelineEra {
+  start: number;
+  width: number;
+  name: string;
+}
+
+export interface RecordTimelineBreak {
+  at: number;
+  label: string;
+}
+
+export interface RecordTimelineCard {
+  tag: string;
+  line: string;
+  evidence: Array<{ when: string; source: string; text: string }>;
+}
+
+export interface RecordTimeline {
+  span: string[];
+  note: string | null;
+  eras: RecordTimelineEra[];
+  breaks: RecordTimelineBreak[];
+  return_line: string | null;
+  card: RecordTimelineCard | null;
+  empty: boolean;
+}
+
+export interface MovedPair {
+  label: string;
+  then: string;
+  now: string;
+}
+
+export interface YearlyRecapEntry {
+  when: string;
+  text: string;
+}
+
+export interface ConstellationTenure {
+  years: number;
+  since: string | null;
 }
 
 export interface ConstellationData {
@@ -115,10 +178,25 @@ export interface ConstellationData {
   archetype: string | null;
   version: number | null;
   generated_at: string | null;
-  /** IDENTITY PORTRAIT prose. */
+  /** Portrait prose for "your story, right now". */
   portrait: string | null;
+  points: CanvasPoint[];
   pillars: Record<Pillar, PillarDetail>;
+  timeline: RecordTimeline;
+  moved: MovedPair[];
+  tenure: ConstellationTenure;
+  yearly_recap: YearlyRecapEntry[] | null;
 }
+
+export const EMPTY_TIMELINE: RecordTimeline = {
+  span: [],
+  note: null,
+  eras: [],
+  breaks: [],
+  return_line: null,
+  card: null,
+  empty: true,
+};
 
 // ---------------------------------------------------------------------------
 // Fetch
@@ -135,8 +213,23 @@ function emptyPillar(pillar: Pillar): PillarDetail {
     has_new: false,
     source_platforms: [],
     source_insight: null,
-    timeline: [],
+    clusters: [],
   };
+}
+
+function pointsFromPillars(pillars: Record<Pillar, PillarDetail>): CanvasPoint[] {
+  return ALL_PILLARS.map((pillar) => {
+    const layout = NODE_LAYOUT[pillar];
+    const detail = pillars[pillar];
+    return {
+      pillar,
+      x: layout.x,
+      y: layout.y,
+      z: layout.z,
+      active: detail.active,
+      has_new: detail.has_new,
+    };
+  });
 }
 
 function emptyState(stellarColor: string): ConstellationData {
@@ -148,7 +241,12 @@ function emptyState(stellarColor: string): ConstellationData {
     version: null,
     generated_at: null,
     portrait: null,
+    points: pointsFromPillars(pillars),
     pillars,
+    timeline: { ...EMPTY_TIMELINE },
+    moved: [],
+    tenure: { years: 0, since: null },
+    yearly_recap: null,
   };
 }
 
@@ -165,6 +263,84 @@ function cachedStellarColor(): string {
  * Normalize the PHE-31 endpoint payload into ConstellationData. Kept tolerant of
  * partial payloads so a half-populated constellation still renders every node.
  */
+function normalizeCluster(raw: any): Cluster | null {
+  if (!raw || typeof raw !== "object") return null;
+  const id = raw.id != null ? String(raw.id) : "";
+  const label = typeof raw.label === "string" && raw.label.trim() ? raw.label.trim() : "core signals";
+  const observations: ClusterObservation[] = Array.isArray(raw.observations)
+    ? raw.observations.map((o: any) => ({
+        id: String(o.id),
+        body: o.body ?? null,
+        points: Array.isArray(o.points) ? o.points : undefined,
+        sources: Array.isArray(o.sources) ? o.sources : undefined,
+        span: o.span ?? null,
+        surfaced_at: o.surfaced_at ?? "",
+        is_new: Boolean(o.is_new),
+        locked: Boolean(o.locked),
+        evidence: o.evidence ?? null,
+      }))
+    : [];
+  return {
+    id: id || label,
+    label,
+    preview: typeof raw.preview === "string" ? raw.preview : null,
+    observation_count: raw.observation_count ?? observations.length,
+    has_new: Boolean(raw.has_new),
+    source_platforms: Array.isArray(raw.source_platforms) ? raw.source_platforms : [],
+    observations,
+  };
+}
+
+function normalizeTimeline(raw: any): RecordTimeline {
+  if (!raw || typeof raw !== "object") return { ...EMPTY_TIMELINE };
+  const eras: RecordTimelineEra[] = Array.isArray(raw.eras)
+    ? raw.eras
+        .map((e: any) => ({
+          start: Number(e.start),
+          width: Number(e.width),
+          name: typeof e.name === "string" ? e.name : "",
+        }))
+        .filter((e: RecordTimelineEra) => e.name && Number.isFinite(e.start) && Number.isFinite(e.width))
+    : [];
+  const breaks: RecordTimelineBreak[] = Array.isArray(raw.breaks)
+    ? raw.breaks
+        .map((b: any) => ({
+          at: Number(b.at),
+          label: typeof b.label === "string" ? b.label : "",
+        }))
+        .filter((b: RecordTimelineBreak) => b.label && Number.isFinite(b.at))
+    : [];
+  const cardRaw = raw.card;
+  const card: RecordTimelineCard | null =
+    cardRaw && typeof cardRaw.tag === "string" && typeof cardRaw.line === "string"
+      ? {
+          tag: cardRaw.tag,
+          line: cardRaw.line,
+          evidence: Array.isArray(cardRaw.evidence)
+            ? cardRaw.evidence
+                .filter((ev: any) => ev && ev.when && ev.source && ev.text)
+                .map((ev: any) => ({
+                  when: String(ev.when),
+                  source: String(ev.source),
+                  text: String(ev.text),
+                }))
+            : [],
+        }
+      : null;
+  const span = Array.isArray(raw.span)
+    ? raw.span.filter((y: unknown): y is string => typeof y === "string")
+    : [];
+  return {
+    span,
+    note: typeof raw.note === "string" ? raw.note : null,
+    eras,
+    breaks,
+    return_line: typeof raw.return_line === "string" ? raw.return_line : null,
+    card,
+    empty: raw.empty !== false && eras.length === 0,
+  };
+}
+
 function normalizeEndpoint(raw: any, fallbackColor: string): ConstellationData {
   const base = emptyState(raw?.stellar_color ?? fallbackColor);
   base.archetype = raw?.archetype ?? null;
@@ -188,16 +364,69 @@ function normalizeEndpoint(raw: any, fallbackColor: string): ConstellationData {
       ? p.source_platforms
       : [];
     detail.source_insight = p.source_insight ?? null;
-    detail.timeline = Array.isArray(p.timeline)
-      ? p.timeline.map((t: any) => ({
-          id: String(t.id),
-          body: t.body ?? null,
-          meta_label: t.meta_label ?? null,
-          surfaced_at: t.surfaced_at,
-          is_new: Boolean(t.is_new),
-        }))
+    detail.clusters = Array.isArray(p.clusters)
+      ? p.clusters.map(normalizeCluster).filter((c: Cluster | null): c is Cluster => c != null)
       : [];
+    if (detail.clusters.length === 0 && Array.isArray(p.timeline) && p.timeline.length > 0) {
+      detail.clusters = [
+        {
+          id: `${key}:core signals`,
+          label: "core signals",
+          preview: null,
+          observation_count: p.timeline.length,
+          has_new: detail.has_new,
+          source_platforms: detail.source_platforms,
+          observations: p.timeline.map((t: any) => ({
+            id: String(t.id),
+            body: t.body ?? null,
+            surfaced_at: t.surfaced_at,
+            is_new: Boolean(t.is_new),
+            locked: t.body == null,
+            evidence: t.evidence ?? null,
+          })),
+        },
+      ];
+    }
   }
+
+  if (Array.isArray(raw?.points) && raw.points.length) {
+    base.points = ALL_PILLARS.map((pillar) => {
+      const found = raw.points.find((pt: any) => pt?.pillar === pillar);
+      const layout = NODE_LAYOUT[pillar];
+      const detail = base.pillars[pillar];
+      return {
+        pillar,
+        x: typeof found?.x === "number" ? found.x : layout.x,
+        y: typeof found?.y === "number" ? found.y : layout.y,
+        z: typeof found?.z === "number" ? found.z : layout.z,
+        active: found?.active ?? detail.active,
+        has_new: found?.has_new ?? detail.has_new,
+      };
+    });
+  } else {
+    base.points = pointsFromPillars(base.pillars);
+  }
+
+  base.timeline = normalizeTimeline(raw?.timeline);
+  base.moved = Array.isArray(raw?.moved)
+    ? raw.moved
+        .filter((m: any) => m && m.label && m.then && m.now)
+        .map((m: any) => ({
+          label: String(m.label),
+          then: String(m.then),
+          now: String(m.now),
+        }))
+    : [];
+  base.tenure = {
+    years: typeof raw?.tenure?.years === "number" ? raw.tenure.years : 0,
+    since: typeof raw?.tenure?.since === "string" ? raw.tenure.since : null,
+  };
+  base.yearly_recap = Array.isArray(raw?.yearly_recap)
+    ? raw.yearly_recap
+        .filter((e: any) => e && e.when && e.text)
+        .map((e: any) => ({ when: String(e.when), text: String(e.text) }))
+    : null;
+
   return base;
 }
 
@@ -217,13 +446,21 @@ interface ObservationRow {
   meta_label: string | null;
   is_new: boolean;
   surfaced_at: string;
+  area_id?: string | null;
 }
 
+interface AreaRow {
+  id: string;
+  pillar: string;
+  label: string;
+  ordinal: number;
+}
+
+const FALLBACK_CLUSTER_CAP = 2;
+
 /**
- * Fallback read straight from Supabase (owner-scoped via RLS) — the shape the
- * legacy `/constellation` page already relies on — so the tab shows real data
- * before the PHE-31 endpoint ships. Timeline gating is still applied in the
- * render layer, so free users never see more than the first two bodies here.
+ * Fallback read straight from Supabase (owner-scoped via RLS). Cluster entries
+ * are capped at 2 so a missing endpoint never leaks the rest to free (fail closed).
  */
 async function readFromSupabase(fallbackColor: string): Promise<ConstellationData> {
   const {
@@ -231,19 +468,29 @@ async function readFromSupabase(fallbackColor: string): Promise<ConstellationDat
   } = await supabase.auth.getUser();
   if (!user) return emptyState(fallbackColor);
 
-  const [profileRes, stateRes, obsRes] = await Promise.all([
-    supabase.from("user_profiles").select("stellar_color").eq("id", user.id).maybeSingle(),
+  const [profileRes, stateRes, obsRes, areasRes] = await Promise.all([
+    supabase.from("user_profiles").select("stellar_color, created_at").eq("id", user.id).maybeSingle(),
     supabase.from("constellation_state").select("*").eq("user_id", user.id).maybeSingle(),
     supabase
       .from("observations")
-      .select("id, pillar, body, source_platforms, meta_label, is_new, surfaced_at")
+      .select("id, pillar, body, source_platforms, meta_label, is_new, surfaced_at, area_id")
       .eq("user_id", user.id)
       .order("surfaced_at", { ascending: false }),
+    supabase
+      .from("areas")
+      .select("id, pillar, label, ordinal")
+      .eq("user_id", user.id)
+      .order("ordinal", { ascending: true }),
   ]);
 
   const stellarColor =
     (profileRes.data?.stellar_color as string | null) || fallbackColor;
   const data = emptyState(stellarColor);
+  const since = (profileRes.data?.created_at as string | null) ?? null;
+  if (since) {
+    const years = Math.max(0, (Date.now() - Date.parse(since)) / (365.25 * 24 * 60 * 60 * 1000));
+    data.tenure = { years: Number.isFinite(years) ? years : 0, since };
+  }
 
   const state = stateRes.data as StateRow | null;
   if (state) {
@@ -264,34 +511,62 @@ async function readFromSupabase(fallbackColor: string): Promise<ConstellationDat
   }
 
   const observations = (obsRes.data ?? []) as ObservationRow[];
-  for (const obs of observations) {
-    const detail = data.pillars[obs.pillar as Pillar];
-    if (!detail) continue;
-    detail.observation_count += 1;
-    if (obs.is_new) detail.has_new = true;
-    for (const platform of obs.source_platforms ?? []) {
-      if (!detail.source_platforms.includes(platform)) {
-        detail.source_platforms.push(platform);
-      }
-    }
-    detail.timeline.push({
-      id: obs.id,
-      body: obs.body,
-      meta_label: obs.meta_label,
-      surfaced_at: obs.surfaced_at,
-      is_new: obs.is_new,
-    });
-  }
+  const areas = (areasRes.error ? [] : (areasRes.data ?? [])) as AreaRow[];
 
-  // The newest observation's meta label doubles as a source-insight line until
-  // the endpoint serves the generated paragraph.
   for (const pillar of ALL_PILLARS) {
     const detail = data.pillars[pillar];
-    if (!detail.source_insight && detail.timeline[0]?.meta_label) {
-      detail.source_insight = detail.timeline[0].meta_label;
+    const pillarObs = observations.filter((o) => o.pillar === pillar);
+    const pillarAreas = areas.filter((a) => a.pillar === pillar);
+    const clusters: Cluster[] = [];
+
+    const toObs = (rows: ObservationRow[]): ClusterObservation[] =>
+      rows.slice(0, FALLBACK_CLUSTER_CAP).map((obs) => ({
+        id: obs.id,
+        body: obs.body,
+        sources: obs.source_platforms ?? undefined,
+        surfaced_at: obs.surfaced_at,
+        is_new: obs.is_new,
+        locked: true,
+        evidence: null,
+      }));
+
+    for (const area of pillarAreas) {
+      const rows = pillarObs.filter((o) => o.area_id === area.id);
+      if (!rows.length) continue;
+      const served = toObs(rows);
+      clusters.push({
+        id: area.id,
+        label: area.label || "core signals",
+        preview: served[0]?.body ?? null,
+        observation_count: served.length,
+        has_new: rows.some((r) => r.is_new),
+        source_platforms: [...new Set(rows.flatMap((r) => r.source_platforms ?? []))],
+        observations: served,
+      });
     }
+
+    const core = pillarObs.filter((o) => !o.area_id);
+    if (core.length) {
+      const served = toObs(core);
+      clusters.push({
+        id: `${pillar}:core signals`,
+        label: "core signals",
+        preview: served[0]?.body ?? null,
+        observation_count: served.length,
+        has_new: core.some((r) => r.is_new),
+        source_platforms: [...new Set(core.flatMap((r) => r.source_platforms ?? []))],
+        observations: served,
+      });
+    }
+
+    detail.clusters = clusters;
+    detail.observation_count = clusters.reduce((n, c) => n + c.observation_count, 0);
+    detail.has_new = clusters.some((c) => c.has_new);
+    detail.source_platforms = [...new Set(clusters.flatMap((c) => c.source_platforms))];
+    if (clusters[0]?.preview) detail.source_insight = clusters[0].preview;
   }
 
+  data.points = pointsFromPillars(data.pillars);
   return data;
 }
 

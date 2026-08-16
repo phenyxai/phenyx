@@ -5,7 +5,7 @@ import { ConstellationController } from "./constellation.controller";
 import { ConstellationService } from "./constellation.service";
 
 /**
- * PHE-31 — Constellation read surface. Depends on AuthModule (owner guard) and
+ * PHE-74 — constellation read surface. Depends on AuthModule (owner guard) and
  * StripeModule (BillingService tier gate); reuses the observation engine's pure
  * gating helpers (`applyReadGate`) directly, so no dependency on ObservationsModule
  * is needed. SupabaseModule is global.
