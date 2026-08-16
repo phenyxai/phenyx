@@ -9,13 +9,14 @@
 //
 // - Four active pillars fill/glow in the user's stellar color; a pillar carrying
 //   a new observation pulses and shows a new-signal dot.
-// - Three locked pillars (becoming|recognition|transcendence) render dim and
-//   desaturated: no pulse, no new-signal dot.
+// - Unformed pillars (becoming|recognition|transcendence until they carry
+//   observations) render dim: no pulse, no new-signal dot. They are still
+//   keyboard-reachable overlay buttons.
 // - The RAF loop pauses when the document is hidden (visibilitychange) and is
 //   skipped entirely under prefers-reduced-motion, which draws a single static
 //   frame instead.
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   ALL_PILLARS,
   EDGES,
@@ -42,15 +43,24 @@ export interface ConstellationCanvasProps {
   data: ConstellationData;
   selectedPillar: Pillar | null;
   onSelectPillar: (pillar: Pillar) => void;
+  /** Escape closes the open point (back to overview). */
+  onClosePoint?: () => void;
 }
 
 export function ConstellationCanvas({
   data,
   selectedPillar,
   onSelectPillar,
+  onClosePoint,
 }: ConstellationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nodePixelsRef = useRef<NodePixel[]>([]);
+  const [overlayNodes, setOverlayNodes] = useState<NodePixel[]>([]);
+  const [kbIndex, setKbIndex] = useState(0);
+  const liveId = useId();
+  const labelId = useId();
+  const helpId = useId();
+  const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const rafRef = useRef<number | null>(null);
   const cssSizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
 
@@ -67,7 +77,7 @@ export function ConstellationCanvas({
   const computeNodePixels = useCallback((w: number, h: number) => {
     const innerW = Math.max(0, w - PADDING * 2);
     const innerH = Math.max(0, h - PADDING * 2);
-    nodePixelsRef.current = ALL_PILLARS.map((pillar) => {
+    const next = ALL_PILLARS.map((pillar) => {
       const pos = NODE_LAYOUT[pillar];
       return {
         pillar,
@@ -76,6 +86,8 @@ export function ConstellationCanvas({
         r: isLockedPillar(pillar) ? LOCKED_RADIUS : BASE_RADIUS,
       };
     });
+    nodePixelsRef.current = next;
+    setOverlayNodes(next);
   }, []);
 
   const drawFrame = useCallback((time: number, animated: boolean) => {
@@ -115,12 +127,19 @@ export function ConstellationCanvas({
       const isSelected = selectedRef.current === node.pillar;
 
       if (!detail.active) {
-        // Locked pillar: dim ring, no fill, no glow, no pulse.
+        // Unformed pillar: dim ring, no fill, no glow, no pulse.
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
         ctx.strokeStyle = "rgba(255,253,253,0.16)";
         ctx.lineWidth = 1;
         ctx.stroke();
+        if (isSelected) {
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, node.r + 4, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(255,253,253,0.35)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
       } else {
         // Active pillar: stellar glow. Pulse amplitude only when carrying a new
         // observation, otherwise a steady halo.
@@ -286,19 +305,100 @@ export function ConstellationCanvas({
           hit = node;
         }
       }
-      if (hit) onSelectPillar(hit.pillar);
+      if (hit) {
+        const idx = ALL_PILLARS.indexOf(hit.pillar);
+        if (idx >= 0) setKbIndex(idx);
+        onSelectPillar(hit.pillar);
+      }
     },
     [onSelectPillar],
   );
 
+  const focusButton = useCallback((index: number) => {
+    const i = (index + ALL_PILLARS.length) % ALL_PILLARS.length;
+    setKbIndex(i);
+    buttonRefs.current[i]?.focus();
+  }, []);
+
+  const onKbKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const k = event.key;
+      if (k === "ArrowRight" || k === "ArrowDown") {
+        event.preventDefault();
+        focusButton(kbIndex + 1);
+      } else if (k === "ArrowLeft" || k === "ArrowUp") {
+        event.preventDefault();
+        focusButton(kbIndex - 1);
+      } else if (k === "Home") {
+        event.preventDefault();
+        focusButton(0);
+      } else if (k === "End") {
+        event.preventDefault();
+        focusButton(ALL_PILLARS.length - 1);
+      } else if (k === "Escape") {
+        if (selectedPillar) {
+          event.preventDefault();
+          onClosePoint?.();
+        }
+      }
+    },
+    [focusButton, kbIndex, onClosePoint, selectedPillar],
+  );
+
   return (
-    <canvas
-      ref={canvasRef}
-      onClick={handlePointer}
-      className="h-full w-full cursor-pointer"
-      role="img"
-      aria-label="your constellation — seven points of identity"
-    />
+    <div className="relative h-full w-full">
+      <canvas
+        ref={canvasRef}
+        onClick={handlePointer}
+        className="h-full w-full cursor-pointer"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute inset-0"
+        role="group"
+        aria-labelledby={labelId}
+        aria-describedby={helpId}
+        onKeyDown={onKbKeyDown}
+      >
+        {overlayNodes.map((node, i) => {
+          const detail = data.pillars[node.pillar];
+          const areaCount = detail.clusters.length;
+          const n = detail.observation_count;
+          const label = areaCount
+            ? `${pillarLabel(node.pillar)}, ${n} observation${n === 1 ? "" : "s"} in ${areaCount} area${areaCount === 1 ? "" : "s"}`
+            : `${pillarLabel(node.pillar)}, no observations yet`;
+          return (
+            <button
+              key={node.pillar}
+              ref={(el) => {
+                buttonRefs.current[i] = el;
+              }}
+              type="button"
+              tabIndex={i === kbIndex ? 0 : -1}
+              aria-label={label}
+              aria-expanded={selectedPillar === node.pillar}
+              onClick={() => {
+                setKbIndex(i);
+                onSelectPillar(node.pillar);
+              }}
+              className="pointer-events-auto absolute h-11 w-11 -translate-x-1/2 -translate-y-1/2 rounded-full border-0 bg-transparent p-0 focus-visible:bg-[#FFFDFD]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--s,#88AAEE)] motion-reduce:transition-none"
+              style={{ left: node.x, top: node.y }}
+            />
+          );
+        })}
+      </div>
+      <p id={labelId} className="sr-only">
+        your constellation
+      </p>
+      <p id={helpId} className="sr-only">
+        seven points. use the arrow keys to move between them, enter to open one, escape to close it.
+      </p>
+      <p id={liveId} className="sr-only" role="status" aria-live="polite">
+        {selectedPillar
+          ? `${pillarLabel(selectedPillar)} opened. details are in the panel beside the constellation.`
+          : ""}
+      </p>
+    </div>
   );
 }
 

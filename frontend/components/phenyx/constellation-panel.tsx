@@ -1,66 +1,70 @@
 "use client";
 
-// PHE-28 — Constellation detail panel (the 320px right column).
+// PHE-74 — Constellation detail panel.
 //
-// Three states, driven entirely by `selectedPillar`:
-//   - null              → default: "tap any node to explore" + IDENTITY PORTRAIT
-//                         + a clickable pillars summary.
-//   - a locked pillar   → a single static card, no per-user fetch.
-//   - an active pillar  → node-detail: pill + count, synthesis, sources, and the
-//                         OBSERVATIONS OVER TIME timeline (free = 2 + teasers).
+// Three states: overview | pillar | cluster. Back always steps one level.
+// Overview: "your story, right now" + per-pillar summaries.
+// Pillar: name, area count, pillar text, source tags, cluster cards.
+// Cluster: observations with evidence traces (PHE-71 EvidenceTrace).
 
-import { useTier } from "@/lib/use-tier";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
+import { EvidenceTrace } from "@/components/phenyx/evidence-trace";
 import {
   ALL_PILLARS,
-  isLockedPillar,
   pillarLabel,
   relativeTime,
+  type Cluster,
+  type ClusterObservation,
   type ConstellationData,
   type Pillar,
   type PillarDetail,
 } from "@/lib/constellation";
 
-const FREE_VISIBLE_ENTRIES = 2;
-
 export interface ConstellationPanelProps {
   data: ConstellationData;
   selectedPillar: Pillar | null;
+  selectedClusterId: string | null;
   onSelectPillar: (pillar: Pillar) => void;
+  onSelectCluster: (clusterId: string) => void;
   onBack: () => void;
 }
 
 export function ConstellationPanel({
   data,
   selectedPillar,
+  selectedClusterId,
   onSelectPillar,
+  onSelectCluster,
   onBack,
 }: ConstellationPanelProps) {
-  if (selectedPillar && isLockedPillar(selectedPillar)) {
-    return <LockedCard onBack={onBack} />;
+  if (selectedPillar && selectedClusterId) {
+    const detail = data.pillars[selectedPillar];
+    const cluster = detail.clusters.find((c) => c.id === selectedClusterId);
+    if (cluster) {
+      return (
+        <ClusterDetail
+          stellar={data.stellar_color}
+          pillar={detail}
+          cluster={cluster}
+          onBack={onBack}
+        />
+      );
+    }
   }
   if (selectedPillar) {
     return (
-      <NodeDetail
+      <PillarDetailView
         stellar={data.stellar_color}
         detail={data.pillars[selectedPillar]}
         onBack={onBack}
+        onSelectCluster={onSelectCluster}
       />
     );
   }
-  return (
-    <DefaultView
-      data={data}
-      onSelectPillar={onSelectPillar}
-    />
-  );
+  return <Overview data={data} onSelectPillar={onSelectPillar} />;
 }
 
-// ---------------------------------------------------------------------------
-// Default view
-// ---------------------------------------------------------------------------
-
-function DefaultView({
+function Overview({
   data,
   onSelectPillar,
 }: {
@@ -70,11 +74,11 @@ function DefaultView({
   return (
     <div className="flex flex-col gap-6">
       <p className="text-[13px] font-light lowercase text-[#FFFDFD]/45">
-        tap any node to explore
+        tap any point to explore
       </p>
 
       <section>
-        <SectionLabel>identity portrait</SectionLabel>
+        <SectionLabel>your story, right now</SectionLabel>
         {data.portrait ? (
           <p className="text-[14px] font-light leading-relaxed text-[#FFFDFD]/80">
             {data.portrait}
@@ -91,18 +95,12 @@ function DefaultView({
         <ul className="flex flex-col">
           {ALL_PILLARS.map((pillar) => {
             const detail = data.pillars[pillar];
-            const clickable = detail.active;
             return (
               <li key={pillar}>
                 <button
                   type="button"
-                  disabled={!clickable}
-                  onClick={() => clickable && onSelectPillar(pillar)}
-                  className={`flex w-full items-center justify-between gap-3 border-b border-[#FFFDFD]/6 py-3 text-left transition-colors motion-reduce:transition-none ${
-                    clickable
-                      ? "cursor-pointer hover:text-[#FFFDFD]"
-                      : "cursor-default"
-                  }`}
+                  onClick={() => onSelectPillar(pillar)}
+                  className="flex w-full cursor-pointer items-center justify-between gap-3 border-b border-[#FFFDFD]/6 py-3 text-left transition-colors hover:text-[#FFFDFD] motion-reduce:transition-none"
                 >
                   <span
                     className={`flex items-center gap-2 text-[13px] font-light lowercase ${
@@ -110,12 +108,12 @@ function DefaultView({
                     }`}
                   >
                     {pillarLabel(pillar)}
-                    {detail.active && detail.has_new && (
-                      <PulsingDot color={data.stellar_color} />
-                    )}
+                    {detail.has_new && <PulsingDot color={data.stellar_color} />}
                   </span>
                   <span className="text-[12px] font-light tabular-nums text-[#FFFDFD]/35">
-                    {detail.observation_count}
+                    {detail.clusters.length
+                      ? `${detail.clusters.length} area${detail.clusters.length === 1 ? "" : "s"}`
+                      : detail.observation_count}
                   </span>
                 </button>
               </li>
@@ -127,25 +125,19 @@ function DefaultView({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Node detail (active pillar)
-// ---------------------------------------------------------------------------
-
-function NodeDetail({
+function PillarDetailView({
   stellar,
   detail,
   onBack,
+  onSelectCluster,
 }: {
   stellar: string;
   detail: PillarDetail;
   onBack: () => void;
+  onSelectCluster: (clusterId: string) => void;
 }) {
-  const { isPro } = useTier();
-  const { openModal } = useSettingsModals();
-
-  const timeline = detail.timeline;
-  const hasSources =
-    detail.source_platforms.length > 0 || Boolean(detail.source_insight);
+  const areaCount = detail.clusters.length;
+  const hasSources = detail.source_platforms.length > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -157,7 +149,6 @@ function NodeDetail({
         ← all pillars
       </button>
 
-      {/* Pillar header: colored pill + observation count. */}
       <div className="flex items-center justify-between gap-3">
         <span
           className="rounded-full px-3 py-1 text-[12px] lowercase text-[#0A0A0A]"
@@ -166,12 +157,10 @@ function NodeDetail({
           {pillarLabel(detail.pillar)}
         </span>
         <span className="text-[12px] font-light tabular-nums text-[#FFFDFD]/40">
-          {detail.observation_count}{" "}
-          {detail.observation_count === 1 ? "observation" : "observations"}
+          {areaCount} {areaCount === 1 ? "area" : "areas"}
         </span>
       </div>
 
-      {/* Synthesis. */}
       {detail.synthesis ? (
         <p className="text-[14px] font-light leading-relaxed text-[#FFFDFD]/80">
           {detail.synthesis}
@@ -182,95 +171,91 @@ function NodeDetail({
         </p>
       )}
 
-      {/* Sources block. */}
       {hasSources && (
         <section>
           <SectionLabel>sources</SectionLabel>
-          {detail.source_platforms.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-2">
-              {detail.source_platforms.map((platform) => (
-                <span
-                  key={platform}
-                  className="rounded-full border border-[#FFFDFD]/12 px-2.5 py-0.5 text-[11px] lowercase text-[#FFFDFD]/55"
-                >
-                  {platform}
-                </span>
-              ))}
-            </div>
-          )}
-          {detail.source_insight && (
-            <p className="text-[13px] font-light leading-relaxed text-[#FFFDFD]/60">
-              {detail.source_insight}
-            </p>
-          )}
+          <div className="mb-3 flex flex-wrap gap-2">
+            {detail.source_platforms.map((platform) => (
+              <span
+                key={platform}
+                className="rounded-full border border-[#FFFDFD]/12 px-2.5 py-0.5 text-[11px] lowercase text-[#FFFDFD]/55"
+              >
+                {platform}
+              </span>
+            ))}
+          </div>
         </section>
       )}
 
-      {/* Observations over time. */}
       <section>
-        <SectionLabel>observations over time</SectionLabel>
-        {timeline.length === 0 ? (
+        <SectionLabel>clusters</SectionLabel>
+        {detail.clusters.length === 0 ? (
           <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
             no observations yet.
           </p>
         ) : (
-          <ol className="flex flex-col gap-4">
-            {timeline.map((entry, index) => {
-              const unlocked =
-                (isPro || index < FREE_VISIBLE_ENTRIES) && entry.body != null;
-              return (
-                <li key={entry.id} className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-light lowercase text-[#FFFDFD]/35">
-                      {relativeTime(entry.surfaced_at)}
-                    </span>
-                    {index === 0 && (
-                      <span
-                        className="text-[10px] font-medium uppercase tracking-[0.15em]"
-                        style={{ color: stellar }}
-                      >
-                        new signal
-                      </span>
-                    )}
-                  </div>
-                  {unlocked ? (
-                    <p className="text-[13px] font-light leading-relaxed text-[#FFFDFD]/75">
-                      {entry.body}
-                    </p>
-                  ) : (
-                    <LockedTeaser onUpgrade={() => openModal("upgrade")} />
-                  )}
-                </li>
-              );
-            })}
-          </ol>
+          <div className="flex flex-col gap-1.5">
+            {detail.clusters.map((cluster) => (
+              <ClusterCard
+                key={cluster.id}
+                cluster={cluster}
+                onOpen={() => onSelectCluster(cluster.id)}
+              />
+            ))}
+          </div>
         )}
       </section>
     </div>
   );
 }
 
-function LockedTeaser({ onUpgrade }: { onUpgrade: () => void }) {
+function ClusterCard({
+  cluster,
+  onOpen,
+}: {
+  cluster: Cluster;
+  onOpen: () => void;
+}) {
+  const count = cluster.observation_count;
   return (
     <button
       type="button"
-      onClick={onUpgrade}
-      className="group flex flex-col items-start gap-1.5 text-left"
+      onClick={onOpen}
+      className={`rounded-[10px] border bg-[#0c0c0c] px-4 py-3.5 text-left transition-colors hover:border-[rgba(var(--s-rgb),0.35)] hover:bg-[#0f0f0f] motion-reduce:transition-none ${
+        cluster.has_new
+          ? "border-l-2 border-[#1e1e1e] border-l-[var(--s)]"
+          : "border-[#1e1e1e]"
+      }`}
     >
-      <span className="h-2 w-full max-w-[220px] rounded-full bg-[#FFFDFD]/10" />
-      <span className="h-2 w-full max-w-[160px] rounded-full bg-[#FFFDFD]/10" />
-      <span className="mt-1 text-[11px] font-light lowercase text-[#FFFDFD]/40 transition-colors group-hover:text-[#FFFDFD]/70 motion-reduce:transition-none">
-        unlock all observations →
-      </span>
+      <p className="mb-1 text-[13px] font-medium lowercase tracking-wide text-[#FFFDFD]/80">
+        {cluster.label}
+      </p>
+      {cluster.preview && (
+        <p className="mt-1 max-w-[62ch] text-[13px] font-light leading-relaxed text-[#FFFDFD]/50">
+          {cluster.preview}
+        </p>
+      )}
+      <p className="mt-2 text-[11px] tracking-wide text-[rgba(var(--s-rgb),0.6)]">
+        {count} {count === 1 ? "signal" : "signals"}
+      </p>
     </button>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Locked pillar static card
-// ---------------------------------------------------------------------------
+function ClusterDetail({
+  stellar,
+  pillar,
+  cluster,
+  onBack,
+}: {
+  stellar: string;
+  pillar: PillarDetail;
+  cluster: Cluster;
+  onBack: () => void;
+}) {
+  const { openModal } = useSettingsModals();
+  const hasSources = cluster.source_platforms.length > 0;
 
-function LockedCard({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col gap-6">
       <button
@@ -278,20 +263,130 @@ function LockedCard({ onBack }: { onBack: () => void }) {
         onClick={onBack}
         className="self-start text-[12px] font-light lowercase text-[#FFFDFD]/45 transition-colors hover:text-[#FFFDFD]/80 motion-reduce:transition-none"
       >
-        ← all pillars
+        ← {pillarLabel(pillar.pillar)}
       </button>
-      <div className="rounded-xl border border-[#FFFDFD]/8 bg-[#FFFDFD]/2 px-5 py-6">
-        <p className="text-[13px] font-light lowercase leading-relaxed text-[#FFFDFD]/40">
-          these form over time — keep returning
-        </p>
+
+      <div className="flex items-center justify-between gap-3">
+        <span
+          className="rounded-full px-3 py-1 text-[12px] lowercase text-[#0A0A0A]"
+          style={{ background: stellar }}
+        >
+          {pillarLabel(pillar.pillar)}
+        </span>
+        <span className="text-[12px] font-light lowercase text-[#FFFDFD]/40">
+          {cluster.label}
+        </span>
       </div>
+
+      {cluster.preview ? (
+        <p className="text-[14px] font-light leading-relaxed text-[#FFFDFD]/80">
+          {cluster.preview}
+        </p>
+      ) : null}
+
+      {hasSources && (
+        <div className="flex flex-wrap gap-2" aria-label={`drawn from ${cluster.source_platforms.join(", ")}`}>
+          {cluster.source_platforms.map((platform) => (
+            <span
+              key={platform}
+              className="rounded-full border border-[#FFFDFD]/12 px-2.5 py-0.5 text-[11px] lowercase text-[#FFFDFD]/55"
+            >
+              {platform}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <section>
+        {cluster.observations.length === 0 ? (
+          <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
+            no observations yet.
+          </p>
+        ) : (
+          <ol className="flex flex-col gap-5">
+            {cluster.observations.map((entry, index) => (
+              <ClusterObservationRow
+                key={entry.id}
+                entry={entry}
+                stellar={stellar}
+                isFirst={index === 0}
+                onUpgrade={() => openModal("upgrade")}
+              />
+            ))}
+          </ol>
+        )}
+      </section>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Shared bits
-// ---------------------------------------------------------------------------
+function ClusterObservationRow({
+  entry,
+  stellar,
+  isFirst,
+  onUpgrade,
+}: {
+  entry: ClusterObservation;
+  stellar: string;
+  isFirst: boolean;
+  onUpgrade: () => void;
+}) {
+  return (
+    <li className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        {entry.surfaced_at && (
+          <span className="text-[11px] font-light lowercase text-[#FFFDFD]/35">
+            {relativeTime(entry.surfaced_at)}
+          </span>
+        )}
+        {isFirst && entry.is_new && (
+          <span
+            className="text-[10px] font-medium uppercase tracking-[0.15em]"
+            style={{ color: stellar }}
+          >
+            new signal
+          </span>
+        )}
+      </div>
+      {entry.body && (
+        <p className="text-[13px] font-light leading-relaxed text-[#FFFDFD]/75">
+          {entry.body}
+        </p>
+      )}
+      {entry.points && entry.points.length > 0 && (
+        <ul className="mt-1 flex flex-col gap-1 pl-0">
+          {entry.points.map((point) => (
+            <li key={point} className="text-[12px] font-light text-[#FFFDFD]/50">
+              {point}
+            </li>
+          ))}
+        </ul>
+      )}
+      {entry.sources && entry.sources.length > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {entry.sources.map((platform) => (
+            <span
+              key={platform}
+              className="text-[10px] lowercase tracking-wide text-[rgba(var(--s-rgb),0.7)]"
+            >
+              {platform}
+            </span>
+          ))}
+          {entry.span && (
+            <span className="text-[10px] text-[#FFFDFD]/35">{entry.span}</span>
+          )}
+        </div>
+      )}
+      {entry.evidence && (
+        <EvidenceTrace
+          observationId={entry.id}
+          evidence={entry.evidence}
+          onUpgrade={onUpgrade}
+        />
+      )}
+    </li>
+  );
+}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
