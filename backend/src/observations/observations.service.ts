@@ -15,6 +15,15 @@ import {
   applyReadGate,
   groupTimelineByPillar,
 } from "./gating";
+import {
+  buildEvidence,
+  buildUnderneath,
+  pickPreviewEntries,
+  pickUnderneathOfDay,
+  stubEvidence,
+  utcDayNumber,
+  type SourceRecordPreview,
+} from "./evidence";
 
 /**
  * PHE-37 — Observation Generation Engine (Lane 6 foundation).
@@ -93,7 +102,7 @@ export class ObservationsService {
       supabase
         .from("observations")
         .select(
-          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at,points,evidence_span,span_start,span_end"
+          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at,points,evidence_span,span_start,span_end,signal_type,evidence_n,record_count,sources"
         )
         .eq("user_id", userId)
         .order("surfaced_at", { ascending: false }),
@@ -104,9 +113,15 @@ export class ObservationsService {
         .maybeSingle(),
     ]);
 
+    const withEvidence = await this.attachEvidenceHierarchy(
+      userId,
+      (rows ?? []) as ObservationRow[],
+      capabilities.evidenceTracesPerDay
+    );
+
     return {
       mantra: (state?.mantra as string | null) ?? null,
-      observations: applyReadGate((rows ?? []) as ObservationRow[], capabilities),
+      observations: applyReadGate(withEvidence, capabilities),
     };
   }
 
@@ -124,6 +139,155 @@ export class ObservationsService {
       .order("surfaced_at", { ascending: false });
 
     return { pillars: groupTimelineByPillar((rows ?? []) as ObservationRow[], capabilities) };
+  }
+
+  /**
+   * Load v66 hierarchy rows (signals, preview source records, underneath readings)
+   * and stamp them onto each observation before the read gate redacts.
+   *
+   * Chain payloads are only fetched for the first `traceBudget` rows — locked
+   * free traces keep `{ sig, recs }` from the observation columns alone.
+   */
+  private async attachEvidenceHierarchy(
+    userId: string,
+    rows: ObservationRow[],
+    traceBudget: number
+  ): Promise<ObservationRow[]> {
+    if (rows.length === 0) return rows;
+    const supabase = this.supabaseService.getClient();
+    const ids = rows.map((r) => r.id);
+
+    const { data: readingRows } = await supabase
+      .from("underneath_readings")
+      .select(
+        "id,observation_id,headline,belief,gap,mechanism,tell,basis,hedge"
+      )
+      .eq("user_id", userId)
+      .in("observation_id", ids);
+
+    const readings = (readingRows ?? []) as UnderneathRow[];
+    const readingByObs = new Map<string, UnderneathRow>();
+    for (const r of readings) {
+      if (!readingByObs.has(r.observation_id)) readingByObs.set(r.observation_id, r);
+    }
+    const ofDayId = pickUnderneathOfDay(
+      readings.map((r) => r.observation_id).filter((id) => ids.includes(id)),
+      utcDayNumber()
+    );
+
+    const unlocked = rows.filter((_, i) => i < traceBudget && !!normalizeSig(rows[i]));
+    const unlockedIds = unlocked.map((r) => r.id);
+    const signalByObs = await this.loadSignalsForObservations(userId, unlockedIds);
+    const signalIds = [...new Set([...signalByObs.values()].map((s) => s.id))];
+    const entriesBySignal = await this.loadPreviewEntries(signalIds);
+
+    return rows.map((row, index) => {
+      const sig = normalizeSig(row);
+      const recs = Number(row.record_count ?? row.evidence_n ?? 0);
+      const sources = (row.sources?.length ? row.sources : row.source_platforms) ?? [];
+      const span = formatEvidenceSpan(row);
+      const n = Number(row.evidence_n ?? row.record_count ?? 0);
+      const traceUnlocked = index < traceBudget;
+
+      let assembled_evidence = sig ? stubEvidence(sig, recs) : null;
+      if (sig && traceUnlocked) {
+        const signal = signalByObs.get(row.id);
+        const metric =
+          signal?.metric_value && typeof signal.metric_value === "object"
+            ? (signal.metric_value as Record<string, unknown>)
+            : null;
+        assembled_evidence = buildEvidence({
+          sig,
+          recs: Number(signal?.record_count ?? recs),
+          n: Number(signal?.evidence_n ?? n),
+          sources: (signal?.sources?.length ? signal.sources : sources) as string[],
+          span: signal?.canonical_span || span,
+          metric,
+          entries: signal ? entriesBySignal.get(signal.id) ?? [] : [],
+        });
+      }
+
+      const reading = readingByObs.get(row.id);
+      const assembled_underneath = reading
+        ? buildUnderneath({
+            ...reading,
+            recs,
+            sources,
+          })
+        : null;
+
+      return {
+        ...row,
+        assembled_evidence,
+        assembled_underneath,
+        underneath_of_day: ofDayId != null && row.id === ofDayId,
+      };
+    });
+  }
+
+  private async loadSignalsForObservations(
+    userId: string,
+    observationIds: string[]
+  ): Promise<Map<string, LinkedSignal>> {
+    const out = new Map<string, LinkedSignal>();
+    if (observationIds.length === 0) return out;
+    const supabase = this.supabaseService.getClient();
+    const { data } = await supabase
+      .from("observation_signals")
+      .select(
+        "observation_id, signal_id, signals(id, signal_type, metric_value, record_count, sources, evidence_n, canonical_span)"
+      )
+      .eq("user_id", userId)
+      .in("observation_id", observationIds);
+
+    for (const link of (data ?? []) as ObservationSignalLink[]) {
+      const signal = Array.isArray(link.signals) ? link.signals[0] : link.signals;
+      if (!signal || out.has(link.observation_id)) continue;
+      out.set(link.observation_id, { ...signal, id: signal.id ?? link.signal_id });
+    }
+    return out;
+  }
+
+  /**
+   * At most three dated entries per signal (earliest, most recent, defining).
+   * Two ordered lookups per signal so a 1,847-row chain never lands in the feed.
+   */
+  private async loadPreviewEntries(
+    signalIds: string[]
+  ): Promise<Map<string, ReturnType<typeof pickPreviewEntries>>> {
+    const out = new Map<string, ReturnType<typeof pickPreviewEntries>>();
+    if (signalIds.length === 0) return out;
+    const supabase = this.supabaseService.getClient();
+
+    await Promise.all(
+      signalIds.map(async (signalId) => {
+        const [earliestRes, latestRes] = await Promise.all([
+          supabase
+            .from("signal_source_records")
+            .select("source_records(platform, record_type, occurred_at)")
+            .eq("signal_id", signalId)
+            .order("occurred_at", { referencedTable: "source_records", ascending: true })
+            .limit(2),
+          supabase
+            .from("signal_source_records")
+            .select("source_records(platform, record_type, occurred_at)")
+            .eq("signal_id", signalId)
+            .order("occurred_at", { referencedTable: "source_records", ascending: false })
+            .limit(1),
+        ]);
+
+        const previews: SourceRecordPreview[] = [];
+        const push = (row: unknown) => {
+          const rec = unwrapSourceRecord(row);
+          if (rec) previews.push(rec);
+        };
+        for (const row of earliestRes.data ?? []) push(row);
+        for (const row of latestRes.data ?? []) push(row);
+        out.set(signalId, pickPreviewEntries(previews));
+      })
+    );
+
+    return out;
   }
 
   // -------------------------------------------------------------------------
@@ -549,4 +713,67 @@ interface GenerationContext {
   connections: { platform: string; redacted_snapshot: Record<string, unknown> | null }[];
   recent: { pillar: string; body: string; meta_label: string | null }[];
   hasSignal: boolean;
+}
+
+interface UnderneathRow {
+  id: string;
+  observation_id: string;
+  headline: string;
+  belief: unknown;
+  gap: string;
+  mechanism: string;
+  tell: string;
+  basis: string;
+  hedge: string;
+}
+
+interface LinkedSignal {
+  id: string;
+  signal_type?: string | null;
+  metric_value?: Record<string, unknown> | null;
+  record_count?: number | null;
+  sources?: string[] | null;
+  evidence_n?: number | null;
+  canonical_span?: string | null;
+}
+
+interface ObservationSignalLink {
+  observation_id: string;
+  signal_id: string;
+  signals: LinkedSignal | LinkedSignal[] | null;
+}
+
+function normalizeSig(row: ObservationRow): string | null {
+  const sig = row.signal_type?.trim().toLowerCase();
+  return sig || null;
+}
+
+function formatEvidenceSpan(row: ObservationRow): string | null {
+  if (row.evidence_span && row.evidence_span.trim()) return row.evidence_span.trim();
+  const start = row.span_start ? new Date(row.span_start) : null;
+  const end = row.span_end ? new Date(row.span_end) : null;
+  const year = (d: Date) =>
+    Number.isNaN(d.getTime()) ? null : String(d.getUTCFullYear());
+  const a = start ? year(start) : null;
+  const b = end ? year(end) : null;
+  if (a && b) return a === b ? a : `${a} - ${b}`;
+  return null;
+}
+
+function unwrapSourceRecord(row: unknown): SourceRecordPreview | null {
+  if (!row || typeof row !== "object") return null;
+  const nested = (row as { source_records?: unknown }).source_records;
+  const rec = Array.isArray(nested) ? nested[0] : nested;
+  if (!rec || typeof rec !== "object") return null;
+  const r = rec as {
+    platform?: unknown;
+    record_type?: unknown;
+    occurred_at?: unknown;
+  };
+  if (typeof r.platform !== "string") return null;
+  return {
+    platform: r.platform,
+    record_type: typeof r.record_type === "string" ? r.record_type : "",
+    occurred_at: typeof r.occurred_at === "string" ? r.occurred_at : null,
+  };
 }
