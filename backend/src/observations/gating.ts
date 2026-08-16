@@ -144,6 +144,12 @@ export interface ObservationRow {
   is_new: boolean;
   locked_for_free: boolean;
   surfaced_at: string;
+  /** v66 supporting points (jsonb array of strings). */
+  points?: unknown;
+  /** Human date span, e.g. "2016 - 2026". */
+  evidence_span?: string | null;
+  span_start?: string | null;
+  span_end?: string | null;
 }
 
 /**
@@ -155,12 +161,46 @@ export interface ServedObservation {
   id: string;
   pillar_tag: string;
   body?: string | null;
+  /** First sentence of `body`, for the collapsed Daily card. */
+  sentence?: string | null;
+  /** Counts behind the claim. */
+  points?: string[] | null;
   sources?: string[] | null;
+  /** Date span shown next to source tags. */
+  span?: string | null;
   meta_line?: string | null;
+  /** Opening question for ✦ explore. */
+  explore_prompt?: string | null;
   is_new?: boolean;
   /** True when the evidence trace is redacted (free, after the daily budget). */
   locked?: boolean;
   hint?: string | null;
+}
+
+/** First sentence of an observation body (collapsed Daily card). */
+export function firstSentence(body: string): string {
+  const cleaned = body.replace(/<\/?[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  const match = cleaned.match(/^[^.!?]+[.!?]?/);
+  return (match ? match[0] : cleaned).trim();
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+}
+
+function formatSpan(row: ObservationRow): string | null {
+  if (row.evidence_span && row.evidence_span.trim()) return row.evidence_span.trim();
+  const start = row.span_start ? new Date(row.span_start) : null;
+  const end = row.span_end ? new Date(row.span_end) : null;
+  const year = (d: Date) =>
+    Number.isNaN(d.getTime()) ? null : String(d.getUTCFullYear());
+  const a = start ? year(start) : null;
+  const b = end ? year(end) : null;
+  if (a && b) return a === b ? a : `${a} - ${b}`;
+  if (row.meta_label && row.meta_label.trim()) return row.meta_label.trim();
+  return null;
 }
 
 /** Redacted placeholder served in place of a locked observation's body. */
@@ -185,6 +225,8 @@ export function applyReadGate(
   return rows.map((row, index) => {
     const bodyUnlocked = index < capabilities.observationsUnlocked;
     const traceUnlocked = index < capabilities.evidenceTracesPerDay;
+    const sentence = firstSentence(row.body);
+    const points = asStringArray(row.points);
     if (!bodyUnlocked) {
       return {
         id: row.id,
@@ -198,8 +240,12 @@ export function applyReadGate(
       id: row.id,
       pillar_tag: row.pillar,
       body: row.body,
+      sentence,
+      points: points.length ? points : undefined,
       sources: traceUnlocked ? row.source_platforms : undefined,
+      span: traceUnlocked ? formatSpan(row) : undefined,
       meta_line: traceUnlocked ? row.meta_label : undefined,
+      explore_prompt: sentence || undefined,
       is_new: row.is_new,
       locked: !traceUnlocked,
     };

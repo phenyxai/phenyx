@@ -13,6 +13,7 @@ import {
   applyReadGate,
   groupTimelineByPillar,
   isValidPillar,
+  firstSentence,
 } from "./gating";
 import { BillingService } from "../stripe/billing.service";
 import { ObservationsService } from "./observations.service";
@@ -147,6 +148,14 @@ function row(overrides: Partial<ObservationRow>): ObservationRow {
   };
 }
 
+test("firstSentence takes the leading clause and strips markup", () => {
+  assert.equal(
+    firstSentence("eight of every ten sessions begin between 1am and 4am. visual work does not."),
+    "eight of every ten sessions begin between 1am and 4am."
+  );
+  assert.equal(firstSentence("boards of canada returned after <b>six</b> years."), "boards of canada returned after six years.");
+});
+
 test("applyReadGate free tier: all bodies, traces only on first two of the day", () => {
   const served = applyReadGate(
     [row({ id: "fresh" }), row({ id: "older" }), row({ id: "oldest" })],
@@ -163,8 +172,26 @@ test("applyReadGate free tier: all bodies, traces only on first two of the day",
   // Third+ keep the sentence; traces are withheld.
   assert.equal(served[2].locked, true);
   assert.equal(served[2].body, "the body");
+  assert.equal(served[2].sentence, "the body");
+  assert.equal(served[2].explore_prompt, "the body");
   assert.equal(served[2].sources, undefined);
+  assert.equal(served[2].span, undefined);
   assert.equal(served[2].meta_line, undefined);
+});
+
+test("applyReadGate ships points and span on unlocked traces", () => {
+  const served = applyReadGate(
+    [
+      row({
+        points: ["twelve sessions", "none of them public"],
+        evidence_span: "2016 - 2026",
+      }),
+    ],
+    PRO
+  );
+  assert.deepEqual(served[0].points, ["twelve sessions", "none of them public"]);
+  assert.equal(served[0].span, "2016 - 2026");
+  assert.equal(served[0].sentence, "the body");
 });
 
 test("applyReadGate pro/gifted: all unlocked with source_platforms + provenance present", () => {

@@ -2,83 +2,103 @@
 
 import { useEffect } from "react";
 
-// ============================================================================
-// ObservationCard — a single Daily-feed observation (PHE-26)
-// ----------------------------------------------------------------------------
-// Two variants share one component:
-//   • unlocked — the colored uppercase pillar tag, a 2–3 sentence body, source
-//     platform badges + a muted meta line, and a green-glow "new" badge for
-//     first-time observations (`is_new`).
-//   • locked   — free-tier gating: only a redacted hint plus an "unlock on
-//     pro ✦" button that opens the upgrade modal. The server redacts `body` and
-//     `sources` for locked observations, so this variant never receives them —
-//     it renders a hint line only, never client-hidden real content.
-//
-// Colors: the pillar tag is tinted by `pillar_color` (a stellar-family hex from
-// the engine); when the payload omits it we fall back to a deterministic
-// per-pillar stellar color so an active pillar always reads in-family.
-//
-// The "new" badge glow is a CSS keyframe (`phenyx-obs-new-glow`) injected once
-// and frozen under `prefers-reduced-motion: reduce`, mirroring PolarisBadge.
-// ============================================================================
-
 import { STELLAR_DEFAULT } from "@/lib/stellar";
 
-/** The rendered observation shape (served by the engine, PHE-37 / 06-engine-data.md). */
+// ============================================================================
+// ObservationCard: collapsed Daily-feed card (PHE-70 / v67)
+// ----------------------------------------------------------------------------
+// Collapsed: one sentence + pillar tag + chevron. Expanded in place, in order:
+//   1. supporting points
+//   2. source tags + date span
+//   3. slots for evidence / underneath / feedback (PHE-71 / PHE-72)
+//   4. ✦ explore
+//
+// The PHE-26 locked-body variant (`unlock on pro`) is gone. Every tier reads
+// the sentence. `observation.locked` means the evidence *trace* is withheld
+// (sources + span omitted); never the body.
+// ============================================================================
+
+/** The rendered observation shape (served by the engine, PHE-37 / PHE-70). */
 export interface Observation {
   id: string;
-  /** Pillar label, e.g. "origin" | "self_creation". Rendered uppercased. */
+  /** Pillar label, e.g. "origin" | "self_creation". */
   pillar_tag: string;
   /** Stellar-family hex for the pillar tag; falls back to a per-pillar color. */
   pillar_color?: string | null;
-  /** 2–3 sentence observation body. Absent on locked (server-redacted). */
+  /** Full observation body. Always present on the v67 feed. */
   body?: string | null;
-  /** Platform badges, e.g. ["instagram","spotify"]. Absent on locked. */
+  /** Collapsed one-liner. Derived from `body` when the server omits it. */
+  sentence?: string | null;
+  /** Counts behind the claim. Shown only when expanded. */
+  points?: string[] | null;
+  /** Platform badges, e.g. ["instagram","spotify"]. Omitted when the trace is locked. */
   sources?: string[] | null;
-  /** Muted meta line, e.g. "cross-platform pattern / 6 months". */
+  /** Date span next to source tags, e.g. "2016 - 2026". */
+  span?: string | null;
+  /** Muted meta line, used as a span fallback. */
   meta_line?: string | null;
+  /** Opening question for ✦ explore. */
+  explore_prompt?: string | null;
   /** First-ever render to this user → green-glow "new" badge. */
   is_new?: boolean;
-  /** Server gating flag. The page also enforces gating by tier + index. */
+  /** True when the evidence trace is redacted (free, after the daily budget). */
   locked?: boolean;
-  /** Redacted hint string served in place of the body on locked cards. */
-  hint?: string | null;
+  /** Optional underneath reading id; PHE-72 fills the slot when present. */
+  under?: string | boolean | null;
 }
 
-// Deterministic fallback color per active pillar (stellar family). Only used
-// when the engine does not attach a `pillar_color`. Keyed by the normalized
-// pillar tag (lowercased, spaces/underscores collapsed).
 const PILLAR_COLORS: Record<string, string> = {
   origin: "#E87722",
   emergence: "#E8B822",
   self_creation: "#77BBFF",
   convergence: "#5599FF",
+  becoming: "#88AAEE",
+  recognition: "#CCDDFF",
+  transcendence: "#4488EE",
 };
 
 /** Normalize a pillar tag to its lookup key: "SELF CREATION" → "self_creation". */
-function pillarKey(tag: string): string {
+export function pillarKey(tag: string): string {
   return tag.trim().toLowerCase().replace(/[\s-]+/g, "_");
 }
 
-/** "self_creation" → "SELF CREATION" for the pillar tag label. */
-function pillarLabel(tag: string): string {
-  return tag.trim().replace(/[_-]+/g, " ").toUpperCase();
+/** Display label: "self_creation" → "self-creation". */
+export function pillarLabel(tag: string): string {
+  return tag.trim().toLowerCase().replace(/[_]+/g, "-").replace(/\s+/g, "-");
+}
+
+export function firstSentence(body: string): string {
+  const cleaned = body.replace(/<\/?[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  const match = cleaned.match(/^[^.!?]+[.!?]?/);
+  return (match ? match[0] : cleaned).trim();
+}
+
+export function observationSentence(o: Observation): string {
+  if (o.sentence && o.sentence.trim()) return o.sentence.trim();
+  if (o.body && o.body.trim()) return firstSentence(o.body);
+  return "";
+}
+
+export function observationExplorePrompt(o: Observation): string {
+  if (o.explore_prompt && o.explore_prompt.trim()) return o.explore_prompt.trim();
+  return observationSentence(o);
 }
 
 function resolvePillarColor(o: Observation): string {
   if (o.pillar_color) return o.pillar_color;
-  return PILLAR_COLORS[pillarKey(o.pillar_tag)] ?? STELLAR_DEFAULT;
+  const key = pillarKey(o.pillar_tag);
+  return PILLAR_COLORS[key] ?? STELLAR_DEFAULT;
 }
 
-// Green used for the "new" glow. Injected once; frozen under reduced motion.
 const NEW_GREEN = "#4ADE80";
-let glowInjected = false;
+let cardStylesInjected = false;
 
-function injectNewGlowStyles() {
-  if (glowInjected || typeof document === "undefined") return;
-  glowInjected = true;
+function injectCardStyles() {
+  if (cardStylesInjected || typeof document === "undefined") return;
+  cardStylesInjected = true;
   const style = document.createElement("style");
-  style.setAttribute("data-phenyx-obs-new-glow", "");
+  style.setAttribute("data-phenyx-obs-card", "");
   style.textContent = `
     @keyframes phenyx-obs-new-glow {
       0%, 100% { box-shadow: 0 0 4px ${NEW_GREEN}66, 0 0 0 ${NEW_GREEN}00; }
@@ -89,6 +109,9 @@ function injectNewGlowStyles() {
         animation: none !important;
         box-shadow: 0 0 6px ${NEW_GREEN}66 !important;
       }
+      .phenyx-obs-chevron {
+        transition: none !important;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -96,107 +119,77 @@ function injectNewGlowStyles() {
 
 export interface ObservationCardProps {
   observation: Observation;
-  /** Render the locked (free-tier) variant. */
-  locked: boolean;
-  /** Open the upgrade modal — wired to the locked-variant "unlock on pro ✦" CTA. */
-  onUpgrade: () => void;
+  expanded: boolean;
+  onToggle: () => void;
+  /** Pro → route to Polaris. Free → open the upgrade modal. */
+  onExplore: () => void;
+  /** Accent for chevron / explore / focused border. */
+  accent?: string;
+  /** Pro daily-focus match: slightly stronger border. */
+  focused?: boolean;
 }
 
-export function ObservationCard({ observation, locked, onUpgrade }: ObservationCardProps) {
+export function ObservationCard({
+  observation,
+  expanded,
+  onToggle,
+  onExplore,
+  accent = "var(--s, #5599FF)",
+  focused = false,
+}: ObservationCardProps) {
   useEffect(() => {
-    injectNewGlowStyles();
+    injectCardStyles();
   }, []);
 
   const color = resolvePillarColor(observation);
   const label = pillarLabel(observation.pillar_tag);
+  const sentence = observationSentence(observation);
+  const points = (observation.points ?? []).filter((p) => p && p.trim());
+  const sources = observation.locked ? [] : (observation.sources ?? []);
+  const span = observation.locked
+    ? ""
+    : (observation.span ?? observation.meta_line ?? "").trim();
 
-  const tag = (
-    <span
-      style={{
-        fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: "0.18em",
-        textTransform: "uppercase",
-        color,
-      }}
-    >
-      {label}
-    </span>
-  );
-
-  // -- locked variant -------------------------------------------------------
-  // Only the pillar tag, a redacted hint, and the unlock CTA. No body/sources.
-  if (locked) {
-    return (
-      <article
-        aria-label={`${observation.pillar_tag} observation — locked`}
-        aria-disabled="true"
-        style={{
-          background: "#0E0E0E",
-          border: "0.5px solid #1C1C1C",
-          borderRadius: 12,
-          padding: "18px 20px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          {tag}
-        </div>
-        <p
-          style={{
-            fontSize: 13,
-            fontWeight: 300,
-            color: "rgba(255,253,253,0.28)",
-            fontStyle: "italic",
-            margin: 0,
-            marginBottom: 16,
-          }}
-        >
-          {observation.hint ?? "something surfaced here."}
-        </p>
-        <button
-          type="button"
-          onClick={onUpgrade}
-          style={{
-            background: "transparent",
-            border: "0.5px solid rgba(255,253,253,0.18)",
-            borderRadius: 999,
-            padding: "8px 16px",
-            fontSize: 12,
-            color: "rgba(255,253,253,0.55)",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            transition: "all 0.2s ease",
-          }}
-          className="motion-reduce:transition-none"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255,253,253,0.4)";
-            e.currentTarget.style.color = "#FFFDFD";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255,253,253,0.18)";
-            e.currentTarget.style.color = "rgba(255,253,253,0.55)";
-          }}
-        >
-          unlock on pro ✦
-        </button>
-      </article>
-    );
-  }
-
-  // -- unlocked variant -----------------------------------------------------
-  const sources = observation.sources ?? [];
   return (
     <article
-      aria-label={`${observation.pillar_tag} observation`}
+      aria-label={`${label} observation`}
+      aria-expanded={expanded}
       style={{
-        background: "#0D0D0D",
-        border: "0.5px solid #1A1A1A",
+        background: expanded ? "#090909" : focused ? "#0d0d0d" : "#0b0b0b",
+        border: `1px solid ${
+          focused
+            ? `${color}73`
+            : expanded
+              ? "rgba(255,253,253,0.12)"
+              : "#1c1c1c"
+        }`,
         borderRadius: 12,
-        padding: "18px 20px",
+        padding: expanded ? "30px 32px 32px" : "13px 20px",
+        position: "relative",
+        transition: "border-color 0.35s ease, padding 0.4s ease, background 0.4s ease",
       }}
+      className="motion-reduce:transition-none"
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-        {tag}
+      <span
+        style={{
+          position: "absolute",
+          top: -10,
+          right: 16,
+          zIndex: 2,
+          fontSize: 11.5,
+          letterSpacing: "0.09em",
+          textTransform: "lowercase",
+          color,
+          background: "#0b0b0d",
+          border: `1px solid ${color}6B`,
+          borderRadius: 20,
+          padding: "3px 12px",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        {label}
         {observation.is_new && (
           <span
             className="phenyx-obs-new-badge"
@@ -206,9 +199,6 @@ export function ObservationCard({ observation, locked, onUpgrade }: ObservationC
               letterSpacing: "0.14em",
               textTransform: "uppercase",
               color: NEW_GREEN,
-              border: `0.5px solid ${NEW_GREEN}80`,
-              borderRadius: 999,
-              padding: "2px 8px",
               lineHeight: 1,
               animation: "phenyx-obs-new-glow 2.4s ease-in-out infinite",
             }}
@@ -216,54 +206,180 @@ export function ObservationCard({ observation, locked, onUpgrade }: ObservationC
             new
           </span>
         )}
-      </div>
+      </span>
 
-      {observation.body && (
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 12,
+          width: "100%",
+          background: "none",
+          border: "none",
+          padding: 0,
+          margin: 0,
+          cursor: "pointer",
+          textAlign: "left",
+          fontFamily: "inherit",
+        }}
+      >
         <p
           style={{
-            fontSize: 15,
+            flex: 1,
+            fontSize: expanded ? 16 : 14,
             fontWeight: 300,
-            lineHeight: 1.55,
-            color: "#FFFDFD",
+            lineHeight: expanded ? 1.72 : 1.75,
+            color: "rgba(255,253,253,0.78)",
             margin: 0,
-            marginBottom: sources.length || observation.meta_line ? 16 : 0,
           }}
         >
-          {observation.body}
+          {sentence}
         </p>
-      )}
+        <span
+          className="phenyx-obs-chevron"
+          aria-hidden="true"
+          style={{
+            flexShrink: 0,
+            fontSize: 20,
+            lineHeight: 1.2,
+            color: expanded ? accent : "rgba(255,253,253,0.52)",
+            transform: expanded ? "rotate(90deg)" : "none",
+            transition: "transform 0.28s ease, color 0.2s",
+            marginTop: -1,
+          }}
+        >
+          ›
+        </span>
+      </button>
 
-      {sources.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: observation.meta_line ? 8 : 0 }}>
-          {sources.map((src) => (
-            <span
-              key={src}
+      {expanded && (
+        <div style={{ marginTop: 2 }}>
+          {points.length > 0 && (
+            <ul
               style={{
-                fontSize: 11,
-                color: "rgba(255,253,253,0.55)",
-                background: "rgba(255,253,253,0.04)",
-                border: "0.5px solid rgba(255,253,253,0.12)",
-                borderRadius: 999,
-                padding: "3px 10px",
-                lineHeight: 1.3,
+                margin: "10px 0 0",
+                paddingLeft: 18,
+                listStyle: "disc",
               }}
             >
-              {src}
-            </span>
-          ))}
-        </div>
-      )}
+              {points.map((point) => (
+                <li
+                  key={point}
+                  style={{
+                    fontSize: 12,
+                    color: "rgba(255,253,253,0.58)",
+                    lineHeight: 1.6,
+                    margin: "3px 0",
+                    paddingLeft: 2,
+                  }}
+                >
+                  {point}
+                </li>
+              ))}
+            </ul>
+          )}
 
-      {observation.meta_line && (
-        <p
-          style={{
-            fontSize: 12,
-            color: "rgba(255,253,253,0.3)",
-            margin: 0,
-          }}
-        >
-          {observation.meta_line}
-        </p>
+          {(sources.length > 0 || span) && (
+            <div
+              aria-label={
+                sources.length
+                  ? `sourced from ${sources.join(", ")}${span ? `, ${span}` : ""}`
+                  : span
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexWrap: "wrap",
+                marginTop: 10,
+              }}
+            >
+              {sources.map((src) => (
+                <span
+                  key={src}
+                  style={{
+                    fontSize: 10,
+                    letterSpacing: "0.08em",
+                    textTransform: "lowercase",
+                    padding: "3px 8px",
+                    border: "1px solid #242424",
+                    borderRadius: 20,
+                    color: "rgba(255,253,253,0.62)",
+                    background: "#0d0d0d",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {src}
+                </span>
+              ))}
+              {sources.length > 0 && span ? (
+                <span style={{ color: "rgba(255,253,253,0.4)", fontSize: 10 }} aria-hidden="true">
+                  ·
+                </span>
+              ) : null}
+              {span ? (
+                <span
+                  style={{
+                    fontSize: 10.5,
+                    letterSpacing: "0.06em",
+                    color: "rgba(255,253,253,0.52)",
+                  }}
+                >
+                  {span}
+                </span>
+              ) : null}
+            </div>
+          )}
+
+          {/* PHE-71 fills the evidence control. Do not invent the dropdown here. */}
+          <div data-slot="evidence" />
+          {/* PHE-72 fills underneath when the observation carries a reading. */}
+          {observation.under ? <div data-slot="underneath" /> : null}
+          {/* PHE-72 fills `does this land?` feedback. */}
+          <div data-slot="feedback" />
+
+          <div
+            style={{
+              marginTop: 10,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+            }}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onExplore();
+              }}
+              title="ask polaris about this"
+              style={{
+                background: "none",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                cursor: "pointer",
+                padding: "8px 6px",
+                fontFamily: "inherit",
+              }}
+            >
+              <span style={{ fontSize: 13, color: accent }}>✦</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  letterSpacing: "0.03em",
+                  color: "rgba(255,253,253,0.6)",
+                }}
+              >
+                explore
+              </span>
+            </button>
+          </div>
+        </div>
       )}
     </article>
   );
