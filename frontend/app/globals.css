@@ -525,3 +525,142 @@
   .legal-doc { font-size: 14.5px; }
   .legal-doc__foot-inner { flex-direction: column; align-items: flex-start; gap: 20px; }
 }
+
+/* v67 walkthrough layout (PHE-77). Primary action sits on one shared line.
+   Form screens (join / sign-in / forgot) must NOT use --onb-block; they size
+   to their own content. */
+:root {
+  --onb-block: 600px;
+  --onb-pad: 44px;
+  --onb-side: 46px;
+  --onb-action-bottom: 112px;
+  --onb-action-h: 50px;
+  --onb-sub: calc(var(--onb-action-bottom) - 36px);
+  --onb-mt: max(24px, calc((100dvh - var(--onb-block)) / 2));
+}
+
+@media (max-height: 720px) {
+  :root {
+    --onb-block: 450px;
+    --onb-pad: 30px;
+    --onb-action-bottom: 70px;
+  }
+}
+
+.onb-v67 {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 24px 24px 32px;
+  box-sizing: border-box;
+}
+
+.onb-block {
+  position: relative;
+  width: 100%;
+  max-width: 470px;
+  height: var(--onb-block);
+  min-height: var(--onb-block);
+  margin-top: var(--onb-mt);
+  padding: var(--onb-pad) var(--onb-side) calc(var(--onb-pad) + 118px);
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.onb-block--sm { max-width: 440px; }
+.onb-block--welcome {
+  max-width: 400px;
+  align-items: center;
+}
+
+.onb-block .onb-action {
+  position: absolute;
+  left: var(--onb-side);
+  right: var(--onb-side);
+  bottom: var(--onb-action-bottom);
+  height: var(--onb-action-h);
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.onb-block .onb-skip,
+.onb-block .onb-back {
+  position: absolute;
+  left: var(--onb-side);
+  right: var(--onb-side);
+  bottom: calc(var(--onb-sub) - 6px);
+  width: auto;
+  margin: 0 !important;
+  padding: 6px 0;
+  text-align: center;
+}
+
+/* Walkthrough spacing: 7 / 14 / 20 / 30 */
+.onb-block .onb-ey { margin-bottom: 14px; }
+.onb-block .onb-h1 { margin-bottom: 0; }
+.onb-block .onb-ey + .onb-h1 { margin-top: 0; }
+.onb-block .onb-h1 + .onb-sub { margin-top: 30px; }
+.onb-block .onb-sub { margin-bottom: 0; }
+.onb-block .onb-sub + .onb-sub { margin-top: 14px; }
+.onb-block .onb-stack { margin-top: 14px; }
+
+.onb-welcome-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  min-height: 0;
+}
+
+.auth-field-link {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: rgba(255, 253, 253, 0.58);
+  cursor: pointer;
+  padding: 7px 0 5px;
+  margin-left: auto;
+  min-height: 24px;
+  display: block;
+  width: 100%;
+  text-align: right;
+  letter-spacing: 0.01em;
+  transition: color 0.2s ease;
+}
+
+.auth-field-link:hover { color: rgba(255, 253, 253, 0.8); }
+
+.auth-form-foot {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 253, 253, 0.055);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-form-alt {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--color-stellar);
+  cursor: pointer;
+  padding: 6px 0;
+  text-align: center;
+  transition: color 0.2s ease;
+}
+
+.auth-form-alt:hover { color: #FFFDFD; }

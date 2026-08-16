@@ -87,15 +87,10 @@ export default function WelcomePage() {
 
   return (
     <main
-      className={reduceMotion ? undefined : "animate-fade-in"}
+      className={`onb-v67${reduceMotion ? "" : " animate-fade-in"}`}
       style={{
         minHeight: "100vh",
         background: "#050505",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
         position: "relative",
       }}
     >
@@ -139,70 +134,61 @@ export default function WelcomePage() {
         </Link>
       </header>
 
-      {/* Content */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "48px",
-          maxWidth: "400px",
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
-        {/* The assigned color, revealed as a glowing orb. */}
-        <div
-          style={{
-            width: "16px",
-            height: "16px",
-            borderRadius: "50%",
-            background: stellarColor,
-            boxShadow: `0 0 24px ${stellarColor}, 0 0 48px color-mix(in srgb, ${stellarColor} 50%, transparent)`,
-            opacity: orbVisible ? 1 : 0,
-            transform: orbVisible ? "scale(1)" : "scale(0.6)",
-            transition,
-            animation: reduceMotion ? undefined : "pulse 3s ease-in-out infinite",
-          }}
-        />
+      <div className="onb-block onb-block--welcome">
+        <div className="onb-welcome-body">
+          {/* The assigned color, revealed as a glowing orb. */}
+          <div
+            style={{
+              width: "16px",
+              height: "16px",
+              borderRadius: "50%",
+              background: stellarColor,
+              boxShadow: `0 0 24px ${stellarColor}, 0 0 48px color-mix(in srgb, ${stellarColor} 50%, transparent)`,
+              opacity: orbVisible ? 1 : 0,
+              transform: orbVisible ? "scale(1)" : "scale(0.6)",
+              transition,
+              animation: reduceMotion ? undefined : "pulse 3s ease-in-out infinite",
+            }}
+          />
 
-        {/* Welcome copy — staggers in after the orb (or appears at once on RM). */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
-            opacity: copyVisible ? 1 : 0,
-            transform: copyVisible || reduceMotion ? "translateY(0)" : "translateY(8px)",
-            transition,
-          }}
-        >
-          <h1
+          {/* Welcome copy — staggers in after the orb (or appears at once on RM). */}
+          <div
             style={{
-              fontSize: "24px",
-              fontWeight: 300,
-              color: "#FFFDFD",
-              letterSpacing: "-0.02em",
-              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+              opacity: copyVisible ? 1 : 0,
+              transform: copyVisible || reduceMotion ? "translateY(0)" : "translateY(8px)",
+              transition,
             }}
           >
-            welcome, <b style={{ fontWeight: 500 }}>{firstName}.</b>
-          </h1>
-          <p
-            style={{
-              fontSize: "13px",
-              fontWeight: 300,
-              color: "#666",
-              lineHeight: 1.6,
-              margin: 0,
-            }}
-          >
-            this is your color. the {colorName(stellarColor)} represents you.
-          </p>
+            <h1
+              style={{
+                fontSize: "24px",
+                fontWeight: 300,
+                color: "#FFFDFD",
+                letterSpacing: "-0.02em",
+                margin: 0,
+              }}
+            >
+              welcome, <b style={{ fontWeight: 500 }}>{firstName}.</b>
+            </h1>
+            <p
+              style={{
+                fontSize: "13px",
+                fontWeight: 300,
+                color: "#666",
+                lineHeight: 1.6,
+                margin: 0,
+              }}
+            >
+              your color is {colorName(stellarColor)}.
+            </p>
+          </div>
         </div>
 
-        {/* Continue button */}
         <button
+          className="onb-action"
           onClick={handleContinue}
           style={{
             background: "transparent",
@@ -215,6 +201,7 @@ export default function WelcomePage() {
             cursor: "pointer",
             transition: reduceMotion ? "none" : "all 0.2s ease",
             fontFamily: "inherit",
+            width: "100%",
             opacity: copyVisible ? 1 : 0,
             pointerEvents: copyVisible ? "auto" : "none",
           }}
