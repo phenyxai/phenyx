@@ -29,6 +29,8 @@ import { NotificationsModal } from './notifications'
 import { ConnectionsModal } from './connections'
 import { DataManagementModal } from './data-management'
 import { AccountModal } from './account'
+import { CloseAccountModal } from './close-account'
+import { EditProfileModal } from './edit-profile'
 import { FeedbackModal } from './feedback'
 import { UpgradeModal } from './upgrade'
 
@@ -48,6 +50,8 @@ export type SettingsModalId =
   | 'my-connections'
   | 'data-management'
   | 'account'
+  | 'close-account'
+  | 'edit-profile'
   | 'feedback'
   | 'upgrade'
 
@@ -107,6 +111,8 @@ export function SettingsModalsProvider({
         {openId === 'my-connections' && <ConnectionsModal />}
         {openId === 'data-management' && <DataManagementModal />}
         {openId === 'account' && <AccountModal />}
+        {openId === 'close-account' && <CloseAccountModal />}
+        {openId === 'edit-profile' && <EditProfileModal />}
         {openId === 'feedback' && <FeedbackModal />}
         {openId === 'upgrade' && <UpgradeModal />}
       </Dialog>
@@ -260,7 +266,7 @@ export function DangerButton({
 /**
  * Wraps a danger trigger with an explicit confirm step (alert-dialog). The
  * passed child is the trigger; confirming runs `onConfirm`. Used for every
- * destructive action (delete constellation data, freeze, delete account).
+ * destructive action (delete constellation, close account).
  */
 export function DangerConfirm({
   children,
@@ -330,9 +336,58 @@ export function StatusLine({
       role="status"
       aria-live="polite"
       className="text-xs"
-      style={{ color: tone === 'error' ? '#E84422' : 'var(--stellar)' }}
+      style={{ color: tone === 'error' ? '#c97a6a' : 'var(--stellar)' }}
     >
       {message}
     </p>
+  )
+}
+
+/** Inline modal error — prototype `modalErr`. Never `alert`. */
+export function ModalErr({ message }: { message: string }) {
+  if (!message) return null
+  return (
+    <p role="alert" className="text-[11.5px] leading-normal text-[#c97a6a]">
+      {message}
+    </p>
+  )
+}
+
+const fieldInputClassName =
+  'w-full border-0 border-b border-[#1a1a1a] bg-transparent px-0 py-2 text-base text-[#FFFDFD] outline-none placeholder:text-[14px] placeholder:font-light placeholder:text-[#FFFDFD]/50 focus:border-[var(--stellar)]'
+
+/** Label + input matching the v67 modal field. */
+export function ModalField({
+  label,
+  type,
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  spellCheck,
+}: {
+  label: React.ReactNode
+  type: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  autoComplete?: string
+  spellCheck?: boolean
+}) {
+  return (
+    <label className="flex flex-col gap-2">
+      <span className="text-[11.5px] font-medium tracking-[0.1em] text-[#FFFDFD]/50 uppercase">
+        {label}
+      </span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        spellCheck={spellCheck}
+        className={fieldInputClassName}
+      />
+    </label>
   )
 }

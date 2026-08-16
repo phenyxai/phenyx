@@ -4,10 +4,10 @@ import { AccountController } from "./account.controller";
 import { AccountService } from "./account.service";
 
 /**
- * PHE-42 — Account Lifecycle module (export / freeze / delete). Imports AuthModule
- * for the SupabaseAuthGuard; SupabaseService (service-role client, cascade delete)
- * and EncryptionService (owner-side Polaris decrypt on export) are provided by the
- * globally-registered SupabaseModule / CommonModule.
+ * PHE-42 / PHE-75 — Account Lifecycle module (export / close / passphrase).
+ * Freeze is gone: disconnecting through Onairos is the only stop. Imports
+ * AuthModule for the SupabaseAuthGuard and PassphraseService; SupabaseService
+ * and EncryptionService are provided by the globally-registered modules.
  */
 @Module({
   imports: [AuthModule],

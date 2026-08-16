@@ -4,9 +4,9 @@ import { ProfileController } from "./profile.controller";
 import { ProfileService } from "./profile.service";
 
 /**
- * PHE-30 / PHE-38 — Profile overview read surface. Depends on AuthModule (owner
- * guard); SupabaseModule is global. No tier gate: the profile header, snapshot,
- * and foresight are shown to every owner (the tier itself is returned in-band).
+ * PHE-30 / PHE-38 / PHE-75 — Profile overview + identity/notification writes.
+ * Depends on AuthModule (owner guard + PassphraseService); SupabaseModule is
+ * global. No tier gate. Gifted is never returned as product copy.
  */
 @Module({
   imports: [AuthModule],

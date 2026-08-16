@@ -1,23 +1,29 @@
 import { HttpException, Injectable, Logger } from "@nestjs/common";
+import { randomBytes } from "crypto";
 import { SupabaseService } from "../supabase/supabase.service";
 import { EncryptionService } from "../common/encryption.service";
+import { PassphraseService, PASSPHRASE_ALGO } from "../auth/passphrase.service";
 import {
-  AccountDeleteDto,
-  DELETE_CONFIRMATION_PHRASE,
-  isDeleteConfirmed,
+  AccountCloseDto,
+  AccountPassphraseChangeDto,
+  closeAccountError,
+  passphraseChangeError,
+  readPassphrase,
 } from "./account.dto";
 import { scrubCredentials } from "./account.redaction";
 
 /**
- * PHE-42 — Account Lifecycle service.
+ * PHE-42 / PHE-75 — Account Lifecycle service.
  *
- * Three owner-scoped operations, all keyed by the `userId` the guard resolved
- * from the bearer (never the request body):
+ * Owner-scoped operations, all keyed by the `userId` the guard resolved from
+ * the bearer (never the request body):
  *   • export   — a single portable JSON dump of everything observed about the
  *                owner, with Polaris turns decrypted owner-side and a hard "no
  *                token/JWT ever leaves" guarantee (see {@link scrubCredentials}).
- *   • freeze   — flip `user_profiles.frozen`; idempotent no-op when already there.
- *   • delete   — service-role delete of the auth user, cascading every owned row.
+ *   • close    — two-gate destroy: current passphrase + typed confirmation.
+ *   • passphrase — rotate the returning passphrase after proving the current one.
+ *
+ * Freeze/pause is gone: disconnecting through Onairos is the only stop.
  */
 @Injectable()
 export class AccountService {
@@ -25,7 +31,8 @@ export class AccountService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly encryption: EncryptionService
+    private readonly encryption: EncryptionService,
+    private readonly passphrase: PassphraseService
   ) {}
 
   // --------------------------------------------------------------------------
@@ -53,6 +60,9 @@ export class AccountService {
       conversations,
       messages,
       events,
+      sourceRecords,
+      signals,
+      underneath,
     ] = await Promise.all([
       supabase.from("user_profiles").select("*").eq("id", userId).maybeSingle(),
       supabase.from("user_persona").select("*").eq("user_id", userId).maybeSingle(),
@@ -96,6 +106,21 @@ export class AccountService {
         .select("*")
         .eq("user_id", userId)
         .order("occurred_at", { ascending: true }),
+      supabase
+        .from("source_records")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("signals")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("underneath_readings")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true }),
     ]);
 
     const bundle: Record<string, unknown> = {
@@ -103,8 +128,7 @@ export class AccountService {
         user_id: userId,
         exported_at: new Date().toISOString(),
         format: "phenyx.account.export.v1",
-        // States plainly what the bundle intentionally never contains.
-        note: "Owner data export. Contains no authentication tokens or JWTs. Onairos snapshots are the redacted ones stored at connect time; Polaris message bodies are decrypted for the owner.",
+        note: "Owner export. Contains no authentication tokens or JWTs. Onairos snapshots are the redacted ones stored at connect time; Polaris message bodies are decrypted for the owner.",
       },
       profile: profile.data ?? null,
       persona: persona.data ?? null,
@@ -116,10 +140,11 @@ export class AccountService {
       polaris_conversations: conversations.data ?? [],
       polaris_messages: this.decryptMessages(messages.data ?? []),
       events: events.data ?? [],
+      source_records: sourceRecords.error ? [] : sourceRecords.data ?? [],
+      signals: signals.error ? [] : signals.data ?? [],
+      underneath_readings: underneath.error ? [] : underneath.data ?? [],
     };
 
-    // Defense in depth: strip any credential-shaped key at any depth before the
-    // bundle leaves the service, regardless of upstream schema drift.
     return scrubCredentials(bundle);
   }
 
@@ -146,90 +171,134 @@ export class AccountService {
   }
 
   // --------------------------------------------------------------------------
-  // Freeze / unfreeze
+  // Close
   // --------------------------------------------------------------------------
 
   /**
-   * Flip `user_profiles.frozen`. Idempotent: freezing an already-frozen account
-   * (or unfreezing an already-active one) is a no-op that still returns success
-   * with `changed: false`.
+   * Permanently close the account. Checks run in fill order: passphrase first,
+   * then the typed confirmation phrase. Rejected (400) before anything is
+   * touched. Deletes the auth user via the service role, which cascades to every
+   * per-user table. Irreversible. Logs only `{ user_id, timestamp }` — never any
+   * content.
    */
-  async setFrozen(
+  async closeAccount(
     userId: string,
-    frozen: boolean
-  ): Promise<{ frozen: boolean; changed: boolean }> {
-    const supabase = this.supabaseService.getClient();
-
-    const { data: current, error: readErr } = await supabase
-      .from("user_profiles")
-      .select("frozen")
-      .eq("id", userId)
-      .maybeSingle();
-    if (readErr) {
-      this.logger.error(`freeze read failed for ${userId}: ${readErr.message}`);
-      throw new HttpException({ error: "freeze failed" }, 500);
-    }
-    if (!current) {
-      throw new HttpException({ error: "profile not found" }, 404);
-    }
-
-    if (current.frozen === frozen) {
-      return { frozen, changed: false }; // already in the requested state.
-    }
-
-    const { error: updateErr } = await supabase
-      .from("user_profiles")
-      .update({ frozen })
-      .eq("id", userId);
-    if (updateErr) {
-      this.logger.error(`freeze update failed for ${userId}: ${updateErr.message}`);
-      throw new HttpException({ error: "freeze failed" }, 500);
-    }
-
-    this.logger.log(
-      JSON.stringify({ event: frozen ? "account_frozen" : "account_unfrozen", user_id: userId, ts: new Date().toISOString() })
-    );
-    return { frozen, changed: true };
-  }
-
-  // --------------------------------------------------------------------------
-  // Delete
-  // --------------------------------------------------------------------------
-
-  /**
-   * Permanently delete the account. Requires the exact typed confirmation phrase
-   * in the body — rejected (400) without it, before anything is touched. Deletes
-   * the auth user via the service role, which cascades to every per-user table
-   * (all declare `on delete cascade` on auth.users). Irreversible. Logs only
-   * `{ user_id, timestamp }` — never any content.
-   */
-  async deleteAccount(
-    userId: string,
-    body: AccountDeleteDto | undefined
+    body: AccountCloseDto | undefined
   ): Promise<{ deleted: true }> {
-    if (!isDeleteConfirmed(body)) {
+    const passphrase = readPassphrase(body?.passphrase);
+    const fieldError = closeAccountError(passphrase, body?.confirmation);
+    if (fieldError) {
+      throw new HttpException({ error: fieldError }, 400);
+    }
+
+    const verified = await this.verifyCurrentPassphrase(userId, passphrase);
+    if (!verified) {
       throw new HttpException(
-        {
-          error: "confirmation required",
-          detail: `send { "confirmation": "${DELETE_CONFIRMATION_PHRASE}" } to permanently delete this account`,
-        },
+        { error: "enter your passphrase to confirm it is you." },
         400
       );
     }
 
     const supabase = this.supabaseService.getClient();
-    // Service-role auth-user delete → ON DELETE CASCADE removes every owned row
-    // (profile, constellation, observations, traits, onairos, polaris, events, …).
     const { error } = await supabase.auth.admin.deleteUser(userId);
     if (error) {
-      this.logger.error(`account delete failed for ${userId}: ${error.message}`);
-      throw new HttpException({ error: "delete failed" }, 500);
+      this.logger.error(`account close failed for ${userId}: ${error.message}`);
+      throw new HttpException({ error: "could not close the account." }, 500);
     }
 
-    // Terminal audit — user id + timestamp only, never content.
     this.logger.log(
       JSON.stringify({ event: "account_deleted", user_id: userId, ts: new Date().toISOString() })
     );
     return { deleted: true };
+  }
+
+  // --------------------------------------------------------------------------
+  // Passphrase change
+  // --------------------------------------------------------------------------
+
+  async changePassphrase(
+    userId: string,
+    body: AccountPassphraseChangeDto | undefined
+  ): Promise<{ updated: true }> {
+    const current = readPassphrase(body?.currentPassphrase);
+    const next = readPassphrase(body?.newPassphrase);
+    const fieldError = passphraseChangeError(current, next);
+    if (fieldError) {
+      throw new HttpException({ error: fieldError }, 400);
+    }
+
+    const verified = await this.verifyCurrentPassphrase(userId, current);
+    if (!verified) {
+      throw new HttpException(
+        { error: "enter your current passphrase to confirm it is you." },
+        400
+      );
+    }
+
+    const newHash = await this.passphrase.hash(next);
+    const supabase = this.supabaseService.getClient();
+    const { error: updateErr } = await supabase
+      .from("user_profiles")
+      .update({ passphrase_hash: newHash, passphrase_algo: PASSPHRASE_ALGO })
+      .eq("id", userId);
+    if (updateErr) {
+      this.logger.error(`passphrase change failed for ${userId}: ${updateErr.message}`);
+      throw new HttpException({ error: "could not update your passphrase." }, 500);
+    }
+
+    // Rotate the unused GoTrue password so existing sessions must re-enter.
+    const { error: rotateErr } = await supabase.auth.admin.updateUserById(userId, {
+      password: randomBytes(32).toString("hex"),
+    });
+    if (rotateErr) {
+      this.logger.error(`session rotate after passphrase change failed: ${rotateErr.message}`);
+    }
+
+    return { updated: true };
+  }
+
+  /** True when the typed passphrase matches the stored Argon2id hash. */
+  async verifyCurrentPassphrase(userId: string, passphrase: string): Promise<boolean> {
+    if (!passphrase.trim()) return false;
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("passphrase_hash")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error || !data?.passphrase_hash) return false;
+    return this.passphrase.verify(data.passphrase_hash as string, passphrase);
+  }
+
+  /**
+   * Remove constellation content (points, observations, polaris history, traits,
+   * v66 records) while keeping the account and profile. Irreversible.
+   */
+  async clearConstellation(userId: string): Promise<{ cleared: true }> {
+    const supabase = this.supabaseService.getClient();
+    const tables = [
+      "underneath_readings",
+      "artifact_observations",
+      "generated_artifacts",
+      "observation_signals",
+      "area_signal_memberships",
+      "areas",
+      "signal_source_records",
+      "signals",
+      "source_records",
+      "polaris_messages",
+      "polaris_conversations",
+      "observations",
+      "user_traits",
+      "constellation_points",
+      "constellation_state",
+    ];
+    for (const table of tables) {
+      const { error } = await supabase.from(table).delete().eq("user_id", userId);
+      if (error) {
+        this.logger.error(`constellation clear ${table} failed: ${error.message}`);
+      }
+    }
+    return { cleared: true };
   }
 }

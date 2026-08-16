@@ -45,8 +45,11 @@ export function FeedbackModal() {
   }
 
   return (
-    <SettingsDialogContent aria-describedby={undefined}>
-      <ModalHeading title="share feedback" />
+    <SettingsDialogContent>
+      <ModalHeading
+        title="share feedback"
+        subtitle="your feedback directly shapes how PHENYX develops. tell us what is working, what is not, and what you want to see."
+      />
 
       <div
         role="radiogroup"

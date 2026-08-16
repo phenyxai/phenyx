@@ -3,103 +3,60 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 
-import { apiFetch } from '@/lib/api-client'
 import { supabaseBrowser as supabase } from '@/lib/supabase-browser'
 import {
-  DangerConfirm,
   ModalHeading,
   SettingsDialogContent,
-  StatusLine,
+  useSettingsModals,
 } from './modal-host'
 
 const rowButtonClassName =
-  'w-full rounded-lg border border-[#1C1C1C] bg-[#0A0A0A] px-4 py-3 text-left text-xs text-[#aaa] transition-colors hover:border-[#333] hover:text-[#FFFDFD] disabled:cursor-not-allowed disabled:opacity-50'
+  'w-full rounded-lg border border-[#282828] bg-transparent px-4 py-3 text-left text-[11px] text-[#ccc] transition-colors hover:border-[#333] hover:text-[#FFFDFD]'
 
 const dangerRowClassName =
-  'w-full rounded-lg border border-[#3a1010] bg-transparent px-4 py-3 text-left text-xs text-[#6a2020] transition-colors hover:bg-[#3a1010] hover:text-[#FFFDFD] disabled:cursor-not-allowed disabled:opacity-50'
+  'w-full rounded-lg border border-[#5a2a2a] bg-transparent px-4 py-3 text-left text-[11px] text-[#c97a6a] transition-colors hover:bg-[#3a1010] hover:text-[#FFFDFD]'
 
 /**
- * account modal — log out (immediate), plus freeze and delete which each sit
- * behind an explicit danger confirm step before the backend job runs.
+ * account — sign out keeps everything as it is. closing opens the two-gate
+ * close-account screen. There is no pause or freeze.
  */
 export function AccountModal() {
   const router = useRouter()
-  const [status, setStatus] = React.useState('')
-  const [error, setError] = React.useState('')
+  const { openModal } = useSettingsModals()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
 
-  const handleFreeze = async () => {
-    setStatus('')
-    setError('')
-    try {
-      const res = await apiFetch('/account/freeze', { method: 'POST' })
-      if (!res.ok) throw new Error('failed')
-      setStatus('your account is frozen. data reading is paused.')
-    } catch {
-      setError('could not freeze your account. please try again.')
-    }
-  }
-
-  const handleDelete = async () => {
-    setStatus('')
-    setError('')
-    try {
-      const res = await apiFetch('/account', {
-        method: 'DELETE',
-        body: JSON.stringify({ confirm: 'DELETE' }),
-      })
-      if (!res.ok) throw new Error('failed')
-      await supabase.auth.signOut()
-      router.push('/')
-    } catch {
-      setError('could not delete your account. please try again.')
-    }
-  }
-
   return (
     <SettingsDialogContent>
-      <ModalHeading title="account" subtitle="manage your account status." />
+      <ModalHeading
+        title="account"
+        subtitle="signing out keeps everything as it is. closing the account does not."
+      />
 
-      <div className="flex flex-col gap-2">
+      <button type="button" onClick={handleLogout} className={rowButtonClassName}>
+        sign out
+      </button>
+
+      <div className="mt-6 border-t border-[#1c1414] pt-4">
+        <p className="mb-2 text-[11.5px] font-semibold tracking-[0.12em] text-[#a06054] uppercase">
+          closing your account
+        </p>
+        <p className="mb-3 text-[11.5px] leading-relaxed text-[#FFFDFD]/55">
+          this removes your constellation, every observation, and your polaris
+          history. it cannot be undone, so export first if you want to keep any
+          of it.
+        </p>
         <button
           type="button"
-          onClick={handleLogout}
-          className={rowButtonClassName}
+          onClick={() => openModal('close-account')}
+          className={dangerRowClassName}
         >
-          log out
+          close my account
         </button>
-
-        <DangerConfirm
-          title="freeze account?"
-          description="this pauses all data reading. your constellation and observations are retained and remain readable. you can unfreeze at any time."
-          confirmLabel="freeze account"
-          cancelLabel="keep active"
-          onConfirm={handleFreeze}
-        >
-          <button type="button" className={dangerRowClassName}>
-            freeze account, pause all data reading
-          </button>
-        </DangerConfirm>
-
-        <DangerConfirm
-          title="delete account and all data?"
-          description="this permanently removes your account, your constellation, and every observation. this cannot be undone."
-          confirmLabel="delete everything"
-          cancelLabel="keep my account"
-          onConfirm={handleDelete}
-        >
-          <button type="button" className={dangerRowClassName}>
-            delete account and all data
-          </button>
-        </DangerConfirm>
       </div>
-
-      {status && <StatusLine message={status} />}
-      {error && <StatusLine message={error} tone="error" />}
     </SettingsDialogContent>
   )
 }

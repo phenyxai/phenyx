@@ -3,151 +3,112 @@
 import * as React from 'react'
 
 import { apiFetch } from '@/lib/api-client'
+import { OnairosButtonWrapper } from '@/components/onairos-button-wrapper'
+import { clearOnairosClientToken } from '@/lib/onairos'
+import { redactOnairosForProfile } from '@/lib/onairos-snapshot'
+import {
+  buildOnairosTraitObject,
+  normalizeOnairosResult,
+} from '@/lib/onairos-result'
+import type { OnairosCompleteData } from 'onairos'
 import {
   ModalHeading,
   SettingsDialogContent,
   StatusLine,
 } from './modal-host'
 
-/** Platforms PHENYX can read through Onairos. Labels render verbatim, lowercase. */
-const ALL_PLATFORMS = [
-  'instagram',
-  'spotify',
-  'youtube',
-  'linkedin',
-  'reddit',
-] as const
-
-type Platform = (typeof ALL_PLATFORMS)[number]
-
-const rowClassName =
-  'flex items-center justify-between gap-4 rounded-lg border border-[#1C1C1C] bg-[#0A0A0A] px-3 py-2.5'
-
 /**
- * my connections modal — the connected-platform list (each with a disconnect
- * action) and the available-platform list (each with a connect action).
- * Connect/disconnect call the Onairos endpoints; the local lists update
- * optimistically and tolerate a not-yet-live backend.
+ * my connections — currently connected tags and a single Onairos CTA.
+ * Add/remove happens through Onairos; there is no in-app pause or disconnect.
  */
 export function ConnectionsModal() {
-  const [connected, setConnected] = React.useState<Platform[]>([])
-  const [pending, setPending] = React.useState<Platform | null>(null)
+  const [connected, setConnected] = React.useState<string[]>([])
   const [error, setError] = React.useState('')
 
-  React.useEffect(() => {
-    let active = true
-    ;(async () => {
-      try {
-        const res = await apiFetch('/onairos/connections')
-        if (!res.ok) return
-        const body = (await res.json()) as {
-          connections?: { platform: string; status?: string }[]
-        }
-        if (!active) return
-        const live = (body.connections ?? [])
+  const load = React.useCallback(async () => {
+    try {
+      const res = await apiFetch('/onairos/connections')
+      if (!res.ok) return
+      const body = (await res.json()) as {
+        connections?: { platform: string; status?: string }[]
+      }
+      setConnected(
+        (body.connections ?? [])
           .filter((c) => c.status !== 'disconnected')
           .map((c) => c.platform)
-          .filter((p): p is Platform =>
-            (ALL_PLATFORMS as readonly string[]).includes(p),
-          )
-        setConnected(live)
-      } catch {
-        // backend not live yet — start from no connections.
-      }
-    })()
-    return () => {
-      active = false
+          .filter(Boolean),
+      )
+    } catch {
+      // backend not live yet
     }
   }, [])
 
-  const available = ALL_PLATFORMS.filter((p) => !connected.includes(p))
+  React.useEffect(() => {
+    void load()
+  }, [load])
 
-  const connect = async (platform: Platform) => {
-    setPending(platform)
-    setError('')
-    try {
-      const res = await apiFetch('/onairos/connect', {
+  const handleComplete = (result: OnairosCompleteData) => {
+    const normalized = normalizeOnairosResult(result)
+    const platforms = normalized.platforms
+    const redacted = redactOnairosForProfile(buildOnairosTraitObject(normalized))
+    if (platforms.length >= 1) {
+      apiFetch('/onairos/connect', {
         method: 'POST',
-        body: JSON.stringify({ platform }),
+        body: JSON.stringify({
+          platforms,
+          trait_object: redacted,
+          token: (result as { token?: string }).token,
+          trigger: 'platform_refresh',
+        }),
       })
-      if (!res.ok) throw new Error('failed')
-      setConnected((prev) => [...prev, platform])
-    } catch {
-      setError(`could not connect ${platform}. please try again.`)
-    } finally {
-      setPending(null)
+        .then(() => load())
+        .catch(() => {
+          setError('could not refresh connections. please try again.')
+        })
     }
-  }
-
-  const disconnect = async (platform: Platform) => {
-    setPending(platform)
-    setError('')
-    try {
-      const res = await apiFetch('/onairos/disconnect', {
-        method: 'POST',
-        body: JSON.stringify({ platform }),
-      })
-      if (!res.ok) throw new Error('failed')
-      setConnected((prev) => prev.filter((p) => p !== platform))
-    } catch {
-      setError(`could not disconnect ${platform}. please try again.`)
-    } finally {
-      setPending(null)
-    }
+    clearOnairosClientToken()
   }
 
   return (
     <SettingsDialogContent>
       <ModalHeading
         title="my connections"
-        subtitle="connected platforms feed your constellation. disconnecting stops new data. previous patterns are retained."
+        subtitle="connected platforms feed your constellation. manage every connection in one place through onairos."
       />
 
-      <section aria-label="connected platforms" className="flex flex-col gap-2">
-        <h3 className="text-[10px] tracking-[0.12em] text-[var(--stellar)] uppercase">
-          connected
-        </h3>
+      <section aria-label="currently connected" className="flex flex-col gap-2">
+        <p className="text-[9px] tracking-[0.14em] text-[#FFFDFD]/55 uppercase">
+          currently connected
+        </p>
         {connected.length === 0 ? (
           <p className="text-xs text-[#555]">no platforms connected.</p>
         ) : (
-          connected.map((platform) => (
-            <div key={platform} className={rowClassName}>
-              <span className="text-xs text-[#FFFDFD]">{platform}</span>
-              <button
-                type="button"
-                onClick={() => disconnect(platform)}
-                disabled={pending === platform}
-                className="text-[11px] text-[#666] transition-colors hover:text-[#FFFDFD] disabled:opacity-50"
+          <div className="flex flex-wrap gap-2">
+            {connected.map((platform) => (
+              <span
+                key={platform}
+                className="rounded-full border border-[#242424] bg-[#0d0d0d] px-3 py-1 text-[11px] lowercase text-[#FFFDFD]/70"
               >
-                {pending === platform ? 'disconnecting…' : 'disconnect'}
-              </button>
-            </div>
-          ))
+                {platform}
+              </span>
+            ))}
+          </div>
         )}
       </section>
 
-      <section aria-label="available platforms" className="flex flex-col gap-2">
-        <h3 className="text-[10px] tracking-[0.12em] text-[#555] uppercase">
-          available
-        </h3>
-        {available.length === 0 ? (
-          <p className="text-xs text-[#555]">all platforms connected.</p>
-        ) : (
-          available.map((platform) => (
-            <div key={platform} className={rowClassName}>
-              <span className="text-xs text-[#aaa]">{platform}</span>
-              <button
-                type="button"
-                onClick={() => connect(platform)}
-                disabled={pending === platform}
-                className="text-[11px] text-[var(--stellar)] transition-colors hover:text-[#FFFDFD] disabled:opacity-50"
-              >
-                {pending === platform ? 'connecting…' : 'connect'}
-              </button>
-            </div>
-          ))
-        )}
-      </section>
+      <div className="mt-2">
+        <OnairosButtonWrapper
+          webpageName="PHENYX"
+          requestedData={['personality']}
+          buttonText="continue with onairos"
+          onComplete={handleComplete}
+        />
+      </div>
+
+      <p className="text-[11.5px] leading-relaxed text-[#FFFDFD]/50">
+        add, remove, or manage any platform directly through onairos. your
+        constellation retains the patterns already observed.
+      </p>
 
       {error && <StatusLine message={error} tone="error" />}
     </SettingsDialogContent>
