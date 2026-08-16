@@ -13,7 +13,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { makePolarisMessageProps, makeEvent, daysSince, lastVisitKey } from "./analytics.ts";
+import { makePolarisMessageProps, makeEvent, daysSince, lastVisitKey, makeObservationFeedbackProps } from "./analytics.ts";
 
 test("polaris_message props carry NO message text (privacy)", () => {
   const secret = "a private user message that must never be persisted anywhere";
@@ -73,4 +73,36 @@ test("daysSince computes whole days and handles first visit + clock skew", () =>
 
 test("lastVisitKey is namespaced per user", () => {
   assert.equal(lastVisitKey("abc"), "phenyx:abc:lastVisitTs");
+});
+
+test("observation_feedback props carry NO observation body (privacy)", () => {
+  const secret = "eight of every ten sessions begin between 1am and 4am";
+  const props = makeObservationFeedbackProps({
+    pillar: "origin",
+    signal_type: "timing",
+    verdict: "known",
+  });
+
+  assert.deepEqual(Object.keys(props).sort(), ["pillar", "signal_type", "verdict"]);
+  assert.equal(props.pillar, "origin");
+  assert.equal(props.signal_type, "timing");
+  assert.equal(props.verdict, "known");
+
+  const asRecord = props as Record<string, unknown>;
+  for (const key of ["message", "text", "body", "content", "transcript"]) {
+    assert.ok(!(key in asRecord), `props must not contain a "${key}" field`);
+  }
+  assert.ok(!JSON.stringify(props).includes(secret), "observation body leaked into props");
+});
+
+test("observation_feedback opened-only event still has no body field", () => {
+  const props = makeObservationFeedbackProps({
+    pillar: "self_creation",
+    signal_type: null,
+    opened: true,
+  });
+  assert.equal(props.opened, true);
+  assert.equal(props.signal_type, null);
+  assert.ok(!("body" in props));
+  assert.ok(!("verdict" in props));
 });

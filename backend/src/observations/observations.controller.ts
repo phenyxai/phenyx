@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
 import type { Request } from "express";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { ObservationsService } from "./observations.service";
@@ -42,5 +42,21 @@ export class ObservationsController {
       eventId: body?.eventId,
       trigger: "signal",
     });
+  }
+
+  /**
+   * PHE-72 — persist a `does this land?` verdict and/or evidence-opened flag.
+   * Body: `{ verdict: 'new'|'known'|'reading'|null, opened?: boolean }`.
+   * `verdict: null` is `change it` and deletes the row.
+   */
+  @Post(":id/feedback")
+  @UseGuards(SupabaseAuthGuard)
+  async feedback(
+    @Req() req: Request,
+    @Param("id") id: string,
+    @Body() body: { verdict?: "new" | "known" | "reading" | null; opened?: boolean }
+  ) {
+    const user = (req as any).user as { id: string };
+    return this.observations.upsertFeedback(user.id, id, body);
   }
 }

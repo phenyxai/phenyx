@@ -11,6 +11,7 @@ import {
   UnderneathReading,
   type Underneath,
 } from "@/components/phenyx/underneath-reading";
+import { ObservationFeedback } from "./observation-feedback";
 
 // ============================================================================
 // ObservationCard: collapsed Daily-feed card (PHE-70 / v67)
@@ -58,6 +59,10 @@ export interface Observation {
   under?: string | boolean | null;
   evidence?: Evidence | null;
   underneath?: Underneath | null;
+  /** v66 pattern type. Analytics only; never the observation body. */
+  signal_type?: string | null;
+  /** Persisted `does this land?` state. Null when untouched. */
+  feedback?: { verdict: "new" | "known" | "reading" | null; opened: boolean } | null;
 }
 
 const PILLAR_COLORS: Record<string, string> = {
@@ -374,8 +379,13 @@ export function ObservationCard({
               onUpgrade={() => onUpgrade?.()}
             />
           ) : null}
-          {/* PHE-72 fills `does this land?` feedback. */}
-          <div data-slot="feedback" />
+          <ObservationFeedback
+            observationId={observation.id}
+            pillar={pillarKey(observation.pillar_tag)}
+            signalType={observation.signal_type ?? null}
+            initial={observation.feedback ?? null}
+            accent={accent}
+          />
 
           <div
             style={{

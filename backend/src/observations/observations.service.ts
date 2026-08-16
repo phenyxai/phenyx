@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { HttpException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { SupabaseService } from "../supabase/supabase.service";
 import { VoiceStandardService } from "../voice-standard/voice-standard.service";
@@ -10,7 +10,6 @@ import {
   TimelineGroup,
   PILLAR_ORDER,
   isValidPillar,
-  orderCandidates,
   buildInsertRows,
   applyReadGate,
   groupTimelineByPillar,
@@ -24,6 +23,13 @@ import {
   utcDayNumber,
   type SourceRecordPreview,
 } from "./evidence";
+import {
+  applyFeedbackRanking,
+  attachFeedback,
+  parseFeedbackBody,
+  type FeedbackSignal,
+  type ObservationFeedbackState,
+} from "./feedback";
 
 /**
  * PHE-37 — Observation Generation Engine (Lane 6 foundation).
@@ -98,7 +104,7 @@ export class ObservationsService {
     const supabase = this.supabaseService.getClient();
     const capabilities = this.billing.capabilitiesFor(await this.getUserTier(userId));
 
-    const [{ data: rows }, { data: state }] = await Promise.all([
+    const [{ data: rows }, { data: state }, { data: feedbackRows }] = await Promise.all([
       supabase
         .from("observations")
         .select(
@@ -111,6 +117,10 @@ export class ObservationsService {
         .select("mantra")
         .eq("user_id", userId)
         .maybeSingle(),
+      supabase
+        .from("observation_feedback")
+        .select("observation_id,verdict,opened")
+        .eq("user_id", userId),
     ]);
 
     const withEvidence = await this.attachEvidenceHierarchy(
@@ -121,7 +131,14 @@ export class ObservationsService {
 
     return {
       mantra: (state?.mantra as string | null) ?? null,
-      observations: applyReadGate(withEvidence, capabilities),
+      observations: attachFeedback(
+        applyReadGate(withEvidence, capabilities),
+        (feedbackRows ?? []) as {
+          observation_id: string;
+          verdict: string | null;
+          opened: boolean;
+        }[]
+      ),
     };
   }
 
@@ -326,7 +343,8 @@ export class ObservationsService {
     const valid = candidates.filter(
       (c) => isValidPillar(c.pillar) && c.body.trim().length > 0 && c.signal_key.trim().length > 0
     );
-    const ordered = orderCandidates(valid);
+    // PHE-72: skip `reading` hashes (overreach) and deprioritize `known` pillars.
+    const ordered = applyFeedbackRanking(userId, valid, context.feedbackSignals);
     const rows = buildInsertRows(userId, ordered, hasFullAccess);
 
     let generated = 0;
@@ -349,6 +367,91 @@ export class ObservationsService {
       `generate(${options.trigger ?? "signal"}) user=${userId} candidates=${candidates.length} inserted=${generated} cacheRead=${cacheReadTokens ?? 0}`
     );
     return { status: "generated", generated, candidates: candidates.length, cacheReadTokens };
+  }
+
+  /**
+   * PHE-72 — persist a verdict and/or `opened`. `verdict: null` (`change it`)
+   * deletes the row. Missing/unowned observations are 404; bad bodies 400.
+   */
+  async upsertFeedback(
+    userId: string,
+    observationId: string,
+    body: unknown
+  ): Promise<ObservationFeedbackState> {
+    const parsed = parseFeedbackBody(body);
+    if (!parsed.ok) {
+      throw new HttpException({ error: parsed.error }, 400);
+    }
+    if (!observationId) {
+      throw new HttpException({ error: "observation not found" }, 404);
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const { data: observation } = await supabase
+      .from("observations")
+      .select("id")
+      .eq("id", observationId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!observation) {
+      throw new HttpException({ error: "observation not found" }, 404);
+    }
+
+    const patch = parsed.value;
+    const clearingVerdict = patch.verdict === null;
+    const markingOpened = patch.opened === true;
+
+    // `change it` deletes the row so the three buttons return.
+    if (clearingVerdict && !markingOpened) {
+      const { error } = await supabase
+        .from("observation_feedback")
+        .delete()
+        .eq("user_id", userId)
+        .eq("observation_id", observationId);
+      if (error) {
+        this.logger.error(`feedback delete failed for ${observationId}: ${error.message}`);
+        throw new HttpException({ error: "feedback failed" }, 500);
+      }
+      return { verdict: null, opened: false };
+    }
+
+    const { data: existing } = await supabase
+      .from("observation_feedback")
+      .select("verdict,opened")
+      .eq("user_id", userId)
+      .eq("observation_id", observationId)
+      .maybeSingle();
+
+    const nextVerdict =
+      patch.verdict !== undefined
+        ? patch.verdict
+        : ((existing?.verdict as ObservationFeedbackState["verdict"]) ?? null);
+    const nextOpened = markingOpened ? true : existing?.opened === true;
+
+    const { data: upserted, error } = await supabase
+      .from("observation_feedback")
+      .upsert(
+        {
+          user_id: userId,
+          observation_id: observationId,
+          verdict: nextVerdict,
+          opened: nextOpened,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,observation_id" }
+      )
+      .select("verdict,opened")
+      .maybeSingle();
+    if (error) {
+      this.logger.error(`feedback upsert failed for ${observationId}: ${error.message}`);
+      throw new HttpException({ error: "feedback failed" }, 500);
+    }
+
+    return {
+      verdict:
+        (upserted?.verdict as ObservationFeedbackState["verdict"]) ?? nextVerdict,
+      opened: upserted?.opened === true || nextOpened,
+    };
   }
 
   /**
@@ -390,7 +493,7 @@ export class ObservationsService {
   private async loadGenerationContext(userId: string): Promise<GenerationContext> {
     const supabase = this.supabaseService.getClient();
 
-    const [stateRes, traitsRes, connectionsRes, recentRes] = await Promise.all([
+    const [stateRes, traitsRes, connectionsRes, recentRes, feedbackSignals] = await Promise.all([
       supabase
         .from("constellation_state")
         .select(
@@ -417,6 +520,7 @@ export class ObservationsService {
         .eq("user_id", userId)
         .order("surfaced_at", { ascending: false })
         .limit(50),
+      this.loadFeedbackSignals(userId),
     ]);
 
     const connections = (connectionsRes.data ?? []) as {
@@ -430,6 +534,7 @@ export class ObservationsService {
       traits: (traitsRes.data ?? []) as GenerationContext["traits"],
       connections,
       recent: (recentRes.data ?? []) as GenerationContext["recent"],
+      feedbackSignals,
       hasSignal: connections.length > 0 || stateRes.data != null,
     };
   }
@@ -623,6 +728,11 @@ strict prohibitions — never break these:
       .map((r) => `- [${r.pillar}] ${r.body}${r.meta_label ? ` (${r.meta_label})` : ""}`)
       .join("\n");
 
+    const readingClaims = context.feedbackSignals
+      .filter((f) => f.verdict === "reading" && f.body)
+      .map((f) => `- [${f.pillar}] ${f.body}`)
+      .join("\n");
+
     return `USER CONSTELLATION
 archetype: ${state?.archetype ?? "unknown"}
 foresight: ${state?.foresight ?? "none"}
@@ -637,6 +747,9 @@ ${connections || "none connected"}
 
 ALREADY SURFACED OBSERVATIONS (do NOT restate any of these)
 ${alreadySurfaced || "none yet — this is the first pass"}
+
+CLAIMS FLAGGED AS A BAD READING (do NOT regenerate these patterns)
+${readingClaims || "none"}
 
 Surface only genuinely novel observations via emit_observations.`;
   }
@@ -690,6 +803,48 @@ Surface only genuinely novel observations via emit_observations.`;
     }
     this.processedEventIds.add(eventId);
   }
+
+  /**
+   * PHE-72 writer input: known/reading verdicts joined to signal_hash + pillar.
+   * Body is loaded only so the generator can skip regenerating a flagged claim;
+   * it is never returned on the daily feed's feedback object.
+   */
+  private async loadFeedbackSignals(userId: string): Promise<FeedbackSignal[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data: fb } = await supabase
+      .from("observation_feedback")
+      .select("observation_id, verdict")
+      .eq("user_id", userId)
+      .in("verdict", ["known", "reading"]);
+    const rows = (fb ?? []) as { observation_id: string; verdict: string | null }[];
+    if (rows.length === 0) return [];
+
+    const ids = rows.map((r) => r.observation_id);
+    const { data: obs } = await supabase
+      .from("observations")
+      .select("id, signal_hash, pillar, body")
+      .eq("user_id", userId)
+      .in("id", ids);
+    const byId = new Map(
+      ((obs ?? []) as { id: string; signal_hash: string; pillar: string; body: string }[]).map(
+        (o) => [o.id, o]
+      )
+    );
+
+    const out: FeedbackSignal[] = [];
+    for (const row of rows) {
+      const o = byId.get(row.observation_id);
+      if (!o) continue;
+      if (row.verdict !== "known" && row.verdict !== "reading") continue;
+      out.push({
+        signal_hash: o.signal_hash,
+        pillar: o.pillar,
+        verdict: row.verdict,
+        body: o.body,
+      });
+    }
+    return out;
+  }
 }
 
 interface GenerationContext {
@@ -712,6 +867,7 @@ interface GenerationContext {
   traits: { keyword_tags: string[] | null; insight: string | null; derived_from: string[] | null }[];
   connections: { platform: string; redacted_snapshot: Record<string, unknown> | null }[];
   recent: { pillar: string; body: string; meta_label: string | null }[];
+  feedbackSignals: FeedbackSignal[];
   hasSignal: boolean;
 }
 
