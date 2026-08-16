@@ -112,7 +112,7 @@ export default function ProfileTabPage() {
       joined: null,
       stellar_color: profile?.stellar_color ?? null,
       connected_platforms: [],
-      held: [],
+      held: pickHeldConstants([]),
       tier: isPro ? "pro" : "free",
     });
   }, [isPro]);
@@ -258,26 +258,24 @@ export default function ProfileTabPage() {
           </div>
         </div>
 
-        {held.length > 0 && (
-          <div className="mb-[52px]">
-            <SectionLabel>what has held</SectionLabel>
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-              {held.map((item) => (
-                <div
-                  key={item.title}
-                  className="rounded-xl border border-[#FFFDFD]/[0.07] bg-[#FFFDFD]/[0.008] px-[22px] py-5"
-                >
-                  <p className="mb-1.5 text-[13px] tracking-[0.01em] text-[var(--s)]">
-                    {item.title}
-                  </p>
-                  <p className="text-[13px] leading-relaxed text-[#FFFDFD]/78">
-                    {item.body}
-                  </p>
-                </div>
-              ))}
-            </div>
+        <div className="mb-[52px]">
+          <SectionLabel>what has held</SectionLabel>
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+            {held.map((item) => (
+              <div
+                key={item.title}
+                className="rounded-xl border border-[#FFFDFD]/[0.07] bg-[#FFFDFD]/[0.008] px-[22px] py-5"
+              >
+                <p className="mb-1.5 text-[13px] tracking-[0.01em] text-[var(--s)]">
+                  {item.title}
+                </p>
+                <p className="text-[13px] leading-relaxed text-[#FFFDFD]/78">
+                  {item.body}
+                </p>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
 
         <div className="mb-[52px]">
           <SectionLabel>settings</SectionLabel>
