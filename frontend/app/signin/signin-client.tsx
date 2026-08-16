@@ -7,6 +7,7 @@ import Image from "next/image";
 import { STELLAR_DEFAULT } from "@/lib/stellar";
 import { signin, otpSend, otpVerify, passphraseResetRequest } from "@/lib/api-client";
 import { supabaseBrowser as supabase, setSessionFromTokens } from "@/lib/supabase-browser";
+import { setOtpFlowContext, clearOtpFlowContext } from "@/lib/otp-flow-context";
 
 // ssignin = name + passphrase. emailcode = enter email for a one-time code.
 // otp = enter that code. sforgot = request a reset link.
@@ -60,13 +61,21 @@ export default function SignInClient() {
   }, [view]);
 
   /**
-   * Land a freshly authenticated user. returnTo wins; otherwise route by whether
-   * they already have a persona (existing constellation) or still need onboarding.
-   * Mirrors the prior signin routing — read the user id from the adopted session.
+   * Land a freshly authenticated user.
+   * - returnTo wins (deep link).
+   * - OTP started from sign-in (`_otpFlowContext='signin'`) always returns to
+   *   the product, never welcome/onboarding (PHE-77 / PHE-45).
+   * - Passphrase sign-in still routes by whether a persona already exists.
    */
-  const proceed = async () => {
+  const proceed = async (mode: "passphrase" | "otp" = "passphrase") => {
     if (returnTo) {
+      clearOtpFlowContext();
       router.push(returnTo);
+      return;
+    }
+    if (mode === "otp") {
+      clearOtpFlowContext();
+      router.push("/dashboard");
       return;
     }
     const { data: { user } } = await supabase.auth.getUser();
@@ -124,6 +133,7 @@ export default function SignInClient() {
 
     setIsLoading(true);
     try {
+      setOtpFlowContext("signin");
       await otpSend({ purpose: "signin", email: email.trim().toLowerCase() });
       setOtp("");
       setView("otp");
@@ -149,7 +159,7 @@ export default function SignInClient() {
 
       if (result.status === "ok" && result.session) {
         await setSessionFromTokens(result.session);
-        await proceed();
+        await proceed("otp");
         return;
       }
 
@@ -328,17 +338,14 @@ export default function SignInClient() {
             PHENYX
           </span>
         </Link>
-        <div className="flex items-center gap-2" style={{ fontSize: "11px" }}>
-          <span style={{ color: "#444" }}>new here?</span>
-          <Link
-            href="/join"
-            className="transition-opacity hover:opacity-100"
-            style={{ color: stellarColor, opacity: 0.8 }}
-            aria-label="create a new account"
-          >
-            join
-          </Link>
-        </div>
+        <Link
+          href="/join"
+          className="transition-opacity hover:opacity-100"
+          style={{ color: stellarColor, opacity: 0.8, fontSize: "11px" }}
+          aria-label="create an account"
+        >
+          create an account
+        </Link>
       </header>
 
       {/* Card */}
@@ -377,13 +384,23 @@ export default function SignInClient() {
                   type="password"
                   autoComplete="current-password"
                   aria-required="true"
-                  placeholder="the phrase only you know"
+                  placeholder="your personal phrase"
                   value={passphrase}
                   onChange={(e) => setPassphrase(e.target.value)}
                   style={inputStyles}
                   onFocus={onInputFocus}
                   onBlur={onInputBlur}
                 />
+                <button
+                  type="button"
+                  className="auth-field-link"
+                  onClick={() => {
+                    setView("forgot");
+                    setError("");
+                  }}
+                >
+                  forgot your passphrase?
+                </button>
               </div>
 
               {error && (
@@ -408,30 +425,17 @@ export default function SignInClient() {
               </button>
             </form>
 
-            <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="auth-form-foot">
               <button
                 type="button"
+                className="auth-form-alt"
                 onClick={() => {
+                  setOtpFlowContext("signin");
                   setView("emailcode");
                   setError("");
                 }}
-                style={linkButtonStyles}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
               >
-                sign in with email code
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setView("forgot");
-                  setError("");
-                }}
-                style={linkButtonStyles}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
-              >
-                forgot your passphrase?
+                sign in with an email code instead
               </button>
             </div>
           </>

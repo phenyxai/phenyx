@@ -7,6 +7,7 @@ import Image from "next/image";
 import { STELLAR_DEFAULT } from "@/lib/stellar";
 import { signupStart, otpSend, otpVerify } from "@/lib/api-client";
 import { setSessionFromTokens } from "@/lib/supabase-browser";
+import { setOtpFlowContext, clearOtpFlowContext } from "@/lib/otp-flow-context";
 
 // s1 = account creation (name + email + passphrase); s2 = email OTP.
 type Screen = "s1" | "s2";
@@ -104,6 +105,7 @@ export default function JoinPage() {
     setIsLoading(true);
     try {
       localStorage.setItem("phenyx_stellar_color", stellarColor);
+      setOtpFlowContext("signup");
 
       const { draft_id, maskedEmail: masked } = await signupStart({
         name: trimmedName,
@@ -150,6 +152,7 @@ export default function JoinPage() {
       if (result.status === "ok" && result.session) {
         await setSessionFromTokens(result.session);
         sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+        clearOtpFlowContext();
         router.push("/welcome");
         return;
       }
@@ -507,7 +510,7 @@ export default function JoinPage() {
                   type="email"
                   autoComplete="email"
                   aria-required="true"
-                  placeholder="we'll send a verification code"
+                  placeholder="we'll send a code to confirm it is you"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={inputStyles}
@@ -534,8 +537,7 @@ export default function JoinPage() {
                   onBlur={onInputBlur}
                 />
                 <p style={{ fontSize: "10px", color: "#444", marginTop: "8px", lineHeight: 1.6 }}>
-                  yours to keep. you&apos;ll use it alongside your name every time
-                  you return.
+                  used with your name each time you return.
                 </p>
               </div>
 

@@ -30,7 +30,7 @@ export const STELLAR = [
 export type StellarColor = (typeof STELLAR)[number];
 
 // Every palette hex maps to a human name so the welcome copy
-// ("the {colorName} represents you.") never falls back to the generic word.
+// ("your color is {colorName}.") never falls back to the generic word.
 export const STELLAR_NAMES: Record<string, string> = {
   "#CC3300": "deep red",
   "#E84422": "vermilion",

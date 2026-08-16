@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { OnairosCompleteData } from "onairos";
 import { OnairosButtonWrapper } from "@/components/onairos-button-wrapper";
 import { clearOnairosClientToken } from "@/lib/onairos";
@@ -29,11 +30,13 @@ const STELLAR_PALETTE = [
 // router and the DB enum added in
 //   supabase/migrations/20260626000000_user_profiles_onboarding_step.sql
 //
-// Flow: welcome (separate /welcome route) → fork → manifesto → polaris_intro →
-//       connect → synthesizing → reveal → done (→ /constellation dashboard).
+// Flow: welcome (separate /welcome route) → fork → manifesto (s4B) →
+//       polaris_intro (s5B) → connect (s6 Onairos) → synthesizing → reveal →
+//       done (→ Daily). s4A/s5A ship but are not on the live path.
 //
-// The fork branches: "show me how it works" → manifesto; the skip link jumps
-// straight to connect, bypassing manifesto + polaris_intro (not marked seen).
+// The fork branches: "show me how it works" → manifesto; "skip intro" jumps
+// straight to s6 (Onairos), bypassing manifesto + polaris_intro. It does NOT
+// skip connections.
 // ============================================================================
 type OnboardingStep =
   | "welcome"
@@ -388,6 +391,11 @@ export default function OnboardingPage() {
   }
 
   const showBack = Boolean(PREV_STEP[step]);
+  const isWalkthrough =
+    step === "fork" ||
+    step === "manifesto" ||
+    step === "polaris_intro" ||
+    step === "connect";
 
   return (
     <main style={{ minHeight: "100vh", background: "#0A0A0A", position: "relative", overflow: "hidden" }}>
@@ -445,37 +453,41 @@ export default function OnboardingPage() {
           transition (no stale animation/visibility state on back-nav). */}
       <div
         key={step}
-        style={{
-          position: "relative",
-          zIndex: 1,
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "24px"
-        }}
+        className={isWalkthrough ? "onb-v67" : undefined}
+        style={
+          isWalkthrough
+            ? undefined
+            : {
+                position: "relative",
+                zIndex: 1,
+                minHeight: "100vh",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "24px",
+              }
+        }
       >
         {/* ================================================================ */}
         {/* s3b — NEW/FAMILIAR FORK (PHE-14, fully implemented)              */}
         {/* ================================================================ */}
         {step === "fork" && (
-          <div style={{ textAlign: "center", maxWidth: 440 }}>
+          <div className="onb-block onb-block--sm">
             <p
-              className="animate-fade-in"
+              className="onb-ey animate-fade-in"
               style={{
                 fontSize: "10px",
                 color: stellarColor,
                 textTransform: "uppercase",
                 letterSpacing: "0.22em",
-                marginBottom: "20px"
               }}
             >
               before we continue
             </p>
 
             <h1
-              className="animate-fade-in"
+              className="onb-h1 animate-fade-in"
               style={{
                 animationDelay: "150ms",
                 animationFillMode: "both",
@@ -484,14 +496,13 @@ export default function OnboardingPage() {
                 color: "#FFFDFD",
                 letterSpacing: "0.01em",
                 lineHeight: 1.4,
-                marginBottom: "20px"
               }}
             >
               new here, or already know phenyx?
             </h1>
 
             <p
-              className="animate-fade-in"
+              className="onb-sub animate-fade-in"
               style={{
                 animationDelay: "300ms",
                 animationFillMode: "both",
@@ -499,17 +510,16 @@ export default function OnboardingPage() {
                 fontWeight: 300,
                 color: "#888",
                 lineHeight: 1.7,
-                marginBottom: "40px"
               }}
             >
               {"if you've used phenyx before, skip straight to connecting your platforms. otherwise, it's worth a minute to see how this works."}
             </p>
 
-            {/* Primary: show me how it works → manifesto (s4) */}
+            {/* Primary: show me how it works → manifesto (s4B) */}
             <button
               onClick={() => void setOnboardingStep("manifesto")}
               aria-label="show me how it works"
-              className="animate-fade-in"
+              className="onb-action animate-fade-in"
               style={{
                 animationDelay: "450ms",
                 animationFillMode: "both",
@@ -522,7 +532,8 @@ export default function OnboardingPage() {
                 fontWeight: 500,
                 cursor: "pointer",
                 fontFamily: "inherit",
-                transition: "all 0.2s ease"
+                transition: "all 0.2s ease",
+                width: "100%",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = "#FFFDFD";
@@ -545,11 +556,11 @@ export default function OnboardingPage() {
               show me how it works
             </button>
 
-            {/* Skip: connect my platforms → connect (s6), bypassing s4 + s5 */}
-            <div style={{ marginTop: "24px" }}>
+            {/* Skip intro → s6 Onairos, not skip connections */}
+            <div className="onb-skip">
               <button
                 onClick={() => void setOnboardingStep("connect")}
-                aria-label="skip the intro, connect my platforms"
+                aria-label="skip intro"
                 className="animate-fade-in"
                 style={{
                   animationDelay: "600ms",
@@ -560,7 +571,8 @@ export default function OnboardingPage() {
                   fontSize: "12px",
                   cursor: "pointer",
                   fontFamily: "inherit",
-                  transition: "color 0.2s ease"
+                  transition: "color 0.2s ease",
+                  width: "100%",
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = "#999")}
                 onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
@@ -572,7 +584,7 @@ export default function OnboardingPage() {
                   e.currentTarget.style.outline = "none";
                 }}
               >
-                skip the intro, connect my platforms
+                skip intro
               </button>
             </div>
           </div>
@@ -651,11 +663,11 @@ export default function OnboardingPage() {
         {/* The cinematic payoff: a full-viewport canvas particle animation   */}
         {/* that materializes the constellation in 5 phases                  */}
         {/* (APPEAR→FLOAT→CONDENSE→LINES→REVEAL) into 7 nodes + 7 canonical    */}
-        {/* edges, lands the reveal line, and AUTO-ADVANCES to the dashboard. */}
+        {/* edges, lands the reveal line, and AUTO-ADVANCES to Daily.         */}
         {/* It reads `constellationState` for active-node glow intensity      */}
         {/* (null → neutral fallback). `prefers-reduced-motion` snaps the     */}
         {/* finished constellation + line in ≤2s. On auto-advance it sets     */}
-        {/* onboarding_step = done BEFORE routing to /constellation (keep this */}
+        {/* onboarding_step = done BEFORE routing to /dashboard (Daily);      */}
         {/* order so the dashboard never bounces back into onboarding); the   */}
         {/* transition is independent of synthesis outcome. RevealScreen owns  */}
         {/* its own full-screen canvas + rAF loop + label interval and cleans  */}
@@ -703,8 +715,8 @@ export default function OnboardingPage() {
 // Node POSITIONS are fixed (never depend on score) — only glow intensity does.
 // ============================================================================
 
-// The exact reveal line (note "what", NOT "who" — changed from v1).
-const REVEAL_LINE = "this is what you have always been.";
+// The exact reveal line (v67 formation end card). Auto-advances to Daily.
+const REVEAL_LINE = "none of it is new. it is only in one piece now.";
 
 // Phase timing constants (verbatim from the ticket / prototype :1834-1843).
 const T_APPEAR = 2000;
@@ -1169,16 +1181,15 @@ function RevealScreen({
 }
 
 // ============================================================================
-// s6 Onairos Platform Connect (PHE-17)
+// s6 Onairos Platform Connect (PHE-17, copy patched in PHE-77)
 // ----------------------------------------------------------------------------
-// Verbatim, all-lowercase framing + 4 data-point bullets + the "sign in with
-// onairos" CTA (the real Onairos SDK, mounted via OnairosButtonWrapper). The
-// success path (validate >=1 platform → redact → persist → synthesize → advance)
-// lives in the parent's handleOnairosComplete; this screen only renders + wires
-// the SDK and surfaces the 0-platform notice.
+// Verbatim v67 framing: "your signals are the source of truth.", three promises,
+// privacy-policy link, and a single "continue with onairos" CTA (the real
+// Onairos SDK via OnairosButtonWrapper). No local platform picker or permission
+// checkboxes. The success path lives in handleOnairosComplete.
 //
-// Self-contained: the s3b skip-path lands here directly, so it assumes no prior
-// manifesto / polaris_intro state.
+// Self-contained: the s3b skip-intro path lands here directly, so it assumes no
+// prior manifesto / polaris_intro state.
 //
 // NOTE (.hidden CSS-collision guard, acceptance criterion): the Onairos SDK
 // leaks a global `.hidden` class into the page. PHENYX must NOT rely on a bare
@@ -1186,11 +1197,10 @@ function RevealScreen({
 // (`max-lg:hidden`) / scoped variants instead. Enforced via eslint.config.mjs
 // (no-restricted-syntax) + components/phenyx/CONVENTIONS.md.
 // ============================================================================
-const ONAIROS_BULLETS = [
-  "we never store your raw data. it's processed and immediately discarded.",
-  "everything your constellation produces belongs to you, always.",
-  "you can disconnect any platform at any time, directly through onairos.",
-  "connect at least 3 for the fuller picture, but you can start with one and add more whenever you want.",
+const ONAIROS_PROMISES = [
+  "read once, then discarded. nothing kept.",
+  "what phenyx finds belongs to you.",
+  "disconnect any platform, any time.",
 ] as const;
 
 function ConnectScreen({
@@ -1205,22 +1215,21 @@ function ConnectScreen({
   onBack: () => void;
 }) {
   return (
-    <div style={{ textAlign: "center", maxWidth: 520, width: "100%" }}>
+    <div className="onb-block">
       <p
-        className="animate-fade-in"
+        className="onb-ey animate-fade-in"
         style={{
           fontSize: "10px",
           color: stellarColor,
           textTransform: "uppercase",
           letterSpacing: "0.22em",
-          marginBottom: "20px",
         }}
       >
         powered by onairos
       </p>
 
       <h1
-        className="animate-fade-in"
+        className="onb-h1 animate-fade-in"
         style={{
           animationDelay: "150ms",
           animationFillMode: "both",
@@ -1229,14 +1238,13 @@ function ConnectScreen({
           color: "#FFFDFD",
           letterSpacing: "0.01em",
           lineHeight: 1.4,
-          marginBottom: "24px",
         }}
       >
-        your data is the source of truth.
+        your signals are the <b style={{ fontWeight: 600 }}>source of truth.</b>
       </h1>
 
       <p
-        className="animate-fade-in"
+        className="onb-sub animate-fade-in"
         style={{
           animationDelay: "300ms",
           animationFillMode: "both",
@@ -1244,33 +1252,32 @@ function ConnectScreen({
           fontWeight: 300,
           color: "#888",
           lineHeight: 1.7,
-          marginBottom: "32px",
         }}
       >
-        onairos reads the signal layer beneath your platforms. not what you posted, the patterns underneath. what you play at 2am. what you search and don&apos;t act on. what you return to without thinking.
+        onairos reads the layer beneath your platforms. not what you posted, what sits underneath it.
       </p>
 
-      {/* 4 data-point bullets (exact order) */}
       <ul
-        className="animate-fade-in"
+        className="onb-stack animate-fade-in"
         style={{
           animationDelay: "450ms",
           animationFillMode: "both",
           listStyle: "none",
           padding: 0,
-          margin: "0 auto 32px",
+          marginLeft: "auto",
+          marginRight: "auto",
           maxWidth: 440,
           textAlign: "left",
         }}
       >
-        {ONAIROS_BULLETS.map((bullet, i) => (
+        {ONAIROS_PROMISES.map((promise, i) => (
           <li
             key={i}
             style={{
               display: "flex",
               alignItems: "flex-start",
               gap: "12px",
-              marginBottom: i === ONAIROS_BULLETS.length - 1 ? 0 : "16px",
+              marginBottom: i === ONAIROS_PROMISES.length - 1 ? 0 : "16px",
             }}
           >
             <span
@@ -1292,13 +1299,36 @@ function ConnectScreen({
                 lineHeight: 1.6,
               }}
             >
-              {bullet}
+              {promise}
             </span>
           </li>
         ))}
       </ul>
 
-      {/* 0-platform prompt — rendered only when the SDK returned no platforms. */}
+      <p
+        className="animate-fade-in"
+        style={{
+          animationDelay: "500ms",
+          animationFillMode: "both",
+          fontSize: "12px",
+          fontWeight: 300,
+          color: "#555",
+          lineHeight: 1.6,
+          marginTop: "14px",
+        }}
+      >
+        all of it is written out in the{" "}
+        <Link
+          href="/privacy-policy"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: stellarColor, textDecoration: "underline", textUnderlineOffset: "3px" }}
+        >
+          privacy policy
+        </Link>
+        .
+      </p>
+
       {notice && (
         <p
           role="alert"
@@ -1308,36 +1338,25 @@ function ConnectScreen({
             fontWeight: 400,
             color: "#E84422",
             lineHeight: 1.5,
-            marginBottom: "20px",
+            marginTop: "16px",
           }}
         >
           {notice}
         </p>
       )}
 
-      {/* CTA — the real Onairos SDK mounts behind "sign in with onairos". */}
-      <div
-        className="animate-fade-in"
-        style={{
-          animationDelay: "600ms",
-          animationFillMode: "both",
-          display: "flex",
-          justifyContent: "center",
-          marginBottom: "24px",
-        }}
-      >
+      <div className="onb-action animate-fade-in" style={{ animationDelay: "600ms", animationFillMode: "both" }}>
         <OnairosButtonWrapper
           webpageName="PHENYX"
           requestedData={["personality"]}
           buttonType="pill"
-          buttonText="sign in with onairos"
+          buttonText="continue with onairos"
           textColor="white"
           onComplete={onComplete}
         />
       </div>
 
-      {/* back link → polaris_intro on the normal path (see PREV_STEP). */}
-      <div className="animate-fade-in" style={{ animationDelay: "750ms", animationFillMode: "both" }}>
+      <div className="onb-back animate-fade-in" style={{ animationDelay: "750ms", animationFillMode: "both" }}>
         <button
           onClick={onBack}
           aria-label="go back to the previous step"
@@ -1349,6 +1368,7 @@ function ConnectScreen({
             cursor: "pointer",
             fontFamily: "inherit",
             transition: "color 0.2s ease",
+            width: "100%",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "#999")}
           onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
@@ -1450,6 +1470,7 @@ type RevealBlock = {
     | "badge"
     | "example";
   text?: string; // primary copy (unused by "badge"/"example")
+  emphasis?: string; // bold suffix on headings (v67 <b>)
   d: number; // data-d ms offset
   stellar?: boolean;
   muted?: boolean; // dimmer line (s5A muted reflections)
@@ -1457,6 +1478,7 @@ type RevealBlock = {
   label?: string;
   q?: string;
   a?: string;
+  src?: string;
 };
 
 // s4A (manifesto) — retained-but-unreachable staggered emotional read. Lead +200
@@ -1472,21 +1494,19 @@ const S4A_BLOCKS: RevealBlock[] = [
 // s4B (gentle) — the shipped variant. Lead +150 ports animGR('#s4B').
 const S4B_BLOCKS: RevealBlock[] = [
   { kind: "eyebrow", text: "what phenyx is", d: 0 },
-  { kind: "heading", text: "a mirror, not a map.", d: 200 },
+  { kind: "heading", text: "a mirror, ", emphasis: "not a map.", d: 200 },
   {
     kind: "body",
-    text:
-      "most identity tools show you who you could become. PHENYX shows you who you already are, using the behavioral signals you leave behind every day without realizing it.",
-    d: 700,
+    text: "most tools show you who you could become. phenyx shows you what you have actually done.",
+    d: 640,
   },
   {
     kind: "body",
-    text:
-      "the patterns you leave behind every day, what you return to, what you avoid, what you cannot stop doing, those are the signals. PHENYX reads them.",
-    d: 1500,
+    text: "it reads the accounts you already use and finds what repeats. what you come back to, what you drop, what you do every year without planning it.",
+    d: 1060,
   },
-  { kind: "cta", text: "continue", d: 3400 },
-  { kind: "back", text: "back", d: 3600 },
+  { kind: "cta", text: "continue", d: 1480 },
+  { kind: "back", text: "back", d: 1620 },
 ];
 
 const MANIFESTO_CONFIG: Record<ManifestoVariant, { lead: number; blocks: RevealBlock[] }> = {
@@ -1512,7 +1532,7 @@ function ManifestoScreen({
   );
 
   return (
-    <div style={{ textAlign: "center", maxWidth: 560, width: "100%" }}>
+    <div className="onb-block">
       {blocks.map((block, i) => {
         const shown = revealed[i];
         const reveal = revealStyle(shown);
@@ -1522,13 +1542,13 @@ function ManifestoScreen({
             return (
               <p
                 key={i}
+                className="onb-ey"
                 style={{
                   ...reveal,
                   fontSize: "10px",
                   color: stellarColor,
                   textTransform: "uppercase",
                   letterSpacing: "0.22em",
-                  marginBottom: "20px",
                 }}
               >
                 {block.text}
@@ -1539,6 +1559,7 @@ function ManifestoScreen({
             return (
               <h1
                 key={i}
+                className="onb-h1"
                 style={{
                   ...reveal,
                   fontSize: "28px",
@@ -1546,10 +1567,10 @@ function ManifestoScreen({
                   color: "#FFFDFD",
                   letterSpacing: "0.01em",
                   lineHeight: 1.4,
-                  marginBottom: "28px",
                 }}
               >
                 {block.text}
+                {block.emphasis ? <b style={{ fontWeight: 600 }}>{block.emphasis}</b> : null}
               </h1>
             );
 
@@ -1558,13 +1579,14 @@ function ManifestoScreen({
             return (
               <p
                 key={i}
+                className={block.kind === "body" ? "onb-sub" : undefined}
                 style={{
                   ...reveal,
                   fontSize: block.kind === "line" ? "20px" : "15px",
                   fontWeight: 300,
                   color: block.stellar ? stellarColor : "#888",
                   lineHeight: 1.7,
-                  marginBottom: "22px",
+                  marginBottom: block.kind === "line" ? "22px" : undefined,
                 }}
               >
                 {block.text}
@@ -1577,13 +1599,13 @@ function ManifestoScreen({
             return (
               <button
                 key={i}
+                className="onb-action"
                 onClick={onContinue}
                 disabled={!shown}
                 aria-label={block.text}
                 style={{
                   ...reveal,
                   pointerEvents: shown ? "all" : "none",
-                  marginTop: "16px",
                   background: "transparent",
                   border: `0.5px solid ${stellarColor}`,
                   color: stellarColor,
@@ -1593,6 +1615,7 @@ function ManifestoScreen({
                   fontWeight: 500,
                   cursor: shown ? "pointer" : "default",
                   fontFamily: "inherit",
+                  width: "100%",
                   transition:
                     "opacity 0.8s ease, transform 0.8s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease",
                 }}
@@ -1622,7 +1645,7 @@ function ManifestoScreen({
           case "back":
             // Gentle-only "back" link → fork. Also gated on its own offset.
             return (
-              <div key={i} style={{ marginTop: "24px" }}>
+              <div key={i} className="onb-back">
                 <button
                   onClick={onBack}
                   disabled={!shown}
@@ -1636,6 +1659,7 @@ function ManifestoScreen({
                     fontSize: "12px",
                     cursor: shown ? "pointer" : "default",
                     fontFamily: "inherit",
+                    width: "100%",
                     transition:
                       "opacity 0.8s ease, transform 0.8s ease, color 0.2s ease",
                   }}
@@ -1687,8 +1711,9 @@ const POLARIS_VARIANT: PolarisVariant = "s5B";
 // Shared authored example Q&A (verbatim) — static copy, identical across variants.
 const POLARIS_EXAMPLE = {
   label: "an example",
-  q: "what do people see when they first meet me?",
-  a: "someone who listens before they speak. and chooses words like they matter.",
+  q: '"why do i keep starting over?"',
+  a: "you haven't. you've started nine things since 2021, and they're all the same three ideas.",
+  src: "chatgpt, pinterest · 2021-2026",
 } as const;
 
 // s5A (manifesto) — retained-but-unreachable staggered emotional read. Lead +200
@@ -1702,7 +1727,7 @@ const S5A_BLOCKS: RevealBlock[] = [
   {
     kind: "line",
     text:
-      "it's built directly on your constellation. the actual patterns in your data, not who you wish you were. it answers questions. it reflects things back.",
+      "it's built directly on your constellation. the actual patterns in your signals, not who you wish you were. it answers questions. it reflects things back.",
     d: 2800,
     muted: true,
   },
@@ -1716,30 +1741,24 @@ const S5A_BLOCKS: RevealBlock[] = [
   { kind: "cta", text: "understood", d: 5600 },
 ];
 
-// s5B (gentle) — the shipped variant. Lead +150 ports animGR('#s5B'). CTA 4200 /
-// back 4400 are fixed by spec; the badge (0), heading (200), body (700/1500) and
-// example (2600) offsets are chosen to match the gentle manifesto cadence.
+// s5B (gentle) — the shipped variant. Lead +150 ports animGR('#s5B'). CTA 1680 /
+// back 1820 match the v67 walkthrough; the example is the worked polaris Q&A.
 const S5B_BLOCKS: RevealBlock[] = [
-  { kind: "badge", d: 0 },
+  { kind: "eyebrow", text: "polaris", d: 0 },
   {
     kind: "heading",
-    text: "built on your constellation. not on who you say you are.",
+    text: "built on your constellation. ",
+    emphasis: "not on who you say you are.",
     d: 200,
   },
   {
     kind: "body",
-    text:
-      "polaris is an AI that lives inside your constellation. ask it anything about how you show up. how others might perceive you. what patterns keep recurring.",
-    d: 700,
+    text: "polaris lives inside your constellation. ask it anything.",
+    d: 420,
   },
-  {
-    kind: "body",
-    text: "it doesn't perform. it doesn't reassure. it reflects what's actually there.",
-    d: 1500,
-  },
-  { kind: "example", ...POLARIS_EXAMPLE, d: 2600 },
-  { kind: "cta", text: "continue", d: 4200 },
-  { kind: "back", text: "back", d: 4400 },
+  { kind: "example", ...POLARIS_EXAMPLE, d: 1260 },
+  { kind: "cta", text: "continue", d: 1680 },
+  { kind: "back", text: "back", d: 1820 },
 ];
 
 const POLARIS_CONFIG: Record<PolarisVariant, { lead: number; blocks: RevealBlock[] }> = {
@@ -1765,12 +1784,29 @@ function PolarisIntroScreen({
   );
 
   return (
-    <div style={{ textAlign: "center", maxWidth: 560, width: "100%" }}>
+    <div className="onb-block">
       {blocks.map((block, i) => {
         const shown = revealed[i];
         const reveal = revealStyle(shown);
 
         switch (block.kind) {
+          case "eyebrow":
+            return (
+              <p
+                key={i}
+                className="onb-ey"
+                style={{
+                  ...reveal,
+                  fontSize: "10px",
+                  color: stellarColor,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.22em",
+                }}
+              >
+                {block.text}
+              </p>
+            );
+
           case "badge":
             // Shared Polaris badge near the top. The blink is pure CSS; under
             // reduced motion the dot is frozen at full opacity (frozen prop).
@@ -1787,6 +1823,7 @@ function PolarisIntroScreen({
             return (
               <h1
                 key={i}
+                className="onb-h1"
                 style={{
                   ...reveal,
                   fontSize: "26px",
@@ -1794,10 +1831,10 @@ function PolarisIntroScreen({
                   color: "#FFFDFD",
                   letterSpacing: "0.01em",
                   lineHeight: 1.4,
-                  marginBottom: "28px",
                 }}
               >
                 {block.text}
+                {block.emphasis ? <b style={{ fontWeight: 600 }}>{block.emphasis}</b> : null}
               </h1>
             );
 
@@ -1806,6 +1843,7 @@ function PolarisIntroScreen({
             return (
               <p
                 key={i}
+                className={block.kind === "body" ? "onb-sub" : undefined}
                 style={{
                   ...reveal,
                   fontSize: block.kind === "line" ? "20px" : "15px",
@@ -1818,7 +1856,7 @@ function PolarisIntroScreen({
                         ? "#FFFDFD"
                         : "#888",
                   lineHeight: 1.7,
-                  marginBottom: "22px",
+                  marginBottom: block.kind === "line" ? "22px" : undefined,
                 }}
               >
                 {block.text}
@@ -1831,10 +1869,12 @@ function PolarisIntroScreen({
             return (
               <div
                 key={i}
+                className="onb-stack"
                 style={{
                   ...reveal,
                   maxWidth: 440,
-                  margin: "0 auto 28px",
+                  marginLeft: "auto",
+                  marginRight: "auto",
                   padding: "20px 22px",
                   textAlign: "left",
                   border: "0.5px solid rgba(255,253,253,0.12)",
@@ -1870,10 +1910,24 @@ function PolarisIntroScreen({
                     fontWeight: 300,
                     color: "#888",
                     lineHeight: 1.6,
+                    marginBottom: block.src ? "10px" : 0,
                   }}
                 >
                   {block.a}
                 </p>
+                {block.src ? (
+                  <p
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 300,
+                      color: "#555",
+                      letterSpacing: "0.02em",
+                      margin: 0,
+                    }}
+                  >
+                    {block.src}
+                  </p>
+                ) : null}
               </div>
             );
 
@@ -1883,13 +1937,13 @@ function PolarisIntroScreen({
             return (
               <button
                 key={i}
+                className="onb-action"
                 onClick={onContinue}
                 disabled={!shown}
                 aria-label={block.text}
                 style={{
                   ...reveal,
                   pointerEvents: shown ? "all" : "none",
-                  marginTop: "16px",
                   background: "transparent",
                   border: `0.5px solid ${stellarColor}`,
                   color: stellarColor,
@@ -1899,6 +1953,7 @@ function PolarisIntroScreen({
                   fontWeight: 500,
                   cursor: shown ? "pointer" : "default",
                   fontFamily: "inherit",
+                  width: "100%",
                   transition:
                     "opacity 0.8s ease, transform 0.8s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease",
                 }}
@@ -1928,7 +1983,7 @@ function PolarisIntroScreen({
           case "back":
             // Gentle-only "back" link → manifesto (s4). Gated on its own offset.
             return (
-              <div key={i} style={{ marginTop: "24px" }}>
+              <div key={i} className="onb-back">
                 <button
                   onClick={onBack}
                   disabled={!shown}
@@ -1942,6 +1997,7 @@ function PolarisIntroScreen({
                     fontSize: "12px",
                     cursor: shown ? "pointer" : "default",
                     fontFamily: "inherit",
+                    width: "100%",
                     transition: "opacity 0.8s ease, transform 0.8s ease, color 0.2s ease",
                   }}
                   onMouseEnter={(e) => {
