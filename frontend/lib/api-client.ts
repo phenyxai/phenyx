@@ -116,7 +116,7 @@ export interface PolarisAllowance {
   week: string
   /** Tokens debited this week so far. */
   used: number
-  /** Tier-derived weekly limit (80 free / 8000 pro|gifted). */
+  /** Tier-derived weekly limit (0 free / 800 pro|gifted). */
   limit: number
   /** max(0, limit - used). */
   remaining: number

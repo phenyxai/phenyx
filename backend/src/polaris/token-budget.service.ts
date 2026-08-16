@@ -2,12 +2,11 @@ import { Injectable } from "@nestjs/common";
 import { SupabaseService } from "../supabase/supabase.service";
 import { BillingService } from "../stripe/billing.service";
 
-// PHE-27 — weekly Polaris token allowance by access tier (05-polaris.md). Free is
-// metered tightly; pro/gifted get the full weekly budget. The budget numbers
-// (80 free / 8000 pro|gifted) live in ONE authority —
-// BillingService.capabilitiesFor(tier).polarisWeeklyTokens (PHE-41) — and are read
-// at CHECK time from the live tier, so a mid-week upgrade widens the ceiling on the
-// very next ask.
+// PHE-27 / PHE-69 — weekly Polaris token allowance by access tier. Free is
+// locked (0 tokens). Pro/gifted get 800 weekly tokens. The budget numbers live
+// in ONE authority — BillingService.capabilitiesFor(tier).polarisWeeklyTokens —
+// and are read at CHECK time from the live tier, so a mid-week upgrade widens
+// the ceiling on the very next ask.
 
 // Verbatim graceful at-limit copy (ticket §6). Returned on the over-budget
 // short-circuit; the chat surface also renders this line at its at-limit mount.
@@ -20,7 +19,7 @@ export interface WeeklyAllowance {
   week: string;
   /** Tokens debited this week so far. */
   used: number;
-  /** Tier-derived weekly limit (80 free / 8000 pro|gifted). */
+  /** Tier-derived weekly limit (0 free / 800 pro|gifted). */
   limit: number;
   /** max(0, limit - used). */
   remaining: number;

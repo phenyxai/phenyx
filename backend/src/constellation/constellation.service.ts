@@ -15,9 +15,8 @@ import { normalizePillar } from "../observations/signal-hash";
  * syntheses, the three locked pillars, the identity portrait, mantra, foresight,
  * and version) together with their observations timeline grouped per pillar. The
  * observations feed is gated exactly like the daily feed / timeline routes:
- * capabilities come from {@link BillingService.capabilitiesFor} and the same
- * pure {@link applyReadGate} is applied, so free serves one unlocked body (no
- * citations/provenance) and pro/gifted serve everything.
+ * *bodies* (citations/provenance on the first two of the local day) and
+ * pro/gifted serve every trace. Polaris is locked for free via polarisAccess.
  */
 
 /** Seven-pillar model, active-first — matches PILLAR_ORDER + the frontend layout. */
@@ -120,14 +119,15 @@ export class ConstellationService {
       portrait: state?.portrait ?? null,
       mantra: (state?.mantra as string | null) ?? null,
       foresight: (state?.foresight as string | null) ?? null,
-      pillars: this.buildPillars(state, rows, served),
+      pillars: this.buildPillars(state, rows, served, capabilities.clusterEntries),
     };
   }
 
   private buildPillars(
     state: Record<string, unknown> | null,
     rows: ObservationRow[],
-    served: ServedObservation[]
+    served: ServedObservation[],
+    clusterEntries: number,
   ): ConstellationPillar[] {
     const byPillar = new Map<string, ConstellationPillar>();
     for (const pillar of PILLARS) {
@@ -173,6 +173,12 @@ export class ConstellationService {
         detail.source_insight = gated.meta_line;
       }
     });
+
+    if (Number.isFinite(clusterEntries)) {
+      for (const detail of byPillar.values()) {
+        detail.timeline = detail.timeline.slice(0, clusterEntries);
+      }
+    }
 
     return PILLARS.map((p) => byPillar.get(p) as ConstellationPillar);
   }

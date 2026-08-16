@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 //      localStorage logic — this component only renders whatever node is passed
 //      in, so the seam stays clean); and
 //   3. the "✦ ask polaris anything" quick-action with a secondary token label
-//      ("80 tokens" free / "8000 tokens" pro) that routes to the Polaris tab.
+//      ("800 weekly tokens" pro / lock copy for free) that routes to Polaris.
 //
 // Mantra input is tolerant: a two-element tuple, or a single string split on
 // "/" into two lines. Absent mantra → the block is skipped gracefully.
@@ -20,7 +20,7 @@ import type { ReactNode } from "react";
 export interface DailyHeaderProps {
   /** Two-line mantra: a [line1, line2] tuple, a "line1 / line2" string, or null. */
   mantra?: string | [string, string] | null;
-  /** Secondary token label, e.g. "80 tokens" (free) / "8000 tokens" (pro). */
+  /** Secondary token label, e.g. "800 weekly tokens" (pro). */
   tokenLabel: string;
   /** Route to /dashboard/polaris (and fire tab_visit — see page seam). */
   onAskPolaris: () => void;

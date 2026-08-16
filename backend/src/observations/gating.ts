@@ -69,18 +69,19 @@ export function orderCandidates(
 
 /**
  * Generation-time gating flags (denormalized convenience persisted on the row).
- * `orderedCandidates` MUST already be in {@link orderCandidates} order. Free
- * tier: exactly the single highest-priority candidate is unlocked
- * (`locked_for_free=false`), the rest locked. Pro/gifted: all unlocked.
+ * `orderedCandidates` MUST already be in {@link orderCandidates} order.
  *
- * The authoritative serve-time gate is {@link applyReadGate}; this flag is a
- * convenience for SQL verification and a fast path, re-derived on read.
+ * v67: observation *bodies* are never locked. `locked_for_free` now means
+ * "evidence trace is behind the free daily budget" and is re-derived at read
+ * time by {@link applyReadGate} from `evidenceTracesPerDay`. Generation still
+ * stamps the flag for SQL convenience: free marks every candidate after the
+ * first two; pro/gifted stamps all false.
  */
 export function computeLockedForFree(
   orderedCandidates: ObservationCandidate[],
   hasFullAccess: boolean
 ): boolean[] {
-  return orderedCandidates.map((_, i) => (hasFullAccess ? false : i !== 0));
+  return orderedCandidates.map((_, i) => (hasFullAccess ? false : i >= 2));
 }
 
 /** A row to be inserted into `public.observations`. */
@@ -107,12 +108,11 @@ export function buildInsertRows(
   orderedCandidates: ObservationCandidate[],
   hasFullAccess: boolean
 ): ObservationInsert[] {
-  const lockedFlags = computeLockedForFree(orderedCandidates, hasFullAccess);
   const seen = new Set<string>();
   const rows: ObservationInsert[] = [];
-  orderedCandidates.forEach((c, i) => {
+  for (const c of orderedCandidates) {
     const signal_hash = computeSignalHash(userId, c.pillar, c.signal_key);
-    if (seen.has(signal_hash)) return;
+    if (seen.has(signal_hash)) continue;
     seen.add(signal_hash);
     rows.push({
       user_id: userId,
@@ -121,10 +121,12 @@ export function buildInsertRows(
       source_platforms: c.source_platforms,
       meta_label: c.meta_label && c.meta_label.trim() ? c.meta_label : null,
       is_new: true,
-      locked_for_free: lockedFlags[i],
+      // Stamp after dedup so the free budget applies to unique rows, not
+      // collapsed duplicates that never land in `observations`.
+      locked_for_free: hasFullAccess ? false : rows.length >= 2,
       signal_hash,
     });
-  });
+  }
   return rows;
 }
 
@@ -146,8 +148,8 @@ export interface ObservationRow {
 
 /**
  * The shape the frontend consumes (`frontend/components/phenyx/observation-card.tsx`
- * → `Observation`). Locked cards omit `body`/`sources` entirely — the client
- * never receives redacted content — and carry a `hint` instead.
+ * → `Observation`). v67: bodies always ship. `locked` means the *evidence trace*
+ * is withheld (citations/provenance omitted) — never the sentence itself.
  */
 export interface ServedObservation {
   id: string;
@@ -156,6 +158,7 @@ export interface ServedObservation {
   sources?: string[] | null;
   meta_line?: string | null;
   is_new?: boolean;
+  /** True when the evidence trace is redacted (free, after the daily budget). */
   locked?: boolean;
   hint?: string | null;
 }
@@ -168,43 +171,37 @@ export function redactedHint(row: ObservationRow): string {
 
 /**
  * Authoritative serve-time tier gate, driven by {@link TierCapabilities}
- * (PHE-41). `rows` MUST be ordered `surfaced_at DESC` (freshest first) — that
- * ordering is what makes the free unlock land at index 0, matching the
- * belt-and-suspenders client gate in `frontend/app/dashboard/daily/page.tsx`
- * (`locked = !isPro && index > 0`).
+ * (PHE-69). `rows` MUST be ordered `surfaced_at DESC` (freshest first).
  *
- * Free (`observationsUnlocked: 1`): exactly the freshest observation is served
- * with its `body`, but with `source_platforms` and provenance (`meta_label`)
- * STRIPPED — those are stored, never sent, so an upgrade reveals them with no
- * re-generation. Every other row is served locked with `body`/`sources` omitted
- * and a `hint` in their place.
- * Pro/gifted (`observationsUnlocked: Infinity`): all unlocked, citations +
- * provenance present.
+ * v67: every tier receives every observation body. Free receives citations +
+ * provenance on the first `evidenceTracesPerDay` rows of the local day; later
+ * rows keep `body` but set `locked=true` and omit sources/meta (the proof is
+ * what Pro buys, not the only honest sentences). Pro/gifted: all traces.
  */
 export function applyReadGate(
   rows: ObservationRow[],
   capabilities: TierCapabilities
 ): ServedObservation[] {
   return rows.map((row, index) => {
-    const unlocked = index < capabilities.observationsUnlocked;
-    if (unlocked) {
+    const bodyUnlocked = index < capabilities.observationsUnlocked;
+    const traceUnlocked = index < capabilities.evidenceTracesPerDay;
+    if (!bodyUnlocked) {
       return {
         id: row.id,
         pillar_tag: row.pillar,
-        body: row.body,
-        // Stripped for free even on the single unlocked card (still stored).
-        sources: capabilities.crossPlatformCitations ? row.source_platforms : undefined,
-        meta_line: capabilities.fullProvenance ? row.meta_label : undefined,
         is_new: row.is_new,
-        locked: false,
+        locked: true,
+        hint: redactedHint(row),
       };
     }
     return {
       id: row.id,
       pillar_tag: row.pillar,
+      body: row.body,
+      sources: traceUnlocked ? row.source_platforms : undefined,
+      meta_line: traceUnlocked ? row.meta_label : undefined,
       is_new: row.is_new,
-      locked: true,
-      hint: redactedHint(row),
+      locked: !traceUnlocked,
     };
   });
 }

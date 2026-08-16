@@ -11,6 +11,7 @@ import {
 } from "@/lib/api-client";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { trackPolarisMessage } from "@/lib/analytics";
+import { useTier } from "@/lib/use-tier";
 
 // ============================================================================
 // PolarisTab — the dashboard Polaris chat surface (PHE-23)
@@ -74,6 +75,7 @@ function datedLabel(iso: string): string {
 
 export function PolarisTab() {
   const { openModal } = useSettingsModals();
+  const { isPro } = useTier();
 
   const [view, setView] = useState<View>("main");
 
@@ -114,8 +116,9 @@ export function PolarisTab() {
   }, []);
 
   useEffect(() => {
+    if (!isPro) return;
     void loadMain();
-  }, [loadMain]);
+  }, [loadMain, isPro]);
 
   // Autofocus the chat input whenever the chat view opens.
   useEffect(() => {
@@ -238,6 +241,53 @@ export function PolarisTab() {
     setInput("");
     void sendQuestion(q);
   }, [input, sendQuestion]);
+
+  if (!isPro) {
+    return (
+      <section style={{ maxWidth: 560, margin: "0 auto", padding: "72px 24px" }}>
+        <p
+          style={{
+            fontSize: 21,
+            fontWeight: 300,
+            letterSpacing: "-0.02em",
+            color: "#FFFDFD",
+            margin: 0,
+            marginBottom: 12,
+          }}
+        >
+          polaris
+        </p>
+        <p
+          style={{
+            fontSize: 15,
+            fontWeight: 300,
+            lineHeight: 1.6,
+            color: "rgba(255,253,253,0.55)",
+            margin: 0,
+            marginBottom: 28,
+          }}
+        >
+          ask about any observation, grounded in your own record. polaris is on pro.
+        </p>
+        <button
+          type="button"
+          onClick={() => openModal("upgrade")}
+          style={{
+            background: "transparent",
+            border: "0.5px solid rgba(255,253,253,0.35)",
+            borderRadius: 999,
+            padding: "10px 18px",
+            fontSize: 13,
+            color: "#FFFDFD",
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          go pro, $12.99/month
+        </button>
+      </section>
+    );
+  }
 
   if (view === "chat") {
     return (

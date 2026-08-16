@@ -5,7 +5,7 @@ import { BillingService } from "../stripe/billing.service";
 import type { SupabaseService } from "../supabase/supabase.service";
 
 /**
- * PHE-41 — the weekly Polaris budget must derive its 80/8000 numbers from the
+ * PHE-41 / PHE-69 — the weekly Polaris budget must derive its 0/800 numbers from the
  * single authority `BillingService.capabilitiesFor(tier).polarisWeeklyTokens`,
  * not from constants local to the Polaris lane. These tests stub the tier read so
  * `weeklyLimit` can be checked without a live DB.
