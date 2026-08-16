@@ -14,6 +14,7 @@ import {
   pillarKey,
   type Observation,
 } from "@/components/phenyx/observation-card";
+import { consumeProReturn, peekProReturn } from "@/components/phenyx/evidence-trace";
 import { IntroBanner } from "@/components/phenyx/intro-banner";
 import { StillTrueToday } from "@/components/phenyx/still-true-today";
 import {
@@ -84,6 +85,7 @@ export default function DailyTabPage() {
   const [loading, setLoading] = useState(true);
   const [observations, setObservations] = useState<Observation[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [proReturnId, setProReturnId] = useState<string | null>(null);
 
   const { focus, setFocus } = useDailyFocus(isPro ? userId : null);
   const dayNum = localDayNumber();
@@ -135,7 +137,18 @@ export default function DailyTabPage() {
     if (first) setOpenId(first.id);
   }, [focus, feed]);
 
+  useEffect(() => {
+    if (!isPro) return;
+    const id = peekProReturn();
+    if (!id) return;
+    if (!feed.some((o) => o.id === id)) return;
+    consumeProReturn();
+    setOpenId(id);
+    setProReturnId(id);
+  }, [isPro, feed]);
+
   const openUpgrade = () => openModal("upgrade");
+  const openExport = () => openModal("data-management");
 
   const explore = (obs: Observation) => {
     if (!isPro) {
@@ -214,6 +227,9 @@ export default function DailyTabPage() {
               accent={stellarColor}
               onToggle={() => setOpenId((id) => (id === obs.id ? null : obs.id))}
               onExplore={() => explore(obs)}
+              onUpgrade={openUpgrade}
+              onExport={openExport}
+              autoExpandEvidence={proReturnId === obs.id}
             />
           ))}
         </div>

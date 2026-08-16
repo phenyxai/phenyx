@@ -3,6 +3,14 @@
 import { useEffect } from "react";
 
 import { STELLAR_DEFAULT } from "@/lib/stellar";
+import {
+  EvidenceTrace,
+  type Evidence,
+} from "@/components/phenyx/evidence-trace";
+import {
+  UnderneathReading,
+  type Underneath,
+} from "@/components/phenyx/underneath-reading";
 
 // ============================================================================
 // ObservationCard: collapsed Daily-feed card (PHE-70 / v67)
@@ -10,7 +18,7 @@ import { STELLAR_DEFAULT } from "@/lib/stellar";
 // Collapsed: one sentence + pillar tag + chevron. Expanded in place, in order:
 //   1. supporting points
 //   2. source tags + date span
-//   3. slots for evidence / underneath / feedback (PHE-71 / PHE-72)
+//   3. evidence trace / underneath / feedback slot (PHE-71 / PHE-72)
 //   4. ✦ explore
 //
 // The PHE-26 locked-body variant (`unlock on pro`) is gone. Every tier reads
@@ -43,8 +51,13 @@ export interface Observation {
   is_new?: boolean;
   /** True when the evidence trace is redacted (free, after the daily budget). */
   locked?: boolean;
-  /** Optional underneath reading id; PHE-72 fills the slot when present. */
+  /**
+   * True when this card is today's Daily underneath (Pro body or free lock).
+   * The reading itself lives on `underneath` and is omitted for free.
+   */
   under?: string | boolean | null;
+  evidence?: Evidence | null;
+  underneath?: Underneath | null;
 }
 
 const PILLAR_COLORS: Record<string, string> = {
@@ -127,6 +140,12 @@ export interface ObservationCardProps {
   accent?: string;
   /** Pro daily-focus match: slightly stronger border. */
   focused?: boolean;
+  /** Locked evidence / underneath opens the Pro modal. */
+  onUpgrade?: () => void;
+  /** `{n} more, all of them yours to export.` opens the export surface. */
+  onExport?: () => void;
+  /** After upgrade `_proReturn`, auto-expand the evidence chain. */
+  autoExpandEvidence?: boolean;
 }
 
 export function ObservationCard({
@@ -136,6 +155,9 @@ export function ObservationCard({
   onExplore,
   accent = "var(--s, #5599FF)",
   focused = false,
+  onUpgrade,
+  onExport,
+  autoExpandEvidence = false,
 }: ObservationCardProps) {
   useEffect(() => {
     injectCardStyles();
@@ -334,10 +356,24 @@ export function ObservationCard({
             </div>
           )}
 
-          {/* PHE-71 fills the evidence control. Do not invent the dropdown here. */}
-          <div data-slot="evidence" />
-          {/* PHE-72 fills underneath when the observation carries a reading. */}
-          {observation.under ? <div data-slot="underneath" /> : null}
+          {observation.evidence ? (
+            <EvidenceTrace
+              observationId={observation.id}
+              evidence={observation.evidence}
+              onUpgrade={() => onUpgrade?.()}
+              onExport={onExport}
+              autoExpand={autoExpandEvidence}
+            />
+          ) : (
+            <div data-slot="evidence" />
+          )}
+          {observation.under ? (
+            <UnderneathReading
+              observationId={observation.id}
+              underneath={observation.underneath ?? null}
+              onUpgrade={() => onUpgrade?.()}
+            />
+          ) : null}
           {/* PHE-72 fills `does this land?` feedback. */}
           <div data-slot="feedback" />
 

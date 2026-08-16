@@ -1,5 +1,10 @@
 import { computeSignalHash, normalizePillar, normalizeSignalKey } from "./signal-hash";
 import type { TierCapabilities } from "../stripe/billing.service";
+import {
+  redactEvidence,
+  type Evidence,
+  type Underneath,
+} from "./evidence";
 
 /**
  * Free-tier gating + deterministic ordering + read-time redaction for the
@@ -150,6 +155,15 @@ export interface ObservationRow {
   evidence_span?: string | null;
   span_start?: string | null;
   span_end?: string | null;
+  signal_type?: string | null;
+  evidence_n?: number | null;
+  record_count?: number | null;
+  sources?: string[] | null;
+  /** Full chain assembled by the service; redacted by {@link applyReadGate}. */
+  assembled_evidence?: Evidence | null;
+  assembled_underneath?: Underneath | null;
+  /** True when this row is the one Daily underneath for the local day. */
+  underneath_of_day?: boolean;
 }
 
 /**
@@ -175,6 +189,14 @@ export interface ServedObservation {
   /** True when the evidence trace is redacted (free, after the daily budget). */
   locked?: boolean;
   hint?: string | null;
+  /** Full chain, or `{ sig, recs }` stub when locked. Null when there is no signal. */
+  evidence?: Evidence | null;
+  /**
+   * True when this observation is today's Daily underneath (Pro body or free lock).
+   * The reading payload is never sent to free.
+   */
+  under?: boolean;
+  underneath?: Underneath | null;
 }
 
 /** First sentence of an observation body (collapsed Daily card). */
@@ -217,6 +239,11 @@ export function redactedHint(row: ObservationRow): string {
  * provenance on the first `evidenceTracesPerDay` rows of the local day; later
  * rows keep `body` but set `locked=true` and omit sources/meta (the proof is
  * what Pro buys, not the only honest sentences). Pro/gifted: all traces.
+ *
+ * Evidence: unlocked rows ship the full chain. Locked rows keep `{ sig, recs }`
+ * so the client can render the lock from payload presence — never chart/entries/
+ * closer. Underneath: at most one of the day; Pro gets the reading, free gets
+ * `under: true` with `underneath: null`.
  */
 export function applyReadGate(
   rows: ObservationRow[],
@@ -227,6 +254,10 @@ export function applyReadGate(
     const traceUnlocked = index < capabilities.evidenceTracesPerDay;
     const sentence = firstSentence(row.body);
     const points = asStringArray(row.points);
+    const evidence = redactEvidence(row.assembled_evidence ?? null, traceUnlocked);
+    const under = row.underneath_of_day === true;
+    const underneath =
+      under && capabilities.underneath ? row.assembled_underneath ?? null : null;
     if (!bodyUnlocked) {
       return {
         id: row.id,
@@ -234,6 +265,9 @@ export function applyReadGate(
         is_new: row.is_new,
         locked: true,
         hint: redactedHint(row),
+        evidence: evidence ? redactEvidence(evidence, false) : null,
+        under,
+        underneath: null,
       };
     }
     return {
@@ -248,6 +282,9 @@ export function applyReadGate(
       explore_prompt: sentence || undefined,
       is_new: row.is_new,
       locked: !traceUnlocked,
+      evidence,
+      under,
+      underneath,
     };
   });
 }

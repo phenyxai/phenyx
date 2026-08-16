@@ -17,6 +17,15 @@ import {
 } from "./gating";
 import { BillingService } from "../stripe/billing.service";
 import { ObservationsService } from "./observations.service";
+import {
+  buildEvidence,
+  certaintyCopy,
+  chartFromMetric,
+  pickPreviewEntries,
+  pickUnderneathOfDay,
+  redactEvidence,
+  stubEvidence,
+} from "./evidence";
 
 // The read gate now consumes TierCapabilities (PHE-41). Resolve them from the
 // real BillingService so the gate tests and the resolver can't silently drift.
@@ -216,6 +225,171 @@ test("groupTimelineByPillar groups by pillar and keeps every body for free", () 
   assert.equal(served.length, 3);
   assert.ok(served.every((o) => o.body === "the body"));
   assert.equal(served.filter((o) => o.locked === true).length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// PHE-71 — evidence traces + underneath gating
+// ---------------------------------------------------------------------------
+
+const maraEvidence = buildEvidence({
+  sig: "frequency",
+  recs: 1847,
+  n: 1847,
+  sources: ["spotify", "chatgpt"],
+  span: "2016 - 2026",
+  metric: { k: "split", a: 1847, b: 12, la: "these four", lb: "the four you post about" },
+  entries: [
+    { t: "14 mar 2016, 23:41", s: "spotify", w: "session opened on heaven or las vegas, first on record", l: "earliest" },
+    { t: "29 jul 2026, 02:08", s: "spotify", w: "session opened on geogaddi, 1,847th", l: "most recent" },
+    { t: "06 apr 2024, 19:12", s: "spotify", w: "public playlist 'for the drive' created, none of the four included", l: "the one that defines it" },
+  ],
+});
+
+const maraUnder = {
+  id: "u-night",
+  headline: "the 1am to 4am pattern is not chronotype. it tracks the absence of obligation.",
+  belief: { said: "i'm just nocturnal", n: 23, where: "chat history, 2021 to now" },
+  gap: "the hour is given as preference. it moved when obligation moved.",
+  mechanism: "what the record separates is not day from night but making from being assessed.",
+  tell: "creative start time moves when obligation moves.",
+  basis: "five years of session starts",
+  recs: 612,
+  sources: ["chatgpt", "spotify", "youtube"],
+  hedge: "the hour is measurable. the reason is still yours.",
+};
+
+test("certaintyCopy matches the mara frequency fixture", () => {
+  assert.equal(
+    certaintyCopy(1847, "2016 - 2026", 2),
+    "measured across 1,847 instances, holding for 10 years, corroborated in a second place."
+  );
+});
+
+test("chartFromMetric prefers an explicit viz and derives timing clocks", () => {
+  assert.deepEqual(
+    chartFromMetric("frequency", { viz: { k: "split", a: 1847, b: 12, la: "these four", lb: "the four you post about" } }),
+    { k: "split", a: 1847, b: 12, la: "these four", lb: "the four you post about" }
+  );
+  assert.deepEqual(
+    chartFromMetric("timing", { measure: "median_hour", value: 23, unit: "hour_utc" }),
+    { k: "clock", hrs: [23], unit: "hour", label: "23:00" }
+  );
+});
+
+test("pickPreviewEntries returns earliest, most recent, and a defining third", () => {
+  const entries = pickPreviewEntries([
+    { platform: "spotify", record_type: "play", occurred_at: "2016-03-14T23:41:00Z" },
+    { platform: "spotify", record_type: "play", occurred_at: "2024-04-06T19:12:00Z" },
+    { platform: "spotify", record_type: "play", occurred_at: "2026-07-29T02:08:00Z" },
+  ]);
+  assert.equal(entries.length, 3);
+  assert.equal(entries[0].l, "earliest");
+  assert.equal(entries[1].l, "most recent");
+  assert.equal(entries[2].l, "the one that defines it");
+  assert.equal(entries[0].t, "14 mar 2016, 23:41");
+});
+
+test("redactEvidence drops chart/entries/closer on a locked trace", () => {
+  const locked = redactEvidence(maraEvidence, false);
+  assert.deepEqual(locked, stubEvidence("frequency", 1847));
+  assert.equal(locked?.entries, undefined);
+  assert.equal(locked?.chart, undefined);
+  assert.equal(locked?.closer, undefined);
+  assert.equal(redactEvidence(maraEvidence, true), maraEvidence);
+});
+
+test("applyReadGate free: first two traces keep the chain, later rows keep only sig+recs", () => {
+  const served = applyReadGate(
+    [
+      row({
+        id: "one",
+        signal_type: "frequency",
+        record_count: 1847,
+        assembled_evidence: maraEvidence,
+      }),
+      row({
+        id: "two",
+        signal_type: "timing",
+        record_count: 4,
+        assembled_evidence: buildEvidence({
+          sig: "timing",
+          recs: 4,
+          n: 4,
+          sources: ["spotify"],
+          span: "this week",
+          entries: [],
+        }),
+      }),
+      row({
+        id: "three",
+        signal_type: "frequency",
+        record_count: 12,
+        assembled_evidence: maraEvidence,
+      }),
+    ],
+    FREE
+  );
+  assert.ok(served[0].evidence?.entries);
+  assert.ok(served[0].evidence?.chart);
+  assert.ok(served[0].evidence?.closer);
+  assert.equal(served[1].evidence?.entries?.length, 0);
+  assert.equal(served[2].locked, true);
+  assert.deepEqual(served[2].evidence, { sig: "frequency", recs: 1847 });
+  assert.equal(served[2].evidence?.entries, undefined);
+  assert.equal(served[2].evidence?.chart, undefined);
+  assert.equal(served[2].evidence?.closer, undefined);
+});
+
+test("applyReadGate free: underneath flag without reading payload", () => {
+  const served = applyReadGate(
+    [
+      row({
+        id: "one",
+        assembled_underneath: maraUnder,
+        underneath_of_day: true,
+      }),
+      row({ id: "two", assembled_underneath: maraUnder, underneath_of_day: false }),
+    ],
+    FREE
+  );
+  assert.equal(served[0].under, true);
+  assert.equal(served[0].underneath, null);
+  assert.equal(served[1].under, false);
+  assert.equal(served[1].underneath, null);
+});
+
+test("applyReadGate pro: underneath body ships on the of-the-day row only", () => {
+  const served = applyReadGate(
+    [
+      row({
+        id: "one",
+        assembled_evidence: maraEvidence,
+        assembled_underneath: maraUnder,
+        underneath_of_day: true,
+      }),
+      row({
+        id: "two",
+        assembled_evidence: maraEvidence,
+        assembled_underneath: maraUnder,
+        underneath_of_day: false,
+      }),
+    ],
+    PRO
+  );
+  assert.equal(served[0].under, true);
+  assert.equal(served[0].underneath?.headline, maraUnder.headline);
+  assert.equal(served[1].under, false);
+  assert.equal(served[1].underneath, null);
+  assert.ok(served.every((o) => Array.isArray(o.evidence?.entries)));
+});
+
+test("pickUnderneathOfDay is stable for a given date and set", () => {
+  const ids = ["c", "a", "b"];
+  const first = pickUnderneathOfDay(ids, 10);
+  const again = pickUnderneathOfDay(["b", "c", "a"], 10);
+  assert.equal(first, again);
+  assert.equal(pickUnderneathOfDay([], 10), null);
+  assert.ok(ids.includes(pickUnderneathOfDay(ids, 0)!));
 });
 
 // ---------------------------------------------------------------------------
