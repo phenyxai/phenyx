@@ -134,7 +134,7 @@ export default function WelcomePage() {
               fontWeight: 300,
             }}
           >
-            PHENYX COLLECTIVE
+            PHENYX
           </span>
         </Link>
       </header>

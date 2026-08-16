@@ -253,7 +253,7 @@ export default function SettingsPage() {
         >
           ←
         </button>
-        <Link href="/" aria-label="PHENYX COLLECTIVE">
+        <Link href="/" aria-label="PHENYX">
           <Image src="/phenyx-logo.png" alt="" width={20} height={20} style={{ opacity: 0.9 }} />
         </Link>
       </header>
@@ -622,9 +622,9 @@ export default function SettingsPage() {
             your reflections and insights are encrypted and belong entirely to you.
           </p>
           <button
-            aria-label="request a download of all your PHENYX COLLECTIVE data"
+            aria-label="request a download of all your PHENYX records"
             onClick={() => {
-              window.location.href = `mailto:contact@phenyxcollective.com?subject=data request&body=please send me all data associated with my account: ${userEmail}`;
+              window.location.href = `mailto:contact@phenyxai.com?subject=data request&body=please send me all data associated with my account: ${userEmail}`;
             }}
             style={ghostButtonStyle}
             onMouseEnter={(e) => { e.currentTarget.style.background = "#FFFDFD"; e.currentTarget.style.color = "#0A0A0A"; }}

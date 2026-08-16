@@ -36,7 +36,9 @@ export function AskPolarisWidget() {
   }, [isPaused, reducedMotion, stop]);
 
   const entry = constellationCopy.polarisExamples[index];
-  const [answerStart] = entry.answer.split(entry.emphasis);
+  const emphasisAt = entry.answer.indexOf(entry.emphasis);
+  const answerStart = emphasisAt >= 0 ? entry.answer.slice(0, emphasisAt) : entry.answer;
+  const answerEnd = emphasisAt >= 0 ? entry.answer.slice(emphasisAt + entry.emphasis.length) : "";
 
   return (
     <div
@@ -51,7 +53,7 @@ export function AskPolarisWidget() {
       <div className="landing-v66__polaris-qa">
         <p className="landing-v66__polaris-pillar">{entry.pillar}</p>
         <p className="landing-v66__polaris-question">{entry.question}</p>
-        <p className="landing-v66__polaris-answer">{answerStart}<strong>{entry.emphasis}</strong></p>
+        <p className="landing-v66__polaris-answer">{answerStart}<strong>{entry.emphasis}</strong>{answerEnd}</p>
         <div className="landing-v66__polaris-meta">
           {entry.sources.map((source) => (
             <span className="landing-v66__polaris-source" key={source}><i aria-hidden="true" />{source}</span>

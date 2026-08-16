@@ -138,7 +138,7 @@ export default function ResetClient() {
         <Link href="/" className="flex items-center" style={{ gap: "8px" }}>
           <Image
             src="/phenyx-logo.png"
-            alt="PHENYX COLLECTIVE"
+            alt="PHENYX"
             width={20}
             height={20}
             style={{ opacity: 0.9 }}
@@ -152,7 +152,7 @@ export default function ResetClient() {
               opacity: 0.9,
             }}
           >
-            PHENYX COLLECTIVE
+            PHENYX
           </span>
         </Link>
       </header>

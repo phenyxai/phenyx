@@ -379,7 +379,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                 50% { opacity: 0.45; transform: scale(1.15); } 
               }
             `}</style>
-            <h2 className="text-2xl font-semibold mb-2 uppercase">PHENYX COLLECTIVE</h2>
+            <h2 className="text-2xl font-semibold mb-2 uppercase">PHENYX</h2>
             <p className="text-xs font-light lowercase mb-8" style={{ color: "rgba(255,253,253,0.6)" }}>
               we{"'"}re not live yet. be among the first.
             </p>
@@ -528,7 +528,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
         ) : step === 1 ? (
           <div style={{ animation: "fadeIn 400ms ease-out" }}>
             <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
-            <h2 className="text-2xl font-semibold mb-2 uppercase">PHENYX COLLECTIVE</h2>
+            <h2 className="text-2xl font-semibold mb-2 uppercase">PHENYX</h2>
             <p className="text-xs font-light lowercase mb-8" style={{ color: "rgba(255,253,253,0.6)" }}>
               we{"'"}re not live yet. be among the first.
             </p>
@@ -609,7 +609,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
         ) : (
           <div style={{ animation: "fadeIn 400ms ease-out" }}>
             <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
-            <h2 className="text-2xl font-semibold mb-2 uppercase">PHENYX COLLECTIVE</h2>
+            <h2 className="text-2xl font-semibold mb-2 uppercase">PHENYX</h2>
             <p className="text-xs font-light lowercase mb-8" style={{ color: "rgba(255,253,253,0.6)" }}>
               we{"'"}re not live yet. be among the first.
             </p>

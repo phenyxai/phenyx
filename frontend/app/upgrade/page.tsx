@@ -117,7 +117,7 @@ export default function UpgradePage() {
               fontWeight: 300,
             }}
           >
-            PHENYX COLLECTIVE
+            PHENYX
           </span>
         </Link>
         <Link
