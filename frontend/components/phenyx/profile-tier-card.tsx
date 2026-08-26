@@ -34,8 +34,8 @@ export function ProfileTierCard({
       </p>
       <p className="mt-3 text-[13px] font-light leading-relaxed text-[#FFFDFD]/70">
         {isPro
-          ? "you are seeing everything your data reveals."
-          : "you are seeing one observation. upgrade to see everything your data reveals."}
+          ? "you are seeing everything your record reveals."
+          : "you are seeing one observation. upgrade to see everything your record reveals."}
       </p>
       {!isPro && (
         <button
