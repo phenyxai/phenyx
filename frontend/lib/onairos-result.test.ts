@@ -21,6 +21,7 @@ import {
   normalizeOnairosResult,
   getConnectedPlatforms,
   buildOnairosTraitObject,
+  claimOnairosCompletion,
 } from "./onairos-result.ts";
 
 const SUMMARY = "You are someone who moves through life with intense curiosity...";
@@ -202,11 +203,21 @@ test("backfills prose from userProfile when the trait block is score-only", () =
 // ---------------------------------------------------------------------------
 
 test("cancel / explicit failure / error are reported as not ok", () => {
-  assert.equal(normalizeOnairosResult({ cancelled: true }).ok, false);
+  const cancelled = normalizeOnairosResult({ cancelled: true });
+  assert.equal(cancelled.ok, false);
+  assert.equal(cancelled.cancelled, true);
+  assert.equal(normalizeOnairosResult({ success: false }).cancelled, false);
   assert.equal(normalizeOnairosResult({ success: false }).ok, false);
   assert.equal(normalizeOnairosResult({ error: "denied" }).ok, false);
   assert.equal(normalizeOnairosResult({ apiResponse: { success: false } }).ok, false);
   assert.equal(normalizeOnairosResult(null).ok, false);
+});
+
+test("claims a successful completion exactly once", () => {
+  const completion = { current: false };
+  assert.equal(claimOnairosCompletion(completion), true);
+  assert.equal(claimOnairosCompletion(completion), false);
+  assert.equal(completion.current, true);
 });
 
 test("a genuinely empty completion yields no platforms and no traits", () => {

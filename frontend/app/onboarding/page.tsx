@@ -9,7 +9,11 @@ import { OnairosButtonWrapper } from "@/components/onairos-button-wrapper";
 import { clearOnairosClientToken } from "@/lib/onairos";
 import { PolarisBadge } from "@/components/phenyx/polaris-badge";
 import { redactOnairosForProfile } from "@/lib/onairos-snapshot";
-import { normalizeOnairosResult, buildOnairosTraitObject } from "@/lib/onairos-result";
+import {
+  normalizeOnairosResult,
+  buildOnairosTraitObject,
+  claimOnairosCompletion,
+} from "@/lib/onairos-result";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { apiFetch } from "@/lib/api-client";
 import {
@@ -135,12 +139,10 @@ export default function OnboardingPage() {
   // the dashboard hydrates the constellation once synthesis lands.
   const [constellationState] = useState<ConstellationState | null>(null);
 
-  // Duplicate-trigger guard (PHE-18). The synthesis POST must fire AT MOST ONCE
-  // per successful connection — a re-render, a double success callback, or a
-  // retry must not double-fire it. This is a CLIENT-side guard only; server-side
-  // idempotency (trigger_event_id + per-user advisory lock) is owned by the
-  // engine lane (06-engine-data.md), not this ticket.
-  const synthesisTriggeredRef = useRef(false);
+  // Claim the first successful SDK completion before any success side effect.
+  // This guards both the synthesis handoff and the constellation formation step
+  // against SDK double-callbacks while still allowing retries after cancel/error.
+  const connectionCompletedRef = useRef(false);
 
   // --------------------------------------------------------------------------
   // Init: stellar color, reduced-motion, user, and resume-on-load.
@@ -305,7 +307,24 @@ export default function OnboardingPage() {
   // no user_profiles, no logs/analytics. The redaction step strips it before any
   // persist; we never log `result.token`.
   // --------------------------------------------------------------------------
-  const handleOnairosComplete = useCallback((result: OnairosCompleteData) => {
+  const handleOnairosComplete = useCallback((
+    result: OnairosCompleteData,
+    completionError?: Error
+  ) => {
+    // The SDK can store the JWT as part of completion. Capture it only in this
+    // callback's stack, then purge browser storage on every outcome.
+    const token = (result as { token?: string }).token;
+    clearOnairosClientToken();
+
+    // A callback emitted after the first accepted success is a no-op. Purging
+    // above still runs in case the SDK wrote its completion state twice.
+    if (connectionCompletedRef.current) return;
+
+    if (completionError) {
+      setConnectNotice("onairos could not finish connecting. try again.");
+      return;
+    }
+
     // 1) Normalize the SDK payload before judging it. The completion object is
     //    schema-loose and, with `autoFetch`, the traits/platform body lands under
     //    `result.apiResponse` — NOT on the result root — so the shape has to be
@@ -319,10 +338,21 @@ export default function OnboardingPage() {
     // payload cannot exist unless at least one platform was connected, so a
     // payload that carries traits but omits the platform NAMES still advances
     // (blocking there was the bug — the user connected, we just failed to read it).
-    if (!normalized.ok || (platforms.length < 1 && !normalized.hasTraits)) {
+    if (normalized.cancelled) {
+      setConnectNotice("connection cancelled. try again when you're ready.");
+      return;
+    }
+    if (!normalized.ok) {
+      setConnectNotice("onairos could not finish connecting. try again.");
+      return;
+    }
+    if (platforms.length < 1 && !normalized.hasTraits) {
       setConnectNotice("connect at least one platform to continue.");
       return;
     }
+
+    // Claim success before persistence, network, or navigation side effects.
+    if (!claimOnairosCompletion(connectionCompletedRef)) return;
     setConnectNotice(null);
 
     // 2) Build the compact, allowlisted trait object, then redact (strip
@@ -336,9 +366,9 @@ export default function OnboardingPage() {
     //    synthesis exactly once — so the raw token never touches our DB and the
     //    connection state is server-authoritative (not a client-direct write).
     //    STRICT FIRE-AND-FORGET (PHE-18): the POST is LAUNCHED but NEVER awaited,
-    //    so step 5 advances the user into the reveal regardless of synthesis
-    //    latency or outcome. Guarded by `synthesisTriggeredRef` so a re-render /
-    //    double success-callback / retry connects at most once per success.
+    //    so step 4 advances the user into the reveal regardless of synthesis
+    //    latency or outcome. The callback-wide success claim above ensures a
+    //    double success-callback cannot repeat this request or the transition.
     //    Requires at least one NAMED platform — `onairos_connections` is keyed on
     //    (user_id, platform), so there is no row to write without one. The
     //    traits-but-no-names case still advances (above) and still persists the
@@ -348,8 +378,7 @@ export default function OnboardingPage() {
         "[onboarding] onairos returned traits but no platform names — skipping /onairos/connect"
       );
     }
-    if (userId && platforms.length >= 1 && !synthesisTriggeredRef.current) {
-      synthesisTriggeredRef.current = true;
+    if (userId && platforms.length >= 1) {
       apiFetch("/onairos/connect", {
         method: "POST",
         body: JSON.stringify({
@@ -358,7 +387,7 @@ export default function OnboardingPage() {
           // The Onairos JWT is sent ONCE to our own verified callback for
           // server-side verification, then discarded server-side. It is never
           // stored client-side (purged from localStorage in step 4 below).
-          token: (result as { token?: string }).token,
+          token,
           trigger: "onboarding",
         }),
       }).catch(() => {
@@ -380,11 +409,7 @@ export default function OnboardingPage() {
         });
     }
 
-    // 4) Purge the raw Onairos JWT the SDK persisted in localStorage. The token is
-    //    verified server-side per connect; nothing client-side reuses it (PHE-40).
-    clearOnairosClientToken();
-
-    // 5) Persist onboarding_step = synthesizing and advance toward the reveal.
+    // 4) Persist onboarding_step = synthesizing and advance toward the reveal.
     //    This is NOT gated on the synthesis promise above — the user proceeds
     //    immediately into the reveal animation (PHE-19), which IS the loading
     //    experience, so there is never a blank loader/spinner.
@@ -1175,7 +1200,7 @@ function ConnectScreen({
 }: {
   stellarColor: string;
   notice: string | null;
-  onComplete: (result: OnairosCompleteData) => void;
+  onComplete: (result: OnairosCompleteData, error?: Error) => void;
   onBack: () => void;
 }) {
   return (

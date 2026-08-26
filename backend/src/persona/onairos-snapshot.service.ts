@@ -3,30 +3,25 @@ import { Injectable } from "@nestjs/common";
 // Credential-bearing keys stripped at every depth. Matched case-insensitively so
 // a schema-loose trait-shape change cannot smuggle a token through under a
 // differently-cased key.
-const SENSITIVE_KEYS = new Set([
-  "token",
-  "jwt",
-  "apikey",
-  "api_key",
-  "accesstoken",
-  "access_token",
-  "refreshtoken",
-  "refresh_token",
-  "idtoken",
-  "id_token",
-  "authorization",
-  "bearer",
-  "secret",
-  "apisecret",
-  "api_secret",
-  "password",
-]);
+function isSensitiveKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return [
+    "token",
+    "jwt",
+    "apikey",
+    "authorization",
+    "bearer",
+    "secret",
+    "password",
+    "credential",
+  ].some((fragment) => normalized.includes(fragment));
+}
 
 @Injectable()
 export class OnairosSnapshotService {
   /**
    * Redacts secrets from Onairos completion payloads before storing in Supabase.
-   * Deep-strips every credential-bearing key (see SENSITIVE_KEYS) at any depth so
+   * Deep-strips every credential-bearing key at any depth so
    * the session JWT (`token`) — or any nested credential — is never persisted.
    */
   redactOnairosForProfile(input: unknown): Record<string, unknown> {
@@ -43,7 +38,7 @@ export class OnairosSnapshotService {
     if (value && typeof value === "object") {
       const result: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-        if (SENSITIVE_KEYS.has(key.toLowerCase())) continue;
+        if (isSensitiveKey(key)) continue;
         result[key] = this.deepRedact(val);
       }
       return result;

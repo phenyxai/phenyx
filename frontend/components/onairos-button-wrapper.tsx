@@ -19,7 +19,7 @@ interface OnairosButtonWrapperProps {
   /** Connector IDs (lowercase), e.g. youtube, linkedin, chatgpt, reddit */
   allowedPlatforms?: string[] | null;
   autoFetch?: boolean;
-  onComplete: (result: OnairosCompleteData) => void;
+  onComplete: (result: OnairosCompleteData, error?: Error) => void;
   buttonType?: "pill" | "icon" | "rectangle";
   buttonText?: string;
   textColor?: "black" | "white";
@@ -54,11 +54,8 @@ export function OnairosButtonWrapper({
       .then(() => {
         setInitialized(true);
       })
-      .catch((err: unknown) => {
-        console.error("[onairos] SDK initialization failed:", err);
-        const msg =
-          err instanceof Error ? err.message : "Unknown Onairos initialization error";
-        setError(msg);
+      .catch(() => {
+        setError("onairos could not start. try again.");
       });
   }, []);
 
@@ -80,16 +77,17 @@ export function OnairosButtonWrapper({
 
   if (error) {
     return (
-      <div style={{ color: "#888", fontSize: "12px", padding: "12px", maxWidth: 360, lineHeight: 1.5 }}>
-        <strong style={{ color: "#E84422" }}>Onairos did not start.</strong>
-        <br />
+      <div
+        role="alert"
+        style={{
+          color: "#E84422",
+          fontSize: "12px",
+          padding: "12px",
+          maxWidth: 360,
+          lineHeight: 1.5,
+        }}
+      >
         {error}
-        <br />
-        <span style={{ color: "#555", fontSize: "11px" }}>
-          Check: <code style={{ color: "#aaa" }}>NEXT_PUBLIC_ONAIROS_API_KEY</code> in{" "}
-          <code style={{ color: "#aaa" }}>.env.local</code>, restart <code style={{ color: "#aaa" }}>pnpm dev</code>,
-          allow this site in the Onairos dashboard, and allow pop-ups for this page.
-        </span>
       </div>
     );
   }
@@ -97,7 +95,7 @@ export function OnairosButtonWrapper({
   if (!initialized) {
     return (
       <div style={{ color: "#666", fontSize: "12px", padding: "12px" }}>
-        Initializing Onairos...
+        initializing onairos...
       </div>
     );
   }
@@ -115,7 +113,6 @@ export function OnairosButtonWrapper({
       textColor={textColor}
       showIcon={showIcon}
       apiKey={getOnairosApiKey()}
-      skipApiKeyInitialization={true}
     />
   );
 }

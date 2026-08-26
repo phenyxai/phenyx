@@ -60,6 +60,12 @@ export class PersonaService {
         throw new HttpException({ error: "missing required fields" }, 400);
       }
 
+      // Treat every inbound Onairos shape as untrusted. This sanitized snapshot
+      // is the only form allowed past the engine boundary into model prompts or
+      // durable writes.
+      const sanitizedOnairosData =
+        this.onairosSnapshot.redactOnairosForProfile(onairosData);
+
       // Call Claude for synthesis. [Voice Standard] (cached) + [task instructions];
       // the per-request Onairos data stays in the user message, after the cached prefix.
       const system = await this.voiceStandard.buildSystemBlocks(TASK_INSTRUCTIONS);
@@ -78,7 +84,7 @@ export class PersonaService {
             {
               role: "user",
               content: `Here is the user's Onairos data: ${JSON.stringify(
-                onairosData
+                sanitizedOnairosData
               )}`,
             },
           ],
@@ -131,8 +137,15 @@ export class PersonaService {
         throw new HttpException({ error: "synthesis_failed" }, 500);
       }
 
-      // Extract archetype from onairos data
-      const archetype = onairosData?.traits?.archetype || null;
+      // Extract archetype from the sanitized, schema-loose trait block.
+      const sanitizedTraits = sanitizedOnairosData.traits;
+      const archetype =
+        sanitizedTraits &&
+        typeof sanitizedTraits === "object" &&
+        !Array.isArray(sanitizedTraits) &&
+        typeof (sanitizedTraits as Record<string, unknown>).archetype === "string"
+          ? (sanitizedTraits as Record<string, unknown>).archetype
+          : null;
 
       // Upsert into constellation_state
       const { data: existingState } = await supabase
@@ -150,7 +163,7 @@ export class PersonaService {
             user_id: userId,
             generated_at: new Date().toISOString(),
             version: newVersion,
-            onairos_snapshot: onairosData,
+            onairos_snapshot: sanitizedOnairosData,
             archetype,
             origin_score: synthesis.origin.score,
             origin_synthesis: synthesis.origin.synthesis,
@@ -170,11 +183,9 @@ export class PersonaService {
         // Don't fail the request - synthesis was successful
       }
 
-      const profileSnapshot =
-        this.onairosSnapshot.redactOnairosForProfile(onairosData);
       const { error: profileErr } = await supabase
         .from("user_profiles")
-        .update({ onairos_data: profileSnapshot })
+        .update({ onairos_data: sanitizedOnairosData })
         .eq("id", userId);
 
       if (profileErr) {

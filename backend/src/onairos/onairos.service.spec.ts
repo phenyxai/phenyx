@@ -81,14 +81,34 @@ test("redaction deep-strips credential keys at every depth", () => {
   const snap = new OnairosSnapshotService();
   const out = snap.redactOnairosForProfile({
     token: TOKEN,
-    personality: { openness: 0.8, apiKey: NESTED_SECRET },
-    history: [{ jwt: TOKEN, keep: "value" }, { access_token: TOKEN }],
+    personality: {
+      openness: 0.8,
+      apiKey: NESTED_SECRET,
+      oauthToken: TOKEN,
+      tokenExpiry: "2099-01-01",
+      clientSecret: NESTED_SECRET,
+    },
+    history: [
+      { jwt: TOKEN, keep: "value" },
+      { access_token: TOKEN, session_token: TOKEN },
+      { credentials: { bearer: TOKEN } },
+    ],
   });
   const serialized = JSON.stringify(out);
   assert.ok(!serialized.includes(TOKEN), "token must not survive redaction");
   assert.ok(!serialized.includes(NESTED_SECRET), "nested apiKey must not survive");
   assert.equal((out as any).personality.openness, 0.8, "non-secret fields retained");
   assert.equal((out as any).history[0].keep, "value", "array items retained");
+  const keys: string[] = [];
+  JSON.stringify(out, (key, value) => {
+    if (key) keys.push(key);
+    return value;
+  });
+  assert.deepEqual(
+    keys.filter((key) => /token|jwt|secret|credential|authorization|bearer|password/i.test(key)),
+    [],
+    "no credential-bearing key survives"
+  );
 });
 
 test("redaction returns {} for non-object input", () => {

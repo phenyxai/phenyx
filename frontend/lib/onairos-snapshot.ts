@@ -2,24 +2,19 @@
 // schema-loose Onairos trait-shape change cannot smuggle a token through under a
 // differently-cased or nested key. Mirrors the backend
 // OnairosSnapshotService.redactOnairosForProfile.
-const SENSITIVE_KEYS = new Set([
-  "token",
-  "jwt",
-  "apikey",
-  "api_key",
-  "accesstoken",
-  "access_token",
-  "refreshtoken",
-  "refresh_token",
-  "idtoken",
-  "id_token",
-  "authorization",
-  "bearer",
-  "secret",
-  "apisecret",
-  "api_secret",
-  "password",
-]);
+function isSensitiveKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return [
+    "token",
+    "jwt",
+    "apikey",
+    "authorization",
+    "bearer",
+    "secret",
+    "password",
+    "credential",
+  ].some((fragment) => normalized.includes(fragment));
+}
 
 function deepRedact(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -28,7 +23,7 @@ function deepRedact(value: unknown): unknown {
   if (value && typeof value === "object") {
     const result: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-      if (SENSITIVE_KEYS.has(key.toLowerCase())) continue;
+      if (isSensitiveKey(key)) continue;
       result[key] = deepRedact(val);
     }
     return result;
