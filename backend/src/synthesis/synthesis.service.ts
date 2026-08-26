@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { SupabaseService } from "../supabase/supabase.service";
 import { CrisisService } from "./crisis.service";
 import { TraitProfileService } from "./trait-profile.service";
+import { OnairosSnapshotService } from "../persona/onairos-snapshot.service";
 import {
   SystemBlock,
   VoiceStandardService,
@@ -194,7 +195,8 @@ export class SynthesisService {
     private readonly supabaseService: SupabaseService,
     private readonly crisis: CrisisService,
     private readonly voiceStandard: VoiceStandardService,
-    private readonly traitProfile: TraitProfileService
+    private readonly traitProfile: TraitProfileService,
+    private readonly onairosSnapshot: OnairosSnapshotService
   ) {}
 
   /**
@@ -224,6 +226,11 @@ export class SynthesisService {
       throw new HttpException({ error: "trait_object required" }, 400);
     }
 
+    // Sanitize at the engine boundary before model use, persistence, or any
+    // asynchronous downstream work. Raw credentials never move beyond here.
+    const sanitizedTraitObject =
+      this.onairosSnapshot.redactOnairosForProfile(trait_object);
+
     // Crisis pre-flight — fail closed. PHE-39: regex fast-path + Haiku semantic
     // gate; any timeout/error inside detectCrisis is treated as triggered. On a
     // trigger no Claude synthesis runs and no constellation_state is written; a
@@ -241,7 +248,7 @@ export class SynthesisService {
     }
 
     const userMessage = `onairos trait object:
-${JSON.stringify(trait_object)}
+${JSON.stringify(sanitizedTraitObject)}
 
 archetype label: ${archetype ?? "not provided — infer from the trait object"}
 intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
@@ -289,8 +296,8 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
       p_user_id: userId,
       p_trigger_event_id: trigger_event_id ?? null,
       p_archetype: emit.archetype ?? archetype ?? null,
-      // Verbatim trait object — round-trips as the onairos_snapshot value.
-      p_onairos_snapshot: trait_object,
+      // Only the credential-free trait object may round-trip into the snapshot.
+      p_onairos_snapshot: sanitizedTraitObject,
       p_origin_score: pillars.origin.score,
       p_origin_synthesis: pillars.origin.synthesis,
       p_emergence_score: pillars.emergence.score,
@@ -323,7 +330,11 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
       // and dedups against existing insights, so it never re-stores the trait
       // grounding the apply RPC already wrote for this constellation.
       this.enqueue("trait-profile", () =>
-        this.traitProfile.generateTraitProfile(userId, trait_object, version)
+        this.traitProfile.generateTraitProfile(
+          userId,
+          sanitizedTraitObject,
+          version
+        )
       );
       // PHE-37 observation generation is built separately; this is the enqueue
       // seam it will consume. PHE-24 attaches the trait-grounding block here so the

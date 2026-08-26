@@ -71,7 +71,15 @@ export interface NormalizedOnairosResult {
   };
   /** False when the SDK explicitly reported a cancel / failure / error. */
   ok: boolean;
+  cancelled: boolean;
   error: string | null;
+}
+
+/** Atomically claims the first accepted completion in a synchronous callback. */
+export function claimOnairosCompletion(flag: { current: boolean }): boolean {
+  if (flag.current) return false;
+  flag.current = true;
+  return true;
 }
 
 // ----------------------------------------------------------------------------
@@ -336,21 +344,28 @@ function traitBlockHasContent(traits: OnairosTraitBlock | null): boolean {
  * happy path (the SDK sets it explicitly to `false` on its training-guard branch),
  * so we must test for `=== false` rather than falsiness.
  */
-function readStatus(result: unknown): { ok: boolean; error: string | null } {
-  if (!isRecord(result)) return { ok: false, error: "empty onairos result" };
+function readStatus(result: unknown): {
+  ok: boolean;
+  cancelled: boolean;
+  error: string | null;
+} {
+  if (!isRecord(result)) {
+    return { ok: false, cancelled: false, error: "empty onairos result" };
+  }
 
   const error =
     toText(result.error) ??
     toText(readPath(result, ["apiResponse", "error"])) ??
     null;
 
+  const cancelled = result.cancelled === true;
   const explicitFailure =
-    result.cancelled === true ||
+    cancelled ||
     result.success === false ||
     readPath(result, ["apiResponse", "success"]) === false ||
     error !== null;
 
-  return { ok: !explicitFailure, error };
+  return { ok: !explicitFailure, cancelled, error };
 }
 
 // ----------------------------------------------------------------------------
@@ -399,6 +414,7 @@ export function normalizeOnairosResult(
       ),
     },
     ok: status.ok,
+    cancelled: status.cancelled,
     error: status.error,
   };
 }

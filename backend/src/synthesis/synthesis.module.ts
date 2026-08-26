@@ -4,9 +4,10 @@ import { SynthesisController } from "./synthesis.controller";
 import { SynthesisService } from "./synthesis.service";
 import { CrisisService } from "./crisis.service";
 import { TraitProfileService } from "./trait-profile.service";
+import { PersonaModule } from "../persona/persona.module";
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, PersonaModule],
   controllers: [SynthesisController],
   providers: [SynthesisService, CrisisService, TraitProfileService],
   // TraitProfileService is exported so the Polaris module (PHE-22, other chain)

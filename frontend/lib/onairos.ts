@@ -31,15 +31,15 @@ export async function initializeOnairos(): Promise<void> {
       await initializeApiKey({
         apiKey,
         environment: process.env.NODE_ENV === "production" ? "production" : "development",
-        enableLogging: process.env.NODE_ENV !== "production",
+        // The completion includes a short-lived JWT. Keep vendor logging off in
+        // every environment so no credential can enter browser logs.
+        enableLogging: false,
         timeout: 30000,
         retryAttempts: 3,
       });
       
       initialized = true;
-      console.log("[Onairos] SDK initialized successfully");
     } catch (error) {
-      console.error("[Onairos] SDK initialization failed:", error);
       initPromise = null;
       throw error;
     }
