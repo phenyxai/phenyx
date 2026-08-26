@@ -18,6 +18,10 @@ import { consumeProReturn, peekProReturn } from "@/components/phenyx/evidence-tr
 import { IntroBanner } from "@/components/phenyx/intro-banner";
 import { StillTrueToday } from "@/components/phenyx/still-true-today";
 import {
+  pickHeldConstants,
+  type HeldConstant,
+} from "@/app/dashboard/profile/held";
+import {
   DailyFocus,
   useDailyFocus,
   type DailyFocusValue,
@@ -84,6 +88,10 @@ export default function DailyTabPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [observations, setObservations] = useState<Observation[]>([]);
+  const [profileHeld, setProfileHeld] = useState<HeldConstant[]>(() =>
+    pickHeldConstants([], localDayNumber()),
+  );
+  const [profileHeldReady, setProfileHeldReady] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [proReturnId, setProReturnId] = useState<string | null>(null);
 
@@ -104,6 +112,25 @@ export default function DailyTabPage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    apiFetch("/profile/overview")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`profile ${res.status}`);
+        const body = (await res.json()) as { held?: HeldConstant[] };
+        if (active) setProfileHeld(pickHeldConstants(body.held ?? [], dayNum));
+      })
+      .catch(() => {
+        // Keep the same deterministic fallback Profile renders when unavailable.
+      })
+      .finally(() => {
+        if (active) setProfileHeldReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [dayNum]);
 
   useEffect(() => {
     let active = true;
@@ -235,7 +262,9 @@ export default function DailyTabPage() {
         </div>
       )}
 
-      <StillTrueToday accent={stellarColor} />
+      {profileHeldReady && (
+        <StillTrueToday accent={stellarColor} profileHeld={profileHeld} />
+      )}
     </section>
   );
 }

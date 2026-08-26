@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   pickHeldConstants,
+  pickStillTrueForDay,
   profileHeldForDay,
   todaysStillTrueIndex,
   HELD_CONSTANTS,
@@ -36,4 +37,18 @@ test("pickHeldConstants skips today still-true when the list is longer than four
   const picked = pickHeldConstants(items, day);
   assert.equal(picked.length, 4);
   assert.ok(!picked.some((h) => h.title === "a"));
+});
+
+test("Daily excludes Profile's held constants across a day rollover", () => {
+  const beforeRollover = 20_000;
+  const afterRollover = beforeRollover + 1;
+
+  const beforeProfile = pickHeldConstants([], beforeRollover);
+  const afterProfile = pickHeldConstants([], afterRollover);
+  const beforeDaily = pickStillTrueForDay(beforeProfile, beforeRollover);
+  const afterDaily = pickStillTrueForDay(afterProfile, afterRollover);
+
+  assert.ok(!beforeProfile.some((held) => held.body === beforeDaily.body));
+  assert.ok(!afterProfile.some((held) => held.body === afterDaily.body));
+  assert.notEqual(beforeDaily.body, afterDaily.body);
 });

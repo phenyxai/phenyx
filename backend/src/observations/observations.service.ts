@@ -10,6 +10,9 @@ import {
   TimelineGroup,
   PILLAR_ORDER,
   isValidPillar,
+  collapseOverlappingCandidates,
+  normalizeDateSpan,
+  formatObservationSpan,
   buildInsertRows,
   applyReadGate,
   groupTimelineByPillar,
@@ -202,7 +205,7 @@ export class ObservationsService {
       const sig = normalizeSig(row);
       const recs = Number(row.record_count ?? row.evidence_n ?? 0);
       const sources = (row.sources?.length ? row.sources : row.source_platforms) ?? [];
-      const span = formatEvidenceSpan(row);
+      const span = formatObservationSpan(row);
       const n = Number(row.evidence_n ?? row.record_count ?? 0);
       const traceUnlocked = index < traceBudget;
 
@@ -218,7 +221,9 @@ export class ObservationsService {
           recs: Number(signal?.record_count ?? recs),
           n: Number(signal?.evidence_n ?? n),
           sources: (signal?.sources?.length ? signal.sources : sources) as string[],
-          span: signal?.canonical_span || span,
+          span: signal?.canonical_span
+            ? normalizeDateSpan(signal.canonical_span)
+            : span,
           metric,
           entries: signal ? entriesBySignal.get(signal.id) ?? [] : [],
         });
@@ -345,7 +350,8 @@ export class ObservationsService {
     );
     // PHE-72: skip `reading` hashes (overreach) and deprioritize `known` pillars.
     const ordered = applyFeedbackRanking(userId, valid, context.feedbackSignals);
-    const rows = buildInsertRows(userId, ordered, hasFullAccess);
+    const deduped = collapseOverlappingCandidates(ordered);
+    const rows = buildInsertRows(userId, deduped, hasFullAccess);
 
     let generated = 0;
     if (rows.length > 0) {
@@ -610,6 +616,20 @@ export class ObservationsService {
           meta_label: typeof o.meta_label === "string" ? o.meta_label : null,
           signal_key: typeof o.signal_key === "string" ? o.signal_key : "",
           confidence: typeof o.confidence === "number" ? o.confidence : 0,
+          supporting_points: Array.isArray(o.supporting_points)
+            ? o.supporting_points.filter((point: unknown) => typeof point === "string")
+            : [],
+          source_record_keys: Array.isArray(o.source_record_keys)
+            ? o.source_record_keys.filter((key: unknown) => typeof key === "string")
+            : [],
+          window_start:
+            typeof o.window_start === "string" && o.window_start.trim()
+              ? o.window_start
+              : null,
+          window_end:
+            typeof o.window_end === "string" && o.window_end.trim()
+              ? o.window_end
+              : null,
         };
       })
       .filter((c): c is ObservationCandidate => c !== null);
@@ -657,6 +677,28 @@ export class ObservationsService {
                   type: "number",
                   description: "0..1 confidence in this observation; used for ranking.",
                 },
+                supporting_points: {
+                  type: "array",
+                  items: { type: "string" },
+                  description:
+                    "Concrete record-backed points supporting this observation. More points means the observation is better supported.",
+                },
+                source_record_keys: {
+                  type: "array",
+                  items: { type: "string" },
+                  description:
+                    "Exact stable record or derived_from keys from the grounding context. Never copy a bare platform name from source_platforms; use an empty array when no stable key is available.",
+                },
+                window_start: {
+                  type: "string",
+                  description:
+                    "Inclusive ISO-8601 start of the supporting record window, or an empty string when unknown.",
+                },
+                window_end: {
+                  type: "string",
+                  description:
+                    "Inclusive ISO-8601 end of the supporting record window, or an empty string when unknown.",
+                },
               },
               required: [
                 "pillar",
@@ -665,6 +707,10 @@ export class ObservationsService {
                 "meta_label",
                 "signal_key",
                 "confidence",
+                "supporting_points",
+                "source_record_keys",
+                "window_start",
+                "window_end",
               ],
             },
           },
@@ -683,6 +729,8 @@ your task: read the user's synthesized constellation, grounded trait keywords, a
 new-signal diffing is the core rule: ONLY surface genuinely novel patterns. you will be shown the observations already surfaced to this user — do not restate them, rephrase them, or emit near-duplicates. if a pattern only confirms something already surfaced, omit it. if nothing genuinely new surfaced, emit an empty observations array.
 
 for each observation choose a stable signal_key that identifies the underlying pattern (not the prose), so the same pattern always produces the same key. prefer cross-platform reads (source_platforms with 2+ platforms) — they are the strongest signals.
+
+also return the concrete supporting_points, exact source_record_keys copied from the grounding, and the inclusive ISO-8601 window_start/window_end. a bare platform name is not a source record key. do not emit two angles on the same pillar that share a source record or overlap the same time window; keep the one with more supporting points.
 
 you MUST return your result by calling the emit_observations tool. do not answer in plain text.
 
@@ -711,7 +759,10 @@ strict prohibitions — never break these:
     const traits = context.traits
       .map((t) => {
         const tags = (t.keyword_tags ?? []).join(", ");
-        return `- ${tags}${t.insight ? ` — ${t.insight}` : ""}`;
+        const recordKeys = (t.derived_from ?? []).join(", ");
+        return `- ${tags}${t.insight ? ` — ${t.insight}` : ""}${
+          recordKeys ? ` [grounding keys: ${recordKeys}]` : ""
+        }`;
       })
       .join("\n");
 
@@ -902,18 +953,6 @@ interface ObservationSignalLink {
 function normalizeSig(row: ObservationRow): string | null {
   const sig = row.signal_type?.trim().toLowerCase();
   return sig || null;
-}
-
-function formatEvidenceSpan(row: ObservationRow): string | null {
-  if (row.evidence_span && row.evidence_span.trim()) return row.evidence_span.trim();
-  const start = row.span_start ? new Date(row.span_start) : null;
-  const end = row.span_end ? new Date(row.span_end) : null;
-  const year = (d: Date) =>
-    Number.isNaN(d.getTime()) ? null : String(d.getUTCFullYear());
-  const a = start ? year(start) : null;
-  const b = end ? year(end) : null;
-  if (a && b) return a === b ? a : `${a} - ${b}`;
-  return null;
 }
 
 function unwrapSourceRecord(row: unknown): SourceRecordPreview | null {
