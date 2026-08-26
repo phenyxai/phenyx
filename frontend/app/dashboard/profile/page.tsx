@@ -76,9 +76,10 @@ function SectionLabel({ children }: { children: string }) {
  * never shown; freeze/pause does not exist.
  */
 export default function ProfileTabPage() {
-  const { isPro } = useTier();
+  const { tier, isPro } = useTier();
   const { openModal, openId, stellarColor } = useSettingsModals();
   const [overview, setOverview] = useState<ProfileOverview | null>(null);
+  const [subscriptionError, setSubscriptionError] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -128,28 +129,36 @@ export default function ProfileTabPage() {
   }, [openId, load]);
 
   const handleSubscription = async () => {
+    setSubscriptionError("");
     if (!isPro) {
       openModal("upgrade");
       return;
     }
+    if (tier === "gifted") return;
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setSubscriptionError("sign in again to manage your subscription.");
+      return;
+    }
     try {
       const res = await apiFetch("/stripe/billing-portal", {
         method: "POST",
         body: JSON.stringify({ userId: user.id }),
       });
+      if (!res.ok) throw new Error("billing portal unavailable");
       const json = (await res.json()) as { url?: string };
       if (json.url) {
         window.location.href = json.url;
         return;
       }
+      throw new Error("billing portal unavailable");
     } catch {
-      // portal unavailable (e.g. gifted without a stripe customer)
+      setSubscriptionError(
+        "could not open subscription management. please try again.",
+      );
     }
-    openModal("upgrade");
   };
 
   const displayName = overview?.display_name?.trim() ?? "";
@@ -160,7 +169,8 @@ export default function ProfileTabPage() {
   const swatch = overview?.stellar_color || stellarColor;
   const stellarName = colorName(swatch);
   const badge = isPro ? "pro" : "free";
-  const tierLabel = isPro ? "pro · downgrade" : "free · upgrade";
+  const tierLabel =
+    tier === "gifted" ? "pro" : isPro ? "pro · downgrade" : "free · upgrade";
 
   return (
     <>
@@ -293,6 +303,11 @@ export default function ProfileTabPage() {
               }
               onClick={handleSubscription}
             />
+            {subscriptionError && (
+              <p role="alert" className="pt-2 text-[11px] text-[#c97a6a]">
+                {subscriptionError}
+              </p>
+            )}
 
             <p className="mt-[26px] mb-0.5 text-[10.5px] font-semibold tracking-[0.14em] text-[#FFFDFD]/42 uppercase">
               access
@@ -373,18 +388,18 @@ function SettingsRowButton({
     <button
       type="button"
       onClick={onClick}
-      className="group relative flex w-full items-center justify-between border-0 border-b border-[#1a1a1a] bg-transparent py-[15px] text-left text-[14px] text-[#FFFDFD]/85 last:border-b-0 hover:text-[#FFFDFD]"
+      className="ps-row group relative flex w-full cursor-pointer items-center justify-between border-0 border-b border-[#1a1a1a] bg-transparent py-[15px] text-left font-[inherit] text-[14px] text-[#FFFDFD]/85 transition-colors duration-200 after:pointer-events-none after:absolute after:right-0 after:-bottom-px after:left-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(var(--s-rgb),0.55)_18%,rgba(var(--s-rgb),0.55)_82%,transparent)] after:opacity-0 after:transition-opacity after:duration-[450ms] before:pointer-events-none before:absolute before:right-0 before:-bottom-[7px] before:left-0 before:h-[13px] before:bg-[radial-gradient(ellipse_at_center,rgba(var(--s-rgb),0.20),transparent_72%)] before:opacity-0 before:blur-[3px] before:transition-opacity before:duration-500 last:border-b-0 hover:text-[#FFFDFD] hover:after:opacity-100 hover:before:opacity-100 [@media(pointer:coarse)]:py-[22px]"
     >
-      <span className="flex flex-col gap-[3px] text-left">
+      <span className="ps-label flex flex-col gap-[3px] text-left">
         <span>{label}</span>
-        <span className="text-[11.5px] font-light tracking-normal text-[#FFFDFD]/45">
+        <span className="ps-sub text-[11.5px] font-light tracking-normal text-[#FFFDFD]/45">
           {sub}
         </span>
       </span>
       {trailing ?? (
         <span
           aria-hidden="true"
-          className="text-[11px] text-[#888] transition-transform group-hover:translate-x-[3px] group-hover:text-[var(--s)]"
+          className="ps-arrow text-[11px] text-[#888] transition-[color,transform] duration-[350ms] ease-[cubic-bezier(.22,.61,.36,1)] group-hover:translate-x-[3px] group-hover:text-[var(--s)]"
         >
           →
         </span>

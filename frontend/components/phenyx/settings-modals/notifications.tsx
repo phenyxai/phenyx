@@ -78,6 +78,7 @@ export function NotificationsModal() {
           >
             <span className="text-xs text-[#aaa]">{label}</span>
             <Switch
+              aria-label={label}
               checked={prefs[key]}
               onCheckedChange={(checked) => {
                 const next = { ...prefs, [key]: checked }
