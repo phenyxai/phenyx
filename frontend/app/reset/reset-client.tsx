@@ -73,36 +73,37 @@ export default function ResetClient() {
   };
 
   const cardStyle = {
-    background: "#0A0A0A",
-    border: "0.5px solid #1a1a1a",
-    borderRadius: "16px",
-    padding: "36px 32px",
+    background: "transparent",
+    border: "none",
+    borderRadius: 0,
+    padding: "44px 40px",
     maxWidth: "400px",
     width: "100%",
   };
 
   const sendButtonStyles: React.CSSProperties = {
     width: "100%",
-    padding: "15px 24px",
-    fontSize: "13px",
+    padding: "15px",
+    fontSize: "14px",
     fontWeight: 400,
     fontFamily: "inherit",
     letterSpacing: "0.02em",
-    borderRadius: "40px",
+    borderRadius: "6px",
     cursor: "pointer",
     transition: "all 0.25s ease",
     textAlign: "center",
     background: "transparent",
-    border: `0.5px solid ${stellarColor}`,
-    color: stellarColor,
+    border: "1px solid #4d4d4d",
+    color: "rgba(255,253,253,.92)",
   };
 
   const inputStyles: React.CSSProperties = {
     width: "100%",
-    background: "#0d0d0d",
-    border: "0.5px solid #1e1e1e",
-    borderRadius: "10px",
-    padding: "12px 16px",
+    background: "transparent",
+    border: "none",
+    borderBottom: "1px solid #1a1a1a",
+    borderRadius: 0,
+    padding: "8px 0",
     color: "#FFFDFD",
     fontSize: "14px",
     fontWeight: 300,
@@ -113,23 +114,22 @@ export default function ResetClient() {
   const labelStyles: React.CSSProperties = {
     display: "block",
     fontSize: "11px",
-    letterSpacing: "0.04em",
-    color: "#888",
-    marginBottom: "8px",
+    letterSpacing: "0.13em",
+    color: "rgba(255,253,253,.5)",
+    textTransform: "uppercase",
+    marginBottom: "6px",
   };
 
   const onInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderColor = stellarColor;
-    e.target.style.boxShadow = `0 0 0 3px color-mix(in srgb, ${stellarColor} 8%, transparent)`;
+    e.target.style.borderBottomColor = stellarColor;
     e.target.style.outline = "none";
   };
   const onInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderColor = "#1e1e1e";
-    e.target.style.boxShadow = "none";
+    e.target.style.borderBottomColor = "#1a1a1a";
   };
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center px-4 animate-fade-in">
+    <main className="min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 animate-fade-in">
       {/* Topbar */}
       <header
         className="fixed top-0 left-0 right-0 flex items-center justify-between"
@@ -163,11 +163,11 @@ export default function ResetClient() {
           <>
             <h1
               style={{
-                fontSize: "24px",
-                fontWeight: 400,
+                fontSize: "21px",
+                fontWeight: 300,
                 color: "#FFFDFD",
                 letterSpacing: "-0.01em",
-                lineHeight: 1.2,
+                lineHeight: 1.26,
                 marginBottom: "8px",
               }}
             >
@@ -175,11 +175,11 @@ export default function ResetClient() {
             </h1>
             <p
               style={{
-                fontSize: "13px",
+                fontSize: "14.5px",
                 fontWeight: 300,
-                color: "#555",
+                color: "rgba(255,253,253,.55)",
                 lineHeight: 1.7,
-                marginBottom: "28px",
+                marginBottom: "24px",
               }}
             >
               your old passphrase no longer works. sign in with your new one.
@@ -200,11 +200,11 @@ export default function ResetClient() {
           <>
             <h1
               style={{
-                fontSize: "24px",
-                fontWeight: 400,
+                fontSize: "21px",
+                fontWeight: 300,
                 color: "#FFFDFD",
                 letterSpacing: "-0.01em",
-                lineHeight: 1.2,
+                lineHeight: 1.26,
                 marginBottom: "8px",
               }}
             >
@@ -212,11 +212,11 @@ export default function ResetClient() {
             </h1>
             <p
               style={{
-                fontSize: "13px",
+                fontSize: "14.5px",
                 fontWeight: 300,
-                color: "#555",
+                color: "rgba(255,253,253,.55)",
                 lineHeight: 1.7,
-                marginBottom: "28px",
+                marginBottom: "24px",
               }}
             >
               choose something only you would know. you&apos;ll use it with your
@@ -243,7 +243,7 @@ export default function ResetClient() {
                 />
               </div>
 
-              <div style={{ marginTop: "20px" }}>
+              <div style={{ marginTop: "18px" }}>
                 <label htmlFor="confirmPassphrase" style={labelStyles}>
                   confirm passphrase
                 </label>
@@ -275,7 +275,7 @@ export default function ResetClient() {
                 type="submit"
                 disabled={isLoading}
                 aria-label="set passphrase"
-                style={{ ...sendButtonStyles, marginTop: "24px" }}
+                style={{ ...sendButtonStyles, marginTop: "26px" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "#FFFDFD";
                   e.currentTarget.style.borderColor = "#FFFDFD";
@@ -294,22 +294,6 @@ export default function ResetClient() {
         )}
       </div>
 
-      {/* Footer */}
-      <footer
-        className="fixed bottom-0 left-0 right-0 text-center"
-        style={{ padding: "20px 0 24px", marginTop: "28px" }}
-      >
-        <p style={{ fontSize: "10px", color: "#444", lineHeight: 1.8, margin: 0 }}>
-          we never sell your data. your synthesis is yours.
-        </p>
-        <Link
-          href="/privacy"
-          className="transition-all hover:underline"
-          style={{ fontSize: "10px", color: stellarColor, lineHeight: 1.8, textDecoration: "none" }}
-        >
-          read our privacy policy
-        </Link>
-      </footer>
     </main>
   );
 }

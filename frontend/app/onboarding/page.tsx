@@ -390,7 +390,6 @@ export default function OnboardingPage() {
     return <div style={{ minHeight: "100vh", background: "#0A0A0A" }} />;
   }
 
-  const showBack = Boolean(PREV_STEP[step]);
   const isWalkthrough =
     step === "fork" ||
     step === "manifesto" ||
@@ -424,31 +423,6 @@ export default function OnboardingPage() {
         {step === "reveal" && "constellation reveal"}
       </div>
 
-      {/* Back arrow (non-fork screens) */}
-      {showBack && (
-        <button
-          onClick={goBack}
-          aria-label="go back to previous step"
-          style={{
-            position: "fixed",
-            top: 24,
-            left: 24,
-            zIndex: 10,
-            background: "none",
-            border: "none",
-            color: "#555",
-            fontSize: "18px",
-            cursor: "pointer",
-            padding: "8px",
-            transition: "color 0.2s ease"
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
-        >
-          ←
-        </button>
-      )}
-
       {/* Main content. Keyed by step so the fade-in re-fires cleanly on every
           transition (no stale animation/visibility state on back-nav). */}
       <div
@@ -477,10 +451,7 @@ export default function OnboardingPage() {
             <p
               className="onb-ey animate-fade-in"
               style={{
-                fontSize: "10px",
                 color: stellarColor,
-                textTransform: "uppercase",
-                letterSpacing: "0.22em",
               }}
             >
               before we continue
@@ -489,13 +460,8 @@ export default function OnboardingPage() {
             <h1
               className="onb-h1 animate-fade-in"
               style={{
-                animationDelay: "150ms",
+                animationDelay: "0ms",
                 animationFillMode: "both",
-                fontSize: "24px",
-                fontWeight: 300,
-                color: "#FFFDFD",
-                letterSpacing: "0.01em",
-                lineHeight: 1.4,
               }}
             >
               new here, or already know phenyx?
@@ -506,7 +472,7 @@ export default function OnboardingPage() {
               style={{
                 animationDelay: "300ms",
                 animationFillMode: "both",
-                fontSize: "14px",
+                fontSize: "14.5px",
                 fontWeight: 300,
                 color: "#888",
                 lineHeight: 1.7,
@@ -1219,10 +1185,7 @@ function ConnectScreen({
       <p
         className="onb-ey animate-fade-in"
         style={{
-          fontSize: "10px",
           color: stellarColor,
-          textTransform: "uppercase",
-          letterSpacing: "0.22em",
         }}
       >
         powered by onairos
@@ -1231,13 +1194,8 @@ function ConnectScreen({
       <h1
         className="onb-h1 animate-fade-in"
         style={{
-          animationDelay: "150ms",
+          animationDelay: "0ms",
           animationFillMode: "both",
-          fontSize: "26px",
-          fontWeight: 300,
-          color: "#FFFDFD",
-          letterSpacing: "0.01em",
-          lineHeight: 1.4,
         }}
       >
         your signals are the <b style={{ fontWeight: 600 }}>source of truth.</b>
@@ -1246,9 +1204,9 @@ function ConnectScreen({
       <p
         className="onb-sub animate-fade-in"
         style={{
-          animationDelay: "300ms",
+          animationDelay: "420ms",
           animationFillMode: "both",
-          fontSize: "15px",
+          fontSize: "14.5px",
           fontWeight: 300,
           color: "#888",
           lineHeight: 1.7,
@@ -1260,7 +1218,7 @@ function ConnectScreen({
       <ul
         className="onb-stack animate-fade-in"
         style={{
-          animationDelay: "450ms",
+          animationDelay: "840ms",
           animationFillMode: "both",
           listStyle: "none",
           padding: 0,
@@ -1308,7 +1266,7 @@ function ConnectScreen({
       <p
         className="animate-fade-in"
         style={{
-          animationDelay: "500ms",
+          animationDelay: "840ms",
           animationFillMode: "both",
           fontSize: "12px",
           fontWeight: 300,
@@ -1345,7 +1303,7 @@ function ConnectScreen({
         </p>
       )}
 
-      <div className="onb-action animate-fade-in" style={{ animationDelay: "600ms", animationFillMode: "both" }}>
+      <div className="onb-action animate-fade-in" style={{ animationDelay: "1260ms", animationFillMode: "both" }}>
         <OnairosButtonWrapper
           webpageName="PHENYX"
           requestedData={["personality"]}
@@ -1356,7 +1314,7 @@ function ConnectScreen({
         />
       </div>
 
-      <div className="onb-back animate-fade-in" style={{ animationDelay: "750ms", animationFillMode: "both" }}>
+      <div className="onb-back animate-fade-in" style={{ animationDelay: "1400ms", animationFillMode: "both" }}>
         <button
           onClick={onBack}
           aria-label="go back to the previous step"
@@ -1494,7 +1452,7 @@ const S4A_BLOCKS: RevealBlock[] = [
 // s4B (gentle) — the shipped variant. Lead +150 ports animGR('#s4B').
 const S4B_BLOCKS: RevealBlock[] = [
   { kind: "eyebrow", text: "what phenyx is", d: 0 },
-  { kind: "heading", text: "a mirror, ", emphasis: "not a map.", d: 200 },
+  { kind: "heading", text: "a mirror, ", emphasis: "not a map.", d: 0 },
   {
     kind: "body",
     text: "most tools show you who you could become. phenyx shows you what you have actually done.",
@@ -1545,10 +1503,7 @@ function ManifestoScreen({
                 className="onb-ey"
                 style={{
                   ...reveal,
-                  fontSize: "10px",
                   color: stellarColor,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.22em",
                 }}
               >
                 {block.text}
@@ -1562,11 +1517,6 @@ function ManifestoScreen({
                 className="onb-h1"
                 style={{
                   ...reveal,
-                  fontSize: "28px",
-                  fontWeight: 300,
-                  color: "#FFFDFD",
-                  letterSpacing: "0.01em",
-                  lineHeight: 1.4,
                 }}
               >
                 {block.text}
@@ -1713,7 +1663,7 @@ const POLARIS_EXAMPLE = {
   label: "an example",
   q: '"why do i keep starting over?"',
   a: "you haven't. you've started nine things since 2021, and they're all the same three ideas.",
-  src: "chatgpt, pinterest · 2021-2026",
+  src: "chatgpt, pinterest · 2021 – 2026",
 } as const;
 
 // s5A (manifesto) — retained-but-unreachable staggered emotional read. Lead +200
@@ -1749,7 +1699,7 @@ const S5B_BLOCKS: RevealBlock[] = [
     kind: "heading",
     text: "built on your constellation. ",
     emphasis: "not on who you say you are.",
-    d: 200,
+    d: 0,
   },
   {
     kind: "body",
@@ -1797,10 +1747,7 @@ function PolarisIntroScreen({
                 className="onb-ey"
                 style={{
                   ...reveal,
-                  fontSize: "10px",
                   color: stellarColor,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.22em",
                 }}
               >
                 {block.text}
@@ -1826,11 +1773,6 @@ function PolarisIntroScreen({
                 className="onb-h1"
                 style={{
                   ...reveal,
-                  fontSize: "26px",
-                  fontWeight: 300,
-                  color: "#FFFDFD",
-                  letterSpacing: "0.01em",
-                  lineHeight: 1.4,
                 }}
               >
                 {block.text}
