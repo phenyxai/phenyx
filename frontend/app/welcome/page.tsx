@@ -77,7 +77,7 @@ export default function WelcomePage() {
   };
 
   if (!mounted) {
-    return <div style={{ minHeight: "100vh", background: "#050505" }} />;
+    return <div style={{ minHeight: "100vh", background: "#080808" }} />;
   }
 
   // Reduced motion gets no transition/translate; full motion fades + lifts in.
@@ -90,7 +90,7 @@ export default function WelcomePage() {
       className={`onb-v67${reduceMotion ? "" : " animate-fade-in"}`}
       style={{
         minHeight: "100vh",
-        background: "#050505",
+        background: "#080808",
         position: "relative",
       }}
     >
@@ -103,7 +103,7 @@ export default function WelcomePage() {
           right: 0,
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "flex-start",
           gap: "10px",
           padding: "20px 24px",
           zIndex: 50,
@@ -164,7 +164,7 @@ export default function WelcomePage() {
           >
             <h1
               style={{
-                fontSize: "24px",
+                fontSize: "21px",
                 fontWeight: 300,
                 color: "#FFFDFD",
                 letterSpacing: "-0.02em",

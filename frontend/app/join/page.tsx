@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { STELLAR_DEFAULT } from "@/lib/stellar";
+import { STELLAR_DEFAULT, hexToRgb } from "@/lib/stellar";
 import { signupStart, otpSend, otpVerify } from "@/lib/api-client";
 import { setSessionFromTokens } from "@/lib/supabase-browser";
 import { setOtpFlowContext, clearOtpFlowContext } from "@/lib/otp-flow-context";
@@ -46,11 +46,13 @@ export default function JoinPage() {
     if (stored) {
       setStellarColor(stored);
       document.documentElement.style.setProperty("--color-stellar", stored);
+      document.documentElement.style.setProperty("--s-rgb", hexToRgb(stored));
     } else {
       // Pre-auth: no persisted identity yet. Use the deterministic default accent
       // (not random) — the server-assigned color is adopted after account creation.
       setStellarColor(STELLAR_DEFAULT);
       document.documentElement.style.setProperty("--color-stellar", STELLAR_DEFAULT);
+      document.documentElement.style.setProperty("--s-rgb", hexToRgb(STELLAR_DEFAULT));
     }
 
     // Rehydrate a staged draft so refreshing s2 keeps the OTP screen. An expired
@@ -219,20 +221,6 @@ export default function JoinPage() {
     color: "rgba(255,253,253,.92)",
   };
 
-  const inputStyles: React.CSSProperties = {
-    width: "100%",
-    background: "transparent",
-    border: "none",
-    borderBottom: "1px solid #1a1a1a",
-    borderRadius: 0,
-    padding: "8px 0",
-    color: "#FFFDFD",
-    fontSize: "14px",
-    fontWeight: 300,
-    lineHeight: 1.5,
-    transition: "border-color 0.2s ease",
-  };
-
   const labelStyles: React.CSSProperties = {
     display: "block",
     fontSize: "11px",
@@ -240,14 +228,6 @@ export default function JoinPage() {
     color: "rgba(255,253,253,.5)",
     textTransform: "uppercase",
     marginBottom: "6px",
-  };
-
-  const onInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderBottomColor = stellarColor;
-    e.target.style.outline = "none";
-  };
-  const onInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderBottomColor = "#1a1a1a";
   };
 
   return (
@@ -510,9 +490,7 @@ export default function JoinPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoFocus
-                  style={inputStyles}
-                  onFocus={onInputFocus}
-                  onBlur={onInputBlur}
+                  className="auth-input"
                 />
               </div>
 
@@ -529,9 +507,7 @@ export default function JoinPage() {
                   placeholder="we'll send a code to confirm it is you"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  style={inputStyles}
-                  onFocus={onInputFocus}
-                  onBlur={onInputBlur}
+                  className="auth-input"
                 />
               </div>
 
@@ -548,9 +524,7 @@ export default function JoinPage() {
                   placeholder="a phrase or line that means something to you"
                   value={passphrase}
                   onChange={(e) => setPassphrase(e.target.value)}
-                  style={inputStyles}
-                  onFocus={onInputFocus}
-                  onBlur={onInputBlur}
+                  className="auth-input"
                 />
                 <p style={{ fontSize: "10px", color: "#444", marginTop: "8px", lineHeight: 1.6 }}>
                   used with your name each time you return.

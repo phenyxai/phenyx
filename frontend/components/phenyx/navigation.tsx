@@ -32,6 +32,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
     const sections = navCopy.links
       .map((link) => document.getElementById(link.targetId))
       .filter((section): section is HTMLElement => Boolean(section));
+    const hero = document.getElementById(SECTION_IDS.top);
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
@@ -39,10 +40,20 @@ export function Navigation({ onEnterClick }: NavigationProps) {
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
         if (visible) setActiveId(visible.target.id);
       },
-      { rootMargin: "-20% 0px -55%", threshold: [0, 0.15, 0.4] },
+      { rootMargin: "-45% 0px -45%", threshold: [0, 0.15, 0.4] },
+    );
+    const heroObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) setActiveId(null);
+      },
+      { rootMargin: "-20% 0px -60%" },
     );
     sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
+    if (hero) heroObserver.observe(hero);
+    return () => {
+      observer.disconnect();
+      heroObserver.disconnect();
+    };
   }, []);
 
   const enter = () => {

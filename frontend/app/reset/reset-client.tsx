@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { STELLAR_DEFAULT } from "@/lib/stellar";
+import { STELLAR_DEFAULT, hexToRgb } from "@/lib/stellar";
 import { passphraseResetConfirm } from "@/lib/api-client";
 
 // form = enter a new passphrase. done = it's set, sign in again. The token comes
@@ -28,11 +28,13 @@ export default function ResetClient() {
     if (stored) {
       setStellarColor(stored);
       document.documentElement.style.setProperty("--color-stellar", stored);
+      document.documentElement.style.setProperty("--s-rgb", hexToRgb(stored));
     } else {
       // Pre-auth: no persisted identity yet. Use the deterministic default accent
       // (not random) rather than inventing an identity color on the client.
       setStellarColor(STELLAR_DEFAULT);
       document.documentElement.style.setProperty("--color-stellar", STELLAR_DEFAULT);
+      document.documentElement.style.setProperty("--s-rgb", hexToRgb(STELLAR_DEFAULT));
     }
   }, []);
 
@@ -97,20 +99,6 @@ export default function ResetClient() {
     color: "rgba(255,253,253,.92)",
   };
 
-  const inputStyles: React.CSSProperties = {
-    width: "100%",
-    background: "transparent",
-    border: "none",
-    borderBottom: "1px solid #1a1a1a",
-    borderRadius: 0,
-    padding: "8px 0",
-    color: "#FFFDFD",
-    fontSize: "14px",
-    fontWeight: 300,
-    lineHeight: 1.5,
-    transition: "border-color 0.2s ease",
-  };
-
   const labelStyles: React.CSSProperties = {
     display: "block",
     fontSize: "11px",
@@ -118,14 +106,6 @@ export default function ResetClient() {
     color: "rgba(255,253,253,.5)",
     textTransform: "uppercase",
     marginBottom: "6px",
-  };
-
-  const onInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderBottomColor = stellarColor;
-    e.target.style.outline = "none";
-  };
-  const onInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderBottomColor = "#1a1a1a";
   };
 
   return (
@@ -237,9 +217,7 @@ export default function ResetClient() {
                   value={newPassphrase}
                   onChange={(e) => setNewPassphrase(e.target.value)}
                   autoFocus
-                  style={inputStyles}
-                  onFocus={onInputFocus}
-                  onBlur={onInputBlur}
+                  className="auth-input"
                 />
               </div>
 
@@ -255,9 +233,7 @@ export default function ResetClient() {
                   placeholder="type it once more"
                   value={confirmPassphrase}
                   onChange={(e) => setConfirmPassphrase(e.target.value)}
-                  style={inputStyles}
-                  onFocus={onInputFocus}
-                  onBlur={onInputBlur}
+                  className="auth-input"
                 />
               </div>
 

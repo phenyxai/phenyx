@@ -11,6 +11,7 @@ export function AskPolarisWidget() {
   const [isPaused, setIsPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [isFading, setIsFading] = useState(false);
+  const [restartKey, setRestartKey] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -21,7 +22,10 @@ export function AskPolarisWidget() {
 
   const select = useCallback((nextIndex: number) => {
     stop();
-    if (nextIndex === index) return;
+    if (nextIndex === index) {
+      setRestartKey((key) => key + 1);
+      return;
+    }
     if (fadeRef.current) clearTimeout(fadeRef.current);
     if (reducedMotion) {
       setIndex(nextIndex);
@@ -53,7 +57,7 @@ export function AskPolarisWidget() {
       );
     }
     return stop;
-  }, [index, isPaused, reducedMotion, select, stop]);
+  }, [index, isPaused, reducedMotion, restartKey, select, stop]);
 
   useEffect(() => () => {
     if (fadeRef.current) clearTimeout(fadeRef.current);
