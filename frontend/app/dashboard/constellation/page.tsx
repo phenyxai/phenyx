@@ -71,7 +71,7 @@ export default function ConstellationTabPage() {
         copy={INTRO_COPY.constellation}
         className="mx-6 mt-6 shrink-0"
       />
-      <div className="flex min-h-[min(72vh,720px)]">
+      <div className="flex min-h-[min(72vh,720px)] flex-col min-[1100px]:flex-row">
         <div className="relative min-h-[420px] min-w-0 flex-1">
           {data && (
             <ConstellationCanvas
@@ -83,7 +83,7 @@ export default function ConstellationTabPage() {
           )}
         </div>
 
-        <aside className="w-[320px] shrink-0 overflow-y-auto border-l border-[#1a1a1a] px-6 py-8">
+        <aside className="w-full shrink-0 overflow-visible overscroll-contain border-t border-[#1a1a1a] px-6 py-8 min-[1100px]:max-h-[calc(100vh-130px)] min-[1100px]:w-[clamp(380px,36vw,500px)] min-[1100px]:overflow-y-auto min-[1100px]:border-t-0 min-[1100px]:border-l min-[1100px]:[&>*]:overflow-visible">
           {data ? (
             <ConstellationPanel
               data={data}

@@ -12,6 +12,11 @@ import { redactOnairosForProfile } from "@/lib/onairos-snapshot";
 import { normalizeOnairosResult, buildOnairosTraitObject } from "@/lib/onairos-result";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { apiFetch } from "@/lib/api-client";
+import {
+  FORMATION_ANIMATION_DURATION_MS,
+  assignParticlesToNodes,
+  formationTimeline,
+} from "@/lib/constellation-reveal";
 
 const STELLAR_PALETTE = [
   "#CC3300", "#E84422", "#E87722", "#E8B822",
@@ -718,25 +723,9 @@ export default function OnboardingPage() {
 // The exact reveal line (v67 formation end card). Auto-advances to Daily.
 const REVEAL_LINE = "none of it is new. it is only in one piece now.";
 
-// Phase timing constants (verbatim from the ticket / prototype :1834-1843).
-const T_APPEAR = 2000;
-const T_FLOAT_END = 4000;
-const T_CONDENSE = 4000;
-const T_PULL_DUR = 1800;
-const T_NODE_STAG = 300;
-const T_ALL_NODES = T_CONDENSE + 7 * T_NODE_STAG + T_PULL_DUR; // 7900
-const T_LINES = T_ALL_NODES + 400; // 8300
-const T_LINES_DUR = 2400;
-const T_REVEAL = T_LINES + T_LINES_DUR + 1000; // 11700
-// T_FLOAT_END marks the FLOAT-phase boundary (kept for completeness of the
-// constant set); label cycling is driven by the 2000ms SLABELS interval.
-void T_FLOAT_END;
-
-// Reveal-sequence sub-timings (REVEAL phase, from start-of-animation).
-const REVEAL_LOAD_FADE = 800; // fade rcLoad out
-const REVEAL_IN = 2200; // fade rc (reveal line) in
-const REVEAL_HOLD = 3600; // hold the landed line
-const SCREEN_FADE = 1800; // fade scrC out, then auto-advance
+// Every phase derives from this one total-duration decision. The selected
+// 17.085s value is 15% faster than the original 20.1s choreography.
+const FORMATION = formationTimeline(FORMATION_ANIMATION_DURATION_MS);
 
 // Canonical 7 pillars (index 0-6). nx/ny are fractions of the viewport.
 // ORIGIN bottom anchor; EMERGENCE+SELF-CREATION form a diamond into the
@@ -939,7 +928,8 @@ function RevealScreen({
     };
 
     const nodeLocked = (i: number, t: number) =>
-      t - T_CONDENSE >= i * T_NODE_STAG + T_PULL_DUR;
+      t - FORMATION.condenseAtMs >=
+        i * FORMATION.nodeStaggerMs + FORMATION.pullDurationMs;
 
     // ----------------------------------------------------------------------
     // Reduced-motion: bypass the rAF loop entirely. Snap all 7 locked nodes +
@@ -976,25 +966,30 @@ function RevealScreen({
     // ----------------------------------------------------------------------
     const N = 200;
     const M = 60; // inset margin
-    const particles: RevealParticle[] = [];
-    for (let i = 0; i < N; i++) {
-      const target = i % 7;
-      particles.push({
-        x: M + Math.random() * Math.max(1, W - 2 * M),
-        y: M + Math.random() * Math.max(1, H - 2 * M),
+    const seeds = Array.from({ length: N }, () => ({
+      x: M + Math.random() * Math.max(1, W - 2 * M),
+      y: M + Math.random() * Math.max(1, H - 2 * M),
+    }));
+    const assignments = assignParticlesToNodes(seeds, nodePos());
+    const particles: RevealParticle[] = seeds.map((seed, i) => {
+      const target = assignments[i].node;
+      return {
+        ...seed,
         vx: (Math.random() - 0.5) * 0.5,
         vy: (Math.random() - 0.5) * 0.5,
         radius: 0.4 + Math.random() * 1.6,
-        birthDelay: Math.random() * 2000,
+        birthDelay: Math.random() * FORMATION.appearDurationMs,
         condenseDelay:
-          target * T_NODE_STAG + (target === 3 ? 800 : 0) + Math.random() * 600,
+          target * FORMATION.nodeStaggerMs +
+          (target === 3 ? FORMATION.hubDelayMs : 0) +
+          Math.random() * FORMATION.condenseJitterMs,
         target,
         cf: null,
-      });
-    }
+      };
+    });
 
-    // SLABELS cycling — every 2000ms with a short cross-fade; clamps on the
-    // closing label; interval cleared at REVEAL (and on unmount).
+    // SLABELS cycling follows the scaled formation clock with a short
+    // cross-fade; it clamps on the closing label and clears at REVEAL.
     setLoadVisible(true);
     let labelIdx = 0;
     const advanceLabel = () => {
@@ -1004,10 +999,10 @@ function RevealScreen({
           labelIdx = Math.min(labelIdx + 1, SLABELS.length - 1);
           setLoadText(SLABELS[labelIdx]);
           setLoadVisible(true);
-        }, 350),
+        }, FORMATION.labelFadeDurationMs),
       );
     };
-    labelIntervalRef.current = window.setInterval(advanceLabel, 2000);
+    labelIntervalRef.current = window.setInterval(advanceLabel, FORMATION.appearDurationMs);
 
     // Reveal sequence timers (absolute offsets from animation start).
     timersRef.current.push(
@@ -1017,18 +1012,18 @@ function RevealScreen({
           labelIntervalRef.current = null;
         }
         setLoadFade(true);
-      }, T_REVEAL),
+      }, FORMATION.revealAtMs),
     );
     timersRef.current.push(
       window.setTimeout(() => {
         setRevealText(REVEAL_LINE);
         setRevealVisible(true);
-      }, T_REVEAL + REVEAL_LOAD_FADE),
+      }, FORMATION.revealAtMs + FORMATION.loadFadeDurationMs),
     );
     timersRef.current.push(
       window.setTimeout(
         () => setScreenFade(true),
-        T_REVEAL + REVEAL_LOAD_FADE + REVEAL_IN + REVEAL_HOLD,
+        FORMATION.completeAtMs - FORMATION.screenFadeDurationMs,
       ),
     );
     timersRef.current.push(
@@ -1037,7 +1032,7 @@ function RevealScreen({
           doneRef.current = true;
           onDone();
         }
-      }, T_REVEAL + REVEAL_LOAD_FADE + REVEAL_IN + REVEAL_HOLD + SCREEN_FADE),
+      }, FORMATION.completeAtMs),
     );
 
     const start = performance.now();
@@ -1048,7 +1043,7 @@ function RevealScreen({
 
       // Particles (APPEAR fade-in → FLOAT drift → CONDENSE pull into nodes).
       for (const p of particles) {
-        const cStart = T_CONDENSE + p.condenseDelay;
+        const cStart = FORMATION.condenseAtMs + p.condenseDelay;
         let cx: number;
         let cy: number;
         if (t < cStart) {
@@ -1062,17 +1057,17 @@ function RevealScreen({
           cy = p.y;
         } else {
           if (!p.cf) p.cf = { x: p.x, y: p.y };
-          const prog = clamp01((t - cStart) / T_PULL_DUR);
+          const prog = clamp01((t - cStart) / FORMATION.pullDurationMs);
           const e = easeInOut(prog);
           const node = np[p.target];
           cx = p.cf.x + (node.x - p.cf.x) * e;
           cy = p.cf.y + (node.y - p.cf.y) * e;
         }
-        const birth = clamp01((t - p.birthDelay) / T_APPEAR);
+        const birth = clamp01((t - p.birthDelay) / FORMATION.appearDurationMs);
         let alpha = (0.45 + p.radius * 0.18) * birth;
         if (t >= cStart) {
           // Dim as it merges so the node glow takes over.
-          alpha *= 1 - clamp01((t - cStart) / T_PULL_DUR) * 0.6;
+          alpha *= 1 - clamp01((t - cStart) / FORMATION.pullDurationMs) * 0.6;
         }
         if (alpha > 0.002) {
           ctx.globalAlpha = Math.min(1, alpha);
@@ -1087,7 +1082,10 @@ function RevealScreen({
       // Edges (LINES) — staggered, each gated on BOTH endpoints locked.
       CLINES.forEach(([i, j], li) => {
         if (!nodeLocked(i, t) || !nodeLocked(j, t)) return;
-        const prog = clamp01((t - (T_LINES + li * 300)) / T_LINES_DUR);
+        const prog = clamp01(
+          (t - (FORMATION.linesAtMs + li * FORMATION.nodeStaggerMs)) /
+            FORMATION.linesDurationMs,
+        );
         if (prog <= 0) return;
         drawEdge(np[i].x, np[i].y, np[j].x, np[j].y, easeOut(prog));
       });
@@ -1127,7 +1125,7 @@ function RevealScreen({
         zIndex: 5,
         background: "#0A0A0A",
         opacity: !intro ? 0 : screenFade ? 0 : 1,
-        transition: `opacity ${screenFade ? SCREEN_FADE : 800}ms ease`,
+        transition: `opacity ${screenFade ? FORMATION.screenFadeDurationMs : FORMATION.loadFadeDurationMs}ms ease`,
         pointerEvents: "none",
       }}
     >
@@ -1150,7 +1148,7 @@ function RevealScreen({
           textTransform: "lowercase",
           color: "#888",
           opacity: loadFade || !loadVisible ? 0 : 0.85,
-          transition: `opacity ${loadFade ? REVEAL_LOAD_FADE : 450}ms ease`,
+          transition: `opacity ${loadFade ? FORMATION.loadFadeDurationMs : FORMATION.labelFadeDurationMs}ms ease`,
         }}
       >
         {loadText}
@@ -1171,7 +1169,7 @@ function RevealScreen({
           letterSpacing: "0.01em",
           color: "#FFFDFD",
           opacity: revealVisible ? 1 : 0,
-          transition: `opacity ${reducedMotion ? 600 : REVEAL_IN}ms ease`,
+          transition: `opacity ${reducedMotion ? 600 : FORMATION.revealInDurationMs}ms ease`,
         }}
       >
         {revealText}
