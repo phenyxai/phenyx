@@ -10,6 +10,7 @@ import {
   type RefObject,
 } from "react";
 import { useSearchParams } from "next/navigation";
+import * as Popover from "@radix-ui/react-popover";
 
 import {
   askPolaris,
@@ -42,7 +43,7 @@ import { useTier } from "@/lib/use-tier";
 const ACCENT = "var(--s, #5599FF)";
 
 const TOKEN_NOTE =
-  "a shared weekly amount, not a count of questions. longer conversations use more.";
+  "tokens are a shared weekly amount, not a count of questions — longer conversations use more. the amount resets on its own; a top-up is one-time and does not change the reset.";
 
 const COMPOSER_PLACEHOLDER = "ask anything. it already has your context.";
 
@@ -175,7 +176,6 @@ export function PolarisTab() {
       chatInputRef.current?.focus();
       autosize(chatInputRef.current);
     } else {
-      idleInputRef.current?.focus();
       autosize(idleInputRef.current);
     }
   }, [view]);
@@ -333,13 +333,65 @@ export function PolarisTab() {
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "100%",
-        minHeight: 0,
+        height: "calc(var(--app-h, 100vh) - 210px)",
+        minHeight: "min(600px, calc(var(--app-h, 100vh) - 210px))",
       }}
     >
       <style>{`
-        [data-testid="polaris-panel"] textarea[aria-label="ask polaris"]::placeholder {
-          color: rgba(255,253,253,0.52);
+        @layer base {
+          [data-testid="polaris-panel"] textarea[aria-label="ask polaris"]::placeholder {
+            color: rgba(255,253,253,0.52) !important;
+          }
+          [data-testid="polaris-panel"] textarea[aria-label="ask polaris"],
+          [data-testid="polaris-panel"] textarea[aria-label="ask polaris"]:focus {
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            padding: 2px 0 !important;
+          }
+        }
+        [data-polaris-hero-row] {
+          padding-right: 150px;
+        }
+        [data-polaris-hero-token] {
+          position: absolute;
+          right: 0;
+          top: 50%;
+          transform: translateY(-50%);
+        }
+        @media (max-width: 760px) {
+          [data-polaris-hero-row] {
+            flex-wrap: wrap;
+            padding-right: 0;
+          }
+          [data-polaris-hero-token] {
+            position: static;
+            transform: none;
+          }
+        }
+        @media (hover: hover) {
+          [data-polaris-question-card]:hover {
+            border-color: rgba(var(--s-rgb, 85,153,255),0.4) !important;
+            background: #0c0c0c !important;
+          }
+          [data-polaris-chip]:hover {
+            border-color: rgba(var(--s-rgb, 85,153,255),0.4) !important;
+            color: rgba(255,253,253,0.78) !important;
+          }
+          [data-polaris-thread]:hover {
+            border-color: #242424 !important;
+          }
+          [data-polaris-explore-tab][data-active="false"]:hover {
+            color: rgba(255,253,253,0.72) !important;
+          }
+          [data-polaris-token-trigger]:hover {
+            border-color: rgba(var(--s-rgb, 85,153,255),0.4) !important;
+            color: rgba(255,253,253,0.8) !important;
+          }
+          [data-polaris-token-trigger]:hover [data-polaris-token-plus] {
+            color: var(--s, #5599FF) !important;
+          }
         }
       `}</style>
       {view === "idle" ? (
@@ -537,6 +589,7 @@ function IdleView({
     >
       <div style={{ width: "100%", maxWidth: 760, margin: "0 auto" }}>
         <div
+          data-polaris-hero-row
           style={{
             display: "flex",
             alignItems: "center",
@@ -544,8 +597,6 @@ function IdleView({
             gap: 14,
             marginBottom: 26,
             position: "relative",
-            paddingRight: 150,
-            flexWrap: "wrap",
             rowGap: 10,
           }}
         >
@@ -566,7 +617,7 @@ function IdleView({
           >
             what do you want to understand today?
           </p>
-          <div style={{ marginLeft: "auto" }}>
+          <div data-polaris-hero-token>
             <TokenPill remaining={remaining} onTopup={onTopup} />
           </div>
         </div>
@@ -651,15 +702,8 @@ function IdleView({
                   type="button"
                   onClick={() => onOpenChat(s.text, s.pillar_tag)}
                   className="motion-reduce:transition-none"
+                  data-polaris-question-card
                   style={questionCardStyle}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(85,153,255,0.4)";
-                    e.currentTarget.style.background = "#0c0c0c";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#171717";
-                    e.currentTarget.style.background = "transparent";
-                  }}
                 >
                   <p
                     style={{
@@ -704,15 +748,8 @@ function IdleView({
                   type="button"
                   onClick={() => onOpenChat(chip.label, chip.pillar)}
                   className="motion-reduce:transition-none"
+                  data-polaris-chip
                   style={chipStyle}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(85,153,255,0.4)";
-                    e.currentTarget.style.color = "rgba(255,253,253,0.78)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#1e1e1e";
-                    e.currentTarget.style.color = "rgba(255,253,253,0.5)";
-                  }}
                 >
                   {chip.label}
                 </button>
@@ -728,13 +765,8 @@ function IdleView({
                   type="button"
                   onClick={() => onOpenThread(t.id)}
                   className="motion-reduce:transition-none"
+                  data-polaris-thread
                   style={threadRowStyle}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "#242424";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#1a1a1a";
-                  }}
                 >
                   <p
                     style={{
@@ -783,6 +815,8 @@ function ExploreTabButton({
       type="button"
       onClick={onClick}
       className="motion-reduce:transition-none"
+      data-polaris-explore-tab
+      data-active={active}
       style={{
         fontFamily: "inherit",
         fontSize: 12,
@@ -983,9 +1017,10 @@ function ChatView({
                 onClick={onTopup}
                 style={{
                   marginTop: 12,
+                  minHeight: 24,
                   background: "none",
                   border: "none",
-                  padding: 0,
+                  padding: "2px 0",
                   fontSize: 13,
                   color: ACCENT,
                   cursor: "pointer",
@@ -1124,47 +1159,100 @@ function TokenPill({
   onTopup: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onTopup}
-      title={TOKEN_NOTE}
-      aria-label={`${weeklyTokenCopy(remaining)}. ${TOKEN_NOTE}`}
-      className="motion-reduce:transition-none"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        fontFamily: "inherit",
-        fontSize: 11,
-        lineHeight: 1,
-        letterSpacing: "0.02em",
-        color: "rgba(255,253,253,0.5)",
-        padding: "4px 5px 4px 11px",
-        border: "1px solid #242424",
-        borderRadius: 20,
-        whiteSpace: "nowrap",
-        background: "transparent",
-        cursor: "pointer",
-      }}
-    >
-      <span>{weeklyTokenCopy(remaining)}</span>
-      <span
-        aria-hidden="true"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 14,
-          height: 14,
-          color: "rgba(255,253,253,0.6)",
-          flexShrink: 0,
-        }}
-      >
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      </span>
-    </button>
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          aria-label={`${weeklyTokenCopy(remaining)}. learn how polaris tokens work`}
+          className="motion-reduce:transition-none"
+          data-polaris-token-trigger
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            minHeight: 24,
+            minWidth: 24,
+            fontFamily: "inherit",
+            fontSize: 11,
+            lineHeight: 1,
+            letterSpacing: "0.02em",
+            color: "rgba(255,253,253,0.5)",
+            padding: "4px 5px 4px 11px",
+            border: "1px solid #242424",
+            borderRadius: 20,
+            whiteSpace: "nowrap",
+            background: "transparent",
+            cursor: "pointer",
+          }}
+        >
+          <span>{weeklyTokenCopy(remaining)}</span>
+          <span
+            aria-hidden="true"
+            data-polaris-token-plus
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 14,
+              height: 14,
+              color: "rgba(255,253,253,0.6)",
+              flexShrink: 0,
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </span>
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="end"
+          sideOffset={8}
+          aria-label="polaris token details"
+          style={{
+            zIndex: 60,
+            width: "min(320px, calc(100vw - 32px))",
+            border: "1px solid #242424",
+            borderRadius: 12,
+            background: "#0e0e0e",
+            padding: 14,
+            color: "rgba(255,253,253,0.72)",
+            boxShadow: "0 12px 32px rgba(0,0,0,0.45)",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              fontWeight: 300,
+              lineHeight: 1.65,
+            }}
+          >
+            {TOKEN_NOTE}
+          </p>
+          <Popover.Close asChild>
+            <button
+              type="button"
+              onClick={onTopup}
+              style={{
+                minHeight: 24,
+                marginTop: 10,
+                border: "none",
+                background: "transparent",
+                padding: "4px 0",
+                color: ACCENT,
+                fontFamily: "inherit",
+                fontSize: 12,
+                cursor: "pointer",
+              }}
+            >
+              add more for ${V67_PRICING.topup}
+            </button>
+          </Popover.Close>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
@@ -1376,6 +1464,8 @@ const headerTextBtn: CSSProperties = {
   fontSize: 11,
   color: "rgba(255,253,253,0.5)",
   cursor: "pointer",
+  minWidth: 24,
+  minHeight: 24,
   padding: 0,
   letterSpacing: "0.04em",
 };
