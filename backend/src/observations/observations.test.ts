@@ -8,6 +8,7 @@ import {
   ObservationCandidate,
   ObservationRow,
   orderCandidates,
+  collapseOverlappingCandidates,
   computeLockedForFree,
   buildInsertRows,
   applyReadGate,
@@ -109,6 +110,112 @@ test("orderCandidates sorts by pillar priority, then confidence desc", () => {
   );
 });
 
+test("collapseOverlappingCandidates keeps the better-supported same-pillar window", () => {
+  const stronger = cand({
+    pillar: "origin",
+    signal_key: "export-to-release",
+    confidence: 0.72,
+    supporting_points: ["exported 4 jan", "released 18 feb", "45 day gap"],
+    source_record_keys: ["project:export:2026-01-04", "project:release:2026-02-18"],
+    window_start: "2026-01-04T00:00:00Z",
+    window_end: "2026-02-18T00:00:00Z",
+  });
+  const weakerAngle = cand({
+    pillar: "origin",
+    signal_key: "release-lag",
+    confidence: 0.91,
+    supporting_points: ["released 18 feb"],
+    source_record_keys: ["project:review:2026-02-12"],
+    window_start: "2026-02-01T00:00:00Z",
+    window_end: "2026-02-18T00:00:00Z",
+  });
+  const sharedRecordDifferentWindow = cand({
+    pillar: "origin",
+    signal_key: "release-record-retold",
+    supporting_points: ["released 18 feb"],
+    source_record_keys: ["project:release:2026-02-18"],
+    window_start: "2027-01-01T00:00:00Z",
+    window_end: "2027-01-02T00:00:00Z",
+  });
+  const otherPillar = cand({
+    pillar: "emergence",
+    signal_key: "same-window-other-pillar",
+    supporting_points: ["released 18 feb"],
+    source_record_keys: ["project:release:2026-02-18"],
+    window_start: "2026-02-01T00:00:00Z",
+    window_end: "2026-02-18T00:00:00Z",
+  });
+  const separateWindow = cand({
+    pillar: "origin",
+    signal_key: "later-window",
+    supporting_points: ["exported 4 jul"],
+    source_record_keys: ["project:export:2026-07-04"],
+    window_start: "2026-07-04T00:00:00Z",
+    window_end: "2026-07-04T00:00:00Z",
+  });
+
+  const collapsed = collapseOverlappingCandidates([
+    weakerAngle,
+    sharedRecordDifferentWindow,
+    otherPillar,
+    separateWindow,
+    stronger,
+  ]);
+
+  assert.deepEqual(
+    collapsed.map((candidate) => candidate.signal_key).sort(),
+    ["export-to-release", "later-window", "same-window-other-pillar"],
+  );
+});
+
+test("collapseOverlappingCandidates does not transitively merge distinct windows", () => {
+  const collapsed = collapseOverlappingCandidates([
+    cand({
+      signal_key: "january",
+      supporting_points: ["a", "b", "c"],
+      window_start: "2026-01-01T00:00:00Z",
+      window_end: "2026-01-10T00:00:00Z",
+    }),
+    cand({
+      signal_key: "broad-weak-bridge",
+      supporting_points: ["b"],
+      window_start: "2026-01-05T00:00:00Z",
+      window_end: "2026-02-05T00:00:00Z",
+    }),
+    cand({
+      signal_key: "february",
+      supporting_points: ["d", "e"],
+      window_start: "2026-02-01T00:00:00Z",
+      window_end: "2026-02-10T00:00:00Z",
+    }),
+  ]);
+
+  assert.deepEqual(
+    collapsed.map((candidate) => candidate.signal_key),
+    ["january", "february"],
+  );
+});
+
+test("collapseOverlappingCandidates does not treat a platform as a source-record key", () => {
+  const collapsed = collapseOverlappingCandidates([
+    cand({
+      signal_key: "early-listening",
+      source_platforms: ["spotify"],
+      source_record_keys: ["spotify"],
+    }),
+    cand({
+      signal_key: "late-listening",
+      source_platforms: ["spotify"],
+      source_record_keys: ["spotify"],
+    }),
+  ]);
+
+  assert.deepEqual(
+    collapsed.map((candidate) => candidate.signal_key),
+    ["early-listening", "late-listening"],
+  );
+});
+
 // ---------------------------------------------------------------------------
 // Generation-time gating
 // ---------------------------------------------------------------------------
@@ -204,7 +311,7 @@ test("applyReadGate ships points and span on unlocked traces", () => {
     PRO
   );
   assert.deepEqual(served[0].points, ["twelve sessions", "none of them public"]);
-  assert.equal(served[0].span, "2016 - 2026");
+  assert.equal(served[0].span, "2016 – 2026");
   assert.equal(served[0].sentence, "the body");
 });
 
@@ -241,7 +348,7 @@ const maraEvidence = buildEvidence({
   recs: 1847,
   n: 1847,
   sources: ["spotify", "chatgpt"],
-  span: "2016 - 2026",
+  span: "2016 – 2026",
   metric: { k: "split", a: 1847, b: 12, la: "these four", lb: "the four you post about" },
   entries: [
     { t: "14 mar 2016, 23:41", s: "spotify", w: "session opened on heaven or las vegas, first on record", l: "earliest" },
@@ -265,7 +372,7 @@ const maraUnder = {
 
 test("certaintyCopy matches the mara frequency fixture", () => {
   assert.equal(
-    certaintyCopy(1847, "2016 - 2026", 2),
+    certaintyCopy(1847, "2016 – 2026", 2),
     "measured across 1,847 instances, holding for 10 years, corroborated in a second place."
   );
 });

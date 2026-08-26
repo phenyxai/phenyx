@@ -47,6 +47,13 @@ export interface ObservationCandidate {
   source_platforms: string[];
   meta_label: string | null;
   signal_key: string;
+  /** Concrete statements shown behind the observation and used to rank overlap. */
+  supporting_points?: string[];
+  /** Stable source-record or trait keys copied from the grounding context. */
+  source_record_keys?: string[];
+  /** Inclusive UTC window for the records behind this observation. */
+  window_start?: string | null;
+  window_end?: string | null;
   /** 0..1, used only for deterministic ordering; not persisted (no column). */
   confidence: number;
 }
@@ -70,6 +77,88 @@ export function orderCandidates(
       normalizeSignalKey(b.signal_key)
     );
   });
+}
+
+/**
+ * Collapse candidate angles that rest on the same underlying same-day window.
+ * A duplicate pair must share a normalized pillar and either a source-record
+ * key or an overlapping explicit time window. Stronger candidates are compared
+ * first, so a weak broad bridge cannot transitively erase distinct windows.
+ */
+export function collapseOverlappingCandidates(
+  candidates: ObservationCandidate[],
+): ObservationCandidate[] {
+  const ranked = candidates
+    .map((candidate, index) => ({ candidate, index }))
+    .sort(
+      (left, right) =>
+        candidateStrength(right.candidate) - candidateStrength(left.candidate) ||
+        left.index - right.index,
+    );
+  const kept: typeof ranked = [];
+  for (const item of ranked) {
+    if (kept.some((other) => candidatesOverlap(item.candidate, other.candidate))) {
+      continue;
+    }
+    kept.push(item);
+  }
+  return kept
+    .sort((left, right) => left.index - right.index)
+    .map(({ candidate }) => candidate);
+}
+
+function candidateStrength(candidate: ObservationCandidate): number {
+  const points = candidate.supporting_points?.filter((point) => point.trim()).length ?? 0;
+  return points * 2 + Math.max(0, Math.min(1, candidate.confidence ?? 0));
+}
+
+function candidatesOverlap(
+  left: ObservationCandidate,
+  right: ObservationCandidate,
+): boolean {
+  if (normalizePillar(left.pillar) !== normalizePillar(right.pillar)) return false;
+
+  const leftKeys = new Set(candidateRecordKeys(left));
+  const sharesRecord = candidateRecordKeys(right).some((key) => leftKeys.has(key));
+  return sharesRecord || windowsOverlap(left, right);
+}
+
+function candidateRecordKeys(candidate: ObservationCandidate): string[] {
+  const platforms = new Set(candidate.source_platforms.map(normalizeSignalKey));
+  return (candidate.source_record_keys ?? [])
+    .map(normalizeSignalKey)
+    .filter((key) => key && !platforms.has(key));
+}
+
+function windowsOverlap(
+  left: ObservationCandidate,
+  right: ObservationCandidate,
+): boolean {
+  const leftWindow = candidateWindow(left);
+  const rightWindow = candidateWindow(right);
+  return (
+    leftWindow != null &&
+    rightWindow != null &&
+    leftWindow.start <= rightWindow.end &&
+    rightWindow.start <= leftWindow.end
+  );
+}
+
+function candidateWindow(
+  candidate: ObservationCandidate,
+): { start: number; end: number; startIso: string; endIso: string } | null {
+  if (!candidate.window_start || !candidate.window_end) return null;
+  const start = Date.parse(candidate.window_start);
+  const end = Date.parse(candidate.window_end);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  const first = Math.min(start, end);
+  const last = Math.max(start, end);
+  return {
+    start: first,
+    end: last,
+    startIso: new Date(first).toISOString(),
+    endIso: new Date(last).toISOString(),
+  };
 }
 
 /**
@@ -99,6 +188,9 @@ export interface ObservationInsert {
   is_new: boolean;
   locked_for_free: boolean;
   signal_hash: string;
+  points?: string[];
+  span_start?: string | null;
+  span_end?: string | null;
 }
 
 /**
@@ -119,6 +211,7 @@ export function buildInsertRows(
     const signal_hash = computeSignalHash(userId, c.pillar, c.signal_key);
     if (seen.has(signal_hash)) continue;
     seen.add(signal_hash);
+    const window = candidateWindow(c);
     rows.push({
       user_id: userId,
       pillar: normalizePillar(c.pillar),
@@ -130,6 +223,9 @@ export function buildInsertRows(
       // collapsed duplicates that never land in `observations`.
       locked_for_free: hasFullAccess ? false : rows.length >= 2,
       signal_hash,
+      points: c.supporting_points?.filter((point) => point.trim()),
+      span_start: window?.startIso ?? null,
+      span_end: window?.endIso ?? null,
     });
   }
   return rows;
@@ -151,7 +247,7 @@ export interface ObservationRow {
   surfaced_at: string;
   /** v66 supporting points (jsonb array of strings). */
   points?: unknown;
-  /** Human date span, e.g. "2016 - 2026". */
+  /** Human date span, e.g. "2016 – 2026". */
   evidence_span?: string | null;
   span_start?: string | null;
   span_end?: string | null;
@@ -217,16 +313,32 @@ function asStringArray(value: unknown): string[] {
   return value.filter((x): x is string => typeof x === "string" && x.trim().length > 0);
 }
 
-function formatSpan(row: ObservationRow): string | null {
-  if (row.evidence_span && row.evidence_span.trim()) return row.evidence_span.trim();
+export function normalizeDateSpan(span: string): string {
+  return span.replace(/\b(\d{4})\s*[-–—]\s*(\d{4})\b/g, "$1 – $2");
+}
+
+export function formatObservationSpan(
+  row: Pick<ObservationRow, "evidence_span" | "span_start" | "span_end">,
+): string | null {
+  if (row.evidence_span && row.evidence_span.trim()) {
+    return normalizeDateSpan(row.evidence_span.trim());
+  }
   const start = row.span_start ? new Date(row.span_start) : null;
   const end = row.span_end ? new Date(row.span_end) : null;
   const year = (d: Date) =>
     Number.isNaN(d.getTime()) ? null : String(d.getUTCFullYear());
   const a = start ? year(start) : null;
   const b = end ? year(end) : null;
-  if (a && b) return a === b ? a : `${a} - ${b}`;
-  if (row.meta_label && row.meta_label.trim()) return row.meta_label.trim();
+  if (a && b) return a === b ? a : `${a} – ${b}`;
+  return null;
+}
+
+function formatSpan(row: ObservationRow): string | null {
+  const observationSpan = formatObservationSpan(row);
+  if (observationSpan) return observationSpan;
+  if (row.meta_label && row.meta_label.trim()) {
+    return normalizeDateSpan(row.meta_label.trim());
+  }
   return null;
 }
 
