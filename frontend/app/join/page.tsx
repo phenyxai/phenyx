@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { STELLAR_DEFAULT } from "@/lib/stellar";
+import { STELLAR_DEFAULT, hexToRgb } from "@/lib/stellar";
 import { signupStart, otpSend, otpVerify } from "@/lib/api-client";
 import { setSessionFromTokens } from "@/lib/supabase-browser";
 import { setOtpFlowContext, clearOtpFlowContext } from "@/lib/otp-flow-context";
@@ -46,11 +46,13 @@ export default function JoinPage() {
     if (stored) {
       setStellarColor(stored);
       document.documentElement.style.setProperty("--color-stellar", stored);
+      document.documentElement.style.setProperty("--s-rgb", hexToRgb(stored));
     } else {
       // Pre-auth: no persisted identity yet. Use the deterministic default accent
       // (not random) — the server-assigned color is adopted after account creation.
       setStellarColor(STELLAR_DEFAULT);
       document.documentElement.style.setProperty("--color-stellar", STELLAR_DEFAULT);
+      document.documentElement.style.setProperty("--s-rgb", hexToRgb(STELLAR_DEFAULT));
     }
 
     // Rehydrate a staged draft so refreshing s2 keeps the OTP screen. An expired
@@ -195,67 +197,51 @@ export default function JoinPage() {
   };
 
   const cardStyle = {
-    background: "#0A0A0A",
-    border: "0.5px solid #1a1a1a",
-    borderRadius: "16px",
-    padding: "36px 32px",
+    background: "transparent",
+    border: "none",
+    borderRadius: 0,
+    padding: "44px 40px",
     maxWidth: "400px",
     width: "100%",
   };
 
   const sendButtonStyles: React.CSSProperties = {
     width: "100%",
-    padding: "15px 24px",
-    fontSize: "13px",
+    padding: "15px",
+    fontSize: "14px",
     fontWeight: 400,
     fontFamily: "inherit",
     letterSpacing: "0.02em",
-    borderRadius: "40px",
+    borderRadius: "6px",
     cursor: "pointer",
     transition: "all 0.25s ease",
     textAlign: "center",
     background: "transparent",
-    border: `0.5px solid ${stellarColor}`,
-    color: stellarColor,
-  };
-
-  const inputStyles: React.CSSProperties = {
-    width: "100%",
-    background: "#0d0d0d",
-    border: "0.5px solid #1e1e1e",
-    borderRadius: "10px",
-    padding: "12px 16px",
-    color: "#FFFDFD",
-    fontSize: "14px",
-    fontWeight: 300,
-    lineHeight: 1.5,
-    transition: "border-color 0.2s ease",
+    border: "1px solid #4d4d4d",
+    color: "rgba(255,253,253,.92)",
   };
 
   const labelStyles: React.CSSProperties = {
     display: "block",
     fontSize: "11px",
-    letterSpacing: "0.04em",
-    color: "#888",
-    marginBottom: "8px",
-  };
-
-  const onInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderColor = stellarColor;
-    e.target.style.boxShadow = `0 0 0 3px color-mix(in srgb, ${stellarColor} 8%, transparent)`;
-    e.target.style.outline = "none";
-  };
-  const onInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.style.borderColor = "#1e1e1e";
-    e.target.style.boxShadow = "none";
+    letterSpacing: "0.13em",
+    color: "rgba(255,253,253,.5)",
+    textTransform: "uppercase",
+    marginBottom: "6px",
   };
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center px-4 animate-fade-in">
+    <main
+      className={
+        screen === "s2"
+          ? "onb-v67 min-h-screen bg-[#080808] animate-fade-in"
+          : "min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 animate-fade-in"
+      }
+    >
       {/* Topbar */}
       <header
         className="fixed top-0 left-0 right-0 flex items-center justify-between"
-        style={{ padding: "20px 24px 16px" }}
+        style={{ padding: "20px 24px 16px", zIndex: 10 }}
       >
         <Link href="/" className="flex items-center" style={{ gap: "8px" }}>
           <Image
@@ -277,8 +263,7 @@ export default function JoinPage() {
             PHENYX
           </span>
         </Link>
-        <div className="flex items-center gap-2" style={{ fontSize: "11px" }}>
-          <span style={{ color: "#444" }}>already here?</span>
+        <div style={{ fontSize: "11px" }}>
           <Link
             href="/signin"
             className="transition-opacity hover:opacity-100"
@@ -291,38 +276,47 @@ export default function JoinPage() {
       </header>
 
       {/* Card */}
-      <div style={cardStyle}>
+      <div
+        className={screen === "s2" ? "onb-block onb-block--sm onb-block--otp" : undefined}
+        style={screen === "s2" ? undefined : cardStyle}
+      >
         {screen === "s2" ? (
           <>
             <h1
+              className="onb-h1"
               style={{
-                fontSize: "24px",
-                fontWeight: 400,
-                color: "#FFFDFD",
-                letterSpacing: "-0.01em",
-                lineHeight: 1.2,
-                marginBottom: "8px",
+                marginBottom: 0,
               }}
             >
               check your email.
             </h1>
             <p
+              className="onb-otp-lead"
               style={{
-                fontSize: "13px",
+                fontSize: "14.5px",
                 fontWeight: 300,
-                color: "#555",
+                color: "rgba(255,253,253,.55)",
                 lineHeight: 1.7,
-                marginBottom: "28px",
+                marginBottom: "10px",
               }}
             >
-              we sent a code to{" "}
-              <span style={{ color: "#FFFDFD" }}>{maskedEmail}</span>
+              we sent a code to
+            </p>
+            <p
+              className="onb-otp-address"
+              style={{
+                color: "#FFFDFD",
+                fontSize: "13px",
+                letterSpacing: ".02em",
+                marginBottom: 0,
+              }}
+            >
+              {maskedEmail}
             </p>
 
             <form
               onSubmit={handleVerify}
               aria-label="verify your code"
-              className="space-y-6"
             >
               <div className="flex justify-center">
                 <label htmlFor="otp" className="sr-only">
@@ -336,21 +330,23 @@ export default function JoinPage() {
                   maxLength={6}
                   autoComplete="one-time-code"
                   aria-label="6 digit verification code"
-                  placeholder="______"
+                  placeholder="······"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                   autoFocus
+                  className="onb-otp-input"
                   style={{
                     background: "transparent",
                     border: "none",
                     borderBottom: "1px solid #2a2a2a",
                     borderRadius: "0",
                     color: "#FFFDFD",
-                    fontSize: "28px",
+                    fontSize: "34px",
                     letterSpacing: "0.5em",
+                    textIndent: "0.5em",
                     textAlign: "center",
-                    width: "220px",
-                    padding: "0 0 8px 0",
+                    width: "260px",
+                    padding: "18px 0",
                     transition: "border-color 0.2s ease",
                   }}
                   onFocus={(e) => (e.target.style.borderBottomColor = stellarColor)}
@@ -381,6 +377,7 @@ export default function JoinPage() {
                 disabled={isLoading}
                 aria-busy={isLoading}
                 aria-label="verify my code"
+                className="onb-action"
                 style={sendButtonStyles}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "#FFFDFD";
@@ -393,63 +390,62 @@ export default function JoinPage() {
                   e.currentTarget.style.color = stellarColor;
                 }}
               >
-                {isLoading ? "verifying..." : "verify"}
+                {isLoading ? "verifying..." : "continue"}
               </button>
 
-              {showResend ? (
-                <button
-                  type="button"
-                  onClick={handleResendCode}
-                  aria-label="resend verification code"
-                  className="w-full transition-colors"
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "11px",
-                    color: "#555",
-                    textAlign: "center",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
-                >
-                  resend code
-                </button>
-              ) : (
-                // Cooldown state: a fresh code is on its way; resend re-enables in 30s.
-                <p
-                  aria-live="polite"
-                  style={{
-                    fontSize: "11px",
-                    color: "#444",
-                    textAlign: "center",
-                    margin: 0,
-                  }}
-                >
-                  code sent
-                </p>
-              )}
+              <p
+                className="onb-otp-resend"
+                aria-live="polite"
+                style={{
+                  color: "rgba(255,253,253,.5)",
+                  fontSize: "12px",
+                  textAlign: "center",
+                }}
+              >
+                {showResend ? (
+                  <>
+                    didn&apos;t get it?{" "}
+                    <button
+                      type="button"
+                      onClick={handleResendCode}
+                      aria-label="resend verification code"
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "inherit",
+                        cursor: "pointer",
+                        font: "inherit",
+                        padding: 0,
+                        textDecoration: "underline",
+                        textUnderlineOffset: "3px",
+                      }}
+                    >
+                      resend code
+                    </button>
+                  </>
+                ) : (
+                  "code sent"
+                )}
+              </p>
 
               <button
                 type="button"
                 onClick={handleStartOver}
+                className="onb-back"
                 style={{
-                  fontSize: "11px",
-                  color: "#333",
+                  fontSize: "12px",
+                  color: "rgba(255,253,253,.55)",
                   textAlign: "center",
                   cursor: "pointer",
-                  display: "block",
-                  marginTop: "12px",
                   background: "none",
                   border: "none",
                   fontFamily: "inherit",
-                  width: "100%",
                   transition: "color 0.2s ease",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#555")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#333")}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,253,253,.55)")}
               >
-                start over
+                back
               </button>
             </form>
           </>
@@ -457,11 +453,11 @@ export default function JoinPage() {
           <>
             <h1
               style={{
-                fontSize: "24px",
-                fontWeight: 400,
+                fontSize: "21px",
+                fontWeight: 300,
                 color: "#FFFDFD",
                 letterSpacing: "-0.01em",
-                lineHeight: 1.2,
+                lineHeight: 1.26,
                 marginBottom: "8px",
               }}
             >
@@ -469,11 +465,11 @@ export default function JoinPage() {
             </h1>
             <p
               style={{
-                fontSize: "13px",
+                fontSize: "14.5px",
                 fontWeight: 300,
-                color: "#555",
+                color: "rgba(255,253,253,.55)",
                 lineHeight: 1.7,
-                marginBottom: "28px",
+                marginBottom: "24px",
               }}
             >
               a few things first.
@@ -494,14 +490,12 @@ export default function JoinPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoFocus
-                  style={inputStyles}
-                  onFocus={onInputFocus}
-                  onBlur={onInputBlur}
+                  className="auth-input"
                 />
               </div>
 
               {/* email */}
-              <div style={{ marginTop: "20px" }}>
+              <div style={{ marginTop: "18px" }}>
                 <label htmlFor="email" style={labelStyles}>
                   email
                 </label>
@@ -513,14 +507,12 @@ export default function JoinPage() {
                   placeholder="we'll send a code to confirm it is you"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  style={inputStyles}
-                  onFocus={onInputFocus}
-                  onBlur={onInputBlur}
+                  className="auth-input"
                 />
               </div>
 
               {/* your passphrase */}
-              <div style={{ marginTop: "20px" }}>
+              <div style={{ marginTop: "18px" }}>
                 <label htmlFor="passphrase" style={labelStyles}>
                   your passphrase
                 </label>
@@ -532,9 +524,7 @@ export default function JoinPage() {
                   placeholder="a phrase or line that means something to you"
                   value={passphrase}
                   onChange={(e) => setPassphrase(e.target.value)}
-                  style={inputStyles}
-                  onFocus={onInputFocus}
-                  onBlur={onInputBlur}
+                  className="auth-input"
                 />
                 <p style={{ fontSize: "10px", color: "#444", marginTop: "8px", lineHeight: 1.6 }}>
                   used with your name each time you return.
@@ -555,7 +545,7 @@ export default function JoinPage() {
                 type="submit"
                 disabled={isLoading}
                 aria-label="continue"
-                style={{ ...sendButtonStyles, marginTop: "24px" }}
+                style={{ ...sendButtonStyles, marginTop: "26px" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "#FFFDFD";
                   e.currentTarget.style.borderColor = "#FFFDFD";
@@ -574,30 +564,6 @@ export default function JoinPage() {
         )}
       </div>
 
-      {/* Footer */}
-      <footer
-        className="fixed bottom-0 left-0 right-0 text-center"
-        style={{
-          padding: "20px 0 24px",
-          marginTop: "28px",
-        }}
-      >
-        <p style={{ fontSize: "10px", color: "#444", lineHeight: 1.8, margin: 0 }}>
-          we never sell your data. your synthesis is yours.
-        </p>
-        <Link
-          href="/privacy"
-          className="transition-all hover:underline"
-          style={{
-            fontSize: "10px",
-            color: stellarColor,
-            lineHeight: 1.8,
-            textDecoration: "none",
-          }}
-        >
-          read our privacy policy
-        </Link>
-      </footer>
     </main>
   );
 }

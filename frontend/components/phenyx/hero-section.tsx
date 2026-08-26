@@ -19,14 +19,12 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
 
   return (
     <header id={SECTION_IDS.top} className="landing-v66__hero">
+      <IdentityParticles prefersReducedMotion={reducedMotion} />
       <div className="landing-v66__hero-content">
         <p className="landing-v66__hero-preline">{heroCopy.preHeadline}</p>
         <h1>{heroCopy.brand}</h1>
         <p className="landing-v66__hero-tagline">{heroCopy.tagline}</p>
         <EnterButton onClick={onEnterClick} label={heroCopy.enter} />
-      </div>
-      <div className="landing-v66__hero-particles" aria-hidden="true">
-        <IdentityParticles prefersReducedMotion={reducedMotion} />
       </div>
       <div className="landing-v66__scroll-cue" aria-hidden="true">
         <span />

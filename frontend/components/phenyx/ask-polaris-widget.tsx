@@ -4,17 +4,41 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { constellationCopy } from "@/lib/landing-copy";
 
 const AUTO_MS = 6000;
+const FADE_MS = 340;
 
 export function AskPolarisWidget() {
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isFading, setIsFading] = useState(false);
+  const [restartKey, setRestartKey] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fadeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stop = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
   }, []);
+
+  const select = useCallback((nextIndex: number) => {
+    stop();
+    if (nextIndex === index) {
+      setRestartKey((key) => key + 1);
+      return;
+    }
+    if (fadeRef.current) clearTimeout(fadeRef.current);
+    if (reducedMotion) {
+      setIndex(nextIndex);
+      setIsFading(false);
+      return;
+    }
+    setIsFading(true);
+    fadeRef.current = setTimeout(() => {
+      setIndex(nextIndex);
+      setIsFading(false);
+      fadeRef.current = null;
+    }, FADE_MS);
+  }, [index, reducedMotion, stop]);
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -27,13 +51,17 @@ export function AskPolarisWidget() {
   useEffect(() => {
     stop();
     if (!reducedMotion && !isPaused) {
-      timerRef.current = setInterval(
-        () => setIndex((current) => (current + 1) % constellationCopy.polarisExamples.length),
+      timerRef.current = setTimeout(
+        () => select((index + 1) % constellationCopy.polarisExamples.length),
         AUTO_MS,
       );
     }
     return stop;
-  }, [isPaused, reducedMotion, stop]);
+  }, [index, isPaused, reducedMotion, restartKey, select, stop]);
+
+  useEffect(() => () => {
+    if (fadeRef.current) clearTimeout(fadeRef.current);
+  }, []);
 
   const entry = constellationCopy.polarisExamples[index];
   const emphasisAt = entry.answer.indexOf(entry.emphasis);
@@ -50,7 +78,7 @@ export function AskPolarisWidget() {
         if (!event.currentTarget.contains(event.relatedTarget as Node)) setIsPaused(false);
       }}
     >
-      <div className="landing-v66__polaris-qa">
+      <div className={`landing-v66__polaris-qa${isFading ? " fading" : ""}`}>
         <p className="landing-v66__polaris-pillar">{entry.pillar}</p>
         <p className="landing-v66__polaris-question">{entry.question}</p>
         <p className="landing-v66__polaris-answer">{answerStart}<strong>{entry.emphasis}</strong>{answerEnd}</p>
@@ -68,7 +96,7 @@ export function AskPolarisWidget() {
             type="button"
             aria-label={`show ${example.pillar} example`}
             aria-current={dotIndex === index ? "true" : undefined}
-            onClick={() => setIndex(dotIndex)}
+            onClick={() => select(dotIndex)}
           />
         ))}
       </div>

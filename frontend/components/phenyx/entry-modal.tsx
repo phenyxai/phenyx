@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useSessionColor } from "@/contexts/session-color-context";
 import { entryModalCopy } from "@/lib/landing-copy";
 
 interface EntryModalProps {
@@ -22,7 +21,6 @@ interface EntryModalProps {
 // ============================================================================
 export function EntryModal({ isOpen, onClose }: EntryModalProps) {
   const router = useRouter();
-  const { sessionColor } = useSessionColor();
 
   const cardRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -92,11 +90,11 @@ export function EntryModal({ isOpen, onClose }: EntryModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      className="landing-entry"
       onClick={onClose}
     >
       {/* Overlay — clicking it closes the modal. */}
-      <div className="absolute inset-0 bg-[#0A0A0A]/80 backdrop-blur-sm" />
+      <div className="landing-entry__overlay" />
 
       {/* Card — stop propagation so inner clicks don't bubble to the overlay. */}
       <div
@@ -104,113 +102,55 @@ export function EntryModal({ isOpen, onClose }: EntryModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="entry-modal-title"
-        className="relative p-8 md:p-12 max-w-md w-full"
-        style={{
-          backgroundColor: "#0A0A0A",
-          border: "1px solid rgba(255,253,253,0.08)",
-        }}
+        className="landing-entry__card"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close (×) */}
         <button
           ref={closeButtonRef}
+          type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 transition-colors"
-          style={{ color: "rgba(255,253,253,0.5)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,253,253,0.5)")}
+          className="landing-entry__close"
           aria-label={entryModalCopy.closeLabel}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
+          ×
         </button>
 
         {/* Title + sub */}
         <h2
           id="entry-modal-title"
-          className="lowercase"
-          style={{
-            fontSize: "22px",
-            fontWeight: 500,
-            color: "#FFFDFD",
-            marginBottom: "8px",
-          }}
+          className="landing-entry__title"
         >
           {entryModalCopy.title}
         </h2>
-        <p
-          className="lowercase"
-          style={{
-            fontSize: "14px",
-            fontWeight: 300,
-            color: "rgba(255,253,253,0.6)",
-            marginBottom: "32px",
-          }}
-        >
+        <p className="landing-entry__subtitle">
           {entryModalCopy.subtitle}
         </p>
 
         {/* Choice buttons */}
-        <div className="flex flex-col gap-3">
+        <div>
           <button
+            type="button"
             onClick={() => navigateTo(entryModalCopy.returning.href)}
-            className="w-full text-left rounded-xl transition-all"
-            style={{
-              padding: "16px 20px",
-              border: `1px solid ${sessionColor}66`,
-              backgroundColor: "transparent",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = sessionColor;
-              e.currentTarget.style.backgroundColor = `${sessionColor}14`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = `${sessionColor}66`;
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
+            className="landing-entry__choice"
           >
-            <span
-              className="block lowercase"
-              style={{ fontSize: "15px", fontWeight: 400, color: "#FFFDFD" }}
-            >
+            <span>
               {entryModalCopy.returning.primary}
             </span>
-            <span
-              className="block lowercase"
-              style={{ fontSize: "12px", color: "rgba(255,253,253,0.5)", marginTop: "4px" }}
-            >
+            <span className="landing-entry__choice-subtitle">
               {entryModalCopy.returning.secondary}
             </span>
           </button>
 
           <button
+            type="button"
             onClick={() => navigateTo(entryModalCopy.newcomer.href)}
-            className="w-full text-left rounded-xl transition-all"
-            style={{
-              padding: "16px 20px",
-              border: "1px solid rgba(255,253,253,0.12)",
-              backgroundColor: "transparent",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,253,253,0.3)";
-              e.currentTarget.style.backgroundColor = "rgba(255,253,253,0.04)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,253,253,0.12)";
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
+            className="landing-entry__choice"
           >
-            <span
-              className="block lowercase"
-              style={{ fontSize: "15px", fontWeight: 400, color: "#FFFDFD" }}
-            >
+            <span>
               {entryModalCopy.newcomer.primary}
             </span>
-            <span
-              className="block lowercase"
-              style={{ fontSize: "12px", color: "rgba(255,253,253,0.5)", marginTop: "4px" }}
-            >
+            <span className="landing-entry__choice-subtitle">
               {entryModalCopy.newcomer.secondary}
             </span>
           </button>

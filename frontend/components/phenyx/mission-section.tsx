@@ -10,9 +10,13 @@ export function MissionSection() {
         <h2 className="landing-v66__section-headline">{constellationCopy.headline}</h2>
         <div className="landing-v66__identity-grid">
           <div className="landing-v66__identity-copy">
-            {constellationCopy.lines.map((line, index) => (
-              <p key={line}>{index === constellationCopy.lines.length - 1 ? <strong>{line}</strong> : line}</p>
-            ))}
+            <p>
+              {constellationCopy.lines.map((line, index) => (
+                <span className="landing-v66__identity-line" key={line}>
+                  {index === constellationCopy.lines.length - 1 ? <strong>{line}</strong> : line}
+                </span>
+              ))}
+            </p>
           </div>
           <div className="landing-v66__constellation" aria-hidden="true">
             <Constellation />
