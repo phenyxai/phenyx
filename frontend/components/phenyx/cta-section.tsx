@@ -25,7 +25,7 @@ export function CTASection({ onEnterClick }: CTASectionProps) {
           color: "#FFFDFD",
         }}
       >
-        look again.
+        look again
       </h2>
       <p
         className="lowercase mx-auto"

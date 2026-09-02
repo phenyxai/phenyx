@@ -10,7 +10,7 @@ import { MissionSection } from "@/components/phenyx/mission-section";
 import { PolarisSection } from "@/components/phenyx/polaris-section";
 import { CTASection } from "@/components/phenyx/cta-section";
 import { FooterSection } from "@/components/phenyx/footer-section";
-import { WaitlistModal } from "@/components/phenyx/waitlist-modal";
+import { EntryModal } from "@/components/phenyx/entry-modal";
 import { CustomCursor } from "@/components/phenyx/custom-cursor";
 
 export default function Home() {
@@ -19,7 +19,7 @@ export default function Home() {
   return (
     <SessionColorProvider>
       <CustomCursor />
-      <main className="min-h-screen bg-[#0a0a0a]">
+      <main className="min-h-screen bg-[#080808]">
         <Navigation onEnterClick={() => setIsModalOpen(true)} />
 
         <HeroSection onEnterClick={() => setIsModalOpen(true)} />
@@ -36,7 +36,7 @@ export default function Home() {
 
         <FooterSection />
         
-        <WaitlistModal 
+        <EntryModal 
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
         />

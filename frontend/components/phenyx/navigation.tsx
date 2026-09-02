@@ -103,7 +103,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 px-6 sm:px-10 md:px-16 lg:px-28 xl:px-36 py-7 lg:py-8 transition-all duration-300 ${
-          isScrolled || isMenuOpen ? "backdrop-blur-[12px] bg-[#0a0a0a]/70" : ""
+          isScrolled || isMenuOpen ? "backdrop-blur-[12px] bg-[#080808]/70" : ""
         }`}
       >
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
@@ -204,7 +204,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
         aria-label="Site navigation"
         aria-hidden={!isMenuOpen}
         inert={!isMenuOpen}
-        className={`lg:hidden max-lg:flex fixed inset-0 z-40 overflow-hidden items-center justify-center bg-[#0a0a0a]/95 backdrop-blur-[12px] transition-opacity duration-300 ${
+        className={`lg:hidden max-lg:flex fixed inset-0 z-40 overflow-hidden items-center justify-center bg-[#080808]/95 backdrop-blur-[12px] transition-opacity duration-300 ${
           isMenuOpen
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"

@@ -12,7 +12,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'PHENYX',
+  title: 'PHENYX — your life, taking form',
   description: 'PHENYX. where identity takes form. an ai that synthesizes who you are across everything you have built.',
   keywords: ['identity', 'self discovery', 'personal development', 'identity platform', 'creator community', 'phenyx', 'identity formation', 'identity observatory'],
   authors: [{ name: 'Janesse Liang' }],
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0A0A0A',
+  themeColor: '#080808',
   width: 'device-width',
   initialScale: 1,
 }
@@ -84,7 +84,7 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body
         suppressHydrationWarning
-        className={`${plusJakartaSans.variable} antialiased bg-[#0A0A0A] text-[#FFFDFD]`}
+        className={`${plusJakartaSans.variable} antialiased bg-[#080808] text-[#FFFDFD]`}
       >
         {children}
         <Analytics />

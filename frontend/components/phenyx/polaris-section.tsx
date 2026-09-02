@@ -33,7 +33,7 @@ export function PolarisSection() {
             color: "#FFFDFD",
           }}
         >
-          follow one thread all the way through.
+          follow one thread all the way through
         </h2>
 
         <p
@@ -44,10 +44,38 @@ export function PolarisSection() {
             color: "rgba(255,253,253,0.62)",
             fontWeight: 300,
             maxWidth: "680px",
+            marginBottom: "18px",
+          }}
+        >
+          the constellation lets you see yourself. polaris lets you use what you see. ask about something you keep returning to, or where it might be leading. polaris answers from the context already here, so you never start by explaining yourself.
+        </p>
+
+        <p
+          className="lowercase"
+          style={{
+            fontSize: "17px",
+            lineHeight: 1.7,
+            color: "rgba(255,253,253,0.62)",
+            fontWeight: 300,
+            maxWidth: "680px",
+            marginBottom: "18px",
+          }}
+        >
+          and when you arrive with no question, a few things come forward on their own.
+        </p>
+
+        <p
+          className="lowercase"
+          style={{
+            fontSize: "17px",
+            fontWeight: 400,
+            lineHeight: 1.7,
+            color: "#FFFDFD",
+            maxWidth: "680px",
             marginBottom: "36px",
           }}
         >
-          polaris is the ai that knows your constellation. ask about any point, any pattern, any pivot. it doesn't guess. it reflects what your data already shows.
+          you bring the question. the context is already here.
         </p>
 
         <PolarisQA />

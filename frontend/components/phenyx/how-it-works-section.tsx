@@ -93,7 +93,7 @@ export function HowItWorksSection() {
       id="s0-how"
       className="w-full"
       style={{
-        backgroundColor: "#0A0A0A",
+        backgroundColor: "#080808",
         paddingTop: "100px",
         paddingBottom: "100px",
       }}
