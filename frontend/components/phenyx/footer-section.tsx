@@ -207,17 +207,39 @@ export function FooterSection() {
           />
         </div>
         
-        {/* Copyright - truly centered */}
-        <p 
-          className="uppercase text-center order-2 md:order-none"
-          style={{ 
-            fontSize: "11px",
-            letterSpacing: "0.1em",
-            color: "rgba(255,253,253,0.6)",
-          }}
-        >
-          © 2026 PHENYX
-        </p>
+        {/* Links and copyright - truly centered */}
+        <div className="flex items-center justify-center gap-4 order-2 md:order-none">
+          <a 
+            href="/privacy"
+            className="text-[11px] lowercase transition-colors"
+            style={{ color: "rgba(255,253,253,0.6)" }}
+            onMouseEnter={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.9)"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.6)"}
+          >
+            privacy
+          </a>
+          <span style={{ color: "rgba(255,253,253,0.3)" }}>•</span>
+          <a 
+            href="/terms"
+            className="text-[11px] lowercase transition-colors"
+            style={{ color: "rgba(255,253,253,0.6)" }}
+            onMouseEnter={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.9)"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.6)"}
+          >
+            terms
+          </a>
+          <span style={{ color: "rgba(255,253,253,0.3)" }}>•</span>
+          <p 
+            className="uppercase text-center"
+            style={{ 
+              fontSize: "11px",
+              letterSpacing: "0.1em",
+              color: "rgba(255,253,253,0.6)",
+            }}
+          >
+            © 2026 PHENYX INC.
+          </p>
+        </div>
         
         {/* Contact email - absolutely positioned right on desktop */}
         <a 

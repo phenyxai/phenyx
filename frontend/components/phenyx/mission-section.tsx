@@ -34,7 +34,7 @@ export function MissionSection() {
             color: "#FFFDFD",
           }}
         >
-          this is your digital blueprint.
+          see how the parts of your life relate
         </h2>
 
         {/* Grid: body + constellation */}
@@ -45,14 +45,50 @@ export function MissionSection() {
           <div className="lowercase">
             <p
               style={{
-                fontSize: "19px",
+                fontSize: "17px",
                 lineHeight: 1.7,
                 color: "rgba(255,253,253,0.62)",
                 fontWeight: 300,
                 maxWidth: "480px",
+                marginBottom: "22px",
               }}
             >
-              this isn&apos;t a snapshot. it updates as you do. seven points, from who you&apos;ve always been to where you&apos;re still becoming.
+              a constellation is not the stars. it is the shape they make once you see them together.
+            </p>
+            <p
+              style={{
+                fontSize: "17px",
+                lineHeight: 1.7,
+                color: "rgba(255,253,253,0.62)",
+                fontWeight: 300,
+                maxWidth: "480px",
+                marginBottom: "22px",
+              }}
+            >
+              seven points run from where you began to where you are heading, each looking at one question through the evidence of your life.
+            </p>
+            <p
+              style={{
+                fontSize: "17px",
+                lineHeight: 1.7,
+                color: "rgba(255,253,253,0.62)",
+                fontWeight: 300,
+                maxWidth: "480px",
+                marginBottom: "22px",
+              }}
+            >
+              it is not a profile you finish. new things appear, old ones return, some fall away, and the shape keeps enough of you to notice when you change.
+            </p>
+            <p
+              style={{
+                fontSize: "17px",
+                lineHeight: 1.7,
+                color: "#FFFDFD",
+                fontWeight: 500,
+                maxWidth: "480px",
+              }}
+            >
+              the points stay the same. what fills them is yours.
             </p>
           </div>
 
@@ -61,33 +97,19 @@ export function MissionSection() {
           </div>
         </div>
 
-        {/* Dig deeper with polaris */}
+        {/* Example note */}
         <p
           className="lowercase"
           style={{
-            fontSize: "22px",
-            color: "#FFFDFD",
-            fontWeight: 600,
-            marginTop: "56px",
-          }}
-        >
-          dig deeper with polaris
-        </p>
-        <p
-          className="lowercase"
-          style={{
-            fontSize: "15px",
-            color: "rgba(255,253,253,0.62)",
+            fontSize: "13px",
+            color: "rgba(255,253,253,0.5)",
             lineHeight: 1.6,
-            maxWidth: "560px",
-            marginTop: "10px",
+            marginTop: "32px",
             fontWeight: 300,
           }}
         >
-          ask about any point in your constellation. polaris doesn&apos;t guess. it works from what your data already shows.
+          example: the same seven, seen by time. note: an example. yours is built only from the accounts you connect.
         </p>
-
-        <PolarisQA />
       </div>
     </section>
   );

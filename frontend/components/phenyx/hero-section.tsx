@@ -49,19 +49,6 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
       <div className="relative z-[2] mx-auto w-full grid lg:grid-cols-2 gap-12 lg:gap-8 items-center" style={{ maxWidth: "1100px" }}>
         {/* Left content */}
         <div className="flex flex-col gap-6 max-lg:items-center max-lg:text-center lg:text-left">
-          {/* Subline - 16px, weight 300, tracking 0.08em, opacity 70% */}
-          <p 
-            className="text-[16px] lowercase"
-            style={{ 
-              fontWeight: 300,
-              letterSpacing: "0.08em",
-              color: "rgba(255,253,253,0.7)",
-              ...getAnimationStyle(0),
-            }}
-          >
-            once you see it, you can&apos;t unsee it.
-          </p>
-          
           {/* Hero headline - responsive sizing to prevent overflow */}
           <h1 
             className="text-[36px] sm:text-[48px] md:text-[60px] lg:text-[72px] uppercase"
@@ -70,23 +57,37 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
               lineHeight: 0.95,
               letterSpacing: "-0.02em",
               color: "#FFFDFD",
-              ...getAnimationStyle(300),
+              ...getAnimationStyle(0),
             }}
           >
             PHENYX
           </h1>
           
-          {/* Tagline - 12px, weight 300, tracking 0.18em, opacity 50% */}
+          {/* Tagline - 15px, weight 300, tracking 0.18em */}
           <p
             className="text-[15px] lowercase"
             style={{
               fontWeight: 300,
               letterSpacing: "0.18em",
-              color: "rgba(255,253,253,0.5)",
+              color: "rgba(255,253,253,0.7)",
+              ...getAnimationStyle(300),
+            }}
+          >
+            your life, taking form
+          </p>
+          
+          {/* Subline - 16px, weight 300, tracking 0.08em */}
+          <p 
+            className="text-[16px] lowercase"
+            style={{ 
+              fontWeight: 300,
+              letterSpacing: "0.08em",
+              color: "rgba(255,253,253,0.62)",
+              lineHeight: 1.6,
               ...getAnimationStyle(600),
             }}
           >
-            an identity observatory.
+            see who you&apos;ve been, across everything you already use.
           </p>
           
           {/* Enter button - 13px, weight 400, tracking 0.1em */}
