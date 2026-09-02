@@ -313,9 +313,9 @@
   overflow-y: visible;
 }
 .landing-v66__hero-content { position: relative; z-index: 2; flex: 1 1 55%; max-width: 600px; min-width: 0; }
-.landing-v66__hero-preline { margin-bottom: 22px; color: rgba(255,253,253,.5); font-size: 15px; font-weight: 300; letter-spacing: .01em; }
 .landing-v66__hero h1 { margin-bottom: 10px; color: rgba(255,253,253,.97); font-size: clamp(52px,7.5vw,92px); font-weight: 600; letter-spacing: -.022em; line-height: .94; overflow-wrap: break-word; }
-.landing-v66__hero-tagline { margin-bottom: 40px; color: rgba(255,253,253,.66); font-size: 19px; letter-spacing: -.005em; }
+.landing-v66__hero-tagline { margin-bottom: 16px; color: rgba(255,253,253,.66); font-size: 19px; letter-spacing: -.005em; }
+.landing-v66__hero-desc { margin-bottom: 40px; color: rgba(255,253,253,.56); font-size: 16px; letter-spacing: .005em; line-height: 1.6; }
 .landing-v66__hero-stars { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; }
 .landing-v66__hero-particle-field { position: absolute; top: 0; right: 0; bottom: 0; z-index: 0; width: 62%; height: 100vh; }
 .landing-v66__hero-particle-cluster { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; }
@@ -336,6 +336,7 @@
 .landing-v66__about-copy { max-width: 560px; }
 .landing-v66__about-copy p { max-width: 560px; margin-bottom: 22px; color: var(--landing-dim); font-size: 17px; line-height: 1.6; }
 .landing-v66__about-copy strong { color: var(--landing-text); font-weight: 500; }
+.landing-v66__thesis { margin-top: 26px; }
 .landing-v66__platform-field { position: relative; width: 100%; height: 300px; margin-bottom: 8px; overflow: hidden; }
 
 .landing-v66__section-headline { max-width: 26ch; margin-bottom: 14px; color: rgba(255,253,253,.96); font-size: clamp(26px,3.3vw,38px); font-weight: 300; letter-spacing: -.025em; line-height: 1.18; text-wrap: balance; }
@@ -366,9 +367,17 @@
 .landing-v66__identity-line:last-child { margin-bottom: 0; }
 .landing-v66__identity-copy strong { color: rgba(255,253,253,.95); font-weight: 400; }
 .landing-v66__constellation { position: relative; min-width: 0; }
-.landing-v66__polaris-heading { margin-top: 76px; color: rgba(255,253,253,.93); font-size: 24px; font-weight: 300; letter-spacing: -.02em; line-height: 1.3; }
-.landing-v66__polaris-lead { max-width: 58ch; margin-top: 14px; }
-.landing-v66__polaris-card { min-height: 232px; margin-top: 30px; padding: 26px 22px; border: 1px solid rgba(255,253,253,.07); border-radius: 16px; background: linear-gradient(160deg,rgba(var(--s-rgb,136,170,238),.045),rgba(255,253,253,.012) 55%,transparent); box-shadow: 0 0 60px -30px rgba(var(--s-rgb,136,170,238),.5); }
+.landing-v66__constellation-example { margin-top: 60px; }
+.landing-v66__example-eyebrow { margin-bottom: 18px; color: var(--landing-faint); font-size: 11.5px; font-weight: 500; letter-spacing: .22em; text-transform: uppercase; }
+.landing-v66__seven-points { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 16px; }
+.landing-v66__seven-points span { padding: 7px 14px; border: 1px solid rgba(255,253,253,.09); border-radius: 20px; color: rgba(255,253,253,.58); background: rgba(255,253,253,.015); font-size: 12.5px; letter-spacing: .01em; }
+.landing-v66__example-note { max-width: 56ch; color: rgba(255,253,253,.48); font-size: 13px; line-height: 1.6; }
+.landing-v66__polaris-section { position: relative; padding: 68px clamp(28px,4vw,64px) 60px; }
+.landing-v66__polaris-content { max-width: 64ch; margin-bottom: 36px; }
+.landing-v66__polaris-content p { margin-bottom: 18px; color: var(--landing-dim); font-size: 16px; line-height: 1.65; }
+.landing-v66__polaris-preview { margin-top: 40px; }
+.landing-v66__polaris-card { min-height: 232px; padding: 26px 22px; border: 1px solid rgba(255,253,253,.07); border-radius: 16px; background: linear-gradient(160deg,rgba(var(--s-rgb,136,170,238),.045),rgba(255,253,253,.012) 55%,transparent); box-shadow: 0 0 60px -30px rgba(var(--s-rgb,136,170,238),.5); }
+.landing-v66__polaris-card-header { margin-bottom: 14px; }
 .landing-v66__polaris-qa {
   padding-left: 20px;
   border-left: 1px solid rgba(var(--s-rgb,136,170,238),.55);
@@ -385,8 +394,7 @@
 .landing-v66__polaris-answer { max-width: 62ch; color: rgba(255,253,253,.92); font-size: 15px; line-height: 1.7; }
 .landing-v66__polaris-answer strong { font-weight: 600; }
 .landing-v66__polaris-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px; margin-top: 18px; color: rgba(255,253,253,.42); font-size: 11.5px; letter-spacing: .04em; }
-.landing-v66__polaris-source { display: inline-flex; align-items: center; gap: 7px; }
-.landing-v66__polaris-source i { width: 3px; height: 3px; border-radius: 50%; background: rgba(var(--s-rgb,136,170,238),.45); }
+.landing-v66__polaris-sources { display: flex; align-items: center; gap: 6px; }
 .landing-v66__polaris-span { margin-left: auto; }
 .landing-v66__polaris-dots { display: flex; gap: 0; margin-top: 12px; margin-left: -9px; padding-left: 22px; }
 .landing-v66__polaris-dots button { position: relative; display: inline-flex; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: none; }

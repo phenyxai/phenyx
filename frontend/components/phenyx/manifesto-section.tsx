@@ -19,7 +19,7 @@ export function ManifestoSection() {
         <div className="landing-v66__about-grid">
           <div className="landing-v66__about-copy">
             {manifestoCopy.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-            <p><strong>{manifestoCopy.emphasis}</strong></p>
+            <p className="landing-v66__thesis"><strong>{manifestoCopy.thesis}</strong></p>
           </div>
           <div className="landing-v66__platform-field" aria-hidden="true">
             <PlatformField prefersReducedMotion={reducedMotion} />
