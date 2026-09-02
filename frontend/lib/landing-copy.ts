@@ -16,7 +16,7 @@ export const navCopy = {
   logoAlt: "PHENYX",
   menuLabel: "menu",
   links: [
-    { label: "a first look", targetId: SECTION_IDS.about },
+    { label: "first look", targetId: SECTION_IDS.about },
     { label: "how it works", targetId: SECTION_IDS.how },
     { label: "your constellation", targetId: SECTION_IDS.mission },
     { label: "polaris", targetId: SECTION_IDS.polaris },
@@ -25,94 +25,90 @@ export const navCopy = {
 } as const;
 
 export const heroCopy = {
-  preHeadline: "you have been leaving evidence for years.",
   brand: BRAND,
-  tagline: "an identity observatory.",
+  tagline: "your life, taking form",
+  description: "see who you've been, across everything you already use.",
   enter: "enter",
   scroll: "scroll",
 } as const;
 
 export const manifestoCopy = {
-  eyebrow: "a first look",
-  headline: "you have come further than you can see.",
+  eyebrow: "first look",
+  headline: "you were never in pieces, only in places",
   paragraphs: [
-    "linkedin made you a professional. instagram made you an aesthetic. tiktok made you a moment. x made you an opinion.",
-    "every account holds a piece. none of them hold the shape.",
+    "every place you use asks for one part of you: the listener, the maker, the one who saves things for later.",
+    "each one keeps a version of you that is true, but not one shows what it all adds up to.",
+    "so there has never been one place that holds all of you at once. every moment came from the same life, but nothing has ever gathered them in the same place.",
   ],
-  emphasis: "PHENYX reads the accounts you already have and puts all of it in one place. one view of how far you have come.",
+  thesis: "so we made one.",
 } as const;
 
 export const howItWorksCopy = {
   eyebrow: "how it works",
-  headline: "connect. synthesize. reveal.",
-  subline: "you connect the accounts you already use. PHENYX reads them and builds the rest. there is nothing to fill out.",
-  cards: [
+  headline: "connect, assemble, reveal",
+  lede: "three layers, and nothing invented in any of them.",
+  layers: [
     {
       layer: "layer one",
       title: "connect",
-      body: "you link the accounts you already use. spotify, instagram, linkedin, chatgpt and more, as many or as few as you want. you can disconnect any of them at any time.",
+      body: "what you listen to, watch, save, post and build, from only the places you choose.",
     },
     {
       layer: "layer two",
-      title: "synthesize",
-      body: "everything you connect goes onto one timeline. who you have been, what you kept making, when it changed, and where it came from.",
+      title: "assemble",
+      body: "everything lands on one timeline, so repeats and shifts finally sit next to each other.",
     },
     {
       layer: "layer three",
       title: "reveal",
-      body: "the timeline becomes your constellation, dated, with the sources behind every point. ask polaris about any of it and the answer comes from your record, not a guess.",
+      body: "the shape no single account could show, with the moments and evidence that made it visible.",
     },
   ],
-  analyzeLabel: "what we analyze",
-  analyzePills: [
-    "tone and voice",
-    "pivotal moments",
-    "content evolution",
-    "career transitions",
-    "creative output",
-    "network patterns",
-    "language over time",
+  whatComesIntoViewLabel: "what comes into view",
+  whatComesIntoView: [
+    "what keeps returning",
+    "what overlaps",
+    "creative rhythms",
+    "turning points",
+    "how you decide",
+    "what stays with you",
   ],
-  privacyLabel: "what we never do",
-  privacyItems: [
+  whatStaysYoursLabel: "what stays yours",
+  whatStaysYours: [
     {
-      promise: "keep your raw signals.",
-      detail: "read once. only the observations stay, with the dates behind them.",
+      heading: "your control.",
+      detail: "choose what comes in. disconnect whenever you want.",
     },
     {
-      promise: "reach anything you have not opened.",
-      detail: "every connection is yours to revoke.",
+      heading: "your privacy.",
+      detail: "PHENYX keeps what it learned from your accounts, never a second copy of them.",
     },
     {
-      promise: "sort you into a type.",
-      detail: "no archetype, no score, no label you did not write.",
-    },
-    {
-      promise: "let one thing stand for all of it.",
-      detail: "no single point is a verdict.",
+      heading: "your meaning.",
+      detail: "PHENYX can show what is there. what it means stays yours.",
     },
   ],
 } as const;
 
 export const constellationCopy = {
   eyebrow: "your constellation",
-  headline: "an outline of who you are.",
-  lines: [
-    "the week your taste changed. the month you stopped finishing things. the year you started again.",
-    "seven points hold all of it, dated, with what sat around each one. the seven are the same for everyone. what fills them is not.",
-    "this is the first time you see it drawn.",
+  headline: "see how the parts of your life relate",
+  paragraphs: [
+    "a constellation is not the stars. it is the shape they make once you see them together.",
+    "seven points run from where you began to where you are heading, each looking at one question through the evidence of your life.",
+    "it is not a profile you finish. new things appear, old ones return, some fall away, and the shape keeps enough of you to notice when you change.",
   ],
+  thesis: "the points stay the same. what fills them is yours.",
   visualizationLabel: "constellation, seven points of identity",
-  // Kept for the unrendered legacy ProductPreviewSection module. The v66 page
-  // intentionally does not mount that fake product frame.
+  exampleEyebrow: "the same seven, seen by time",
+  exampleNote: "an example. yours is built only from the accounts you connect.",
+  sevenPoints: ["origin", "emergence", "self-creation", "convergence", "becoming", "recognition", "transcendence"],
+  // Legacy fields kept for unmounted components (ask-polaris-widget, product-preview-section) so tsc passes
   previewHeadline: "your identity. finally in one place.",
   previewSubline: "we help you connect it all through moments of reflection.",
   previewBrandLabel: BRAND,
   previewConstellationLabel: "your constellation",
   reflectLabel: "reflect.",
-  polarisHeading: "explore with polaris",
-  polarisLead:
-    "every other ai starts by asking who you are. polaris starts with what you want to understand, because it has already read the rest.",
   polarisExamples: [
     {
       pillar: "convergence",
@@ -153,9 +149,26 @@ export const constellationCopy = {
   ],
 } as const;
 
+export const polarisCopy = {
+  eyebrow: "polaris",
+  headline: "follow one thread all the way through",
+  paragraphs: [
+    "the constellation lets you see yourself. polaris lets you use what you see. ask about something you keep returning to, or where it might be leading. polaris answers from the context already here, so you never start by explaining yourself.",
+    "and when you arrive with no question, a few things come forward on their own.",
+  ],
+  thesis: "you bring the question. the context is already here.",
+  defaultExample: {
+    pillar: "convergence",
+    question: "am i moving as fast as i think i am?",
+    answer: "you tend to describe the work as fast, but what you save and return to has slowed steadily across three years, on both accounts.",
+    sources: ["spotify", "pinterest"],
+    span: "3 years / 2 sources",
+  },
+} as const;
+
 export const ctaCopy = {
-  headline: "what does it add up to?",
-  subline: "you already have the answer. this is where you see it.",
+  headline: "look again",
+  subline: "there is more of you here than you can currently see.",
   enter: "enter",
 } as const;
 
@@ -169,16 +182,16 @@ export const footerCopy = {
 } as const;
 
 export const entryModalCopy = {
-  title: "welcome to PHENYX.",
-  subtitle: "have you been here before?",
+  title: "come in",
+  subtitle: "return to your view, or look around before you connect anything.",
   returning: {
-    primary: "i'm a returning user",
-    secondary: "sign in to your constellation",
+    primary: "i have been here",
+    secondary: "return to the view you already built",
     href: "/signin",
   },
   newcomer: {
-    primary: "i'm new here",
-    secondary: "create your account",
+    primary: "this is my first time",
+    secondary: "nothing connects until you choose it",
     href: "/join",
   },
   closeLabel: "close",

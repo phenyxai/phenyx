@@ -13,8 +13,11 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'PHENYX | an identity observatory',
-  description: 'PHENYX is an identity observatory that connects the evidence you have left across the internet and reveals the pattern it forms.',
+  title: {
+    default: 'PHENYX — your life, taking form',
+    template: '%s · PHENYX',
+  },
+  description: 'PHENYX is an identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline: what began, what changed, and what has been with you the whole way.',
   keywords: ['identity', 'self discovery', 'personal development', 'identity platform', 'identity formation', 'identity observatory'],
   authors: [{ name: 'Janesse Liang' }],
   creator: 'PHENYX',
@@ -24,8 +27,8 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'PHENYX | an identity observatory',
-    description: 'Connect the evidence you have left across the internet and reveal the pattern it forms.',
+    title: 'PHENYX — your life, taking form',
+    description: 'PHENYX is an identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline: what began, what changed, and what has been with you the whole way.',
     url: 'https://phenyxai.com',
     siteName: 'PHENYX',
     images: [
@@ -33,7 +36,7 @@ export const metadata: Metadata = {
         url: '/phenyx-opengraph.png',
         width: 1200,
         height: 630,
-        alt: 'PHENYX | an identity observatory',
+        alt: 'PHENYX — your life, taking form',
       },
     ],
     locale: 'en_US',
@@ -41,8 +44,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PHENYX | an identity observatory',
-    description: 'Connect the evidence you have left across the internet and reveal the pattern it forms.',
+    title: 'PHENYX — your life, taking form',
+    description: 'PHENYX is an identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline: what began, what changed, and what has been with you the whole way.',
     creator: '@phenyxcollect',
     site: '@phenyxcollect',
     images: ['/phenyx-opengraph.png'],
@@ -63,6 +66,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/favicon.png', type: 'image/png' },
     ],
     apple: '/apple-touch-icon.png',
@@ -71,7 +75,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0A0A0A',
+  themeColor: '#080808',
   width: 'device-width',
   initialScale: 1,
 }

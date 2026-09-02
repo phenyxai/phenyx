@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { navCopy, SECTION_IDS } from "@/lib/landing-copy";
 
 interface NavigationProps {
@@ -64,7 +63,15 @@ export function Navigation({ onEnterClick }: NavigationProps) {
   return (
     <nav ref={navRef} className="landing-v66__nav" aria-label="Primary navigation">
       <a className="landing-v66__nav-logo" href={`#${SECTION_IDS.top}`}>
-        <Image src="/phenyx-logo.png" alt={navCopy.logoAlt} width={18} height={18} priority />
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <defs>
+            <radialGradient id="nav-orb-gradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#B9D5FF" />
+              <stop offset="100%" stopColor="#6E8FD0" />
+            </radialGradient>
+          </defs>
+          <circle cx="9" cy="9" r="5" fill="url(#nav-orb-gradient)" />
+        </svg>
         <span>{navCopy.brand}</span>
       </a>
 
