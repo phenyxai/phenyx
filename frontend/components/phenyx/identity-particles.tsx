@@ -54,11 +54,6 @@ function isInHeroDeadZone(x: number, y: number, width: number, height: number) {
   return y < height * 0.12 || x < width * 0.52;
 }
 
-/**
- * The v67 hero treatment is three canvases. The fixed background dots,
- * ambient stars, and interactive right-hand cluster deliberately keep their
- * own bounds and motion.
- */
 export function IdentityParticles({ prefersReducedMotion = false }: { prefersReducedMotion?: boolean }) {
   const backgroundRef = useRef<HTMLCanvasElement>(null);
   const starsRef = useRef<HTMLCanvasElement>(null);
@@ -159,7 +154,7 @@ export function IdentityParticles({ prefersReducedMotion = false }: { prefersRed
   }, [prefersReducedMotion]);
 
   useEffect(() => {
-    const field = fieldRef.current;
+    const field = fieldRef.current?.parentElement;
     const canvas = clusterRef.current;
     const context = canvas?.getContext("2d");
     if (!field || !canvas || !context) return;
@@ -333,8 +328,8 @@ export function IdentityParticles({ prefersReducedMotion = false }: { prefersRed
   return (
     <>
       <canvas ref={backgroundRef} className="landing-v66__background-particles" aria-hidden="true" />
-      <canvas ref={starsRef} className="landing-v66__hero-stars" aria-hidden="true" />
-      <div ref={fieldRef} className="landing-v66__hero-particle-field" aria-hidden="true">
+      <canvas ref={starsRef} className="landing-v66__hero-stars" aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0 }} />
+      <div ref={fieldRef} style={{ position: "absolute", inset: 0, zIndex: 1 }} aria-hidden="true">
         <canvas ref={clusterRef} className="landing-v66__hero-particle-cluster" />
       </div>
     </>

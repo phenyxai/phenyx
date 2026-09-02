@@ -61,8 +61,8 @@ export function Navigation({ onEnterClick }: NavigationProps) {
   };
 
   return (
-    <nav ref={navRef} className="landing-v66__nav" aria-label="Primary navigation">
-      <a className="landing-v66__nav-logo" href={`#${SECTION_IDS.top}`}>
+    <nav ref={navRef} className="landing-nav" aria-label="Primary navigation">
+      <a className="landing-nav__logo" href={`#${SECTION_IDS.top}`}>
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
           <defs>
             <radialGradient id="nav-orb-gradient" cx="50%" cy="50%" r="50%">
@@ -72,10 +72,10 @@ export function Navigation({ onEnterClick }: NavigationProps) {
           </defs>
           <circle cx="9" cy="9" r="5" fill="url(#nav-orb-gradient)" />
         </svg>
-        <span>{navCopy.brand}</span>
+        <span className="landing-nav__brand">{navCopy.brand}</span>
       </a>
 
-      <div className="landing-v66__nav-links">
+      <div className="landing-nav__links">
         {navCopy.links.map((link) => (
           <a
             key={link.targetId}
@@ -87,13 +87,13 @@ export function Navigation({ onEnterClick }: NavigationProps) {
         ))}
       </div>
 
-      <button type="button" className="landing-v66__nav-enter" onClick={enter}>
+      <button type="button" className="landing-nav__enter" onClick={enter}>
         {navCopy.enter}
       </button>
 
       <button
         type="button"
-        className="landing-v66__menu-button"
+        className="landing-nav__menu"
         data-open={isOpen}
         aria-label={navCopy.menuLabel}
         aria-expanded={isOpen}
@@ -103,7 +103,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
         <span /><span /><span />
       </button>
 
-      <div id="landing-nav-menu" className="landing-v66__nav-dropdown" data-open={isOpen}>
+      <div id="landing-nav-menu" className="landing-nav__dropdown" data-open={isOpen}>
         {navCopy.links.map((link) => (
           <a key={link.targetId} href={`#${link.targetId}`} onClick={() => setIsOpen(false)}>
             {link.label}

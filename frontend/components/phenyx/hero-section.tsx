@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { IdentityParticles } from "./identity-particles";
+import { HeroStarfield } from "./hero-starfield";
 import { heroCopy, SECTION_IDS } from "@/lib/landing-copy";
 
 interface HeroSectionProps { onEnterClick: () => void }
@@ -19,11 +20,14 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
 
   return (
     <header id={SECTION_IDS.top} className="landing-v66__hero">
-      <IdentityParticles prefersReducedMotion={reducedMotion} />
+      <div className="landing-v66__hero-particle-field" aria-hidden="true">
+        <HeroStarfield />
+        <IdentityParticles prefersReducedMotion={reducedMotion} />
+      </div>
       <div className="landing-v66__hero-content">
-        <h1>{heroCopy.brand}</h1>
-        <p className="landing-v66__hero-tagline">{heroCopy.tagline}</p>
-        <p className="landing-v66__hero-desc">{heroCopy.description}</p>
+        <h1 className="hero-logo">{heroCopy.brand}</h1>
+        <p className="hero-tagline">{heroCopy.tagline}</p>
+        <p className="hero-desc">{heroCopy.description}</p>
         <EnterButton onClick={onEnterClick} label={heroCopy.enter} />
       </div>
       <div className="landing-v66__scroll-cue" aria-hidden="true">
@@ -36,7 +40,7 @@ export function HeroSection({ onEnterClick }: HeroSectionProps) {
 
 export function EnterButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
-    <button type="button" className="landing-v66__enter-button" onClick={onClick}>
+    <button type="button" className="hero-enter" onClick={onClick}>
       <span>{label}</span>
       <svg aria-hidden="true" width="16" height="10" viewBox="0 0 16 10" fill="none">
         <path d="M.5 5H15M15 5 10.5.5M15 5l-4.5 4.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
