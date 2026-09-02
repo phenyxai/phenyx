@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useSessionColor } from "@/contexts/session-color-context";
 
 interface CTASectionProps {
   onEnterClick: () => void;
 }
 
 export function CTASection({ onEnterClick }: CTASectionProps) {
-  const { sessionColor } = useSessionColor();
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -27,7 +25,7 @@ export function CTASection({ onEnterClick }: CTASectionProps) {
           color: "#FFFDFD",
         }}
       >
-        ready to see what it adds up to?
+        look again.
       </h2>
       <p
         className="lowercase mx-auto"
@@ -35,12 +33,12 @@ export function CTASection({ onEnterClick }: CTASectionProps) {
           fontSize: "16px",
           color: "rgba(255,253,253,0.62)",
           marginBottom: "52px",
-          maxWidth: "480px",
+          maxWidth: "580px",
           fontWeight: 300,
           lineHeight: 1.7,
         }}
       >
-        join the beta and be among the first to see your constellation.
+        there is more of you here than you can currently see.
       </p>
       <button
         onClick={onEnterClick}
@@ -50,9 +48,9 @@ export function CTASection({ onEnterClick }: CTASectionProps) {
         style={{
           gap: isHovered ? "14px" : "10px",
           padding: "14px 36px",
-          border: `1px solid ${isHovered ? sessionColor : "rgba(255,253,253,0.26)"}`,
+          border: "1px solid rgba(255,253,253,0.26)",
           borderRadius: "30px",
-          background: isHovered ? `${sessionColor}12` : "transparent",
+          background: "transparent",
           color: "#FFFDFD",
           fontSize: "14px",
           letterSpacing: "0.02em",

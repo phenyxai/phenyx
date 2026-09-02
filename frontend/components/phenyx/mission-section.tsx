@@ -1,5 +1,4 @@
 import { MissionConstellation } from "./mission-constellation";
-import { PolarisQA } from "./polaris-qa";
 
 export function MissionSection() {
   return (
@@ -34,10 +33,9 @@ export function MissionSection() {
             color: "#FFFDFD",
           }}
         >
-          this is your digital blueprint.
+          see how the parts of your life relate.
         </h2>
 
-        {/* Grid: body + constellation */}
         <div
           className="grid lg:grid-cols-[1fr_1.2fr] gap-10 lg:gap-10 items-start"
           style={{ marginTop: "8px" }}
@@ -52,7 +50,7 @@ export function MissionSection() {
                 maxWidth: "480px",
               }}
             >
-              this isn&apos;t a snapshot. it updates as you do. seven points, from who you&apos;ve always been to where you&apos;re still becoming.
+              seven dimensions. one living map. it updates as you do.
             </p>
           </div>
 
@@ -61,33 +59,42 @@ export function MissionSection() {
           </div>
         </div>
 
-        {/* Dig deeper with polaris */}
-        <p
-          className="lowercase"
-          style={{
-            fontSize: "22px",
-            color: "#FFFDFD",
-            fontWeight: 600,
-            marginTop: "56px",
-          }}
-        >
-          dig deeper with polaris
-        </p>
-        <p
-          className="lowercase"
-          style={{
-            fontSize: "15px",
-            color: "rgba(255,253,253,0.62)",
-            lineHeight: 1.6,
-            maxWidth: "560px",
-            marginTop: "10px",
-            fontWeight: 300,
-          }}
-        >
-          ask about any point in your constellation. polaris doesn&apos;t guess. it works from what your data already shows.
-        </p>
-
-        <PolarisQA />
+        <div style={{ marginTop: "64px" }}>
+          <p
+            className="uppercase"
+            style={{
+              fontSize: "11px",
+              letterSpacing: "0.2em",
+              color: "rgba(255,253,253,0.5)",
+              marginBottom: "18px",
+            }}
+          >
+            example
+          </p>
+          <h3
+            className="lowercase"
+            style={{
+              fontSize: "22px",
+              fontWeight: 500,
+              color: "#FFFDFD",
+              marginBottom: "14px",
+            }}
+          >
+            the same seven, seen by time.
+          </h3>
+          <p
+            className="lowercase"
+            style={{
+              fontSize: "15px",
+              lineHeight: 1.7,
+              color: "rgba(255,253,253,0.62)",
+              fontWeight: 300,
+              maxWidth: "640px",
+            }}
+          >
+            your constellation isn't static. it evolves as you connect more platforms and live more life. each point shifts to reflect new patterns, new pivots, new versions of you.
+          </p>
+        </div>
       </div>
     </section>
   );

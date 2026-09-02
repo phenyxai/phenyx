@@ -7,34 +7,33 @@ const layers = [
   {
     tag: "layer one",
     title: "connect",
-    text: "oauth integrations with instagram, linkedin, pinterest, x, spotify, youtube, github, and more. we read what you have already made, said, and shared, with your permission.",
+    text: "we read what you've already made. oauth integrations with spotify, pinterest, instagram, linkedin, github, youtube, x, and more. with your permission, we pull in years of choices, content, and signals.",
   },
   {
     tag: "layer two",
-    title: "synthesize",
-    text: "our ai analyzes tone, language patterns, content themes, and pivotal moments across all sources. it finds the pattern that ties it all together.",
+    title: "assemble",
+    text: "our ai analyzes patterns across all your platforms: language, tone, pivots, recurring themes, what you share versus what you keep. it finds the threads that tie it all together.",
   },
   {
     tag: "layer three",
     title: "reveal",
-    text: "we surface observations based on your behavior, each one tied to a point on your constellation. polaris, our ai, is connected to all of it, helping you explore what it finds and what it means.",
+    text: "you get a living constellation — seven interconnected points that reflect who you've been and where you're becoming. polaris, our conversational ai, helps you explore what it all means.",
   },
 ];
 
 const analyzeTags = [
-  "tone and voice",
-  "pivotal moments",
-  "content evolution",
-  "career transitions",
-  "creative output",
-  "network patterns",
-  "language over time",
+  "creative patterns",
+  "taste evolution",
+  "career signals",
+  "recurring themes",
+  "emotional tone",
+  "network behavior",
 ];
 
 const neverDoItems = [
-  "store raw platform data. we process and discard. only synthesized insights are retained.",
-  "access without consent. every connection is oauth-authorized and revocable at any time.",
-  "assign you a label. the ai reflects. it does not categorize.",
+  "we don't store raw platform data. only the synthesis. we process, reflect, discard.",
+  "we don't access without consent. every connection is oauth-authorized. revocable anytime.",
+  "we don't define you. we reflect meaning, not categories. the constellation is yours to interpret.",
 ];
 
 export function HowItWorksSection() {
@@ -238,7 +237,7 @@ export function HowItWorksSection() {
                 marginBottom: "24px",
               }}
             >
-              what we analyze
+              what comes into view
             </p>
             <div className="flex flex-wrap" style={{ gap: "12px" }}>
               {analyzeTags.map((tag) => (
@@ -260,7 +259,6 @@ export function HowItWorksSection() {
             </div>
           </div>
 
-          {/* what we never do */}
           <div
             ref={(el) => { elementRefs.current[4] = el; }}
             style={{
@@ -277,7 +275,7 @@ export function HowItWorksSection() {
                 marginBottom: "24px",
               }}
             >
-              what we never do
+              what stays yours
             </p>
             <div className="flex flex-col" style={{ gap: "18px" }}>
               {neverDoItems.map((item, i) => (

@@ -9,10 +9,10 @@ interface NavigationProps {
 }
 
 const NAV_LINKS = [
-  { href: "#s0-about", label: "a first look" },
+  { href: "#s0-about", label: "first look" },
   { href: "#s0-how", label: "how it works" },
   { href: "#s0-mission", label: "your constellation" },
-  { href: "#s0-cta", label: "stay connected" },
+  { href: "#s0-polaris", label: "polaris" },
 ] as const;
 
 export function Navigation({ onEnterClick }: NavigationProps) {
