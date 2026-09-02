@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import Image from "next/image";
 
 export function FooterSection() {
   const [email, setEmail] = useState("");
@@ -189,28 +188,16 @@ export function FooterSection() {
       
       {/* Zone 2 - Bottom bar - vertical on mobile, horizontal on desktop */}
       <div 
-        className="relative flex flex-col md:flex-row items-center justify-center gap-4 md:gap-0 px-6 md:px-12 lg:px-20"
+        className="relative flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 px-6 md:px-12 lg:px-20"
         style={{ 
           borderTop: "1px solid rgba(255, 253, 253, 0.06)",
           paddingTop: "24px",
           paddingBottom: "24px",
         }}
       >
-        {/* Logo - absolutely positioned left on desktop */}
-        <div className="md:absolute md:left-6 lg:left-20 flex-shrink-0 order-first md:order-none">
-          <Image 
-            src="/brand/phenyx-mark.png"
-            alt="PHENYX" 
-            width={20} 
-            height={20}
-            className="w-5 h-5 opacity-40"
-          />
-        </div>
-        
-        {/* Links and copyright - truly centered */}
-        <div className="flex items-center justify-center gap-4 order-2 md:order-none">
-          <a 
-            href="/privacy"
+        <div className="flex items-center gap-6 order-first md:order-none">
+          <a
+            href="/privacy-policy"
             className="text-[11px] lowercase transition-colors"
             style={{ color: "rgba(255,253,253,0.6)" }}
             onMouseEnter={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.9)"}
@@ -218,8 +205,7 @@ export function FooterSection() {
           >
             privacy
           </a>
-          <span style={{ color: "rgba(255,253,253,0.3)" }}>•</span>
-          <a 
+          <a
             href="/terms"
             className="text-[11px] lowercase transition-colors"
             style={{ color: "rgba(255,253,253,0.6)" }}
@@ -228,29 +214,28 @@ export function FooterSection() {
           >
             terms
           </a>
-          <span style={{ color: "rgba(255,253,253,0.3)" }}>•</span>
-          <p 
-            className="uppercase text-center"
-            style={{ 
-              fontSize: "11px",
-              letterSpacing: "0.1em",
-              color: "rgba(255,253,253,0.6)",
-            }}
-          >
-            © 2026 PHENYX INC.
-          </p>
         </div>
-        
-        {/* Contact email - absolutely positioned right on desktop */}
+
         <a 
           href="mailto:contact@phenyxai.com"
-          className="md:absolute md:right-6 lg:right-20 text-[11px] lowercase transition-colors flex-shrink-0 order-1 md:order-none"
+          className="text-[11px] lowercase transition-colors order-2 md:order-none"
           style={{ color: "rgba(255,253,253,0.6)" }}
           onMouseEnter={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.9)"}
           onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.6)"}
         >
           contact@phenyxai.com
         </a>
+
+        <p 
+          className="uppercase text-center order-last md:order-none"
+          style={{ 
+            fontSize: "11px",
+            letterSpacing: "0.1em",
+            color: "rgba(255,253,253,0.6)",
+          }}
+        >
+          © 2026 PHENYX INC.
+        </p>
       </div>
     </footer>
   );

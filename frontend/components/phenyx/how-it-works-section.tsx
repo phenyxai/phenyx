@@ -5,35 +5,35 @@ import { useSessionColor } from "@/contexts/session-color-context";
 
 const layers = [
   {
-    tag: "connect",
+    tag: "layer one",
     title: "connect",
-    text: "what you listen to, watch, save, post and build, from only the places you choose.",
+    text: "we read what you've already made. oauth integrations with spotify, pinterest, instagram, linkedin, github, youtube, x, and more. with your permission, we pull in years of choices, content, and signals.",
   },
   {
-    tag: "assemble",
+    tag: "layer two",
     title: "assemble",
-    text: "everything lands on one timeline, so repeats and shifts finally sit next to each other.",
+    text: "our ai analyzes patterns across all your platforms: language, tone, pivots, recurring themes, what you share versus what you keep. it finds the threads that tie it all together.",
   },
   {
-    tag: "reveal",
+    tag: "layer three",
     title: "reveal",
-    text: "the shape no single account could show, with the moments and evidence that made it visible.",
+    text: "you get a living constellation — seven interconnected points that reflect who you've been and where you're becoming. polaris, our conversational ai, helps you explore what it all means.",
   },
 ];
 
-const comesIntoView = [
-  "what keeps returning",
-  "what overlaps",
-  "creative rhythms",
-  "turning points",
-  "how you decide",
-  "what stays with you",
+const analyzeTags = [
+  "creative patterns",
+  "taste evolution",
+  "career signals",
+  "recurring themes",
+  "emotional tone",
+  "network behavior",
 ];
 
-const staysYours = [
-  { title: "your control", text: "choose what comes in. disconnect whenever you want." },
-  { title: "your privacy", text: "PHENYX keeps what it learned from your accounts, never a second copy of them." },
-  { title: "your meaning", text: "PHENYX can show what is there. what it means stays yours." },
+const neverDoItems = [
+  "we don't store raw platform data. only the synthesis. we process, reflect, discard.",
+  "we don't access without consent. every connection is oauth-authorized. revocable anytime.",
+  "we don't define you. we reflect meaning, not categories. the constellation is yours to interpret.",
 ];
 
 export function HowItWorksSection() {
@@ -93,7 +93,7 @@ export function HowItWorksSection() {
       id="s0-how"
       className="w-full"
       style={{
-        backgroundColor: "#0A0A0A",
+        backgroundColor: "#080808",
         paddingTop: "100px",
         paddingBottom: "100px",
       }}
@@ -124,7 +124,7 @@ export function HowItWorksSection() {
             marginBottom: "24px",
           }}
         >
-          connect, assemble, reveal
+          connect. synthesize. reveal.
         </h2>
 
         {/* Subline */}
@@ -139,7 +139,7 @@ export function HowItWorksSection() {
             marginBottom: "36px",
           }}
         >
-          three layers, and nothing invented in any of them.
+          we help you make sense of it all, through three layers.
         </p>
 
         {/* Three layers — vertical stack inside one card */}
@@ -171,7 +171,7 @@ export function HowItWorksSection() {
                 }}
               />
               <p
-                className="lowercase"
+                className="uppercase"
                 style={{
                   fontSize: "11px",
                   letterSpacing: "0.18em",
@@ -210,7 +210,7 @@ export function HowItWorksSection() {
 
         <div style={{ height: "28px" }} />
 
-        {/* Dual stack — what comes into view / what stays yours */}
+        {/* Dual stack — what we analyze / what we never do */}
         <div
           style={{
             background: "#121212",
@@ -219,7 +219,7 @@ export function HowItWorksSection() {
             overflow: "hidden",
           }}
         >
-          {/* what comes into view */}
+          {/* what we analyze */}
           <div
             ref={(el) => { elementRefs.current[3] = el; }}
             style={{
@@ -229,7 +229,7 @@ export function HowItWorksSection() {
             }}
           >
             <p
-              className="lowercase"
+              className="uppercase"
               style={{
                 fontSize: "11px",
                 letterSpacing: "0.18em",
@@ -240,7 +240,7 @@ export function HowItWorksSection() {
               what comes into view
             </p>
             <div className="flex flex-wrap" style={{ gap: "12px" }}>
-              {comesIntoView.map((tag) => (
+              {analyzeTags.map((tag) => (
                 <span
                   key={tag}
                   className="lowercase"
@@ -259,7 +259,6 @@ export function HowItWorksSection() {
             </div>
           </div>
 
-          {/* what stays yours */}
           <div
             ref={(el) => { elementRefs.current[4] = el; }}
             style={{
@@ -268,7 +267,7 @@ export function HowItWorksSection() {
             }}
           >
             <p
-              className="lowercase"
+              className="uppercase"
               style={{
                 fontSize: "11px",
                 letterSpacing: "0.18em",
@@ -279,19 +278,17 @@ export function HowItWorksSection() {
               what stays yours
             </p>
             <div className="flex flex-col" style={{ gap: "18px" }}>
-              {staysYours.map((item, i) => (
-                <div key={i}>
-                  <p
-                    className="lowercase"
+              {neverDoItems.map((item, i) => (
+                <div key={i} className="flex items-start" style={{ gap: "16px" }}>
+                  <span
                     style={{
-                      fontSize: "15px",
-                      fontWeight: 500,
-                      color: "#FFFDFD",
-                      marginBottom: "6px",
+                      width: "16px",
+                      height: "1px",
+                      background: "#a26656",
+                      flexShrink: 0,
+                      marginTop: "11px",
                     }}
-                  >
-                    {item.title}
-                  </p>
+                  />
                   <p
                     className="lowercase"
                     style={{
@@ -301,7 +298,7 @@ export function HowItWorksSection() {
                       fontWeight: 300,
                     }}
                   >
-                    {item.text}
+                    {item}
                   </p>
                 </div>
               ))}

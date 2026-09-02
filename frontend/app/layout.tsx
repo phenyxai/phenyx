@@ -13,18 +13,18 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: 'PHENYX — your life, taking form',
-  description: 'PHENYX is an identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline: what began, what changed, and what has been with you the whole way.',
-  keywords: ['identity', 'identity observatory', 'personal timeline', 'life patterns', 'constellation', 'polaris', 'phenyx'],
-  authors: [{ name: 'PHENYX' }],
+  description: 'PHENYX. where identity takes form. an ai that synthesizes who you are across everything you have built.',
+  keywords: ['identity', 'self discovery', 'personal development', 'identity platform', 'creator community', 'phenyx', 'identity formation', 'identity observatory'],
+  authors: [{ name: 'Janesse Liang' }],
   creator: 'PHENYX',
-  publisher: 'PHENYX INC.',
+  publisher: 'PHENYX',
   metadataBase: new URL('https://phenyxcollective.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: 'PHENYX — your life, taking form',
-    description: 'PHENYX is an identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline: what began, what changed, and what has been with you the whole way.',
+    title: 'PHENYX',
+    description: 'PHENYX. where identity takes form. an ai that synthesizes who you are across everything you have built.',
     url: 'https://phenyxcollective.com',
     siteName: 'PHENYX',
     images: [
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'PHENYX — your life, taking form',
+        alt: 'PHENYX',
       },
     ],
     locale: 'en_US',
@@ -40,8 +40,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PHENYX — your life, taking form',
-    description: 'PHENYX is an identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline: what began, what changed, and what has been with you the whole way.',
+    title: 'PHENYX',
+    description: 'PHENYX. where identity takes form. an ai that synthesizes who you are across everything you have built.',
     creator: '@phenyxcollect',
     site: '@phenyxcollect',
     images: ['/og-image.png'],
@@ -62,8 +62,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.png', type: 'image/png' },
     ],
     apple: '/apple-touch-icon.png',
   },

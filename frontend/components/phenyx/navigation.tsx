@@ -204,7 +204,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
         aria-label="Site navigation"
         aria-hidden={!isMenuOpen}
         inert={!isMenuOpen}
-        className={`lg:hidden max-lg:flex fixed inset-0 z-40 overflow-hidden items-center justify-center bg-[#0a0a0a]/95 backdrop-blur-[12px] transition-opacity duration-300 ${
+        className={`lg:hidden max-lg:flex fixed inset-0 z-40 overflow-hidden items-center justify-center bg-[#080808]/95 backdrop-blur-[12px] transition-opacity duration-300 ${
           isMenuOpen
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"

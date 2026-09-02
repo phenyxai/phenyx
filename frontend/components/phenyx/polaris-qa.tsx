@@ -22,36 +22,12 @@ interface Entry {
 
 const ENTRIES: Entry[] = [
   {
-    pillar: "origin",
-    q: '"why have the same three songs been on repeat for years whenever i\'m overwhelmed?"',
-    a: "those songs were never comfort. they're a reset button. <b>you reach for them right before your best decisions, not your worst ones.</b>",
+    pillar: "convergence",
+    q: '"am i moving as fast as i think i am?"',
+    a: "you tend to describe the work as fast, but what you save and return to has slowed steadily across three years, on both accounts.",
     src1: "spotify",
-    src2: "youtube",
-    span: "consistent pattern / 3+ years",
-  },
-  {
-    pillar: "emergence",
-    q: '"why did people start treating me differently before i felt like anything had changed?"',
-    a: "they weren't reacting to something new. they were finally catching up to something that had been building for a while. <b>you were the last one to notice what everyone else could already see.</b>",
-    src1: "instagram",
-    src2: "github",
-    span: "visible shift / building for months",
-  },
-  {
-    pillar: "recognition",
-    q: '"why do people open up to me so fast, even online?"',
-    a: "you ask one real question before anyone expects it. most people wait for permission to be that direct. <b>you've just never needed it.</b>",
-    src1: "reddit",
-    src2: "linkedin",
-    span: "40+ threads / recurring",
-  },
-  {
-    pillar: "transcendence",
-    q: '"why do i feel done with something i haven\'t even technically finished?"',
-    a: "you're not done with the project. you're done with who you were when you started it. <b>that's a different ending than the one you've been bracing for.</b>",
-    src1: "github",
-    src2: "youtube",
-    span: "shift detected / recent",
+    src2: "pinterest",
+    span: "3 years / 2 sources",
   },
 ];
 

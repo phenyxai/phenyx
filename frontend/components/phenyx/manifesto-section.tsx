@@ -3,11 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { PlatformField } from "./platform-field";
 
-/**
- * "a first look" / "who are you, really?" — repurposed from the old manifesto
- * section. Two-column grid: reference about copy on the left, the floating
- * platform field on the right. Keeps the IntersectionObserver fade-in.
- */
 export function AboutSection() {
   const [visibleParagraphs, setVisibleParagraphs] = useState<number[]>([]);
   const paragraphRefs = useRef<(HTMLParagraphElement | null)[]>([]);
@@ -62,7 +57,6 @@ export function AboutSection() {
   return (
     <section id="s0-about" className="w-full px-6 md:px-20" style={{ paddingTop: "100px", paddingBottom: "100px" }}>
       <div className="mx-auto" style={{ maxWidth: "1100px" }}>
-        {/* Eyebrow */}
         <p
           className="uppercase"
           style={{
@@ -75,7 +69,6 @@ export function AboutSection() {
           first look
         </p>
 
-        {/* Headline */}
         <h2
           className="lowercase"
           style={{
@@ -87,10 +80,9 @@ export function AboutSection() {
             color: "#FFFDFD",
           }}
         >
-          you were never in pieces, only in places
+          you were never in pieces, only in places.
         </h2>
 
-        {/* Two-column grid: copy + platform field */}
         <div className="grid lg:grid-cols-2 gap-10 items-start">
           <div className="lowercase" style={{ maxWidth: "560px" }}>
             <p
@@ -104,7 +96,7 @@ export function AboutSection() {
                 ...getAnimationStyle(0),
               }}
             >
-              every place you use asks for one part of you: the listener, the maker, the one who saves things for later.
+              every platform gave you a box. linkedin made you a professional. instagram made you an aesthetic. spotify showed your taste. pinterest mapped your curiosity.
             </p>
             <p
               ref={(el) => { paragraphRefs.current[1] = el; }}
@@ -117,7 +109,7 @@ export function AboutSection() {
                 ...getAnimationStyle(1),
               }}
             >
-              each one keeps a version of you that is true, but not one shows what it all adds up to.
+              but you are not scattered. you have simply been leaving pieces of yourself in different places, waiting for someone to see them all at once.
             </p>
             <p
               ref={(el) => { paragraphRefs.current[2] = el; }}
@@ -130,22 +122,20 @@ export function AboutSection() {
                 ...getAnimationStyle(2),
               }}
             >
-              so there has never been one place that holds all of you at once. every moment came from the same life, but nothing has ever gathered them in the same place.
+              no one has ever shown you what it all adds up to.
             </p>
             <p
               ref={(el) => { paragraphRefs.current[3] = el; }}
               style={{
                 fontSize: "17px",
-                fontWeight: 300,
+                fontWeight: 400,
                 lineHeight: 1.6,
-                color: "rgba(255,253,253,0.62)",
+                color: "#FFFDFD",
                 marginBottom: 0,
                 ...getAnimationStyle(3),
               }}
             >
-              <strong style={{ color: "#FFFDFD", fontWeight: 500 }}>
-                so we made one.
-              </strong>
+              so we made one.
             </p>
           </div>
 

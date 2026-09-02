@@ -11,29 +11,18 @@ import { PolarisSection } from "@/components/phenyx/polaris-section";
 import { CTASection } from "@/components/phenyx/cta-section";
 import { FooterSection } from "@/components/phenyx/footer-section";
 import { EntryModal } from "@/components/phenyx/entry-modal";
-import { WaitlistModal } from "@/components/phenyx/waitlist-modal";
 import { CustomCursor } from "@/components/phenyx/custom-cursor";
 
 export default function Home() {
-  const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
-  const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false);
-
-  const handleEnterClick = () => {
-    setIsEntryModalOpen(true);
-  };
-
-  const handleEntryToWaitlist = () => {
-    setIsEntryModalOpen(false);
-    setIsWaitlistModalOpen(true);
-  };
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <SessionColorProvider>
       <CustomCursor />
       <main className="min-h-screen bg-[#080808]">
-        <Navigation onEnterClick={handleEnterClick} />
+        <Navigation onEnterClick={() => setIsModalOpen(true)} />
 
-        <HeroSection onEnterClick={handleEnterClick} />
+        <HeroSection onEnterClick={() => setIsModalOpen(true)} />
 
         <AboutSection />
 
@@ -43,19 +32,13 @@ export default function Home() {
 
         <PolarisSection />
 
-        <CTASection onEnterClick={handleEnterClick} />
+        <CTASection onEnterClick={() => setIsModalOpen(true)} />
 
         <FooterSection />
         
         <EntryModal 
-          isOpen={isEntryModalOpen} 
-          onClose={() => setIsEntryModalOpen(false)}
-          onWaitlist={handleEntryToWaitlist}
-        />
-
-        <WaitlistModal 
-          isOpen={isWaitlistModalOpen} 
-          onClose={() => setIsWaitlistModalOpen(false)} 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
         />
       </main>
     </SessionColorProvider>
