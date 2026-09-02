@@ -9,10 +9,10 @@ interface NavigationProps {
 }
 
 const NAV_LINKS = [
-  { href: "#s0-about", label: "a first look" },
+  { href: "#s0-about", label: "first look" },
   { href: "#s0-how", label: "how it works" },
   { href: "#s0-mission", label: "your constellation" },
-  { href: "#s0-cta", label: "stay connected" },
+  { href: "#s0-polaris", label: "polaris" },
 ] as const;
 
 export function Navigation({ onEnterClick }: NavigationProps) {
@@ -103,7 +103,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 px-6 sm:px-10 md:px-16 lg:px-28 xl:px-36 py-7 lg:py-8 transition-all duration-300 ${
-          isScrolled || isMenuOpen ? "backdrop-blur-[12px] bg-[#0a0a0a]/70" : ""
+          isScrolled || isMenuOpen ? "backdrop-blur-[12px] bg-[#080808]/70" : ""
         }`}
       >
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">

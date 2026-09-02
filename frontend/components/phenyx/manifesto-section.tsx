@@ -72,7 +72,7 @@ export function AboutSection() {
             marginBottom: "26px",
           }}
         >
-          a first look
+          first look
         </p>
 
         {/* Headline */}
@@ -87,7 +87,7 @@ export function AboutSection() {
             color: "#FFFDFD",
           }}
         >
-          who are you, really?
+          you were never in pieces, only in places
         </h2>
 
         {/* Two-column grid: copy + platform field */}
@@ -104,7 +104,7 @@ export function AboutSection() {
                 ...getAnimationStyle(0),
               }}
             >
-              every platform gave you a box.
+              every place you use asks for one part of you: the listener, the maker, the one who saves things for later.
             </p>
             <p
               ref={(el) => { paragraphRefs.current[1] = el; }}
@@ -117,7 +117,7 @@ export function AboutSection() {
                 ...getAnimationStyle(1),
               }}
             >
-              linkedin made you a professional. instagram made you an aesthetic. tiktok made you a moment. x made you an opinion.
+              each one keeps a version of you that is true, but not one shows what it all adds up to.
             </p>
             <p
               ref={(el) => { paragraphRefs.current[2] = el; }}
@@ -130,7 +130,7 @@ export function AboutSection() {
                 ...getAnimationStyle(2),
               }}
             >
-              you have built a life across the internet, but no one has ever shown you what it all adds up to.
+              so there has never been one place that holds all of you at once. every moment came from the same life, but nothing has ever gathered them in the same place.
             </p>
             <p
               ref={(el) => { paragraphRefs.current[3] = el; }}
@@ -143,8 +143,8 @@ export function AboutSection() {
                 ...getAnimationStyle(3),
               }}
             >
-              <strong style={{ color: "#FFFDFD", fontWeight: 700 }}>
-                <span className="uppercase">PHENYX</span> does.
+              <strong style={{ color: "#FFFDFD", fontWeight: 500 }}>
+                so we made one.
               </strong>
             </p>
           </div>

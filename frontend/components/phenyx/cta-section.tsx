@@ -27,7 +27,7 @@ export function CTASection({ onEnterClick }: CTASectionProps) {
           color: "#FFFDFD",
         }}
       >
-        ready to see what it adds up to?
+        look again
       </h2>
       <p
         className="lowercase mx-auto"
@@ -40,7 +40,7 @@ export function CTASection({ onEnterClick }: CTASectionProps) {
           lineHeight: 1.7,
         }}
       >
-        join the beta and be among the first to see your constellation.
+        there is more of you here than you can currently see.
       </p>
       <button
         onClick={onEnterClick}
