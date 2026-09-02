@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'PHENYX — your life, taking form',
-    description: 'An identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline.',
+    description: 'PHENYX is an identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline: what began, what changed, and what has been with you the whole way.',
     url: 'https://phenyxai.com',
     siteName: 'PHENYX',
     images: [
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'PHENYX — your life, taking form',
-    description: 'An identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline.',
+    description: 'PHENYX is an identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline: what began, what changed, and what has been with you the whole way.',
     creator: '@phenyxcollect',
     site: '@phenyxcollect',
     images: ['/phenyx-opengraph.png'],
@@ -66,6 +66,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/favicon.png', type: 'image/png' },
     ],
     apple: '/apple-touch-icon.png',

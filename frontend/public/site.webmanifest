@@ -1,20 +1,20 @@
 {
   "name": "PHENYX",
   "short_name": "PHENYX",
-  "description": "the first identity observatory",
+  "description": "your life, taking form",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0D0D0C",
-  "theme_color": "#0D0D0C",
+  "background_color": "#080808",
+  "theme_color": "#080808",
   "icons": [
     {
-      "src": "/icon.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     },
     {
-      "src": "/icon.png",
-      "sizes": "512x512",
+      "src": "/favicon.png",
+      "sizes": "32x32",
       "type": "image/png"
     }
   ]
