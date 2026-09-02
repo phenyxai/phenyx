@@ -25,7 +25,7 @@ export function ManifestoSection() {
             {manifestoCopy.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             <p className="landing-vnext__thesis">{manifestoCopy.emphasis}</p>
           </div>
-          <div className="landing-vnext__platform-field" aria-hidden="true">
+          <div className="landing-vnext__platform-field">
             <PlatformField prefersReducedMotion={reducedMotion} />
           </div>
         </div>
