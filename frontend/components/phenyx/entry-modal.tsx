@@ -4,81 +4,46 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { entryModalCopy } from "@/lib/landing-copy";
 
-interface EntryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+interface EntryModalProps { isOpen: boolean; onClose: () => void }
 
-// ============================================================================
-// EntryModal (PHE-8) — the single decision point that routes a visitor into
-// auth. Triggered by every `enter` affordance on the landing page; asks whether
-// the person is returning or new and sends them to /signin or /join. It mirrors
-// the overlay/dialog structure, session-color usage, and overlay/Escape-close
-// patterns of waitlist-modal.tsx for visual consistency.
-//
-// Exactly one instance is rendered by the landing page; every `enter` source
-// just flips the shared `isOpen` state — duplicates are never mounted.
-// ============================================================================
 export function EntryModal({ isOpen, onClose }: EntryModalProps) {
   const router = useRouter();
-
   const cardRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  // Element that had focus when the modal opened, so we can restore it on close.
-  const triggerElementRef = useRef<HTMLElement | null>(null);
-  // Keep the latest onClose without re-running the focus effect (onClose is a
-  // fresh closure each parent render, and re-running would recapture focus).
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  // Escape-key close + focus management. We remember the triggering element on
-  // open, move focus into the modal, and return focus to the trigger on close.
-  // Depends only on `isOpen` so focus is captured/restored exactly once per open.
   useEffect(() => {
     if (!isOpen) return;
-
-    triggerElementRef.current = document.activeElement as HTMLElement | null;
-
+    triggerRef.current = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
         onCloseRef.current();
         return;
       }
-
-      // Trap focus within the card while the modal is open.
-      if (event.key === "Tab" && cardRef.current) {
-        const focusable = cardRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (event.shiftKey) {
-          if (document.activeElement === first) {
-            event.preventDefault();
-            last.focus();
-          }
-        } else if (document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-        }
+      if (event.key !== "Tab" || !cardRef.current) return;
+      const controls = cardRef.current.querySelectorAll<HTMLElement>("button, [href], [tabindex]:not([tabindex='-1'])");
+      if (!controls.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
-
-    // Move focus into the modal once it is rendered.
-    closeButtonRef.current?.focus();
-
+    closeRef.current?.focus();
     return () => {
+      document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
-      // Return focus to the element that opened the modal.
-      triggerElementRef.current?.focus?.();
+      triggerRef.current?.focus();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -89,72 +54,25 @@ export function EntryModal({ isOpen, onClose }: EntryModalProps) {
   };
 
   return (
-    <div
-      className="landing-entry"
-      onClick={onClose}
-    >
-      {/* Overlay — clicking it closes the modal. */}
-      <div className="landing-entry__overlay" />
-
-      {/* Card — stop propagation so inner clicks don't bubble to the overlay. */}
+    <div className="landing-vnext__modal-layer" onMouseDown={onClose}>
+      <div className="landing-vnext__modal-overlay" />
       <div
         ref={cardRef}
+        className="landing-vnext__modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="entry-modal-title"
-        className="landing-entry__card"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
       >
-        {/* Close (×) */}
-        <button
-          ref={closeButtonRef}
-          type="button"
-          onClick={onClose}
-          className="landing-entry__close"
-          aria-label={entryModalCopy.closeLabel}
-        >
-          ×
+        <button ref={closeRef} type="button" className="landing-vnext__modal-close" onClick={onClose} aria-label={entryModalCopy.closeLabel}>×</button>
+        <h2 id="entry-modal-title">{entryModalCopy.title}</h2>
+        <p>{entryModalCopy.subtitle}</p>
+        <button type="button" className="landing-vnext__modal-choice" onClick={() => navigateTo(entryModalCopy.returning.href)}>
+          <span>{entryModalCopy.returning.primary}</span><small>{entryModalCopy.returning.secondary}</small>
         </button>
-
-        {/* Title + sub */}
-        <h2
-          id="entry-modal-title"
-          className="landing-entry__title"
-        >
-          {entryModalCopy.title}
-        </h2>
-        <p className="landing-entry__subtitle">
-          {entryModalCopy.subtitle}
-        </p>
-
-        {/* Choice buttons */}
-        <div>
-          <button
-            type="button"
-            onClick={() => navigateTo(entryModalCopy.returning.href)}
-            className="landing-entry__choice"
-          >
-            <span>
-              {entryModalCopy.returning.primary}
-            </span>
-            <span className="landing-entry__choice-subtitle">
-              {entryModalCopy.returning.secondary}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigateTo(entryModalCopy.newcomer.href)}
-            className="landing-entry__choice"
-          >
-            <span>
-              {entryModalCopy.newcomer.primary}
-            </span>
-            <span className="landing-entry__choice-subtitle">
-              {entryModalCopy.newcomer.secondary}
-            </span>
-          </button>
-        </div>
+        <button type="button" className="landing-vnext__modal-choice" onClick={() => navigateTo(entryModalCopy.newcomer.href)}>
+          <span>{entryModalCopy.newcomer.primary}</span><small>{entryModalCopy.newcomer.secondary}</small>
+        </button>
       </div>
     </div>
   );

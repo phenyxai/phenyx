@@ -1,18 +1,18 @@
 import Link from "next/link";
-import { footerCopy, SECTION_IDS } from "@/lib/landing-copy";
+import { footerCopy } from "@/lib/landing-copy";
 
 export function FooterSection() {
   return (
-    <footer id={SECTION_IDS.footer} className="landing-v66__footer">
-      <div className="landing-v66__footer-links">
+    <footer className="landing-vnext__footer">
+      <div className="landing-vnext__footer-left">
+        <span className="landing-vnext__footer-dot" aria-hidden="true" />
+        <div className="landing-vnext__footer-links">
         <Link href={footerCopy.privacyHref}>{footerCopy.privacyLabel}</Link>
         <Link href={footerCopy.termsHref}>{footerCopy.termsLabel}</Link>
         <a href={`mailto:${footerCopy.contactEmail}`}>{footerCopy.contactEmail}</a>
+        </div>
       </div>
-      <span className="landing-v66__footer-meta">
-        <span className="landing-v66__footer-dot" aria-hidden="true" />
-        {footerCopy.copyright}
-      </span>
+      <span className="landing-vnext__footer-meta">{footerCopy.copyright}</span>
     </footer>
   );
 }

@@ -20,7 +20,7 @@ const ICON_COLOR = '#9DBCEF'
 const GRID_COLS = 3
 const GRID_ROWS = 2
 const CELL_COUNT = GRID_COLS * GRID_ROWS // 6
-const ICON_SIZE = 40
+const ICON_SIZE = 54
 const CELL_PADDING = 8
 const DRIFT_AMP_X_MAX = 42
 const DRIFT_AMP_Y_MAX = 12
@@ -156,7 +156,6 @@ export function PlatformField({ prefersReducedMotion = false }: PlatformFieldPro
       timeouts.forEach(clearTimeout)
       timeouts.clear()
       fadingIdsRef.current.clear()
-      setBoxes([])
     }
   }, [prefersReducedMotion])
 
@@ -215,7 +214,7 @@ export function PlatformField({ prefersReducedMotion = false }: PlatformFieldPro
   // Reduced motion: a static, fully-opaque 3x2 grid — no RAF, drift, or hover.
   if (prefersReducedMotion) {
     return (
-      <div ref={containerRef} aria-hidden className="relative w-full h-full overflow-hidden">
+      <div ref={containerRef} aria-hidden className="relative w-full h-full overflow-visible">
         {Array.from({ length: CELL_COUNT }).map((_, cell) => {
           const { baseLeft, baseTop } = boxGeometry(
             { cell, ampFracX: 0, ampFracY: 0, jitterFracX: 0, jitterFracY: 0 },
@@ -225,6 +224,7 @@ export function PlatformField({ prefersReducedMotion = false }: PlatformFieldPro
           return (
             <div
               key={cell}
+              className="landing-vnext__platform-icon"
               style={{
                 position: 'absolute',
                 left: baseLeft,
@@ -243,12 +243,13 @@ export function PlatformField({ prefersReducedMotion = false }: PlatformFieldPro
   }
 
   return (
-    <div ref={containerRef} aria-hidden className="relative w-full h-full overflow-hidden">
+    <div ref={containerRef} aria-hidden className="relative w-full h-full overflow-visible">
       {boxes.map((box) => {
         const { baseLeft, baseTop } = boxGeometry(box, size.w, size.h)
         return (
           <div
             key={box.id}
+            className="landing-vnext__platform-icon"
             ref={(el) => {
               if (el) elRefs.current.set(box.id, el)
               else elRefs.current.delete(box.id)

@@ -6,22 +6,26 @@ import { PlatformField } from "./platform-field";
 
 export function ManifestoSection() {
   const [reducedMotion, setReducedMotion] = useState(false);
+
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(query.matches);
+    const sync = () => setReducedMotion(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
   }, []);
 
   return (
-    <section id={SECTION_IDS.about} className="landing-v66__section landing-v66__about">
-      <div className="landing-v66__inner">
-        <p className="landing-v66__eyebrow">{manifestoCopy.eyebrow}</p>
-        <h2 className="landing-v66__first-headline">{manifestoCopy.headline}</h2>
-        <div className="landing-v66__about-grid">
-          <div className="landing-v66__about-copy">
+    <section id={SECTION_IDS.about} className="landing-vnext__section landing-vnext__about">
+      <div className="landing-vnext__inner">
+        <p className="landing-vnext__eyebrow" data-reveal>{manifestoCopy.eyebrow}</p>
+        <h2 data-reveal>{manifestoCopy.headline}</h2>
+        <div className="landing-vnext__about-grid" data-reveal>
+          <div className="landing-vnext__about-copy">
             {manifestoCopy.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-            <p><strong>{manifestoCopy.emphasis}</strong></p>
+            <p className="landing-vnext__thesis">{manifestoCopy.emphasis}</p>
           </div>
-          <div className="landing-v66__platform-field" aria-hidden="true">
+          <div className="landing-vnext__platform-field" aria-hidden="true">
             <PlatformField prefersReducedMotion={reducedMotion} />
           </div>
         </div>

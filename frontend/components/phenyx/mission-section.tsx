@@ -1,31 +1,21 @@
-import { Constellation } from "./constellation";
-import { AskPolarisWidget } from "./ask-polaris-widget";
 import { constellationCopy, SECTION_IDS } from "@/lib/landing-copy";
+import { LandingConstellation } from "./landing-constellation";
+import { ConstellationExample } from "./constellation-example";
 
 export function MissionSection() {
   return (
-    <section id={SECTION_IDS.mission} className="landing-v66__identity-section">
-      <div className="landing-v66__inner">
-        <p className="landing-v66__eyebrow">{constellationCopy.eyebrow}</p>
-        <h2 className="landing-v66__section-headline">{constellationCopy.headline}</h2>
-        <div className="landing-v66__identity-grid">
-          <div className="landing-v66__identity-copy">
-            <p>
-              {constellationCopy.lines.map((line, index) => (
-                <span className="landing-v66__identity-line" key={line}>
-                  {index === constellationCopy.lines.length - 1 ? <strong>{line}</strong> : line}
-                </span>
-              ))}
-            </p>
+    <section id={SECTION_IDS.mission} className="landing-vnext__section landing-vnext__mission">
+      <div className="landing-vnext__inner">
+        <p className="landing-vnext__eyebrow" data-reveal>{constellationCopy.eyebrow}</p>
+        <h2 data-reveal>{constellationCopy.headline}</h2>
+        <div className="landing-vnext__mission-grid" data-reveal>
+          <div className="landing-vnext__mission-copy">
+            {constellationCopy.lines.map((line) => <p key={line}>{line}</p>)}
+            <p className="landing-vnext__thesis">{constellationCopy.emphasis}</p>
           </div>
-          <div className="landing-v66__constellation" aria-hidden="true">
-            <Constellation />
-          </div>
+          <LandingConstellation />
         </div>
-
-        <h3 id={SECTION_IDS.polaris} className="landing-v66__polaris-heading">{constellationCopy.polarisHeading}</h3>
-        <p className="landing-v66__polaris-lead">{constellationCopy.polarisLead}</p>
-        <AskPolarisWidget />
+        <ConstellationExample />
       </div>
     </section>
   );

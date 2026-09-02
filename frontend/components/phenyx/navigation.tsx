@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { navCopy, SECTION_IDS } from "@/lib/landing-copy";
 
-interface NavigationProps {
-  onEnterClick: () => void;
-}
+interface NavigationProps { onEnterClick: () => void }
 
 export function Navigation({ onEnterClick }: NavigationProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,9 +11,7 @@ export function Navigation({ onEnterClick }: NavigationProps) {
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
-    };
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setIsOpen(false); };
     const closeOutside = (event: PointerEvent) => {
       if (!navRef.current?.contains(event.target as Node)) setIsOpen(false);
     };
@@ -30,23 +25,19 @@ export function Navigation({ onEnterClick }: NavigationProps) {
 
   useEffect(() => {
     const sections = navCopy.links
-      .map((link) => document.getElementById(link.targetId))
+      .map(({ targetId }) => document.getElementById(targetId))
       .filter((section): section is HTMLElement => Boolean(section));
     const hero = document.getElementById(SECTION_IDS.top);
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
         if (visible) setActiveId(visible.target.id);
       },
-      { rootMargin: "-45% 0px -45%", threshold: [0, 0.15, 0.4] },
+      { rootMargin: "-45% 0px -45% 0px", threshold: [0, 0.15, 0.4] },
     );
     const heroObserver = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) setActiveId(null);
-      },
-      { rootMargin: "-20% 0px -60%" },
+      ([entry]) => { if (entry?.isIntersecting) setActiveId(null); },
+      { rootMargin: "-20% 0px -60% 0px" },
     );
     sections.forEach((section) => observer.observe(section));
     if (hero) heroObserver.observe(hero);
@@ -56,37 +47,22 @@ export function Navigation({ onEnterClick }: NavigationProps) {
     };
   }, []);
 
-  const enter = () => {
-    setIsOpen(false);
-    onEnterClick();
-  };
+  const enter = () => { setIsOpen(false); onEnterClick(); };
 
   return (
-    <nav ref={navRef} className="landing-v66__nav" aria-label="Primary navigation">
-      <a className="landing-v66__nav-logo" href={`#${SECTION_IDS.top}`}>
-        <Image src="/phenyx-logo.png" alt={navCopy.logoAlt} width={18} height={18} priority />
-        <span>{navCopy.brand}</span>
+    <nav ref={navRef} className="landing-vnext__nav" aria-label="Primary navigation">
+      <a className="landing-vnext__nav-logo" href={`#${SECTION_IDS.top}`}>
+        <span className="landing-vnext__brand-dot" aria-hidden="true" /><span>{navCopy.brand}</span>
       </a>
-
-      <div className="landing-v66__nav-links">
+      <div className="landing-vnext__nav-links">
         {navCopy.links.map((link) => (
-          <a
-            key={link.targetId}
-            href={`#${link.targetId}`}
-            className={activeId === link.targetId ? "is-active" : undefined}
-          >
-            {link.label}
-          </a>
+          <a key={link.targetId} href={`#${link.targetId}`} data-active={activeId === link.targetId}>{link.label}</a>
         ))}
       </div>
-
-      <button type="button" className="landing-v66__nav-enter" onClick={enter}>
-        {navCopy.enter}
-      </button>
-
+      <button type="button" className="landing-vnext__nav-enter" onClick={enter}>{navCopy.enter}</button>
       <button
         type="button"
-        className="landing-v66__menu-button"
+        className="landing-vnext__menu-button"
         data-open={isOpen}
         aria-label={navCopy.menuLabel}
         aria-expanded={isOpen}
@@ -95,12 +71,9 @@ export function Navigation({ onEnterClick }: NavigationProps) {
       >
         <span /><span /><span />
       </button>
-
-      <div id="landing-nav-menu" className="landing-v66__nav-dropdown" data-open={isOpen}>
+      <div id="landing-nav-menu" className="landing-vnext__nav-dropdown" data-open={isOpen}>
         {navCopy.links.map((link) => (
-          <a key={link.targetId} href={`#${link.targetId}`} onClick={() => setIsOpen(false)}>
-            {link.label}
-          </a>
+          <a key={link.targetId} href={`#${link.targetId}`} onClick={() => setIsOpen(false)}>{link.label}</a>
         ))}
         <button type="button" onClick={enter}>{navCopy.enter}</button>
       </div>
