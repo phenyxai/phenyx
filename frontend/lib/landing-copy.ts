@@ -103,6 +103,50 @@ export const constellationCopy = {
   exampleEyebrow: "the same seven, seen by time",
   exampleNote: "an example. yours is built only from the accounts you connect.",
   sevenPoints: ["origin", "emergence", "self-creation", "convergence", "becoming", "recognition", "transcendence"],
+  // Legacy fields kept for unmounted components (ask-polaris-widget, product-preview-section) so tsc passes
+  previewHeadline: "your identity. finally in one place.",
+  previewSubline: "we help you connect it all through moments of reflection.",
+  previewBrandLabel: BRAND,
+  previewConstellationLabel: "your constellation",
+  reflectLabel: "reflect.",
+  polarisExamples: [
+    {
+      pillar: "convergence",
+      question: '"why does my work feel like two different people made it?"',
+      answer:
+        "the split is dated. everything before june reads one way and everything after reads another, and the turn took about three weeks.",
+      emphasis: "june",
+      sources: ["instagram", "youtube"],
+      span: "june 2025 / 4 years",
+    },
+    {
+      pillar: "becoming",
+      question: '"is there any warning before something shifts in me?"',
+      answer:
+        "yes. what you listen to drops in tempo about nine days before you go quiet. it has held 14 of the last 17 times.",
+      emphasis: "nine days",
+      sources: ["spotify", "instagram"],
+      span: "17 releases / 3 years",
+    },
+    {
+      pillar: "origin",
+      question: '"what was actually going on with me in 2019?"',
+      answer:
+        "march 2019 is where it turns. shoegaze fell from 40% of your listening to under 3%, and what replaced it is what you still play today.",
+      emphasis: "march 2019",
+      sources: ["spotify", "pinterest"],
+      span: "march 2019 / 11 years",
+    },
+    {
+      pillar: "recognition",
+      question: '"how do people actually see my work?"',
+      answer:
+        "twelve people across youtube and instagram described your work as patient this year. you have never used the word yourself.",
+      emphasis: "patient",
+      sources: ["youtube", "instagram"],
+      span: "12 people / 6 months",
+    },
+  ],
 } as const;
 
 export const polarisCopy = {
