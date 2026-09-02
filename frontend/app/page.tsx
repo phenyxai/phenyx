@@ -10,6 +10,7 @@ import { PolarisSection } from "@/components/phenyx/polaris-section";
 import { CtaSection } from "@/components/phenyx/cta-section";
 import { FooterSection } from "@/components/phenyx/footer-section";
 import { EntryModal } from "@/components/phenyx/entry-modal";
+import { CustomCursor } from "@/components/phenyx/custom-cursor";
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,6 +37,7 @@ export default function Home() {
 
   return (
     <>
+      <CustomCursor />
       <main className="landing-vnext">
         <Navigation onEnterClick={openEntryModal} />
 

@@ -1,342 +1,116 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useSessionColor } from "@/contexts/session-color-context";
 
-const PARTICLE_RGB = "157,188,239";
-const STELLAR_RGB = "185,213,255";
-const HERO_PARTICLE_COUNT = 124;
-const FIELD_MIN_X = 0.225;
-const FIELD_MIN_Y = 0.135;
-const CLUSTER_CENTER_X = 0.578;
-const CLUSTER_CENTER_Y = 0.56;
-const CLUSTER_RADIUS_X = 0.35;
-const CLUSTER_RADIUS_Y = 0.31;
-const MAX_RADIUS = 3.4;
-const GLOW_MULTIPLIER = 4.6;
-const MAX_DRIFT = 30;
-const SAFE_PADDING = MAX_RADIUS * GLOW_MULTIPLIER + MAX_DRIFT + 6;
-const FIELD_WAKE_DELAY = 550;
-const FIELD_WAKE_DURATION = 1900;
-const GATHER_RADIUS = 260;
-const GATHER_STRENGTH = 0.05;
-const RETURN_STRENGTH = 0.025;
-
-interface HeroParticle {
-  x: number;
-  y: number;
-  homeX: number;
-  homeY: number;
-  radius: number;
-  baseAlpha: number;
-  driftPhaseX: number;
-  driftPhaseY: number;
-  driftRatio: number;
-  driftPhase2: number;
-  driftSpeed: number;
-  driftAmplitude: number;
-  gatherLag: number;
-}
-
-interface AmbientStar {
-  x: number;
-  y: number;
-  radius: number;
-  baseAlpha: number;
-  phase: number;
-  speed: number;
-}
-
-function randomBetween(min: number, max: number) {
-  return min + Math.random() * (max - min);
-}
-
-function isInHeroDeadZone(x: number, y: number, width: number, height: number) {
-  return y < height * 0.12 || x < width * 0.52;
-}
-
-/**
- * The v67 hero treatment is three canvases. The fixed background dots,
- * ambient stars, and interactive right-hand cluster deliberately keep their
- * own bounds and motion.
- */
-export function IdentityParticles({ prefersReducedMotion = false }: { prefersReducedMotion?: boolean }) {
-  const backgroundRef = useRef<HTMLCanvasElement>(null);
-  const starsRef = useRef<HTMLCanvasElement>(null);
-  const fieldRef = useRef<HTMLDivElement>(null);
-  const clusterRef = useRef<HTMLCanvasElement>(null);
+export function IdentityParticles() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { sessionColor } = useSessionColor();
 
   useEffect(() => {
-    const canvas = backgroundRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const context = ctx;
 
-    const draw = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      for (let index = 0; index < 80; index += 1) {
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
-        if (x < canvas.width * 0.62 || y < canvas.height * 0.42) continue;
-        const radius = Math.random() * 0.6 + 0.1;
-        const alpha = 0.03 + Math.random() * 0.12;
-        context.beginPath();
-        context.arc(x, y, radius, 0, Math.PI * 2);
-        context.fillStyle = `rgba(${STELLAR_RGB},${alpha})`;
-        context.fill();
-      }
-    };
+    const W = canvas.offsetWidth;
+    const H = canvas.offsetHeight;
+    canvas.width = W;
+    canvas.height = H;
 
-    draw();
-    const delayedDraw = window.setTimeout(draw, 400);
-    window.addEventListener("resize", draw);
-    window.addEventListener("load", draw);
-    return () => {
-      window.clearTimeout(delayedDraw);
-      window.removeEventListener("resize", draw);
-      window.removeEventListener("load", draw);
-    };
-  }, []);
+    const COUNT = 100;
+    const particles = Array.from({ length: COUNT }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: 1 + Math.random() * 1.5,
+      baseOpacity: 0.15 + Math.random() * 0.3,
+      opacity: 0.15 + Math.random() * 0.3,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      pulseOffset: Math.random() * Math.PI * 2,
+      pulseSpeed: 0.003 + Math.random() * 0.005,
+    }));
 
-  useEffect(() => {
-    const canvas = starsRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
+    let mouse: { x: number; y: number } | null = null;
+    let animId: number;
 
-    let width = 0;
-    let height = 0;
-    let stars: AmbientStar[] = [];
-    let frame = 0;
-
-    const resize = () => {
-      width = canvas.offsetWidth;
-      height = canvas.offsetHeight;
-      canvas.width = width;
-      canvas.height = height;
-      stars = Array.from({ length: Math.floor((width * height) / 2200) }, () => ({
-        x: width * 0.2 + Math.random() * width * 0.8,
-        y: Math.pow(Math.random(), 1.5) * height * 0.92,
-        radius: 0.5 + Math.random() * 1.4,
-        baseAlpha: 0.22 + Math.random() * 0.6,
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.0004 + Math.random() * 0.0009,
-      }));
-    };
-
-    const paint = (time: number) => {
-      context.clearRect(0, 0, width, height);
+    const onMove = (event: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
-      for (const star of stars) {
-        if (isInHeroDeadZone(star.x, star.y, width, height)) continue;
-        const screenX = rect.left + (star.x / width) * rect.width;
-        const screenY = rect.top + (star.y / height) * rect.height;
-        if (screenX < window.innerWidth * 0.52 && screenY < window.innerHeight * 0.6) continue;
-        if (screenY < 66) continue;
-
-        const alpha = prefersReducedMotion
-          ? star.baseAlpha * 0.78
-          : star.baseAlpha * (0.55 + 0.45 * Math.sin(time * star.speed + star.phase));
-        context.beginPath();
-        context.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-        context.fillStyle = `rgba(255,253,253,${alpha})`;
-        context.fill();
-      }
+      mouse = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    };
+    const onLeave = () => {
+      mouse = null;
     };
 
-    const animate = (time: number) => {
-      paint(time);
-      frame = window.requestAnimationFrame(animate);
-    };
+    canvas.addEventListener("mousemove", onMove);
+    canvas.addEventListener("mouseleave", onLeave);
 
-    resize();
-    if (prefersReducedMotion) paint(0);
-    else frame = window.requestAnimationFrame(animate);
-    window.addEventListener("resize", resize);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", resize);
-    };
-  }, [prefersReducedMotion]);
+    function hexToRgb(hex: string) {
+      const red = parseInt(hex.slice(1, 3), 16);
+      const green = parseInt(hex.slice(3, 5), 16);
+      const blue = parseInt(hex.slice(5, 7), 16);
+      return `${red},${green},${blue}`;
+    }
 
-  useEffect(() => {
-    const field = fieldRef.current;
-    const canvas = clusterRef.current;
-    const context = canvas?.getContext("2d");
-    if (!field || !canvas || !context) return;
+    const rgb = hexToRgb(sessionColor || "#FFFDFD");
 
-    let width = 0;
-    let height = 0;
-    let mouseX: number | null = null;
-    let mouseY: number | null = null;
-    let mouseActive = false;
-    let particles: HeroParticle[] = [];
-    let cueBox: DOMRect | null = null;
-    let fieldStartedAt: number | null = null;
-    let frame = 0;
+    function tick() {
+      context.clearRect(0, 0, W, H);
 
-    const measureCue = () => {
-      cueBox = document.querySelector(".landing-v66__scroll-cue")?.getBoundingClientRect() ?? null;
-    };
+      particles.forEach((particle) => {
+        particle.pulseOffset += particle.pulseSpeed;
+        const pulse = (Math.sin(particle.pulseOffset) + 1) / 2;
 
-    const resize = () => {
-      width = field.clientWidth;
-      height = field.clientHeight;
-      canvas.width = width;
-      canvas.height = height;
-      measureCue();
-      particles = Array.from({ length: HERO_PARTICLE_COUNT }, () => {
-        const angle = Math.random() * Math.PI * 2;
-        const radialDistance = Math.pow(Math.random(), 0.62);
-        const x = width * CLUSTER_CENTER_X + Math.cos(angle) * width * CLUSTER_RADIUS_X * radialDistance;
-        const y = height * CLUSTER_CENTER_Y + Math.sin(angle) * height * CLUSTER_RADIUS_Y * radialDistance;
-        return {
-          x,
-          y,
-          homeX: x,
-          homeY: y,
-          radius: randomBetween(1.6, 3.4) * (1 - 0.3 * radialDistance),
-          baseAlpha: randomBetween(0.16, 0.37) * (1 - 0.45 * radialDistance),
-          driftPhaseX: randomBetween(0, Math.PI * 2),
-          driftPhaseY: randomBetween(0, Math.PI * 2),
-          driftRatio: randomBetween(0.58, 1.47),
-          driftPhase2: randomBetween(0, Math.PI * 2),
-          driftSpeed: randomBetween(0.00009, 0.00024),
-          driftAmplitude: randomBetween(10, 20),
-          gatherLag: randomBetween(0.6, 1.4),
-        };
-      });
-    };
-
-    const onMouseMove = (event: MouseEvent) => {
-      const rect = field.getBoundingClientRect();
-      mouseX = event.clientX - rect.left;
-      mouseY = event.clientY - rect.top;
-      mouseActive = true;
-    };
-    const onMouseLeave = () => {
-      mouseActive = false;
-    };
-
-    const fieldWake = (time: number) => {
-      if (prefersReducedMotion) return 1;
-      if (fieldStartedAt === null) fieldStartedAt = time;
-      const progress = (time - fieldStartedAt - FIELD_WAKE_DELAY) / FIELD_WAKE_DURATION;
-      if (progress <= 0) return 0.12;
-      if (progress >= 1) return 1;
-      return 0.12 + 0.88 * (1 - Math.pow(1 - progress, 3));
-    };
-
-    const paint = (time: number) => {
-      context.clearRect(0, 0, width, height);
-      const wake = fieldWake(time);
-      const fieldRect = field.getBoundingClientRect();
-      const heroRect = field.closest(".landing-v66__hero")?.getBoundingClientRect();
-
-      for (const particle of particles) {
-        const slowerSpeed = particle.driftSpeed * 0.37;
-        const slowerAmplitude = particle.driftAmplitude * 0.45;
-        const driftX = Math.sin(time * particle.driftSpeed + particle.driftPhaseX) * particle.driftAmplitude
-          + Math.sin(time * slowerSpeed + particle.driftPhase2) * slowerAmplitude;
-        const driftY = Math.cos(time * particle.driftSpeed * particle.driftRatio + particle.driftPhaseY) * particle.driftAmplitude
-          + Math.cos(time * slowerSpeed * 1.31 + particle.driftPhase2) * slowerAmplitude;
-        const targetX = particle.homeX + (prefersReducedMotion ? 0 : driftX);
-        const targetY = particle.homeY + (prefersReducedMotion ? 0 : driftY);
-
-        if (!prefersReducedMotion && mouseActive && mouseX !== null && mouseY !== null) {
-          const dx = mouseX - particle.x;
-          const dy = mouseY - particle.y;
-          const distance = Math.hypot(dx, dy);
-          const proximity = Math.max(0, 1 - distance / GATHER_RADIUS);
-          const eased = proximity * proximity;
-          const pull = eased * GATHER_STRENGTH * particle.gatherLag;
-          const gatherX = particle.x + dx * pull;
-          const gatherY = particle.y + dy * pull;
-          const returnX = particle.x + (targetX - particle.x) * RETURN_STRENGTH;
-          const returnY = particle.y + (targetY - particle.y) * RETURN_STRENGTH;
-          particle.x = gatherX * eased + returnX * (1 - eased);
-          particle.y = gatherY * eased + returnY * (1 - eased);
+        if (mouse) {
+          const dx = mouse.x - particle.x;
+          const dy = mouse.y - particle.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < 150 && distance > 20) {
+            const force = ((150 - distance) / 150) * 0.8;
+            particle.vx += (dx / distance) * force * 0.1;
+            particle.vy += (dy / distance) * force * 0.1;
+          }
+          const mouseDistance = Math.sqrt(
+            (mouse.x - particle.x) ** 2 + (mouse.y - particle.y) ** 2,
+          );
+          particle.opacity =
+            particle.baseOpacity +
+            (0.9 - particle.baseOpacity) * Math.max(0, (150 - mouseDistance) / 150);
         } else {
-          particle.x += (targetX - particle.x) * RETURN_STRENGTH;
-          particle.y += (targetY - particle.y) * RETURN_STRENGTH;
+          particle.opacity = particle.baseOpacity + pulse * 0.2;
+          particle.vx *= 0.98;
+          particle.vy *= 0.98;
         }
 
-        particle.x = Math.min(Math.max(particle.x, SAFE_PADDING), width - SAFE_PADDING);
-        particle.y = Math.min(Math.max(particle.y, SAFE_PADDING), height - SAFE_PADDING);
-        particle.x = Math.max(particle.x, width * FIELD_MIN_X);
-        particle.y = Math.max(particle.y, height * FIELD_MIN_Y);
+        particle.vx = Math.max(-1.5, Math.min(1.5, particle.vx));
+        particle.vy = Math.max(-1.5, Math.min(1.5, particle.vy));
 
-        const screenX = particle.x + fieldRect.left;
-        const screenY = particle.y + fieldRect.top;
-        if (
-          cueBox
-          && screenX > cueBox.left - 46
-          && screenX < cueBox.right + 46
-          && screenY > cueBox.top - 34
-          && screenY < cueBox.bottom + 34
-        ) continue;
+        particle.x += particle.vx;
+        particle.y += particle.vy;
 
-        if (
-          heroRect
-          && isInHeroDeadZone(
-            fieldRect.left - heroRect.left + particle.x,
-            fieldRect.top - heroRect.top + particle.y,
-            heroRect.width,
-            heroRect.height,
-          )
-        ) continue;
-
-        const glowRadius = particle.radius * GLOW_MULTIPLIER;
-        const glow = context.createRadialGradient(
-          particle.x,
-          particle.y,
-          0,
-          particle.x,
-          particle.y,
-          glowRadius,
-        );
-        glow.addColorStop(0, `rgba(${PARTICLE_RGB},${particle.baseAlpha * 0.55 * wake})`);
-        glow.addColorStop(0.4, `rgba(${PARTICLE_RGB},${particle.baseAlpha * 0.16 * wake})`);
-        glow.addColorStop(1, `rgba(${PARTICLE_RGB},0)`);
-        context.beginPath();
-        context.arc(particle.x, particle.y, glowRadius, 0, Math.PI * 2);
-        context.fillStyle = glow;
-        context.fill();
+        if (particle.x < 0) particle.x = W;
+        if (particle.x > W) particle.x = 0;
+        if (particle.y < 0) particle.y = H;
+        if (particle.y > H) particle.y = 0;
 
         context.beginPath();
-        context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-        context.fillStyle = `rgba(${STELLAR_RGB},${Math.min(0.52, particle.baseAlpha + 0.14) * wake})`;
+        context.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2);
+        context.fillStyle = `rgba(${rgb},${particle.opacity})`;
         context.fill();
-      }
-    };
+      });
 
-    const animate = (time: number) => {
-      paint(time);
-      frame = window.requestAnimationFrame(animate);
-    };
-
-    resize();
-    if (prefersReducedMotion) paint(performance.now());
-    else {
-      field.addEventListener("mousemove", onMouseMove);
-      field.addEventListener("mouseleave", onMouseLeave);
-      frame = window.requestAnimationFrame(animate);
+      animId = requestAnimationFrame(tick);
     }
-    window.addEventListener("resize", resize);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      field.removeEventListener("mousemove", onMouseMove);
-      field.removeEventListener("mouseleave", onMouseLeave);
-      window.removeEventListener("resize", resize);
-    };
-  }, [prefersReducedMotion]);
 
-  return (
-    <>
-      <canvas ref={backgroundRef} className="landing-v66__background-particles" aria-hidden="true" />
-      <canvas ref={starsRef} className="landing-v66__hero-stars" aria-hidden="true" />
-      <div ref={fieldRef} className="landing-v66__hero-particle-field" aria-hidden="true">
-        <canvas ref={clusterRef} className="landing-v66__hero-particle-cluster" />
-      </div>
-    </>
-  );
+    tick();
+
+    return () => {
+      cancelAnimationFrame(animId);
+      canvas.removeEventListener("mousemove", onMove);
+      canvas.removeEventListener("mouseleave", onLeave);
+    };
+  }, [sessionColor]);
+
+  return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />;
 }
