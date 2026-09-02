@@ -13,7 +13,10 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'PHENYX — your life, taking form',
+  title: {
+    default: 'PHENYX',
+    template: '%s | PHENYX',
+  },
   description: 'PHENYX is an identity observatory. Connect the accounts you choose, and see the parts of your life as one timeline: what began, what changed, and what has been with you the whole way.',
   keywords: ['identity', 'self discovery', 'personal development', 'identity platform', 'identity formation', 'identity observatory'],
   authors: [{ name: 'Janesse Liang' }],

@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { DashboardSidebar } from "@/components/phenyx/dashboard-sidebar";
 import { DashboardInstrumentation } from "@/components/phenyx/dashboard-instrumentation";
 import { SettingsModalsProvider } from "@/components/phenyx/settings-modals/modal-host";
+
+export const metadata: Metadata = {
+  title: {
+    default: "Dashboard",
+    template: "%s | PHENYX",
+  },
+};
 
 /**
  * Authenticated dashboard shell. The sidebar lives here (persistent across tab

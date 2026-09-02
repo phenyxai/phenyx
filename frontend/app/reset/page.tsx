@@ -1,5 +1,10 @@
+import type { Metadata } from "next"
 import { Suspense } from "react"
 import ResetClient from "./reset-client"
+
+export const metadata: Metadata = {
+  title: "Reset password",
+}
 
 export default function ResetPage() {
   return (

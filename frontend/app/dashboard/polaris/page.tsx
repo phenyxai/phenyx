@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { IntroBanner } from "@/components/phenyx/intro-banner";
 import { PolarisTab } from "@/components/phenyx/polaris-tab";
+
+export const metadata: Metadata = {
+  title: "Polaris",
+};
 
 /** Polaris tab (PHE-73). Idle + chat live in the client `PolarisTab`.
  * Deep-link `?q=&pillar=` is consumed inside that client tab (Daily explore).

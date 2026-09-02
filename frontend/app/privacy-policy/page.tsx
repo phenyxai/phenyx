@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalDocument, LegalMail } from "@/components/phenyx/legal-document";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | PHENYX",
+  title: "Privacy Policy",
   description: "Privacy Policy for PHENYX INC.",
 };
 

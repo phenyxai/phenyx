@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalDocument, LegalMail } from "@/components/phenyx/legal-document";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | PHENYX",
+  title: "Terms of Service",
   description: "Terms of Service for PHENYX INC.",
 };
 
