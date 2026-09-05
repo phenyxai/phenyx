@@ -581,8 +581,12 @@
 .landing-vnext__nav-links a[data-active="true"]::after { opacity: 0.85; transform: scaleX(1); }
 .landing-vnext__nav-enter,
 .landing-vnext__enter-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 112px;
   min-height: 46px;
+  padding: 0 24px;
   border: 1px solid rgba(255, 253, 253, 0.2);
   border-radius: 999px;
   background: transparent;
@@ -891,36 +895,70 @@
   .landing-vnext__menu-button[data-open="true"] span:last-child { transform: translateY(-7px) rotate(-45deg); }
   .landing-vnext__nav-dropdown { position: fixed; top: 66px; right: 20px; left: 20px; z-index: 99; display: flex; flex-direction: column; gap: 2px; padding: 14px; border: 1px solid var(--landing-line); border-radius: 14px; background: rgba(8, 8, 8, 0.98); opacity: 0; pointer-events: none; transform: translateY(-8px); transition: opacity 250ms ease, transform 250ms ease; }
   .landing-vnext__nav-dropdown[data-open="true"] { opacity: 1; pointer-events: auto; transform: none; }
-  .landing-vnext__nav-dropdown a { padding: 12px 16px; color: var(--landing-body); font-size: 14px; text-decoration: none; }
+  .landing-vnext__nav-dropdown a { padding: 12px 16px; color: var(--landing-body); font-size: 14px; text-decoration: none; text-align: center; }
   .landing-vnext__nav-dropdown button { min-height: 44px; margin-top: 10px; border: 1px solid rgba(255, 253, 253, 0.2); border-radius: 999px; background: transparent; color: var(--landing-text); }
-  .landing-vnext__hero { width: 100%; max-width: none; min-height: 100svh; padding: 88px 20px 64px; justify-content: center; }
-  .landing-vnext__hero-content { width: 100%; max-width: none; padding-bottom: 7vh; }
-  .landing-vnext__hero h1 { font-size: clamp(33px, 9.5vw, 45px); }
+  .landing-vnext__hero { width: 100%; max-width: none; min-height: 100svh; padding: 88px 20px 64px; justify-content: center; text-align: center; }
+  .landing-vnext__hero-content { width: 100%; max-width: min(540px, 100%); margin: 0 auto; align-items: center; padding-bottom: 7vh; text-align: center; }
+  .landing-vnext__hero h1 { font-size: clamp(33px, 9.5vw, 45px); margin-left: auto; margin-right: auto; }
   .landing-vnext__hero-tagline { font-size: 19px; margin-bottom: 14px; }
-  .landing-vnext__hero-description { max-width: 34ch; margin-bottom: 40px; font-size: 14px; line-height: 1.6; }
-  .landing-vnext__hero-description { white-space: nowrap; }
+  .landing-vnext__hero-description { max-width: 34ch; margin: 0 auto 40px; font-size: 14px; line-height: 1.6; white-space: normal; }
+  .landing-vnext__enter-button { align-self: center; margin: 0 auto; }
   .landing-vnext__hero-particles,
   .landing-vnext__scroll-cue { display: none; }
-  .landing-vnext__section { padding-top: 52px; padding-bottom: 56px; }
-  .landing-vnext__about-grid { grid-template-columns: 1fr; gap: 24px; }
-  .landing-vnext__platform-field { order: -1; height: 320px; min-height: 320px; margin: 0 0 16px; }
+  .landing-vnext__section { padding-top: 52px; padding-bottom: 56px; text-align: center; }
+  .landing-vnext__eyebrow,
+  .landing-vnext__small-label,
+  .landing-vnext__section h2,
+  .landing-vnext__section-lead { margin-left: auto; margin-right: auto; }
+  .landing-vnext__about-grid { grid-template-columns: 1fr; gap: 24px; justify-items: center; }
+  .landing-vnext__platform-field { order: -1; width: 100%; height: 320px; min-height: 320px; margin: 0 0 16px; }
   .landing-vnext__platform-icon { width: 50px !important; height: 50px !important; border-radius: 13px; }
   .landing-vnext__platform-icon svg { width: 19px; height: 19px; }
   .landing-vnext__about-copy,
-  .landing-vnext__mission-copy { max-width: none; }
+  .landing-vnext__mission-copy,
+  .landing-vnext__polaris-copy { width: 100%; max-width: none; margin-left: auto; margin-right: auto; text-align: center; }
+  .landing-vnext__about-copy p,
+  .landing-vnext__mission-copy > p,
+  .landing-vnext__polaris-copy > p,
+  .landing-vnext__about-copy p.landing-vnext__thesis,
+  .landing-vnext__mission-copy > p.landing-vnext__thesis,
+  .landing-vnext__polaris-copy > p.landing-vnext__thesis { margin-left: auto; margin-right: auto; }
+  .landing-vnext__how,
+  .landing-vnext__mission-grid,
+  .landing-vnext__polaris-grid { justify-items: center; }
+  .landing-vnext__steps,
+  .landing-vnext__privacy-grid,
+  .landing-vnext__step,
+  .landing-vnext__how-band,
+  .landing-vnext__example,
+  .landing-vnext__polaris-card { text-align: center; }
+  .landing-vnext__signals { width: min(100%, 340px); margin-left: auto; margin-right: auto; }
+  .landing-vnext__example-tabs button { text-align: center; }
+  .landing-vnext__example-tabs i { left: 50%; transform: translateX(-50%); }
+  .landing-vnext__example-tabs button[data-active="true"] i { transform: translateX(-50%) scale(1.25); }
+  .landing-vnext__example-body h3,
+  .landing-vnext__example-body > p:first-of-type,
+  .landing-vnext__polaris-question,
+  .landing-vnext__polaris-answer { margin-left: auto; margin-right: auto; }
+  .landing-vnext__evidence-rows > div { justify-items: center; text-align: center; }
+  .landing-vnext__observation { border-left: 0; border-top: 2px solid rgba(175, 198, 242, 0.42); border-radius: 12px; text-align: center; }
+  .landing-vnext__polaris-meta { justify-content: center; }
+  .landing-vnext__polaris-dots { justify-content: center; }
   .landing-vnext__constellation { margin-top: 0; }
   .landing-vnext__cta { padding: 72px 20px 84px; }
 }
 
 @media (max-width: 640px) {
-  .landing-vnext__signals { grid-template-columns: 1fr; gap: 2px; }
-  .landing-vnext__signals span { display: flex; align-items: center; min-height: 44px; padding: 12px 0 12px 30px; font-size: 15px; }
+  .landing-vnext__signals { grid-template-columns: 1fr; gap: 2px; width: min(100%, 340px); margin-left: auto; margin-right: auto; }
+  .landing-vnext__signals span { display: flex; align-items: center; justify-content: flex-start; min-height: 44px; padding: 12px 0 12px 30px; font-size: 15px; text-align: left; }
   .landing-vnext__signals i { top: 50%; left: 6px; transform: translateY(-50%); }
   .landing-vnext__example-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .landing-vnext__polaris-card > div:first-child { padding: 24px 22px 20px; }
-  .landing-vnext__polaris-dots { padding: 0 22px 24px; }
-  .landing-vnext__polaris-span { width: 100%; margin-left: 0; }
-  .landing-vnext__footer { flex-direction: column; align-items: flex-start; gap: 20px; }
+  .landing-vnext__polaris-dots { padding: 0 22px 24px; justify-content: center; }
+  .landing-vnext__polaris-span { width: 100%; margin-left: 0; text-align: center; }
+  .landing-vnext__footer { flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; }
+  .landing-vnext__footer-left,
+  .landing-vnext__footer-links { justify-content: center; flex-wrap: wrap; }
 }
 
 @media (prefers-reduced-motion: reduce) {
