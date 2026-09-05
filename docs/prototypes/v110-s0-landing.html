@@ -1,0 +1,220 @@
+<div class="scr landing-scr on" id="s0" style="position:fixed;inset:0;top:0;overflow-y:auto;z-index:10;justify-content:initial;align-items:initial">
+
+  <nav class="landing-nav">
+    <a href="#s0-top" class="landing-nav-logo" onclick="document.getElementById('s0-top').scrollIntoView({behavior:'smooth'});return false;">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='.45' stop-color='%23B9D5FF'/%3E%3Cstop offset='.62' stop-color='%236E8FD0' stop-opacity='.5'/%3E%3Cstop offset='1' stop-color='%236E8FD0' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='32' fill='url(%23g)'/%3E%3Ccircle cx='32' cy='32' r='17' fill='%23B9D5FF'/%3E%3C/svg%3E" alt="" class="landing-nav-dot-img" style="width:18px;height:18px;border-radius:50%;display:block">
+      <span class="landing-nav-word">PHENYX</span>
+    </a>
+    <div class="landing-nav-links">
+      <a href="#s0-about" class="landing-nav-link" onclick="document.getElementById('s0-about').scrollIntoView({behavior:'smooth'});return false;">first look</a>
+      <a href="#s0-how" class="landing-nav-link" onclick="document.getElementById('s0-how').scrollIntoView({behavior:'smooth'});return false;">how it works</a>
+      <a href="#s0-mission" class="landing-nav-link" onclick="document.getElementById('s0-mission').scrollIntoView({behavior:'smooth'});return false;">your constellation</a>
+      <a href="#s0-polaris" class="landing-nav-link" onclick="document.getElementById('s0-polaris').scrollIntoView({behavior:'smooth'});return false;">polaris</a>
+    </div>
+    <button type="button" class="landing-nav-enter" onclick="openEntryModal()">enter</button>
+    <button type="button" class="landing-nav-menu-btn" id="landingNavMenuBtn" onclick="toggleLandingNavMenu()" aria-label="menu" style="display:none">
+      <span class="hb-line"></span><span class="hb-line"></span><span class="hb-line"></span>
+    </button>
+  </nav>
+
+  <div class="landing-nav-dropdown" id="landingNavDropdown">
+    <a href="#s0-about" class="landing-nav-dd-link" onclick="closeLandingNavMenu();document.getElementById('s0-about').scrollIntoView({behavior:'smooth'});return false;">first look</a>
+    <a href="#s0-how" class="landing-nav-dd-link" onclick="closeLandingNavMenu();document.getElementById('s0-how').scrollIntoView({behavior:'smooth'});return false;">how it works</a>
+    <a href="#s0-mission" class="landing-nav-dd-link" onclick="closeLandingNavMenu();document.getElementById('s0-mission').scrollIntoView({behavior:'smooth'});return false;">your constellation</a>
+    <a href="#s0-polaris" class="landing-nav-dd-link" onclick="closeLandingNavMenu();document.getElementById('s0-polaris').scrollIntoView({behavior:'smooth'});return false;">polaris</a>
+    <a href="#" class="landing-nav-dd-link landing-nav-dd-enter" onclick="closeLandingNavMenu();openEntryModal();return false;">enter</a>
+  </div>
+
+  <header class="hero" id="s0-top">
+    <div class="hero-content">
+      <h1 class="hero-logo">PHENYX</h1>
+      <p class="hero-tagline">your life, taking form</p>
+      <p class="hero-desc">see who you've been, across everything you already use.</p>
+      <button type="button" class="hero-enter" onclick="openEntryModal()"><span>enter</span></button>
+    </div>
+    <div class="hero-particle-field" id="heroParticleField">
+      <canvas class="hero-particles" id="heroParticleCanvas" aria-hidden="true"></canvas>
+    </div>
+    <div class="scroll-cue">
+      <span class="scroll-cue-dot"></span>
+      <span class="scroll-cue-label">scroll</span>
+    </div>
+  </header>
+
+  <section class="section" id="s0-about">
+    <div class="section-inner">
+      <p class="s2-eyebrow">first look</p>
+      <h2 class="s2-headline">you were never in pieces, only in places</h2>
+      <div class="s0-about-grid">
+        <div class="s0-about-text">
+          <p class="s2-sub">every place you use asks for one part of you: the listener, the maker, the one who saves things for later.</p>
+          <p class="s2-sub s2-sub-mid">each one keeps a version of you that is true, but not one shows what it all adds up to.</p>
+          <p class="s2-sub s2-sub-mid">so there has never been one place that holds all of you at once. every moment came from the same life, but nothing has ever gathered them in the same place.</p>
+          
+          <p class="section-thesis">so we made one.</p>
+        </div>
+        <div class="s0-platform-field" id="s0PlatformField"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="s0-how">
+    <div class="section-inner">
+      <p class="s3-eyebrow">how it works</p>
+      <h2 class="s3-headline">connect, assemble, reveal</h2>
+      <p class="s3-lede">three layers, and nothing invented in any of them.</p>
+      <div class="how-chart how-system" aria-label="How PHENYX works overview">
+        <div class="how-system-steps">
+          <article class="how-step-card">
+            <p class="how-chart-kicker">layer one</p>
+            <h3 class="how-chart-title">connect</h3>
+            <p class="how-chart-copy">what you listen to, watch, save, post and build, from only the places you choose.</p>
+          </article>
+          <article class="how-step-card">
+            <p class="how-chart-kicker">layer two</p>
+            <h3 class="how-chart-title">assemble</h3>
+            <p class="how-chart-copy">everything lands on one timeline, so repeats and shifts finally sit next to each other.</p>
+          </article>
+          <article class="how-step-card">
+            <p class="how-chart-kicker">layer three</p>
+            <h3 class="how-chart-title">reveal</h3>
+            <p class="how-chart-copy">the shape no single account could show, with the moments and evidence that made it visible.</p>
+          </article>
+        </div>
+
+        <article class="how-system-bottom how-band">
+          <div class="how-band-part how-band-part--signals">
+            <p class="how-signal-label">what comes into view</p>
+            <div class="how-signal-list" id="howSignalList">
+              <svg class="how-signal-path" id="howSignalPath" aria-hidden="true"></svg>
+              <span style="--ny:.62;--ns:5px;--nx:0"><i class="sig-node"></i>what keeps returning</span>
+              <span style="--ny:.24;--ns:4px;--nx:1"><i class="sig-node"></i>what overlaps</span>
+              <span style="--ny:.80;--ns:4.5px;--nx:.42"><i class="sig-node"></i>creative rhythms</span>
+              <span style="--ny:.30;--ns:5.5px;--nx:1"><i class="sig-node"></i>turning points</span>
+              <span style="--ny:.12;--ns:4px;--nx:.28"><i class="sig-node"></i>how you decide</span>
+              <span style="--ny:.54;--ns:5px;--nx:.86"><i class="sig-node"></i>what stays with you</span>
+            </div>
+          </div>
+
+          <div class="how-band-part how-band-part--protect">
+            <p class="how-signal-label">what stays yours</p>
+            <div class="how-protect-grid">
+              <div class="how-protect-card">
+                <h4>your control.</h4>
+                <p>choose what comes in. disconnect whenever you want.</p>
+              </div>
+              <div class="how-protect-card">
+                <h4>your privacy.</h4>
+                <p>PHENYX keeps what it learned from your accounts, never a second copy of them.</p>
+              </div>
+              <div class="how-protect-card">
+                <h4>your meaning.</h4>
+                <p>PHENYX can show what is there. what it means stays yours.</p>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="identity-section" id="s0-mission">
+    <div class="section-inner">
+      <p class="s3-eyebrow">your constellation</p>
+      <h2 class="s3-headline">see how the parts of your life relate</h2>
+      <div class="identity-grid">
+        <div class="identity-body">
+          <p>a constellation is not the stars. it is the shape they make once you see them together.</p>
+          <p class="identity-copy-second">seven points run from where you began to where you are heading, each looking at one question through <span class="no-wrap">the evidence of your life.</span></p>
+          <p class="identity-copy-second">it is not a profile you finish. new things appear, old ones return, some fall away, and the shape keeps enough of you to notice when you change.</p>
+          <p class="section-thesis">the points stay the same. what fills them is yours.</p>
+        </div>
+        <div class="identity-visual">
+          <div class="identity-stack" role="img" aria-label="Seven-point constellation: origin, emergence, self-creation, convergence, becoming, recognition, and transcendence. Each point reflects a different part of your life across time.">
+          <canvas id="mainConstellation" aria-hidden="true"></canvas>
+          <p class="const-hover-name" id="constHoverName" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="const-example" id="constExample">
+        <p class="const-example-label">the same seven, seen by time</p>
+        <div class="const-example-axis" id="cxAxis" role="tablist" aria-label="the seven points"></div>
+        <div class="const-example-body" id="cxBody">
+          <p class="const-example-q" id="cxQ"></p>
+          <p class="const-example-what" id="cxWhat"></p>
+          <div class="cx-star" id="cxStar" style="display:none"></div>
+          <div class="const-example-rows" id="cxRows"></div>
+          <p class="const-example-obs" id="cxObs"></p>
+        </div>
+        <p class="const-example-note">an example. yours is built only from the accounts you connect.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section polaris-section" id="s0-polaris">
+    <div class="section-inner">
+      <p class="s3-eyebrow">polaris</p>
+      <h2 class="s3-headline">follow one thread all the way through</h2>
+      <div class="polaris-preview">
+        <div class="polaris-preview-intro">
+          <p class="usecase-lead"><b class="pol-pair">the constellation lets you see yourself. polaris lets you use what you see.</b> ask about something you keep returning to, or where it might be leading. polaris answers from the context already here, so you never start by explaining yourself.</p>
+          <p class="usecase-lead polaris-observations">and when you arrive with no question, a few things come forward on their own.</p>
+          <p class="section-thesis polaris-thesis">you bring the question. the context is already here.</p>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-qa" id="usecaseQA">
+            <p class="usecase-qa-pillar" id="qaPillar">convergence</p>
+            <p class="usecase-chat-q" id="qaQ">"am i moving as fast as i think i am?"</p>
+            <p class="usecase-chat-a" id="qaA">you tend to describe the work as fast, but what you save and return to has slowed steadily across <b>three years</b>, on both accounts.</p>
+            <div class="usecase-qa-meta" id="qaMeta">
+              <span class="usecase-qa-dot"></span><span id="qaSrc1">spotify</span>
+              <span class="usecase-qa-dot"></span><span id="qaSrc2">pinterest</span>
+              <span class="usecase-qa-span" id="qaSpan">3 years / 2 sources</span>
+            </div>
+          </div>
+          <div class="usecase-qa-dots" id="qaDots"></div>
+        </div>
+      </div>
+
+
+    </div>
+  </section>
+
+  <section class="cta-section" id="s0-cta">
+    <h2 class="cta-headline">look again</h2>
+    <p class="cta-sub">there is more of you here than you can currently see.</p>
+    <button type="button" class="hero-enter" onclick="openEntryModal()" style="margin:0 auto"><span>enter</span></button>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-left">
+      <span class="footer-dot" aria-hidden="true"></span>
+      <div class="footer-links">
+        <a href="https://phenyxai.com/privacy-policy" class="footer-link">privacy</a>
+        <a href="https://phenyxai.com/terms" class="footer-link">terms</a>
+        <a href="mailto:contact@phenyxai.com" class="footer-link">contact@phenyxai.com</a>
+      </div>
+    </div>
+    <span class="footer-meta">© 2026 PHENYX INC.</span>
+  </footer>
+
+  <!-- ── ENTRY CHOICE POPUP ───────────────────────────────────────── -->
+  <div class="entry-modal-overlay" id="entryModalOverlay" onclick="closeEntryModal()" style="display:none"></div>
+  <div class="entry-modal" id="entryModal" style="display:none">
+    <button type="button" class="entry-modal-close" onclick="closeEntryModal()" aria-label="close">×</button>
+    <p class="entry-modal-title">come in</p>
+    <p class="entry-modal-sub">return to your view, or look around before you connect anything.</p>
+    <button type="button" class="entry-modal-btn" onclick="closeEntryModal();window.location.href='https://phenyxai.com'">
+      <span>i have been here</span>
+      <span class="entry-modal-btn-sub">return to the view you already built</span>
+    </button>
+    <button type="button" class="entry-modal-btn" onclick="closeEntryModal();window.location.href='https://phenyxai.com'">
+      <span>this is my first time</span>
+      <span class="entry-modal-btn-sub">nothing connects until you choose it</span>
+    </button>
+  </div>
+
+</div>
