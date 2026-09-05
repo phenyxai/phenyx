@@ -66,9 +66,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: '/favicon.png', type: 'image/png', sizes: '32x32' },
       { url: '/icon.png', type: 'image/png', sizes: '192x192' },
+      { url: '/phenyx-logo.png', type: 'image/png', sizes: '512x512' },
     ],
-    shortcut: '/icon.png',
+    shortcut: '/favicon.png',
     apple: '/apple-icon.png',
   },
   manifest: '/site.webmanifest',
