@@ -46,11 +46,15 @@ export function IdentityParticles() {
   const fieldRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const field = fieldRef.current;
-    if (!canvas || !field) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const canvasNode = canvasRef.current;
+    const fieldNode = fieldRef.current;
+    if (!canvasNode || !fieldNode) return;
+    const context = canvasNode.getContext("2d");
+    if (!context) return;
+
+    const canvas: HTMLCanvasElement = canvasNode;
+    const field: HTMLDivElement = fieldNode;
+    const ctx: CanvasRenderingContext2D = context;
 
     let W = 0;
     let H = 0;
