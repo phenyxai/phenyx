@@ -1,214 +1,385 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useSessionColor } from "@/contexts/session-color-context";
+import { useEffect, useRef, useState } from "react";
 
-/**
- * Floating platform icons for the "who are you, really?" section. Ported from
- * the reference `s0PlatformField`: 6 platform icons spawn into a 3x2 grid,
- * stagger in, drift gently within their own cell, and respawn a different icon
- * elsewhere on hover. Icons are recolored to the session color. Hidden on
- * mobile. Boxes are created imperatively, so base/hover styling is applied
- * inline (styled-jsx class scoping does not reach dynamically-created nodes).
- */
+const DESKTOP_ICONS = [
+  "spotify", "chatgpt", "tiktok", "youtube", "instagram", "pinterest",
+  "claude", "reddit", "netflix", "gemini", "linkedin", "strava",
+] as const;
+const MOBILE_ICONS = ["spotify", "chatgpt", "youtube", "instagram", "pinterest", "claude"] as const;
 
-const CARD_BG = "#121212";
+type IconKey = (typeof DESKTOP_ICONS)[number];
+type MotionState = "arriving" | "idle" | "leaving" | "returning";
+type Point = { x: number; y: number; weight?: number };
 
-function buildIcons(color: string): Record<string, string> {
-  // reference SVGs use #9DBCEF for the icon color and var(--card) for cutouts
-  return {
-    linkedin: `<svg viewBox="0 0 24 24" fill="${color}"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.554V9h3.565v11.452Z"/></svg>`,
-    instagram: `<svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="${color}" stroke="none"/></svg>`,
-    pinterest: `<svg viewBox="0 0 24 24" fill="${color}"><path d="M12.017 0C5.396 0 0 5.396 0 12.017c0 5.054 3.163 9.358 7.621 11.087-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.404 2.562-5.404 5.207 0 1.034.397 2.143.893 2.749a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.749-1.378 0 0-.598 2.282-.744 2.84-.282 1.084-1.064 2.456-1.549 3.235C9.584 23.864 10.776 24 12.017 24 18.638 24 24 18.638 24 12.017 24 5.396 18.638 0 12.017 0z"/></svg>`,
-    x: `<svg viewBox="0 0 24 24" fill="${color}"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.045 4.126H5.078z"/></svg>`,
-    spotify: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="${color}"/><path d="M6.8 9.2c3.6-1.1 8.4-.7 11.1 1.1" stroke="${CARD_BG}" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M7.4 12.4c3-.9 7-.55 9.3.95" stroke="${CARD_BG}" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M8 15.3c2.3-.65 5.3-.4 7 .75" stroke="${CARD_BG}" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>`,
-    youtube: `<svg viewBox="0 0 24 24"><rect x="2" y="5.5" width="20" height="13" rx="4.2" fill="${color}"/><path d="M10 9.2l6 2.8-6 2.8z" fill="${CARD_BG}"/></svg>`,
-  };
+interface Body {
+  box: HTMLDivElement;
+  aura: HTMLSpanElement;
+  x: number;
+  y: number;
+  past: Point[];
+  vx: number;
+  vy: number;
+  wobble: number;
+  wobbleRate: number;
+  phase: number;
+  phaseTwo: number;
+  bornAt: number;
+  state: MotionState;
+  stateAt: number;
+  moving: boolean;
+  next?: Point;
 }
 
-export function PlatformField() {
-  const { sessionColor } = useSessionColor();
-  const fieldRef = useRef<HTMLDivElement>(null);
+const LABELS: Partial<Record<IconKey, string>> = {
+  chatgpt: "ChatGPT",
+  linkedin: "LinkedIn",
+  tiktok: "TikTok",
+  youtube: "YouTube",
+};
+
+function iconsForWidth(width: number): IconKey[] {
+  if (width <= 760) return [...MOBILE_ICONS];
+  if (width <= 980) return [...DESKTOP_ICONS.slice(0, 7)];
+  return [...DESKTOP_ICONS];
+}
+
+function smoothstep(value: number) {
+  return value * value * (3 - 2 * value);
+}
+
+function hash(value: number) {
+  const result = Math.sin(value * 127.1 + 311.7) * 43758.5453;
+  return result - Math.floor(result);
+}
+
+export function PlatformField({ prefersReducedMotion = false }: { prefersReducedMotion?: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const elementRefs = useRef(new Map<IconKey, HTMLDivElement>());
+  const [icons, setIcons] = useState<IconKey[]>([...DESKTOP_ICONS]);
 
   useEffect(() => {
-    const field = fieldRef.current;
+    const sync = () => {
+      const next = iconsForWidth(window.innerWidth);
+      setIcons((current) => current.join() === next.join() ? current : next);
+    };
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
+  }, []);
+
+  useEffect(() => {
+    const field = containerRef.current;
     if (!field) return;
 
-    const ICONS = buildIcons(sessionColor || "#B9D5FF");
-    const KEYS = Object.keys(ICONS);
-    const activeKeys = new Set<string>();
+    let width = field.clientWidth || 640;
+    let height = field.clientHeight || 360;
+    const isMobile = window.innerWidth <= 760;
+    const size = isMobile ? 50 : 54;
+    const radius = size / 2;
+    const speed = isMobile ? 5 : 7.5;
+    const drift = isMobile ? 5 : 8;
+    const padding = radius + 8;
+    let idealDistance = Math.min(120, Math.sqrt(((width - padding * 2) * (height - padding * 2)) / (icons.length * 1.7)));
+    const distanceFloor = size + drift * 2 + 8;
+    const minimumJump = Math.min(180, Math.hypot(width - padding * 2, height - padding * 2) * 0.3);
+    const pointer = { x: -10000, y: -10000 };
+    const cleanups: Array<() => void> = [];
+    const bodies: Body[] = [];
+    let animationFrame = 0;
+    let sizeTick = 0;
+    let lastFrame = performance.now();
 
-    const GRID_COLS = 3;
-    const GRID_ROWS = 2;
-    const occupiedCells = new Set<number>();
-
-    let mounted = true;
-    const rafIds = new Set<number>();
-    const timeoutIds = new Set<ReturnType<typeof setTimeout>>();
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    function rand(min: number, max: number) {
-      return min + Math.random() * (max - min);
-    }
-
-    function pickUnusedKey() {
-      const available = KEYS.filter((k) => !activeKeys.has(k));
-      if (available.length === 0) return null;
-      return available[Math.floor(Math.random() * available.length)];
-    }
-
-    function pickFreeCell() {
-      const all: number[] = [];
-      for (let r = 0; r < GRID_ROWS; r++)
-        for (let c = 0; c < GRID_COLS; c++) all.push(r * GRID_COLS + c);
-      const free = all.filter((idx) => !occupiedCells.has(idx));
-      if (free.length === 0) return null;
-      return free[Math.floor(Math.random() * free.length)];
-    }
-
-    function cellToPosition(cellIdx: number, fw: number, fh: number) {
-      const col = cellIdx % GRID_COLS;
-      const row = Math.floor(cellIdx / GRID_COLS);
-      const cellW = fw / GRID_COLS;
-      const cellH = fh / GRID_ROWS;
-      const pad = 8;
-      const maxX = Math.max(0, cellW - 64 - pad * 2);
-      const maxY = Math.max(0, cellH - 64 - pad * 2);
-      const x = col * cellW + pad + rand(0, maxX);
-      const y = row * cellH + pad + rand(0, maxY);
-      return { x, y };
-    }
-
-    function spawnBox(): HTMLDivElement | null {
-      if (!mounted) return null;
-      const key = pickUnusedKey();
-      if (!key) return null;
-      const cellIdx = pickFreeCell();
-      if (cellIdx === null) return null;
-
-      activeKeys.add(key);
-      occupiedCells.add(cellIdx);
-
-      const box = document.createElement("div");
-      box.innerHTML = ICONS[key];
-      // base styling (reference .s0-pbox)
-      box.style.position = "absolute";
-      box.style.width = "64px";
-      box.style.height = "64px";
-      box.style.border = "1px solid #2e2e2e";
-      box.style.borderRadius = "14px";
-      box.style.background = CARD_BG;
-      box.style.display = "flex";
-      box.style.alignItems = "center";
-      box.style.justifyContent = "center";
-      box.style.cursor = "pointer";
-      box.style.transition =
-        "opacity 1.1s ease, border-color .3s ease, box-shadow .3s ease";
-      box.style.willChange = "opacity";
-      const svgEl = box.querySelector("svg");
-      if (svgEl) {
-        svgEl.style.width = "26px";
-        svgEl.style.height = "26px";
-        svgEl.style.opacity = "0.75";
-        svgEl.style.transition = "opacity .3s ease";
+    const randomBetween = (low: number, high: number) => low + Math.random() * (high - low);
+    const pickPosition = (others: Point[], memory: Point[], jumpDistance: number): Point => {
+      let candidates: Array<Point & { score?: number }> = [];
+      let hardDistance = idealDistance;
+      let jump = jumpDistance;
+      for (let pass = 0; pass < 8 && candidates.length === 0; pass += 1) {
+        for (let attempt = 0; attempt < 420; attempt += 1) {
+          const candidate = { x: randomBetween(padding, width - padding), y: randomBetween(padding, height - padding) };
+          const clearsBodies = others.every((other) => Math.hypot(candidate.x - other.x, candidate.y - other.y) >= hardDistance);
+          const clearsJump = !jump || !memory.length || Math.hypot(candidate.x - memory[0].x, candidate.y - memory[0].y) >= jump;
+          if (clearsBodies && clearsJump) candidates.push(candidate);
+        }
+        hardDistance = Math.max(distanceFloor, hardDistance * 0.9);
+        jump *= 0.8;
       }
-
-      const fw = field!.clientWidth || 320;
-      const fh = field!.clientHeight || 420;
-      const pos = cellToPosition(cellIdx, fw, fh);
-      const startX = pos.x;
-      const startY = pos.y;
-      box.style.left = startX + "px";
-      box.style.top = startY + "px";
-      box.style.opacity = "0";
-      field!.appendChild(box);
-
-      if (reduceMotion) {
-        // static render: no fade, no drift, no hover respawn
-        box.style.transition = "none";
-        box.style.opacity = "0.85";
-        return box;
-      }
-
-      const fadeInRaf = requestAnimationFrame(() => {
-        box.style.opacity = "0.85";
+      if (!candidates.length) return { x: randomBetween(padding, width - padding), y: randomBetween(padding, height - padding) };
+      candidates.forEach((candidate) => {
+        candidate.score = memory.length
+          ? Math.min(...memory.map((point) => Math.hypot(candidate.x - point.x, candidate.y - point.y) * (point.weight ?? 1)))
+          : Math.random();
       });
-      rafIds.add(fadeInRaf);
+      candidates.sort((left, right) => (right.score ?? 0) - (left.score ?? 0));
+      const best = candidates.slice(0, Math.max(1, Math.min(22, Math.round(candidates.length * 0.26))));
+      return best[Math.floor(Math.random() * best.length)];
+    };
+    const place = (body: Body) => {
+      body.box.style.left = `${body.x - radius}px`;
+      body.box.style.top = `${body.y - radius}px`;
+    };
 
-      const col = cellIdx % GRID_COLS;
-      const row = Math.floor(cellIdx / GRID_COLS);
-      const baseX = startX;
-      const baseY = startY;
-      const driftSpeedX = rand(0.00025, 0.00045);
-      const driftSpeedY = rand(0.0005, 0.0008);
-      const phaseX = rand(0, Math.PI * 2);
-      const phaseY = rand(0, Math.PI * 2);
-      let alive = true;
+    icons.forEach((key, index) => {
+      const box = elementRefs.current.get(key);
+      const aura = box?.querySelector<HTMLSpanElement>(".landing-vnext__platform-aura");
+      if (!box || !aura) return;
+      const position = pickPosition(bodies, [], 0);
+      const angle = hash(index * 17 + 3) * Math.PI * 2;
+      const body: Body = {
+        box, aura, x: position.x, y: position.y, past: [{ ...position }],
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        wobble: hash(index * 23 + 7) * Math.PI * 2,
+        wobbleRate: 0.000041 + hash(index * 29 + 11) * 0.000022,
+        phase: 1.31 * index, phaseTwo: 0.77 * index + 2.2,
+        bornAt: performance.now() + 200 + index * 230,
+        state: prefersReducedMotion ? "idle" : "arriving", stateAt: 0, moving: false,
+      };
+      place(body);
+      bodies.push(body);
 
-      function drift(t: number) {
-        if (!alive || !mounted) return;
-        const fw2 = field!.clientWidth || fw;
-        const fh2 = field!.clientHeight || fh;
-        const cellW = fw2 / GRID_COLS;
-        const cellH = fh2 / GRID_ROWS;
-        const cellMinX = col * cellW + 4;
-        const cellMaxX = (col + 1) * cellW - 64 - 4;
-        const cellMinY = row * cellH + 4;
-        const cellMaxY = (row + 1) * cellH - 64 - 4;
-        const driftAmpX = Math.min(42, Math.max(8, (cellMaxX - cellMinX) / 2 - 6));
-        const driftAmpY = Math.min(12, Math.max(4, (cellMaxY - cellMinY) / 2 - 6));
-        let x = baseX + Math.sin(t * driftSpeedX + phaseX) * driftAmpX;
-        let y = baseY + Math.sin(t * driftSpeedY + phaseY) * driftAmpY;
-        x = Math.max(cellMinX, Math.min(cellMaxX, x));
-        y = Math.max(cellMinY, Math.min(cellMaxY, y));
-        box.style.left = x + "px";
-        box.style.top = y + "px";
-        const id = requestAnimationFrame(drift);
-        rafIds.add(id);
+      if (!prefersReducedMotion) {
+        const onEnter = () => {
+          if (body.moving || body.state !== "idle") return;
+          const others = bodies.filter((candidate) => candidate !== body).map(({ x, y }) => ({ x, y }));
+          const memory: Point[] = [{ x: body.x, y: body.y, weight: 1.15 }]
+            .concat(body.past.slice(-3).reverse().map((point, memoryIndex) => ({ ...point, weight: 1.1 - memoryIndex * 0.25 })))
+            .concat(pointer.x > -1000 ? [{ ...pointer, weight: 1.35 }] : []);
+          body.next = pickPosition(others, memory, minimumJump);
+          body.moving = true;
+          body.state = "leaving";
+          body.stateAt = performance.now();
+        };
+        box.addEventListener("mouseenter", onEnter);
+        cleanups.push(() => box.removeEventListener("mouseenter", onEnter));
       }
-      const driftId = requestAnimationFrame(drift);
-      rafIds.add(driftId);
-
-      box.addEventListener("mouseenter", function () {
-        if (!alive || !mounted) return;
-        alive = false;
-        box.style.borderColor = sessionColor;
-        box.style.boxShadow = `0 0 24px ${sessionColor}30`;
-        box.style.transition = "opacity 1.1s ease";
-        box.style.opacity = "0";
-        activeKeys.delete(key);
-        occupiedCells.delete(cellIdx);
-        const tid = setTimeout(() => {
-          box.remove();
-          spawnBox();
-        }, 1100);
-        timeoutIds.add(tid);
-      });
-
-      return box;
-    }
-
-    KEYS.forEach((_, i) => {
-      const tid = setTimeout(() => spawnBox(), reduceMotion ? 0 : i * 220);
-      timeoutIds.add(tid);
     });
 
-    return () => {
-      mounted = false;
-      rafIds.forEach((id) => cancelAnimationFrame(id));
-      timeoutIds.forEach((id) => clearTimeout(id));
-      if (field) field.innerHTML = "";
+    const onPointerMove = (event: MouseEvent) => {
+      const rect = field.getBoundingClientRect();
+      pointer.x = event.clientX - rect.left;
+      pointer.y = event.clientY - rect.top;
     };
-  }, [sessionColor]);
+    const onPointerLeave = () => { pointer.x = -10000; pointer.y = -10000; };
+    field.addEventListener("mousemove", onPointerMove);
+    field.addEventListener("mouseleave", onPointerLeave);
+    cleanups.push(
+      () => field.removeEventListener("mousemove", onPointerMove),
+      () => field.removeEventListener("mouseleave", onPointerLeave),
+    );
+
+    if (prefersReducedMotion) {
+      bodies.forEach((body) => {
+        body.box.style.opacity = "1";
+        body.box.style.transform = "none";
+        body.aura.style.opacity = "0";
+      });
+      return () => cleanups.forEach((cleanup) => cleanup());
+    }
+
+    const frame = (now: number) => {
+      const fieldRect = field.getBoundingClientRect();
+      if (fieldRect.bottom <= 0 || fieldRect.top >= window.innerHeight) {
+        lastFrame = now;
+        animationFrame = requestAnimationFrame(frame);
+        return;
+      }
+      const delta = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      sizeTick += 1;
+      if (sizeTick % 20 === 0) {
+        const nextWidth = field.clientWidth;
+        const nextHeight = field.clientHeight;
+        if (nextWidth && nextHeight && (nextWidth !== width || nextHeight !== height)) {
+          const scaleX = nextWidth / width;
+          const scaleY = nextHeight / height;
+          bodies.forEach((body) => { body.x *= scaleX; body.y *= scaleY; });
+          width = nextWidth;
+          height = nextHeight;
+          idealDistance = Math.min(120, Math.sqrt(((width - padding * 2) * (height - padding * 2)) / (icons.length * 1.7)));
+        }
+      }
+
+      bodies.forEach((body) => {
+        if (body.state === "leaving" || body.state === "returning") return;
+        const turn = Math.sin(now * body.wobbleRate + body.wobble) * 0.34 * delta;
+        const cosine = Math.cos(turn);
+        const sine = Math.sin(turn);
+        const nextVelocityX = body.vx * cosine - body.vy * sine;
+        body.vy = body.vx * sine + body.vy * cosine;
+        body.vx = nextVelocityX;
+        let pressing = 0;
+        let separationX = 0;
+        let separationY = 0;
+        const separationRadius = idealDistance * 1.12;
+        bodies.forEach((other) => {
+          if (other === body) return;
+          const differenceX = body.x - other.x;
+          const differenceY = body.y - other.y;
+          const distance = Math.hypot(differenceX, differenceY);
+          if (distance > 0 && distance < separationRadius) {
+            pressing += 1;
+            const force = (1 - distance / separationRadius) ** 2 * 30 * delta;
+            separationX += differenceX / distance * force;
+            separationY += differenceY / distance * force;
+          }
+        });
+        if (pressing >= 2) {
+          body.vx = body.vx * 0.9 + separationX * 0.35;
+          body.vy = body.vy * 0.9 + separationY * 0.35;
+        } else {
+          body.vx += separationX;
+          body.vy += separationY;
+        }
+        body.x += body.vx * delta;
+        body.y += body.vy * delta;
+        if (body.x < padding) { body.x = padding; body.vx = Math.abs(body.vx); }
+        if (body.x > width - padding) { body.x = width - padding; body.vx = -Math.abs(body.vx); }
+        if (body.y < padding) { body.y = padding; body.vy = Math.abs(body.vy); }
+        if (body.y > height - padding) { body.y = height - padding; body.vy = -Math.abs(body.vy); }
+        const currentSpeed = Math.hypot(body.vx, body.vy) || 1;
+        const maximumSpeed = speed * 1.15;
+        if (currentSpeed > maximumSpeed) {
+          body.vx = body.vx / currentSpeed * maximumSpeed;
+          body.vy = body.vy / currentSpeed * maximumSpeed;
+        }
+        body.vx *= 0.985;
+        body.vy *= 0.985;
+        const dampedSpeed = Math.hypot(body.vx, body.vy) || 1;
+        const cruiseSpeed = speed * 0.9;
+        if (dampedSpeed < cruiseSpeed) {
+          const gain = 1 + Math.min(0.06, (cruiseSpeed - dampedSpeed) / cruiseSpeed * 0.12);
+          body.vx *= gain;
+          body.vy *= gain;
+        }
+      });
+
+      const hardDistance = size + 16;
+      for (let pass = 0; pass < 2; pass += 1) {
+        for (let left = 0; left < bodies.length; left += 1) {
+          for (let right = left + 1; right < bodies.length; right += 1) {
+            const first = bodies[left];
+            const second = bodies[right];
+            if (first.state === "leaving" || second.state === "leaving") continue;
+            let differenceX = second.x - first.x;
+            let differenceY = second.y - first.y;
+            let distance = Math.hypot(differenceX, differenceY);
+            if (distance === 0) { differenceX = 0.6; differenceY = 0.4; distance = 0.72; }
+            if (distance < hardDistance) {
+              const shift = (hardDistance - distance) * 0.4;
+              const unitX = differenceX / distance;
+              const unitY = differenceY / distance;
+              first.x -= unitX * shift;
+              first.y -= unitY * shift;
+              second.x += unitX * shift;
+              second.y += unitY * shift;
+            }
+          }
+        }
+        bodies.forEach((body) => {
+          body.x = Math.max(padding, Math.min(width - padding, body.x));
+          body.y = Math.max(padding, Math.min(height - padding, body.y));
+        });
+      }
+
+      bodies.forEach((body) => {
+        if (body.state !== "leaving") place(body);
+        let opacity = 1;
+        let scale = 1;
+        let glow = 0;
+        if (body.state === "arriving") {
+          const progress = Math.min(1, Math.max(0, (now - body.bornAt) / 2100));
+          opacity = 1 - (1 - progress) ** 3;
+          scale = 0.74 + 0.26 * smoothstep(progress);
+          glow = Math.sin(progress * Math.PI) * 0.42;
+          if (progress >= 1) body.state = "idle";
+        } else if (body.state === "leaving") {
+          const progress = Math.min(1, (now - body.stateAt) / 950);
+          opacity = 1 - progress ** 2;
+          scale = 1 - 0.28 * progress ** 2;
+          glow = Math.sin(progress * Math.PI) * 0.3;
+          if (progress >= 1 && body.next) {
+            body.past.push({ x: body.x, y: body.y });
+            if (body.past.length > 4) body.past.shift();
+            body.x = body.next.x;
+            body.y = body.next.y;
+            place(body);
+            const angle = Math.random() * Math.PI * 2;
+            body.vx = Math.cos(angle) * speed;
+            body.vy = Math.sin(angle) * speed;
+            body.state = "returning";
+            body.stateAt = now;
+          }
+        } else if (body.state === "returning") {
+          const progress = Math.min(1, (now - body.stateAt) / 1700);
+          opacity = smoothstep(progress);
+          scale = 0.72 + 0.28 * smoothstep(progress);
+          glow = Math.sin(progress * Math.PI) * 0.46;
+          if (progress >= 1) { body.state = "idle"; body.moving = false; }
+        } else {
+          scale = 1 + Math.sin(now * 0.000105 + body.phase) * 0.006;
+          glow = 0.1 + Math.sin(now * 0.000082 + body.phaseTwo) * 0.045;
+        }
+        body.box.style.opacity = opacity.toFixed(3);
+        body.box.style.transform = `scale(${scale.toFixed(4)})`;
+        body.aura.style.opacity = glow.toFixed(3);
+      });
+      animationFrame = requestAnimationFrame(frame);
+    };
+
+    animationFrame = requestAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      cleanups.forEach((cleanup) => cleanup());
+    };
+  }, [icons, prefersReducedMotion]);
 
   return (
-    <div
-      ref={fieldRef}
-      aria-hidden="true"
-      className="max-lg:hidden relative w-full overflow-hidden"
-      style={{ height: "420px" }}
-    />
+    <div ref={containerRef} className="relative h-full w-full overflow-visible">
+      {icons.map((icon) => (
+        <div
+          key={icon}
+          ref={(element) => {
+            if (element) elementRefs.current.set(icon, element);
+            else elementRefs.current.delete(icon);
+          }}
+          className="landing-vnext__platform-icon"
+          role="img"
+          aria-label={LABELS[icon] ?? `${icon[0].toUpperCase()}${icon.slice(1)}`}
+        >
+          <span className="landing-vnext__platform-aura" aria-hidden="true" />
+          <span className="landing-vnext__platform-glyph"><PlatformIcon icon={icon} /></span>
+        </div>
+      ))}
+    </div>
   );
+}
+
+function PlatformIcon({ icon }: { icon: IconKey }) {
+  switch (icon) {
+    case "chatgpt":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22.28 9.82a5.98 5.98 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-3.99 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.05 6.05 0 0 0 5.77-4.21 5.98 5.98 0 0 0 3.99-2.9 6.05 6.05 0 0 0-.74-7.07Zm-9.02 12.61a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.79.79 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.49 4.5ZM3.6 18.3a4.47 4.47 0 0 1-.54-3.01l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95A4.5 4.5 0 0 1 3.6 18.3ZM2.34 7.9a4.49 4.49 0 0 1 2.35-1.97v5.67a.77.77 0 0 0 .38.66l5.82 3.36-2.02 1.17a.08.08 0 0 1-.07 0L4 14a4.5 4.5 0 0 1-1.66-6.1Zm16.6 3.86-5.83-3.4 2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.68a.79.79 0 0 0-.4-.65Zm2.01-3.02-.14-.09-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.24V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.49 4.49 0 0 1 6.67 4.65ZM8.31 12.86l-2.02-1.17a.08.08 0 0 1-.04-.06V6.06a4.49 4.49 0 0 1 7.36-3.45l-.14.08L8.7 5.45a.79.79 0 0 0-.39.68v6.73Zm1.1-2.37 2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5v-3Z" /></svg>;
+    case "claude":
+      return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">{Array.from({ length: 12 }, (_, index) => <path key={index} d="M12 12 L12 2.4" transform={`rotate(${index * 30} 12 12)`} />)}</svg>;
+    case "gemini":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.62 5.5 4.38 9.26 9.88 9.88v1.24c-5.5.62-9.26 4.38-9.88 9.88h-1.24c-.62-5.5-4.38-9.26-9.88-9.88v-1.24c5.5-.62 9.26-4.38 9.88-9.88H12Z" /></svg>;
+    case "spotify":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" /><path d="M16.9 16.35a.62.62 0 0 1-.86.21c-2.35-1.44-5.3-1.76-8.79-.96a.62.62 0 1 1-.28-1.21c3.81-.87 7.08-.5 9.72 1.11.29.18.38.56.21.85Z" fill="#080808" /><path d="M18.2 13.44a.78.78 0 0 1-1.07.26c-2.69-1.65-6.79-2.13-9.97-1.17a.78.78 0 1 1-.45-1.49c3.63-1.1 8.15-.56 11.24 1.33.36.23.48.7.25 1.07Z" fill="#080808" /><path d="M18.31 10.42c-3.23-1.92-8.55-2.09-11.63-1.16a.93.93 0 1 1-.54-1.79c3.54-1.07 9.42-.87 13.13 1.34a.93.93 0 1 1-.96 1.61Z" fill="#080808" /></svg>;
+    case "instagram":
+      return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><rect x="3" y="3" width="18" height="18" rx="5.2" stroke="currentColor" strokeWidth="1.7" /><circle cx="12" cy="12" r="3.9" stroke="currentColor" strokeWidth="1.7" /><circle cx="17.1" cy="6.9" r="1.15" fill="currentColor" /></svg>;
+    case "linkedin":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.03-1.85-3.03-1.85 0-2.14 1.44-2.14 2.93v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12ZM7.12 20.45H3.56V9h3.56v11.45Z" /></svg>;
+    case "youtube":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.58 7.19a2.51 2.51 0 0 0-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42a2.51 2.51 0 0 0-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81a2.51 2.51 0 0 0 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42a2.51 2.51 0 0 0 1.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81Z" fill="currentColor" /><path d="M10 15.02 15.2 12 10 8.98v6.04Z" fill="#080808" /></svg>;
+    case "pinterest":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.2a9.8 9.8 0 0 0-3.57 18.93c-.03-.78 0-1.74.2-2.58l1.03-4.39s-.26-.52-.26-1.3c0-1.22.7-2.13 1.58-2.13.74 0 1.1.56 1.1 1.22 0 .74-.47 1.86-.71 2.9-.2.88.44 1.59 1.3 1.59 1.56 0 2.61-2 2.61-4.36 0-1.8-1.22-3.16-3.44-3.16-2.5 0-4.06 1.87-4.06 3.95 0 .72.21 1.22.53 1.61.15.18.17.25.12.45l-.17.69c-.06.22-.25.3-.46.22-1.28-.52-1.88-1.92-1.88-3.48 0-2.58 2.18-5.67 6.48-5.67 3.45 0 5.71 2.5 5.71 5.17 0 3.53-1.96 6.15-4.86 6.15-.97 0-1.87-.52-2.18-1.11l-.6 2.31c-.22.83-.64 1.8-1.03 2.5.78.24 1.61.37 2.47.37a9.8 9.8 0 1 0 0-19.6Z" /></svg>;
+    case "tiktok":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.6 5.82a4.28 4.28 0 0 1-1.06-2.82h-3.1v12.42a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 1 1 .76-5.07V9.71a5.69 5.69 0 0 0-.76-.05 5.69 5.69 0 1 0 5.69 5.74V9.01a7.35 7.35 0 0 0 4.29 1.37V7.28a4.29 4.29 0 0 1-3.23-1.46Z" /></svg>;
+    case "reddit":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22 11.82a2.2 2.2 0 0 0-3.73-1.58 10.79 10.79 0 0 0-5.86-1.86l1-4.7 3.27.7a1.57 1.57 0 1 0 .17-1.02l-3.86-.82a.5.5 0 0 0-.6.39l-1.13 5.44a10.79 10.79 0 0 0-5.94 1.87A2.2 2.2 0 1 0 3.1 14.1c-.03.22-.05.44-.5.66 0 3.36 3.93 6.09 8.78 6.09s8.78-2.73 8.78-6.09c0-.22-.02-.44-.05-.65A2.2 2.2 0 0 0 22 11.82ZM7.28 13.4a1.57 1.57 0 1 1 3.14 0 1.57 1.57 0 0 1-3.14 0Zm8.8 4.16c-1.08 1.08-3.14 1.16-3.75 1.16s-2.68-.08-3.75-1.16a.41.41 0 0 1 .58-.58c.68.68 2.14.92 3.17.92s2.49-.24 3.17-.92a.41.41 0 1 1 .58.58Zm-.29-2.6a1.57 1.57 0 1 1 0-3.14 1.57 1.57 0 0 1 0 3.14Z" /></svg>;
+    case "netflix":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5.4 2h3.94l5.32 15.06V2h3.94v20h-3.83L9.34 6.44V22H5.4V2Z" /></svg>;
+    case "strava":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.6 2 3.4 14.1h3.7L9.6 9l2.5 5.1h3.6L9.6 2Z" /><path fill="rgba(175,198,242,.58)" d="M16.1 14.1 14.5 17l-1.6-2.9h-2.6L14.5 22l4.2-7.9h-2.6Z" /></svg>;
+  }
 }

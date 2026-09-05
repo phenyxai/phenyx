@@ -1,30 +1,49 @@
 "use client";
 
-import { useState } from "react";
-import { SessionColorProvider } from "@/contexts/session-color-context";
+import { useEffect, useState } from "react";
 import { Navigation } from "@/components/phenyx/navigation";
 import { HeroSection } from "@/components/phenyx/hero-section";
-import { AboutSection } from "@/components/phenyx/manifesto-section";
+import { ManifestoSection } from "@/components/phenyx/manifesto-section";
 import { HowItWorksSection } from "@/components/phenyx/how-it-works-section";
 import { MissionSection } from "@/components/phenyx/mission-section";
 import { PolarisSection } from "@/components/phenyx/polaris-section";
-import { CTASection } from "@/components/phenyx/cta-section";
+import { CtaSection } from "@/components/phenyx/cta-section";
 import { FooterSection } from "@/components/phenyx/footer-section";
 import { EntryModal } from "@/components/phenyx/entry-modal";
 import { CustomCursor } from "@/components/phenyx/custom-cursor";
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const openEntryModal = () => setIsModalOpen(true);
+  const closeEntryModal = () => setIsModalOpen(false);
+
+  useEffect(() => {
+    const targets = document.querySelectorAll<HTMLElement>("[data-reveal]");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) {
+      targets.forEach((target) => target.setAttribute("data-visible", "true"));
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.setAttribute("data-visible", "true");
+        observer.unobserve(entry.target);
+      }),
+      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" },
+    );
+    targets.forEach((target) => observer.observe(target));
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <SessionColorProvider>
+    <>
       <CustomCursor />
-      <main className="min-h-screen bg-[#080808]">
-        <Navigation onEnterClick={() => setIsModalOpen(true)} />
+      <main className="landing-vnext">
+        <Navigation onEnterClick={openEntryModal} />
 
-        <HeroSection onEnterClick={() => setIsModalOpen(true)} />
+        <HeroSection onEnterClick={openEntryModal} />
 
-        <AboutSection />
+        <ManifestoSection />
 
         <HowItWorksSection />
 
@@ -32,15 +51,12 @@ export default function Home() {
 
         <PolarisSection />
 
-        <CTASection onEnterClick={() => setIsModalOpen(true)} />
+        <CtaSection onEnterClick={openEntryModal} />
 
         <FooterSection />
-        
-        <EntryModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-        />
+
+        <EntryModal isOpen={isModalOpen} onClose={closeEntryModal} />
       </main>
-    </SessionColorProvider>
+    </>
   );
 }

@@ -1,147 +1,78 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { entryModalCopy } from "@/lib/landing-copy";
 
-interface EntryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+interface EntryModalProps { isOpen: boolean; onClose: () => void }
 
 export function EntryModal({ isOpen, onClose }: EntryModalProps) {
   const router = useRouter();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    if (!isOpen) return;
+    triggerRef.current = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab" || !cardRef.current) return;
+      const controls = cardRef.current.querySelectorAll<HTMLElement>("button, [href], [tabindex]:not([tabindex='-1'])");
+      if (!controls.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    closeRef.current?.focus();
     return () => {
       document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+      triggerRef.current?.focus();
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
-  const handleSignIn = () => {
-    router.push("/signin");
-  };
-
-  const handleJoin = () => {
-    router.push("/join");
+  const navigateTo = (href: string) => {
+    onClose();
+    router.push(href);
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{
-        backgroundColor: "rgba(8,8,8,0.92)",
-        backdropFilter: "blur(12px)",
-      }}
-      onClick={onClose}
-    >
+    <div className="landing-vnext__modal-layer" onMouseDown={onClose}>
+      <div className="landing-vnext__modal-overlay" />
       <div
-        className="relative text-center"
-        style={{ maxWidth: "480px", padding: "0 24px" }}
-        onClick={(e) => e.stopPropagation()}
+        ref={cardRef}
+        className="landing-vnext__modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="entry-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          className="absolute top-0 right-0 text-[24px] transition-colors"
-          style={{
-            color: "rgba(255,253,253,0.5)",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: "8px",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,253,253,0.9)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,253,253,0.5)")}
-          aria-label="Close"
-        >
-          ×
+        <button ref={closeRef} type="button" className="landing-vnext__modal-close" onClick={onClose} aria-label={entryModalCopy.closeLabel}>×</button>
+        <h2 id="entry-modal-title">{entryModalCopy.title}</h2>
+        <p>{entryModalCopy.subtitle}</p>
+        <button type="button" className="landing-vnext__modal-choice" onClick={() => navigateTo(entryModalCopy.returning.href)}>
+          <span>{entryModalCopy.returning.primary}</span><small>{entryModalCopy.returning.secondary}</small>
         </button>
-
-        <h2
-          className="lowercase mb-12"
-          style={{
-            fontSize: "clamp(28px, 5vw, 42px)",
-            fontWeight: 400,
-            color: "#FFFDFD",
-            lineHeight: 1.2,
-          }}
-        >
-          come in
-        </h2>
-
-        <div className="flex flex-col gap-4">
-          <button
-            onClick={handleSignIn}
-            className="lowercase transition-all"
-            style={{
-              padding: "16px 32px",
-              fontSize: "15px",
-              fontWeight: 300,
-              border: "1px solid rgba(255,253,253,0.26)",
-              borderRadius: "30px",
-              background: "transparent",
-              color: "#FFFDFD",
-              cursor: "pointer",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,253,253,0.5)";
-              e.currentTarget.style.backgroundColor = "rgba(255,253,253,0.05)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,253,253,0.26)";
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
-          >
-            i have been here
-          </button>
-
-          <button
-            onClick={handleJoin}
-            className="lowercase transition-all"
-            style={{
-              padding: "16px 32px",
-              fontSize: "15px",
-              fontWeight: 300,
-              border: "1px solid rgba(255,253,253,0.26)",
-              borderRadius: "30px",
-              background: "transparent",
-              color: "#FFFDFD",
-              cursor: "pointer",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,253,253,0.5)";
-              e.currentTarget.style.backgroundColor = "rgba(255,253,253,0.05)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,253,253,0.26)";
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
-          >
-            this is my first time
-          </button>
-        </div>
+        <button type="button" className="landing-vnext__modal-choice" onClick={() => navigateTo(entryModalCopy.newcomer.href)}>
+          <span>{entryModalCopy.newcomer.primary}</span><small>{entryModalCopy.newcomer.secondary}</small>
+        </button>
       </div>
     </div>
   );
