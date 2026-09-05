@@ -9,6 +9,7 @@
 
 /* the walkthrough steps have no footer under them,so .scr's 96px bottom
    padding was reserving space nothing uses. with the block now centred it
+   was the difference between fitting and scrolling on a short window. */
 #s3,#s3b,#s4A,#s4B,#s5A,#s5B,#s6{padding-bottom:32px}
 
 .landing-scr.on{display:block}
@@ -840,10 +841,9 @@
 
 .const-right-panel{width:calc(100% - 24px)!important;left:12px!important;max-height:48%!important}
 
+</style>
 
-
-
-/* v78: spacing and hierarchy pass. One rhythm across the landing page. */
+<style id="v78-spacing-hierarchy">/* v78: spacing and hierarchy pass. One rhythm across the landing page. */
 #s0 .section-inner,#s0 .identity-section .section-inner{
   width:100%;
   max-width:min(1160px,calc(100vw - 80px));
@@ -967,9 +967,10 @@
 
 #s0 .identity-visual,#s0 .identity-stack{height:286px;min-height:286px}
 
+</style>
 
 
-/* v79: tighten heading-to-content rhythm,then create a clear break before Polaris. */
+<style id="v79-spacing-balance">/* v79: tighten heading-to-content rhythm,then create a clear break before Polaris. */
 #s0 #s0-about .s0-about-grid{margin-top:22px!important}
 
 #s0 #s0-how .layers{margin-top:22px!important}
@@ -1006,9 +1007,10 @@
 
 #s0 .polaris-preview{margin-top:48px!important}
 
+</style>
 
 
-/* v80: each landing chapter is a true section with a compact heading-to-content rhythm. */
+<style id="v80-section-rhythm">/* v80: each landing chapter is a true section with a compact heading-to-content rhythm. */
 #s0 #s0-about{padding-top:52px!important;padding-bottom:58px!important}
 
 #s0 #s0-how{padding-top:58px!important;padding-bottom:64px!important}
@@ -1081,9 +1083,9 @@
 
 #s0 .polaris-section .usecase-card{min-height:0!important}
 
+</style>
 
-
-/* v81: remove chapter divider and tighten Record heading-to-content rhythm. */
+<style id="v81-spacing-cleanup">/* v81: remove chapter divider and tighten Record heading-to-content rhythm. */
 #s0 .polaris-section{border-top:0!important;}
 
 /* Your Record should begin directly beneath its heading,not vertically center within the icon field. */
@@ -1160,9 +1162,10 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 
 .const-right-panel{width:calc(100% - 28px)!important;left:14px!important;max-height:44%!important}
 
+</style>
 
 
-/* =========================================================
+<style id="v93-layout-alignment-fixes">/* =========================================================
    v93 — landing alignment / headline / presentation cleanup
    - keep "connect. align. reveal." on one line on desktop
    - vertically center constellation visual against the left copy
@@ -1288,9 +1291,10 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
     min-height:0!important;
   }
 
+</style>
 
 
-/* =========================================================
+<style id="v94-gap-reduction-fixes">/* =========================================================
    v94 — remove the awkward gap under landing headlines
    Keep the right-side visual/card centered,while the left copy
    starts directly under the headline instead of floating lower.
@@ -1334,9 +1338,10 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
   margin-bottom:0!important;
 }
 
+</style>
 
 
-/* v101: surgical responsive fixes without breaking the original button system */
+<style id="v101-responsive-pill-fixes">/* v101: surgical responsive fixes without breaking the original button system */
 
 /* keep action buttons pill-shaped and readable */
 .hero-enter,.landing-nav-enter,.scr .wb,.scr .btn-main,.scr .onairos-btn,.scr .onairos-signin-btn,.scr .entry-modal-btn-main{
@@ -1386,9 +1391,10 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 
 .hero-enter{padding:13px 24px !important;}
 
+</style>
 
 
-/* v102: onboarding container width,padding,and headline fit cleanup */
+<style id="v102-onboarding-spacing-fit-fixes">/* v102: onboarding container width,padding,and headline fit cleanup */
 :root{
   --onb-block:590px;
   --onb-pad:42px;
@@ -1398,9 +1404,10 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
   --onb-sub:calc(var(--onb-action-bottom) - 34px);
 }
 
+</style>
 
 
-/* v103 — one onboarding rail: same left edge,same width,same action line */
+<style id="v103-onboarding-rail-alignment-system">/* v103 — one onboarding rail: same left edge,same width,same action line */
 :root{
   --onb-frame:520px;
   --onb-copy:520px;
@@ -1443,9 +1450,10 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 
 .const-onb-list{grid-template-columns:1fr !important;gap:0 !important;}
 
+</style>
 
 
-/* v105 — PHENYX interface system
+<style id="v105-design-system-responsive">/* v105 — PHENYX interface system
    One rail,one vertical rhythm,and explicit exceptions for focal screens.
    Desktop targets MacBook-sized windows first; phone rules preserve hierarchy
    without forcing desktop line lengths onto an iPhone. */
@@ -1514,9 +1522,10 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 
 .const-onb-item{font-size:9.8px !important;letter-spacing:.11em !important;padding:7px 0 !important;}
 
+</style>
 
 
-#s0 .hero-tagline{letter-spacing:.01em!important;color:rgba(255,253,253,.8)!important}
+<style id="v169-senior-pass">#s0 .hero-tagline{letter-spacing:.01em!important;color:rgba(255,253,253,.8)!important}
 
 #s0 #s0-about .s0-about-grid{align-items:center!important;gap:clamp(36px,4.5vw,72px)!important}
 
@@ -1598,9 +1607,9 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 
 #s0 #s0-how .layer{padding:24px 20px 26px!important}
 
+</style>
 
-
-/* v181: cleaner chart structure for how-it-works + polaris spacing + hover/icon fixes */
+<style id="v181-chart-hover-iconfix">/* v181: cleaner chart structure for how-it-works + polaris spacing + hover/icon fixes */
 #s0 #s0-about .s0-platform-field{
   overflow:visible !important;
 }
@@ -1955,9 +1964,436 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 
 #s0 #s0-how .s3-lede{font-size:14.5px !important;line-height:1.7 !important;}
 
+</style>
+
+</head>
+<body>
+<div id="nav" style="display:none"></div><div id="progTrack" style="display:none"><div id="prog"></div></div><div id="psel" style="display:none"></div>
+<div class="scr landing-scr on" id="s0" style="position:fixed;inset:0;top:0;overflow-y:auto;z-index:10;justify-content:initial;align-items:initial">
+
+  <nav class="landing-nav">
+    <a href="#s0-top" class="landing-nav-logo" onclick="document.getElementById('s0-top').scrollIntoView({behavior:'smooth'}
+
+);return false;">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='.45' stop-color='%23B9D5FF'/%3E%3Cstop offset='.62' stop-color='%236E8FD0' stop-opacity='.5'/%3E%3Cstop offset='1' stop-color='%236E8FD0' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='32' fill='url(%23g)'/%3E%3Ccircle cx='32' cy='32' r='17' fill='%23B9D5FF'/%3E%3C/svg%3E" alt="" class="landing-nav-dot-img" style="width:18px;height:18px;border-radius:50%;display:block">
+      <span class="landing-nav-word">PHENYX</span>
+    </a>
+    <div class="landing-nav-links">
+      <a href="#s0-about" class="landing-nav-link" onclick="document.getElementById('s0-about').scrollIntoView({behavior:'smooth'}
+
+);return false;">first look</a>
+      <a href="#s0-how" class="landing-nav-link" onclick="document.getElementById('s0-how').scrollIntoView({behavior:'smooth'}
+
+);return false;">how it works</a>
+      <a href="#s0-mission" class="landing-nav-link" onclick="document.getElementById('s0-mission').scrollIntoView({behavior:'smooth'}
+
+);return false;">your constellation</a>
+      <a href="#s0-polaris" class="landing-nav-link" onclick="document.getElementById('s0-polaris').scrollIntoView({behavior:'smooth'}
+
+);return false;">polaris</a>
+    </div>
+    <button type="button" class="landing-nav-enter" onclick="openEntryModal()">enter</button>
+    <button type="button" class="landing-nav-menu-btn" id="landingNavMenuBtn" onclick="toggleLandingNavMenu()" aria-label="menu" style="display:none">
+      <span class="hb-line"></span><span class="hb-line"></span><span class="hb-line"></span>
+    </button>
+  </nav>
+
+  <div class="landing-nav-dropdown" id="landingNavDropdown">
+    <a href="#s0-about" class="landing-nav-dd-link" onclick="closeLandingNavMenu();document.getElementById('s0-about').scrollIntoView({behavior:'smooth'}
+
+);return false;">first look</a>
+    <a href="#s0-how" class="landing-nav-dd-link" onclick="closeLandingNavMenu();document.getElementById('s0-how').scrollIntoView({behavior:'smooth'}
+
+);return false;">how it works</a>
+    <a href="#s0-mission" class="landing-nav-dd-link" onclick="closeLandingNavMenu();document.getElementById('s0-mission').scrollIntoView({behavior:'smooth'}
+
+);return false;">your constellation</a>
+    <a href="#s0-polaris" class="landing-nav-dd-link" onclick="closeLandingNavMenu();document.getElementById('s0-polaris').scrollIntoView({behavior:'smooth'}
+
+);return false;">polaris</a>
+    <a href="#" class="landing-nav-dd-link landing-nav-dd-enter" onclick="closeLandingNavMenu();openEntryModal();return false;">enter</a>
+  </div>
+
+  <header class="hero" id="s0-top">
+    <div class="hero-content">
+      <h1 class="hero-logo">PHENYX</h1>
+      <p class="hero-tagline">your life, taking form</p>
+      <p class="hero-desc">see who you've been, across everything you already use.</p>
+      <button type="button" class="hero-enter" onclick="openEntryModal()"><span>enter</span></button>
+    </div>
+    <div class="hero-particle-field" id="heroParticleField">
+      <canvas class="hero-particles" id="heroParticleCanvas" aria-hidden="true"></canvas>
+    </div>
+    <div class="scroll-cue">
+      <span class="scroll-cue-dot"></span>
+      <span class="scroll-cue-label">scroll</span>
+    </div>
+  </header>
+
+  <section class="section" id="s0-about">
+    <div class="section-inner">
+      <p class="s2-eyebrow">first look</p>
+      <h2 class="s2-headline">you were never in pieces, only in places</h2>
+      <div class="s0-about-grid">
+        <div class="s0-about-text">
+          <p class="s2-sub">every place you use asks for one part of you: the listener, the maker, the one who saves things for later.</p>
+          <p class="s2-sub s2-sub-mid">each one keeps a version of you that is true, but not one shows what it all adds up to.</p>
+          <p class="s2-sub s2-sub-mid">so there has never been one place that holds all of you at once. every moment came from the same life, but nothing has ever gathered them in the same place.</p>
+          
+          <p class="section-thesis">so we made one.</p>
+        </div>
+        <div class="s0-platform-field" id="s0PlatformField"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="s0-how">
+    <div class="section-inner">
+      <p class="s3-eyebrow">how it works</p>
+      <h2 class="s3-headline">connect, assemble, reveal</h2>
+      <p class="s3-lede">three layers, and nothing invented in any of them.</p>
+      <div class="how-chart how-system" aria-label="How PHENYX works overview">
+        <div class="how-system-steps">
+          <article class="how-step-card">
+            <p class="how-chart-kicker">layer one</p>
+            <h3 class="how-chart-title">connect</h3>
+            <p class="how-chart-copy">what you listen to, watch, save, post and build, from only the places you choose.</p>
+          </article>
+          <article class="how-step-card">
+            <p class="how-chart-kicker">layer two</p>
+            <h3 class="how-chart-title">assemble</h3>
+            <p class="how-chart-copy">everything lands on one timeline, so repeats and shifts finally sit next to each other.</p>
+          </article>
+          <article class="how-step-card">
+            <p class="how-chart-kicker">layer three</p>
+            <h3 class="how-chart-title">reveal</h3>
+            <p class="how-chart-copy">the shape no single account could show, with the moments and evidence that made it visible.</p>
+          </article>
+        </div>
+
+        <article class="how-system-bottom how-band">
+          <div class="how-band-part how-band-part--signals">
+            <p class="how-signal-label">what comes into view</p>
+            <div class="how-signal-list" id="howSignalList">
+              <svg class="how-signal-path" id="howSignalPath" aria-hidden="true"></svg>
+              <span style="--ny:.62;--ns:5px;--nx:0"><i class="sig-node"></i>what keeps returning</span>
+              <span style="--ny:.24;--ns:4px;--nx:1"><i class="sig-node"></i>what overlaps</span>
+              <span style="--ny:.80;--ns:4.5px;--nx:.42"><i class="sig-node"></i>creative rhythms</span>
+              <span style="--ny:.30;--ns:5.5px;--nx:1"><i class="sig-node"></i>turning points</span>
+              <span style="--ny:.12;--ns:4px;--nx:.28"><i class="sig-node"></i>how you decide</span>
+              <span style="--ny:.54;--ns:5px;--nx:.86"><i class="sig-node"></i>what stays with you</span>
+            </div>
+          </div>
+
+          <div class="how-band-part how-band-part--protect">
+            <p class="how-signal-label">what stays yours</p>
+            <div class="how-protect-grid">
+              <div class="how-protect-card">
+                <h4>your control.</h4>
+                <p>choose what comes in. disconnect whenever you want.</p>
+              </div>
+              <div class="how-protect-card">
+                <h4>your privacy.</h4>
+                <p>PHENYX keeps what it learned from your accounts, never a second copy of them.</p>
+              </div>
+              <div class="how-protect-card">
+                <h4>your meaning.</h4>
+                <p>PHENYX can show what is there. what it means stays yours.</p>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="identity-section" id="s0-mission">
+    <div class="section-inner">
+      <p class="s3-eyebrow">your constellation</p>
+      <h2 class="s3-headline">see how the parts of your life relate</h2>
+      <div class="identity-grid">
+        <div class="identity-body">
+          <p>a constellation is not the stars. it is the shape they make once you see them together.</p>
+          <p class="identity-copy-second">seven points run from where you began to where you are heading, each looking at one question through <span class="no-wrap">the evidence of your life.</span></p>
+          <p class="identity-copy-second">it is not a profile you finish. new things appear, old ones return, some fall away, and the shape keeps enough of you to notice when you change.</p>
+          <p class="section-thesis">the points stay the same. what fills them is yours.</p>
+        </div>
+        <div class="identity-visual">
+          <div class="identity-stack" role="img" aria-label="Seven-point constellation: origin, emergence, self-creation, convergence, becoming, recognition, and transcendence. Each point reflects a different part of your life across time.">
+          <canvas id="mainConstellation" aria-hidden="true"></canvas>
+          <p class="const-hover-name" id="constHoverName" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="const-example" id="constExample">
+        <p class="const-example-label">the same seven, seen by time</p>
+        <div class="const-example-axis" id="cxAxis" role="tablist" aria-label="the seven points"></div>
+        <div class="const-example-body" id="cxBody">
+          <p class="const-example-q" id="cxQ"></p>
+          <p class="const-example-what" id="cxWhat"></p>
+          <div class="cx-star" id="cxStar" style="display:none"></div>
+          <div class="const-example-rows" id="cxRows"></div>
+          <p class="const-example-obs" id="cxObs"></p>
+        </div>
+        <p class="const-example-note">an example. yours is built only from the accounts you connect.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section polaris-section" id="s0-polaris">
+    <div class="section-inner">
+      <p class="s3-eyebrow">polaris</p>
+      <h2 class="s3-headline">follow one thread all the way through</h2>
+      <div class="polaris-preview">
+        <div class="polaris-preview-intro">
+          <p class="usecase-lead"><b class="pol-pair">the constellation lets you see yourself. polaris lets you use what you see.</b> ask about something you keep returning to, or where it might be leading. polaris answers from the context already here, so you never start by explaining yourself.</p>
+          <p class="usecase-lead polaris-observations">and when you arrive with no question, a few things come forward on their own.</p>
+          <p class="section-thesis polaris-thesis">you bring the question. the context is already here.</p>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-qa" id="usecaseQA">
+            <p class="usecase-qa-pillar" id="qaPillar">convergence</p>
+            <p class="usecase-chat-q" id="qaQ">"am i moving as fast as i think i am?"</p>
+            <p class="usecase-chat-a" id="qaA">you tend to describe the work as fast, but what you save and return to has slowed steadily across <b>three years</b>, on both accounts.</p>
+            <div class="usecase-qa-meta" id="qaMeta">
+              <span class="usecase-qa-dot"></span><span id="qaSrc1">spotify</span>
+              <span class="usecase-qa-dot"></span><span id="qaSrc2">pinterest</span>
+              <span class="usecase-qa-span" id="qaSpan">3 years / 2 sources</span>
+            </div>
+          </div>
+          <div class="usecase-qa-dots" id="qaDots"></div>
+        </div>
+      </div>
 
 
-/* v107 — final layout and hierarchy tuning */
+    </div>
+  </section>
+
+  <section class="cta-section" id="s0-cta">
+    <h2 class="cta-headline">look again</h2>
+    <p class="cta-sub">there is more of you here than you can currently see.</p>
+    <button type="button" class="hero-enter" onclick="openEntryModal()" style="margin:0 auto"><span>enter</span></button>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-left">
+      <span class="footer-dot" aria-hidden="true"></span>
+      <div class="footer-links">
+        <a href="https://phenyxai.com/privacy-policy" class="footer-link">privacy</a>
+        <a href="https://phenyxai.com/terms" class="footer-link">terms</a>
+        <a href="mailto:contact@phenyxai.com" class="footer-link">contact@phenyxai.com</a>
+      </div>
+    </div>
+    <span class="footer-meta">© 2026 PHENYX INC.</span>
+  </footer>
+
+  <!-- ── ENTRY CHOICE POPUP ───────────────────────────────────────── -->
+  <div class="entry-modal-overlay" id="entryModalOverlay" onclick="closeEntryModal()" style="display:none"></div>
+  <div class="entry-modal" id="entryModal" style="display:none">
+    <button type="button" class="entry-modal-close" onclick="closeEntryModal()" aria-label="close">×</button>
+    <p class="entry-modal-title">come in</p>
+    <p class="entry-modal-sub">return to your view, or look around before you connect anything.</p>
+    <button type="button" class="entry-modal-btn" onclick="closeEntryModal();window.location.href='https://phenyxai.com'">
+      <span>i have been here</span>
+      <span class="entry-modal-btn-sub">return to the view you already built</span>
+    </button>
+    <button type="button" class="entry-modal-btn" onclick="closeEntryModal();window.location.href='https://phenyxai.com'">
+      <span>this is my first time</span>
+      <span class="entry-modal-btn-sub">nothing connects until you choose it</span>
+    </button>
+  </div>
+
+</div>
+<script>
+// ── CANVAS SHARPNESS ───────────────────────────────────────────────
+// Buffers were sized in CSS pixels, which is half resolution on a retina
+// display. sizeCanvas keeps the buffer at device pixels and scales the
+// context so all existing drawing code stays in CSS units. Capped at 2x:
+// beyond that the extra fill costs more than it shows.
+window.sizeCanvas=function(c,w,h){
+  var dpr=Math.min(2, window.devicePixelRatio||1);
+  w=w||c.offsetWidth||c.clientWidth||300;
+  h=h||c.offsetHeight||c.clientHeight||150;
+  c.width=Math.round(w*dpr); c.height=Math.round(h*dpr);
+  var ctx=c.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {w:w,h:h,ctx:ctx}
+
+//   'polaris_message'  , { message_count_session, pillar_tag }
+
+// ── polaris message + lightweight topic tagging ───────────────────
+// No user-facing labeling. This is purely for internal pattern review
+// (e.g. "which pillar do people ask about most"). The tag is inferred
+// from the same pillar bucket already used in suggested questions -
+// it is never shown back to the user as a category or label.
+let _polarisMessageCount = 0;
+function trackPolarisMessage(text, inferredPillar){
+  _polarisMessageCount++;
+  trackEvent('polaris_message', {
+    message_count_session: _polarisMessageCount,
+    pillar_tag: inferredPillar || null,
+    // message text length only, not full content, to start conservative.
+    // switch to full text capture once a backend + retention policy exists.
+    message_length: (text||'').length,
+  }
+
+);
+  ['daily','polaris','constellation','profile'].forEach(t=>{
+    const el=document.getElementById('dt-'+t);
+    // '' rather than 'block': the polaris panel is a flex column in CSS, and
+    // an inline display:block was overriding it, which is why its composer
+    // sat under the last message instead of at the foot of the panel.
+    if(el) el.style.display=t===tab?'':'none';
+  }
+
+// Updates every UI surface that depends on free vs pro tier: sidebar badge,
+// sidebar upgrade prompt, profile tier card, and polaris token display.
+// Locked observation cards are handled inside renderDaily, which reads the
+// global isPro flag directly when deciding whether to render the lock state.
+// the raw time field carries an internal category label (e.g. "behavioral
+// pattern / 6 months") that reads like analytics-dashboard language. the
+// observation text itself already explains what kind of pattern this is
+// in plain prose, so the visible caption only needs the timeframe.
+
+function warmTime(t){
+  if(!t) return '';
+  const parts=t.split('/');
+  return (parts.length>1?parts[1]:parts[0]).trim();
+}
+
+')" title="ask polaris about this"><span class="obs-pol-star">✦</span><span class="obs-pol-lbl">explore</span></button></div>`;
+      // progressive disclosure: the card shows only the insight line and its
+      // pillar tag by default, so the day is seven scannable lines. tapping a
+      // card opens its evidence, reflection, and explore action. the focused
+      // observation (pro's daily choice) starts open. a chevron signals more.
+      const startOpen = isFocused || idx===0;
+      const el=document.createElement('div');
+      el.className='obs-card obs-collapsible'+(isNewFlag?' new':'')+(isFocused?' focused':'')+(startOpen?' open':'');
+      el.innerHTML=
+        `<div class="obs-head"><div class="obs-text">${o.text}
+
+let _polLastPillar=null;   // remembers the topic of the last real answer
+let _polLastText='';       // the last thing polaris said, for "why" follow-ups
+
+// short, contextless replies that mean "keep going on what we were just on"
+function isFollowUp(text){
+  const t=(text||'').toLowerCase().trim().replace(/[?.!]/g,'');
+  const phrases=['why','whys that','why is that','why that','how so','how come',
+    'says who','based on what','how do you know','what do you mean','meaning',
+    'tell me more','more','go on','elaborate','explain','and','really','so',
+    'like what','such as','for example','proof','show me','what else','keep going',
+    'unpack that','say more'];
+  return phrases.includes(t) || t.split(' ').length<=3 && phrases.some(p=>t.startsWith(p));
+}
+
+);
+  setDemoTab('polaris',polBtn);
+  const d=DEMO_DATA[persona];
+  setTimeout(()=>polStartChat(obsText,d,forcedPillar),250);
+}
+
+);
+    renderConst(d);
+    document.getElementById('const-default-view').style.display='none';
+    document.getElementById('const-node-view').style.display='block';
+  }
+
+)();
+
+// ── INIT ──────────────────────────────────────────────────────────
+// the product opens on the onboarding flow. append #demo to the url to
+// skip straight into mara's dashboard (useful while iterating / editing).
+
+// this is a new-user experience: clear the "seen intro" flags on every fresh
+// load so the per-page explainer banners always appear for a first-time user.
+['daily','polaris','constellation','profile'].forEach(function(t){
+  try{ localStorage.removeItem('phenyx_seen_intro_'+t); }
+
+// ── HERO MOUSE-FOLLOW PARTICLE CLUSTER ──────────────────────────────
+// A field of small blue stellar particles drifts ambiently inside its
+// own container on the right side of the hero, beside the title rather
+// than overlapping it. When the cursor comes near, nearby particles are
+// pulled toward it and gather into a loose cluster; moving away releases
+// them back to their ambient drift.
+(function(){
+  const canvas = document.getElementById('heroParticleCanvas');
+  const field = document.getElementById('heroParticleField');
+  if(!canvas || !field) return;
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  let mouseX = null, mouseY = null;
+  let mouseActive = false;
+
+  function resize(){
+    // the field is display:none below 780px, so it has no measurable size.
+    // leaving W/H undefined there put NaN into every particle position.
+    if(!field.clientWidth || !field.clientHeight){ W=0; H=0; return; }
+
+// the live region of the canvas, in canvas fractions. the field sits at the
+  // right 62% of the hero, so hero x<52% maps to canvas x<0.226, and the nav
+  // strip is the top 12%. drift and cursor pull are clamped to these too.
+  const FIELD_MIN_X = 0.225, FIELD_MIN_Y = 0.135;
+  // the field reads as a gathering, not a filled panel. points are laid out in
+  // a soft ellipse centred in the live region with density and brightness both
+  // falling off toward the rim, so the edge dissolves instead of ending.
+  // the ellipse is wider than tall so the cluster spreads across the space
+  // rather than stacking into a column. rx/ry are held inside the live region
+  // plus SAFE_PAD, or points pile against the clamp instead of floating.
+  const CL_CX = 0.578, CL_CY = 0.560, CL_RX = 0.350, CL_RY = 0.310;
+  const MAX_R = 3.4, GLOW_MULT = 4.6, MAX_DRIFT = 30;
+  const SAFE_PAD = MAX_R*GLOW_MULT + MAX_DRIFT + 6; // ~40px of clearance
+  const PARTICLE_COUNT = 124;
+  // attention settles on movement before it settles on text. the field stays
+  // near-still while the claim is read, then comes alive. this is the single
+  // biggest change to what a first-time visitor actually looks at first.
+  const FIELD_WAKE_MS = 550, FIELD_WAKE_DUR = 1900;
+  let _fieldT0 = null;
+  function fieldWake(now){
+    if(_fieldT0===null) _fieldT0 = now;
+    const t = (now - _fieldT0 - FIELD_WAKE_MS) / FIELD_WAKE_DUR;
+    return t<=0 ? 0.12 : (t>=1 ? 1 : 0.12 + 0.88*(1-Math.pow(1-t,3)));
+  }
+
+// the field is offset inside the hero, so a point is tested against
+      // hero coordinates rather than its own canvas. nothing is painted into
+      // the reserved corner no matter how it got there.
+      if(window._inHeroDeadZone){
+        const _hero=document.getElementById('s0-top');
+        if(_hero){
+          const _fr=field.getBoundingClientRect(), _hr=_hero.getBoundingClientRect();
+          if(_hr.width && _hr.height &&
+             window._inHeroDeadZone(_fr.left-_hr.left+p.x, _fr.top-_hr.top+p.y,
+                                    _hr.width, _hr.height)) return;
+        }
+
+// measured after fonts settle, and again on resize, since the wrap point
+  // of every answer moves with the column width.
+  var card=wrap.closest('.usecase-card');
+  function fitCard(){
+    if(!card) return;
+    var keep=idx;
+    card.style.minHeight='0px';
+    var tallest=0;
+    ENTRIES.forEach(function(_,i){ render(i); tallest=Math.max(tallest, card.offsetHeight); }
+
+;
+  document.querySelectorAll('.landing-nav-link').forEach(a=>{
+    const m = /getElementById\('([^']+)'\)/.exec(a.getAttribute('onclick')||'');
+    if(m) links[m[1]] = a;
+  }
+
+);
+  secs.forEach(el=>io.observe(el));
+  // above the first section nothing is current, which is also information
+  const top = document.getElementById('s0-top');
+  if(top) new IntersectionObserver(e=>{ if(e[0].isIntersecting) setActive(null); }
+
+)();
+</script>
+<style id="v107-final-system-tune">/* v107 — final layout and hierarchy tuning */
 :root{--onb-rail:min(100%,540px)}
 
 /* constellation fit + lower sections */
@@ -1982,6 +2418,9 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 
 .const-right-panel{width:min(292px,74vw)!important;max-height:52%!important}
 
+)();
+</script>
+<style id="v108-complete-ux-pass">/* v108 — landing,constellation,and iPhone completion pass */
 
 /* ---------- landing: immediate comprehension,restrained navigation ---------- */
 #s0 .landing-nav{max-width:1180px!important;padding-left:clamp(22px,4.2vw,54px)!important;padding-right:clamp(22px,4.2vw,54px)!important}
@@ -2113,9 +2552,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 
 .const-record{margin-top:20px!important;padding-top:22px!important}
 
-
-
-/* v109 — alignment consistency pass
+</style>
+<style id="v109-alignment-consistency-pass">/* v109 — alignment consistency pass
    One content rail for standard onboarding screens,two explicit focal exceptions
    (OTP + stellar color),and no orphaned text lines with their own width rules. */
 :root{
@@ -2546,9 +2984,9 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 #s0 #s0-how .layer,#s0 #s0-how .dual-block,#s0 .polaris-section .usecase-card,#s0 .identity-section .identity-shell,#s0 .constellation-card,#s0 .observation-card,#s0 .upgrade-modal-panel{
   border: 1px solid var(--panel-border)!important;
   background:
-     linear-gradient(180deg, rgba(255,255,255,.012), rgba(255,255,255,.006)),
-     radial-gradient(130% 140% at 8% 0%, rgba(80,110,180,.08), transparent 48%),
-     linear-gradient(180deg, rgba(5,9,18,.96), rgba(3,6,13,.98))!important;
+    linear-gradient(180deg, rgba(255,255,255,.012), rgba(255,255,255,.006)),
+    radial-gradient(130% 140% at 8% 0%, rgba(80,110,180,.08), transparent 48%),
+    linear-gradient(180deg, rgba(5,9,18,.96), rgba(3,6,13,.98))!important;
   box-shadow: var(--panel-shadow)!important;
 }
 
@@ -2601,8 +3039,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
   border-radius: 999px!important;
   border: 1px solid rgba(255,255,255,.12)!important;
   background:
-     linear-gradient(180deg, rgba(255,255,255,.018), rgba(255,255,255,.01)),
-     radial-gradient(100% 100% at 50% 0%, rgba(130,165,255,.06), transparent 68%)!important;
+    linear-gradient(180deg, rgba(255,255,255,.018), rgba(255,255,255,.01)),
+    radial-gradient(100% 100% at 50% 0%, rgba(130,165,255,.06), transparent 68%)!important;
   color: rgba(255,253,253,.88)!important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.035)!important;
 }
@@ -2610,8 +3048,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 #s0 #s0-how .tag:hover{
   border-color: rgba(155,188,255,.22)!important;
   background:
-     linear-gradient(180deg, rgba(255,255,255,.022), rgba(255,255,255,.012)),
-     radial-gradient(100% 100% at 50% 0%, rgba(130,165,255,.08), transparent 68%)!important;
+    linear-gradient(180deg, rgba(255,255,255,.022), rgba(255,255,255,.012)),
+    radial-gradient(100% 100% at 50% 0%, rgba(130,165,255,.08), transparent 68%)!important;
 }
 
 /* hero and sections keep airy but not too diffuse */
@@ -2636,7 +3074,25 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
     font-size: 14px!important;
   }
 
+const [u,src,when,what,w]=tlSelected;
+  const near=t.moments.filter(m=>m!==tlSelected&&Math.abs(m[0]-u)<0.09)
+    .sort((a,b)=>Math.abs(a[0]-u)-Math.abs(b[0]-u)).slice(0,3);
+  const si=stageOf(t,u);
+  el.innerHTML=
+    '<div class="tl-detail-head"><span class="tl-detail-when">'+when+'</span>'+
+    '<span class="tl-detail-src">'+src+'</span>'+
+    (w>=3?'<span class="tl-detail-flag">turning point</span>':'')+'</div>'+
+    '<p class="tl-detail-what">'+what+'</p>'+
+    '<p class="tl-detail-era">stage '+(si+1)+' \u00b7 <em>'+STAGE_NAMES[si]+'</em></p>'+
+    (near.length?'<p class="tl-detail-sub">what sat around it</p>'+
+      '<div class="tl-detail-near">'+near.map(m=>
+        '<button type="button" class="tl-near" onclick="tlJump(\''+m[2]+'\')">'+
+        '<span>'+m[2]+'</span><em>'+m[1]+'</em><b>'+m[3]+'</b></button>').join('')+'</div>':'')+
+    '<button type="button" class="tl-ask" onclick="tlAskPolaris()">ask polaris about this</button>';
+}
 
+</script>
+<style id="v132-mobile-container-footer-heading-fix">/* v132 — soften interior blue,align headings to content,and make the mobile
    footer read as one left-aligned vertical stack. */
 
 #s0 .layers,#s0 .dual-stack,#s0 .usecase-card{
@@ -2718,9 +3174,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
     margin:0!important;
   }
 
-
-
-/* v134 — content inside framed blocks should use the frame it is given.
+</style>
+<style id="v134-container-text-fill">/* v134 — content inside framed blocks should use the frame it is given.
    Remove leftover editorial line caps that made copy occupy only half a card. */
 
 #s0 #s0-how .layer,#s0 #s0-how .dual-block{
@@ -2757,9 +3212,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
   max-width:none!important;
 }
 
-
-
-/* v135 — remove the blue wash from landing-page containers.
+</style>
+<style id="v135-neutral-panels">/* v135 — remove the blue wash from landing-page containers.
    Keep the PHENYX feeling dark,precise,and distinct with neutral surfaces. */
 
 #s0 .layers,#s0 .dual-stack{
@@ -2797,9 +3251,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
   box-shadow:0 20px 48px -36px rgba(0,0,0,.95) !important;
 }
 
-
-
-/* v136 — "enter" is the threshold everywhere.
+</style>
+<style id="v136-enter-consistency">/* v136 — "enter" is the threshold everywhere.
    No directional arrow; hierarchy comes from placement and scale instead. */
 
 #s0 .hero-enter,#s0 .landing-nav-enter,#s0 .landing-nav-dd-enter{
@@ -2831,9 +3284,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
   outline-offset:3px!important;
 }
 
-
-
-/* v137 — bring the form/action rail back into proportion.
+</style>
+<style id="v137-action-rail-refined">/* v137 — bring the form/action rail back into proportion.
    The auth and verification screens should read as one measured column:
    headline,supporting copy,fields,primary action,and back link.
    This removes the oversized action feel and aligns the controls to the
@@ -2845,9 +3297,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
   --auth-action-h: 44px;
 }
 
-
-
-/* v139 — one reading rhythm across the main landing chapters */
+</style>
+<style id="v139-balanced-copy">/* v139 — one reading rhythm across the main landing chapters */
 #s0 #s0-about .s0-about-text,#s0 #s0-mission .identity-body,#s0 #s0-polaris .polaris-preview-intro{
   max-width:48ch!important;
 }
@@ -2864,9 +3315,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
   max-width:48ch!important;
 }
 
-
-
-/* v140 — reduce dead space without making the landing page feel cramped.
+</style>
+<style id="v140-tighter-landing-rhythm">/* v140 — reduce dead space without making the landing page feel cramped.
    The rule: tighter chapter spacing,preserved internal breathing room. */
 
 #s0 .section,#s0 .identity-section,#s0 .polaris-section{
@@ -2949,9 +3399,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
     padding-bottom:62px!important;
   }
 
-
-
-/* v154 — use the supplied reference for copy density,not its visual styling.
+</style>
+<style id="v154-reference-length-copy-pass">/* v154 — use the supplied reference for copy density,not its visual styling.
    Major landing chapters now share a similar reading weight and line length. */
 
 #s0 #s0-about .s0-about-text{
@@ -2991,9 +3440,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
     margin-bottom:16px!important;
   }
 
-
-
-/* v155 — a little more story,with more breathing room inside each text block. */
+</style>
+<style id="v155-copy-breathing-room">/* v155 — a little more story,with more breathing room inside each text block. */
 
 #s0 #s0-about .s0-about-text{
   max-width:46ch!important;
@@ -3040,9 +3488,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
     margin-top:24px!important;
   }
 
-
-
-/* v156 — editorial spacing rather than evenly stacked paragraph blocks.
+</style>
+<style id="v156-intentional-section-rhythm">/* v156 — editorial spacing rather than evenly stacked paragraph blocks.
    Each major chapter ends with a semibold wrapper/thesis line. */
 
 #s0 .section-thesis{
@@ -3060,6 +3507,7 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
   margin-top:42px!important;
 }
 
+/* First Light — let the story unfold instead of reading like equal rows. */
 #s0 #s0-about .s0-about-text{
   max-width:48ch!important;
   padding-top:2px!important;
@@ -3145,9 +3593,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
     margin-top:28px!important;
   }
 
-
-
-/* v157 — sharpen the hierarchy so the page reads in layers,not one uniform voice.
+</style>
+<style id="v157-hierarchy-tracking-pass">/* v157 — sharpen the hierarchy so the page reads in layers,not one uniform voice.
    More tracking on labels and body copy,more deliberate gaps between paragraph beats,and stronger contrast between headline / body / thesis. */
 
 /* small labels and category text */
@@ -3882,9 +4329,8 @@ p,h1,h2,h3,h4,li,.obs-text,.sub,.dp-t,.ev-line,.ev-def,.ev-why,.und-val,.prof-bi
 
 #s0 #s0-about .s0-about-text{ align-self:auto !important; }
 
-
-
-/* v160 — one typeface everywhere.
+</style>
+<style id="v160-plus-jakarta-global-lock">/* v160 — one typeface everywhere.
    The previous font request loaded only upright Plus Jakarta Sans. Any italic
    copy was therefore browser-synthesized and could visibly read like a
    different typeface. The font request now includes true italic faces too. */
@@ -3903,9 +4349,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
   font-family:var(--phenyx-font)!important;
 }
 
-
-
-/* PHENYX v161
+</style>
+<style id="v161-warm-celestial-system">/* PHENYX v161
    Cold atmosphere,warm language. The interface stays dark and celestial;
    the copy,spacing,and ownership language provide the care. */
 
@@ -3936,6 +4381,7 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
   color:rgba(var(--phenyx-warm-white),.94)!important;
 }
 
+/* ---------- how it works: let text use the container ---------- */
 #s0 #s0-how .layer-text{
   max-width:none!important;
   width:100%!important;
@@ -4012,9 +4458,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
     padding:24px 10px 0!important;
   }
 
-
-
-/* v162 — value is revealed through the product,not pitched at the user.
+</style>
+<style id="v162-high-value-warm-system">/* v162 — value is revealed through the product,not pitched at the user.
    The atmosphere stays dark,cool,and celestial. The language and spacing
    do the human work: warm,curious,careful,and easy to understand. */
 
@@ -4075,9 +4520,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
   color:rgba(255,250,247,.58)!important;
 }
 
-
-
-/* final MVP value pass:
+</style>
+<style id="v163-final-value-rhythm">/* final MVP value pass:
    - dark/celestial visuals carry the distance
    - warm language carries the care
    - the product loop is visible without reading like a sales funnel */
@@ -4143,9 +4587,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
     min-height:62px!important;
   }
 
-
-
-/* -------------------------------------------------------------
+</style>
+<style id="v165-constellation-layout-rebalance">/* -------------------------------------------------------------
    v165: rebalance the constellation and the supporting blocks
    - make the constellation feel more equal to the copy beside it
    - turn "what comes into view" and "what stays yours" into two
@@ -4782,9 +5225,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
     max-height:218px!important;
   }
 
-
-
-/* Primary reading path:
+</style>
+<style id="v171-cognitive-safety-refinement">/* Primary reading path:
    promise -> mechanics -> reflection -> deeper exploration.
    Supporting content should be quieter than the main thought. */
 
@@ -4813,9 +5255,9 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
     line-height:1.76!important;
   }
 
-
-
-/* PHENYX should feel held,spacious,and legible.
+</style>
+<style id="v172-unified-safe-seen-system">/* PHENYX should feel held,spacious,and legible.
+   Reduce visual fragmentation,shorten reading spans,and let one calm system hold more than one idea at once. */
 
 /* More breathing room in reading text */
 #s0 #s0-about .s2-sub,#s0 #s0-how .s3-lede,#s0 #s0-how .layer-text,#s0 #s0-how .dual-intro,#s0 #s0-how .never-intro,#s0 #s0-how .never-text,#s0 #s0-mission .identity-body p,#s0 #s0-polaris .usecase-lead,#s0 .cta-sub{
@@ -5000,9 +5442,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
     min-height:250px!important;
   }
 
-
-
-/* Positioning:
+</style>
+<style id="v173-market-positioned-final-pass">/* Positioning:
    PHENYX is not an account aggregator and not an identity verdict.
    The value chain is connection -> synthesis -> traceable reflection -> inquiry.
    The visual language should feel premium and quiet,never dashboard-heavy. */
@@ -5119,9 +5560,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
     max-height:226px!important;
   }
 
-
-
-/* MARKET POSITION
+</style>
+<style id="v174-expert-market-positioning">/* MARKET POSITION
    PHENYX is a cross-platform identity instrument:
    it synthesizes lived digital evidence into a traceable,evolving self-view.
    The differentiated value is synthesis + provenance + contextual inquiry,not collection,scoring,or personality classification. */
@@ -5153,9 +5593,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
   color:rgba(255,250,247,.64)!important;
 }
 
-
-
-/* Final UX + motion alignment pass
+</style>
+<style id="v175-ux-motion-alignment-pass">/* Final UX + motion alignment pass
    Goal: restore a coherent section system,remove overlap,keep one shared
    insight box,and make ambient icon motion smoother and more natural. */
 
@@ -5350,9 +5789,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
     max-height:228px!important;
   }
 
-
-
-/* Final visual repolish: cleaner line system,no boxed insight panel,consistent paragraph rhythm,and minor copy/layout refinements. */
+</style>
+<style id="v176-final-visual-repolish">/* Final visual repolish: cleaner line system,no boxed insight panel,consistent paragraph rhythm,and minor copy/layout refinements. */
 #s0 .no-wrap{white-space:nowrap!important}
 
 /* Shared type rhythm */
@@ -5494,9 +5932,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
     padding-top:18px!important;
   }
 
-
-
-/* Global consistency pass */
+</style>
+<style id="v177-consistency-spacing-final">/* Global consistency pass */
 #s0 .section-inner,#s0 .identity-section .section-inner,#s0 .polaris-section .section-inner{
   max-width:min(1100px, calc(100vw - 96px)) !important;
 }
@@ -5689,15 +6126,13 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
   transition:opacity .9s ease,border-color .28s ease,box-shadow .28s ease!important;
 }
 
-
-
-#s0 .s0-pbox{
+</style>
+<style id="v179-final-motion-visual-check">#s0 .s0-pbox{
   transition:opacity .9s ease,border-color .28s ease,box-shadow .28s ease!important;
 }
 
-
-
-/* Reduce visual noise in HOW IT WORKS. Whitespace is the grouping device. */
+</style>
+<style id="v180-cleaner-how-polaris">/* Reduce visual noise in HOW IT WORKS. Whitespace is the grouping device. */
 #s0 #s0-how .layers{
   display:grid!important;
   grid-template-columns:repeat(3,minmax(0,1fr))!important;
@@ -6106,9 +6541,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
 
 #s0 #s0-polaris .usecase-qa-dots{padding:0 22px 20px 40px!important;}
 
-
-
-/* --- v186 alignment refinement --- */
+</style>
+<style id="v186-refine-polaris-how">/* --- v186 alignment refinement --- */
 #s0 #s0-how .s3-lede{
   width:100%!important;
   max-width:72ch!important;
@@ -6214,9 +6648,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
 
 #s0 #s0-polaris .usecase-qa-dots{padding:0 22px 20px 40px!important;}
 
-
-
-/* ═══════════════════════════════════════════════════════════════
+</style>
+<style id="v187-system">/* ═══════════════════════════════════════════════════════════════
    v187 — one system.
    This block is authoritative. Every rule below either resets a
    property an older layer set,or defines it once. Selectors are
@@ -6929,9 +7362,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
   color:rgba(255,253,253,.46)!important;letter-spacing:.005em!important;
 }
 
-
-
-
+</style>
+<style id="v233-design-system">
 /* ═══════════════════════════════════════════════════════════════════
    PHENYX v233 — one design system
 
@@ -7156,16 +7588,14 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
 /* the polaris opening centred itself while everything under it ran left */
 .pol-hero,.pol-top{ align-items:flex-start!important;text-align:left!important; }
 
-
-
-
+</style>
+<style id="v234b-hero-logo-scale">
 /* the hero wordmark, at half the previous size: it reads as a mark set
    above the tagline rather than the full-width banner it had become. */
 #s0 .hero-logo{ font-size:clamp(40px, 4.5vw, 62px)!important; }
 
-
-
-
+</style>
+<style id="v234c-landing-type-consistency">
 /* ═══════════════════════════════════════════════════════════════════
    One type voice across the four landing sections.
    Written at #s0 #<section> .role specificity (two IDs) to match the
@@ -7283,13 +7713,13 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
   #s0 #s0-how p.section-thesis,
   #s0 #s0-polaris p.section-thesis.polaris-thesis{ font-size:16px!important; }
 
-
-
-
+</style>
+<style id="v234d-landing-polaris-spacing">
 /* The polaris intro is a flex column with an 18px gap between every line.
    The thesis line carried an extra 28px margin-top on top of that gap, so
    the space above "you bring the question" was ~46px while every other gap
    in the column was 18px. Remove the stacked margin so the rhythm is even,
+   and let the flex gap alone set the spacing. A touch more breathing room
    before the closing thesis reads as intentional emphasis, so it gets one
    consistent step up, matching how the other sections separate their thesis. */
 #s0 #s0-polaris .polaris-preview-intro{ gap:clamp(16px,1.8vw,22px)!important; }
@@ -7300,9 +7730,8 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
   padding-top:clamp(8px,1vw,14px)!important;   /* small, even emphasis step */
 }
 
-
-
-
+</style>
+<style id="v234e-landing-headline-gap">
 /* The gap from each section's headline to the content beneath it was
    uneven — 36 / 22 / 48 / 34px — because some sections drop straight into
    a grid, one adds a lede line first, and grids added their own top offset.
@@ -7328,6 +7757,7 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
 #s0 #s0-how .s3-lede + .how-system{ margin-top:clamp(20px,2.4vw,28px)!important; }
 
 /* content grids align their columns to the top, so the text always starts
+   at the same offset under the headline (was center-aligned, which let a
    tall visual pull the text's start point around and made the headline gap
    look different section to section) */
 #s0 #s0-mission .identity-grid,
@@ -7339,6 +7769,9 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
 #s0 #s0-polaris .polaris-preview-intro > :first-child,
 #s0 #s0-about .s0-about-text > :first-child{ margin-top:0!important; }
 
+)();
+</script>
+<style id="v235-product-refinements">
 /* ═══════════════════════════════════════════════════════════════════
    PHENYX v235 — product-file refinements
    P1 remove input underlines · P2 dimmer placeholder · P3 header spacing
@@ -7376,4 +7809,39 @@ em,i,.usecase-chat-q,.ex-q,.ex-a,.mom-quote,.und-said{
 
 .pol-hero-input:focus-within, .pol-input-wrap:focus-within{
   border-color:rgba(var(--s-rgb),.24)!important; box-shadow:none!important;
+}
+
+</style>
+<style id="v235e-pillar-story">
+/* L3: pillar rows now read as a named line of story, not a stat row */
+.const-right-panel .cps-story{
+  display:block!important; padding:14px 0!important;
+  border-bottom:1px solid rgba(255,253,253,.06)!important;
+  cursor:pointer!important; transition:opacity .2s!important;
+}
+
+.const-right-panel .cps-story:last-child{ border-bottom:none!important; }
+
+.const-right-panel .cps-story:hover{ opacity:.8!important; }
+
+.const-right-panel .cps-story .cps-head{
+  display:flex!important; align-items:center!important; gap:10px!important; margin:0 0 6px!important;
+}
+
+.const-right-panel .cps-story .cps-pill{
+  font-size:10.5px!important; letter-spacing:.14em!important; text-transform:uppercase!important;
+  color:rgba(var(--s-rgb),.9)!important; font-weight:600!important;
+  background:none!important; border:none!important; padding:0!important;
+}
+
+.const-right-panel .cps-story .cps-newsig{
+  font-size:9.5px!important; letter-spacing:.08em!important; text-transform:uppercase!important;
+  color:rgba(var(--s-rgb),.75)!important;
+  border:1px solid rgba(var(--s-rgb),.28)!important; border-radius:999px!important;
+  padding:2px 7px!important; margin-left:auto!important;
+}
+
+.const-right-panel .cps-story .cps-line{
+  margin:0!important; font-size:13px!important; line-height:1.55!important;
+  color:rgba(255,253,253,.72)!important;
 }
