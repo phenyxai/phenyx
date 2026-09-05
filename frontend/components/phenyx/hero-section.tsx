@@ -1,16 +1,12 @@
 "use client";
 
 import { heroCopy, SECTION_IDS } from "@/lib/landing-copy";
-import { HeroStarfield } from "./hero-starfield";
 import { IdentityParticles } from "./identity-particles";
 
 export function HeroSection({ onEnterClick }: { onEnterClick: () => void }) {
   return (
     <header id={SECTION_IDS.top} className="landing-vnext__hero">
-      <div className="landing-vnext__hero-particles" aria-hidden="true">
-        <HeroStarfield />
-        <IdentityParticles />
-      </div>
+      <IdentityParticles />
       <div className="landing-vnext__hero-content">
         <h1>{heroCopy.brand}</h1>
         <p className="landing-vnext__hero-tagline">{heroCopy.tagline}</p>
