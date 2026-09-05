@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SessionColorProvider } from "@/contexts/session-color-context";
 import { Navigation } from "@/components/phenyx/navigation";
 import { HeroSection } from "@/components/phenyx/hero-section";
 import { ManifestoSection } from "@/components/phenyx/manifesto-section";
@@ -9,13 +10,13 @@ import { MissionSection } from "@/components/phenyx/mission-section";
 import { PolarisSection } from "@/components/phenyx/polaris-section";
 import { CtaSection } from "@/components/phenyx/cta-section";
 import { FooterSection } from "@/components/phenyx/footer-section";
-import { EntryModal } from "@/components/phenyx/entry-modal";
+import { WaitlistModal } from "@/components/phenyx/waitlist-modal";
 import { CustomCursor } from "@/components/phenyx/custom-cursor";
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const openEntryModal = () => setIsModalOpen(true);
-  const closeEntryModal = () => setIsModalOpen(false);
+  const openWaitlist = () => setIsModalOpen(true);
+  const closeWaitlist = () => setIsModalOpen(false);
 
   useEffect(() => {
     const targets = document.querySelectorAll<HTMLElement>("[data-reveal]");
@@ -36,12 +37,12 @@ export default function Home() {
   }, []);
 
   return (
-    <>
+    <SessionColorProvider>
       <CustomCursor />
       <main className="landing-vnext">
-        <Navigation onEnterClick={openEntryModal} />
+        <Navigation onEnterClick={openWaitlist} />
 
-        <HeroSection onEnterClick={openEntryModal} />
+        <HeroSection onEnterClick={openWaitlist} />
 
         <ManifestoSection />
 
@@ -51,12 +52,12 @@ export default function Home() {
 
         <PolarisSection />
 
-        <CtaSection onEnterClick={openEntryModal} />
+        <CtaSection onEnterClick={openWaitlist} />
 
         <FooterSection />
 
-        <EntryModal isOpen={isModalOpen} onClose={closeEntryModal} />
+        <WaitlistModal isOpen={isModalOpen} onClose={closeWaitlist} />
       </main>
-    </>
+    </SessionColorProvider>
   );
 }
