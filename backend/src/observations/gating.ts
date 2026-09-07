@@ -265,8 +265,9 @@ export interface ObservationRow {
 
 /**
  * The shape the frontend consumes (`frontend/components/phenyx/observation-card.tsx`
- * → `Observation`). v67: bodies always ship. `locked` means the *evidence trace*
- * is withheld (citations/provenance omitted) — never the sentence itself.
+ * → `Observation`). Bodies always ship. `locked` means the *evidence trace*
+ * is withheld (citations/provenance omitted), never the sentence itself and,
+ * since v244, never the time span.
  */
 export interface ServedObservation {
   id: string;
@@ -277,13 +278,13 @@ export interface ServedObservation {
   /** Counts behind the claim. */
   points?: string[] | null;
   sources?: string[] | null;
-  /** Date span shown next to source tags. */
+  /** Date span. Served on every tier (v244): how far back the observation reaches. */
   span?: string | null;
   meta_line?: string | null;
   /** Opening question for ✦ explore. */
   explore_prompt?: string | null;
   is_new?: boolean;
-  /** True when the evidence trace is redacted (free, after the daily budget). */
+  /** True when the evidence trace is redacted (free: every row since v244). */
   locked?: boolean;
   hint?: string | null;
   /** Full chain, or `{ sig, recs }` stub when locked. Null when there is no signal. */
@@ -296,7 +297,7 @@ export interface ServedObservation {
   underneath?: Underneath | null;
   /** v66 pattern type for analytics (PHE-72). */
   signal_type?: string | null;
-  /** Persisted `does this land?` state; null when the user has not touched it. */
+  /** Persisted `how does this read to you?` state; null when the user has not touched it. */
   feedback?: { verdict: "new" | "known" | "reading" | null; opened: boolean } | null;
 }
 
@@ -352,15 +353,18 @@ export function redactedHint(row: ObservationRow): string {
  * Authoritative serve-time tier gate, driven by {@link TierCapabilities}
  * (PHE-69). `rows` MUST be ordered `surfaced_at DESC` (freshest first).
  *
- * v67: every tier receives every observation body. Free receives citations +
- * provenance on the first `evidenceTracesPerDay` rows of the local day; later
- * rows keep `body` but set `locked=true` and omit sources/meta (the proof is
- * what Pro buys, not the only honest sentences). Pro/gifted: all traces.
+ * Every tier receives every observation body and its time span (v244: the
+ * span stays on free because it tells the person how far back the observation
+ * reaches; which accounts it came from does not). Citations + provenance
+ * (`sources`, `meta_line`) ship on the first `evidenceTracesPerDay` rows,
+ * which is none on free since v244 and all on pro/gifted; the rest keep
+ * `body` but set `locked=true`. The proof is what full buys, not the only
+ * honest sentences.
  *
  * Evidence: unlocked rows ship the full chain. Locked rows keep `{ sig, recs }`
- * so the client can render the lock from payload presence — never chart/entries/
- * closer. Underneath: at most one of the day; Pro gets the reading, free gets
- * `under: true` with `underneath: null`.
+ * so the client can render the door from payload presence, never chart/entries/
+ * closer. Underneath: at most one of the day; pro/gifted get the reading, free
+ * gets `under: true` with `underneath: null`.
  */
 export function applyReadGate(
   rows: ObservationRow[],
@@ -395,7 +399,9 @@ export function applyReadGate(
       sentence,
       points: points.length ? points : undefined,
       sources: traceUnlocked ? row.source_platforms : undefined,
-      span: traceUnlocked ? formatSpan(row) : undefined,
+      // The date span ships on every tier. The provenance-label fallback
+      // inside `formatSpan` is provenance, so it stays behind the trace.
+      span: (traceUnlocked ? formatSpan(row) : formatObservationSpan(row)) ?? undefined,
       meta_line: traceUnlocked ? row.meta_label : undefined,
       explore_prompt: sentence || undefined,
       is_new: row.is_new,
@@ -415,8 +421,8 @@ export interface TimelineGroup {
 
 /**
  * Constellation timeline: apply the same authoritative gate across the whole
- * `surfaced_at DESC` feed (so "exactly one unlocked for free" holds globally),
- * then group by pillar preserving recency order within each group.
+ * `surfaced_at DESC` feed (so the free trace budget holds globally), then
+ * group by pillar preserving recency order within each group.
  */
 export function groupTimelineByPillar(
   rows: ObservationRow[],

@@ -76,9 +76,9 @@ export default function UpgradePage() {
         return;
       }
 
-      setError("Checkout could not be started. Try again.");
+      setError("checkout could not be started. please try again.");
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("something went wrong. please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -143,8 +143,8 @@ export default function UpgradePage() {
             maxWidth: 420,
           }}
         >
-          one pro membership unlocks full access. choose monthly, pay yearly and save, or gift a constellation to
-          someone else.
+          one full membership unlocks everything. choose monthly, pay yearly and save, or gift a constellation to
+          someone.
         </p>
 
         <div
@@ -190,17 +190,17 @@ export default function UpgradePage() {
               border: currentTier === "free" ? `1px solid ${stellarColor}` : "0.5px solid #1e1e1e",
             }}
           >
-            <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>reflection</h3>
+            <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>free</h3>
             <p style={{ fontSize: "11px", color: "#555", marginBottom: "16px" }}>free forever</p>
             <div style={{ fontSize: "32px", fontWeight: 300, marginBottom: "24px" }}>
               $0<span style={{ fontSize: "12px", color: "#555" }}>/month</span>
             </div>
             <ul className="space-y-3 mb-6">
               {[
-                "1 daily reflection prompt",
-                "7 pillar framework",
-                "basic constellation view",
-                "30-day history",
+                "every observation of the day",
+                "your seven-point constellation",
+                "three polaris questions each week",
+                "the span of time behind each observation",
               ].map((feature, i) => (
                 <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "#888" }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2">
@@ -220,7 +220,7 @@ export default function UpgradePage() {
             )}
           </div>
 
-          {/* Pro */}
+          {/* Full (tier id stays `pro`) */}
           <div
             className="flex-1 p-6 rounded-2xl relative"
             style={{
@@ -232,38 +232,35 @@ export default function UpgradePage() {
               className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs"
               style={{ background: stellarColor, color: "#0A0A0A" }}
             >
-              pro
+              full
             </div>
-            <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>pro</h3>
+            <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>full</h3>
             <p style={{ fontSize: "11px", color: "#555", marginBottom: "16px" }}>
-              full access · signal & observatory experience modes in settings
+              full access
             </p>
             <div style={{ fontSize: "32px", fontWeight: 300, marginBottom: "24px" }}>
               {billingPeriod === "yearly" ? (
                 <>
                   $99
                   <span style={{ fontSize: "12px", color: "#555" }}>/year</span>
-                  <span style={{ fontSize: "11px", color: "#555", display: "block", marginTop: "4px" }}>
-                    first month free
-                  </span>
                 </>
               ) : (
                 <>
                   $12.99
                   <span style={{ fontSize: "12px", color: "#555" }}>/month</span>
                   <span style={{ fontSize: "11px", color: "#555", display: "block", marginTop: "4px" }}>
-                    or $99/year. first month free
+                    or $99/year
                   </span>
                 </>
               )}
             </div>
             <ul className="space-y-3 mb-6">
               {[
-                "every observation traced to the entries behind it",
-                "the reading underneath an observation",
-                "polaris, 800 weekly tokens",
-                "weekly synthesis and yearly recap",
-                "first month free. cancel any time.",
+                "every daily observation",
+                "more polaris room each week",
+                "a daily point to stay close to",
+                "a weekly look at what shifted",
+                "a yearly look across your timeline",
               ].map((feature, i) => (
                 <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "#FFFDFD" }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={stellarColor} strokeWidth="2">
@@ -285,7 +282,7 @@ export default function UpgradePage() {
                 className="w-full py-3 rounded-lg text-center text-xs"
                 style={{ background: "#1a1a1a", color: "#666" }}
               >
-                gifted constellation already includes pro access
+                your gifted constellation already includes full access
               </div>
             ) : (
               <button
@@ -307,7 +304,11 @@ export default function UpgradePage() {
                   e.currentTarget.style.borderColor = stellarColor;
                 }}
               >
-                {isLoading ? "loading..." : "go pro, $12.99/month"}
+                {isLoading
+                  ? "loading..."
+                  : billingPeriod === "yearly"
+                    ? "continue with full, $99/year"
+                    : "continue with full, $12.99/month"}
               </button>
             )}
           </div>
@@ -321,7 +322,7 @@ export default function UpgradePage() {
               border: `1px solid ${stellarColor}`,
             }}
           >
-            <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>pro</h3>
+            <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>full</h3>
             <p style={{ fontSize: "11px", color: "#555", marginBottom: "16px" }}>
               your account already has full access
             </p>
@@ -342,14 +343,6 @@ export default function UpgradePage() {
         )}
 
         <p style={{ fontSize: "11px", color: "#444", marginTop: "40px", textAlign: "center" }}>
-          signal and observatory are experience styles in{" "}
-          <Link href="/settings" style={{ color: stellarColor }} className="hover:underline">
-            settings
-          </Link>
-          {" — available on pro."}
-        </p>
-
-        <p style={{ fontSize: "11px", color: "#444", marginTop: "16px", textAlign: "center" }}>
           questions? read our{" "}
           <Link href="/faq" style={{ color: stellarColor }} className="hover:underline">
             frequently asked questions

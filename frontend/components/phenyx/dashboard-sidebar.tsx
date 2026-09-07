@@ -1,42 +1,70 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSelectedLayoutSegment } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { useTier, applyTierUI } from "@/lib/use-tier";
+import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { trackTabVisit, trackTabDuration } from "@/lib/analytics";
 
 /**
  * Nav items in fixed product order. Rendered in array order — never sorted.
- * (Daily, Polaris, Constellation, Profile.)
+ * (Daily, Polaris, Constellation, You.) Settings is not a tab: it is reached
+ * from the gear in the account row and lives at /dashboard/settings.
  */
 const TABS = [
   { id: "daily", label: "daily" },
   { id: "polaris", label: "polaris" },
   { id: "constellation", label: "constellation" },
-  { id: "profile", label: "profile" },
+  { id: "you", label: "you" },
 ] as const;
 
+/** The brand orb carries the user's stellar color (`--s`), personalising the mark. */
+const ORB_STYLE = {
+  background:
+    "radial-gradient(circle at 42% 42%, var(--s) 0%, var(--s) 42%, color-mix(in srgb, var(--s) 55%, transparent) 60%, transparent 100%)",
+  boxShadow: "0 0 10px color-mix(in srgb, var(--s) 40%, transparent)",
+} as const;
+
+/** First word of a display name; "you" when there is none to show. */
+function firstName(displayName: string | null | undefined): string {
+  const first = displayName?.trim().split(/\s+/)[0];
+  return first || "you";
+}
+
+async function fetchFirstName(userId: string): Promise<string> {
+  const { data } = await supabase
+    .from("user_profiles")
+    .select("display_name")
+    .eq("id", userId)
+    .maybeSingle();
+  return firstName(data?.display_name);
+}
+
 /**
- * Persistent left sidebar for the dashboard shell. Lives in the dashboard layout
- * so it does NOT remount on tab change — Constellation canvas/RAF state survives
- * navigating away and back. The active tab derives from the route segment (no
- * client-only tab state that can desync from the URL).
+ * Persistent left sidebar for the dashboard shell (v244). Lives in the dashboard
+ * layout so it does NOT remount on tab change — Constellation canvas/RAF state
+ * survives navigating away and back. The active tab derives from the route
+ * segment (no client-only tab state that can desync from the URL).
  *
- * Tier-dependent UI (upgrade button visibility + footer badge label) is applied
- * through the single applyTierUI() authority on load and on any tier change; the
- * upgrade button and badge are always rendered and only toggled, so their DOM
- * identity stays stable.
+ * Top to bottom: brand block (stellar orb + PHENYX + plan pill), the four tab
+ * links, and the account row (first name + settings gear). Hidden at or below
+ * 760px, where MobileBottomNav takes over.
+ *
+ * The plan pill's label is applied through the single applyTierUI() authority
+ * on load and on any tier change; the pill is always rendered and only mutated,
+ * so its DOM identity stays stable.
  */
 export function DashboardSidebar() {
   const router = useRouter();
   const segment = useSelectedLayoutSegment();
   const { tier } = useTier();
+  const { openId } = useSettingsModals();
 
-  const upgradeRef = useRef<HTMLButtonElement>(null);
   const badgeRef = useRef<HTMLSpanElement>(null);
+  const [name, setName] = useState("you");
+  const isSettings = segment === "settings";
 
   // Engagement instrumentation (PHE-35). The sidebar persists and observes the
   // active route segment, so its segment change is the single source of truth
@@ -47,23 +75,49 @@ export function DashboardSidebar() {
   const activeTabRef = useRef<string | null>(null);
   const enteredAtRef = useRef<number>(Date.now());
 
-  // Authenticated shell: bounce to sign-in if there is no session. Runs once on
-  // mount of the persistent sidebar (does not re-run on tab change).
+  // Authenticated shell: bounce to sign-in if there is no session, otherwise
+  // read the display name once for the account row. Runs on mount of the
+  // persistent sidebar (does not re-run on tab change).
   useEffect(() => {
     let active = true;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (active && !user) router.replace("/signin");
+      if (!active) return;
+      if (!user) {
+        router.replace("/signin");
+        return;
+      }
+      const next = await fetchFirstName(user.id);
+      if (active) setName(next);
     })();
     return () => {
       active = false;
     };
   }, [router]);
 
+  // The edit-profile modal can change the display name; re-read it when that
+  // modal closes so the account row never shows a stale name.
+  const prevOpenRef = useRef(openId);
+  useEffect(() => {
+    const closedEditProfile = prevOpenRef.current === "edit-profile" && openId === null;
+    prevOpenRef.current = openId;
+    if (!closedEditProfile) return;
+    let active = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !active) return;
+      const next = await fetchFirstName(user.id);
+      if (active) setName(next);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [openId]);
+
   // The one authority for tier-dependent shell UI. Re-applied on every tier
   // change; toggles via DOM mutation rather than conditional unmount.
   useEffect(() => {
-    applyTierUI(tier, { upgradeButton: upgradeRef.current, badge: badgeRef.current });
+    applyTierUI(tier, { badge: badgeRef.current });
   }, [tier]);
 
   // Tab engagement: on each segment change, emit a tab_duration for the tab
@@ -86,8 +140,23 @@ export function DashboardSidebar() {
   return (
     <nav
       aria-label="dashboard"
-      className="flex h-screen w-[240px] shrink-0 flex-col border-r border-[#1a1a1a] bg-[#0A0A0A] px-5 py-7 sticky top-0"
+      className="sticky top-0 flex h-screen w-[240px] shrink-0 flex-col border-r border-[#1a1a1a] bg-[#0A0A0A] px-5 py-7 [@media(max-width:760px)]:hidden"
     >
+      {/* Brand block: stellar orb + wordmark + plan pill. Pill text + data-tier
+          owned by applyTierUI; the static "free" / data-tier here is the
+          pre-load default. */}
+      <div className="mb-2 flex items-center gap-2.5 border-b border-[#FFFDFD]/[0.07] pb-[18px]">
+        <span aria-hidden="true" className="h-[18px] w-[18px] shrink-0 rounded-full" style={ORB_STYLE} />
+        <span className="text-[12.5px] font-semibold tracking-[0.14em] text-[#FFFDFD]">PHENYX</span>
+        <span
+          ref={badgeRef}
+          data-tier="free"
+          className="ml-auto rounded-full border border-[rgba(var(--s-rgb),0.3)] px-[9px] py-[3px] text-[10px] tracking-[0.12em] uppercase text-[rgba(var(--s-rgb),0.9)]"
+        >
+          free
+        </span>
+      </div>
+
       {/* Tab nav — rendered in TABS order, never sorted. */}
       <ul className="flex flex-col gap-1">
         {TABS.map((tab) => {
@@ -97,10 +166,10 @@ export function DashboardSidebar() {
               <Link
                 href={`/dashboard/${tab.id}`}
                 aria-current={isActive ? "page" : undefined}
-                className={`block rounded-lg px-3 py-2 text-[14px] font-light lowercase tracking-wide transition-colors motion-reduce:transition-none ${
+                className={`block rounded-xl px-3 py-[11px] text-[14px] lowercase transition-colors motion-reduce:transition-none ${
                   isActive
-                    ? "bg-[#141414] text-[#FFFDFD]"
-                    : "text-[#FFFDFD]/50 hover:text-[#FFFDFD]/80"
+                    ? "bg-[#FFFDFD]/[0.05] font-medium text-[#FFFDFD]/90"
+                    : "text-[#FFFDFD]/50 hover:bg-[#FFFDFD]/[0.04] hover:text-[#FFFDFD]/70"
                 }`}
               >
                 {tab.label}
@@ -110,28 +179,37 @@ export function DashboardSidebar() {
         })}
       </ul>
 
-      {/* Upgrade CTA — hidden for pro/gifted via applyTierUI (display:none). */}
-      <button
-        ref={upgradeRef}
-        type="button"
-        onClick={() => router.push("/upgrade")}
-        className="mt-6 w-full rounded-full border border-[#FFFDFD]/15 px-4 py-2.5 text-[13px] font-light lowercase tracking-wide text-[#FFFDFD]/80 transition-colors hover:border-[#FFFDFD]/40 hover:text-[#FFFDFD] motion-reduce:transition-none"
-      >
-        upgrade to pro
-      </button>
-
-      {/* Footer: PHENYX logo + tier badge. Badge text + data-tier owned by
-          applyTierUI; the static "free" / data-tier here is the pre-load default. */}
-      <footer className="mt-auto flex items-center gap-2.5 pt-6">
-        <Image src="/phenyx-logo.png" alt="PHENYX" width={20} height={20} className="opacity-90" />
-        <span
-          ref={badgeRef}
-          data-tier="free"
-          className="rounded-full border border-[#FFFDFD]/10 px-2 py-0.5 text-[11px] lowercase tracking-wide text-[#FFFDFD]/45"
+      {/* Account row: first name + settings gear. The gear lights up in the
+          accent while the settings segment is active. */}
+      <div className="mt-auto flex items-center gap-[11px] border-t border-[#FFFDFD]/[0.07] pt-3.5">
+        <span className="min-w-0 truncate text-[13.5px] font-medium text-[#FFFDFD]">{name}</span>
+        <button
+          type="button"
+          aria-label="settings"
+          aria-current={isSettings ? "page" : undefined}
+          onClick={() => router.push("/dashboard/settings")}
+          className={`ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none ${
+            isSettings
+              ? "border-[rgba(var(--s-rgb),0.35)] bg-[rgba(var(--s-rgb),0.10)] text-[#FFFDFD]"
+              : "border-[#FFFDFD]/10 text-[#FFFDFD]/70 hover:border-[#FFFDFD]/20 hover:bg-[#FFFDFD]/[0.05] hover:text-[#FFFDFD]"
+          }`}
         >
-          free
-        </span>
-      </footer>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+      </div>
     </nav>
   );
 }

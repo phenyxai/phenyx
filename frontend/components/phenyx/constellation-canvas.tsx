@@ -31,6 +31,7 @@ const PADDING = 46; // keeps edge nodes + labels off the canvas border
 const BASE_RADIUS = 5.5;
 const LOCKED_RADIUS = 4;
 const HIT_SLOP = 14;
+const LABEL_SAFE_X = 14; // a label never starts or ends closer than this to a side edge
 
 interface NodePixel {
   pillar: Pillar;
@@ -187,15 +188,28 @@ export function ConstellationCanvas({
         }
       }
 
-      // Label.
+      // Label, kept inside the canvas: near a side edge the text anchors to
+      // that edge instead of centring on the point, and the baseline is
+      // clamped so a low or high point never pushes its name off the sky.
+      const label = pillarLabel(node.pillar);
       ctx.font = "300 11px system-ui, -apple-system, sans-serif";
-      ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = detail.active
         ? "rgba(255,253,253,0.6)"
         : "rgba(255,253,253,0.28)";
-      const labelY = node.y + node.r + 12;
-      ctx.fillText(pillarLabel(node.pillar), node.x, labelY);
+      const half = ctx.measureText(label).width / 2;
+      let labelX = node.x;
+      let align: CanvasTextAlign = "center";
+      if (node.x - half < LABEL_SAFE_X) {
+        align = "left";
+        labelX = LABEL_SAFE_X;
+      } else if (node.x + half > w - LABEL_SAFE_X) {
+        align = "right";
+        labelX = w - LABEL_SAFE_X;
+      }
+      ctx.textAlign = align;
+      const labelY = Math.max(16, Math.min(h - 12, node.y + node.r + 12));
+      ctx.fillText(label, labelX, labelY);
     }
   }, []);
 
@@ -391,7 +405,7 @@ export function ConstellationCanvas({
         your constellation
       </p>
       <p id={helpId} className="sr-only">
-        seven points. use the arrow keys to move between them, enter to open one, escape to close it.
+        seven points in your constellation. use the arrow keys to move between them, enter to open one, and escape to close it.
       </p>
       <p id={liveId} className="sr-only" role="status" aria-live="polite">
         {selectedPillar

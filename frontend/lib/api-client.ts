@@ -56,14 +56,31 @@ export interface ProfileSnapshotItem {
   sentence: string
 }
 
+/** How full is paid for; null when there is no billing (free, gifted). */
+export type BillingPeriod = "monthly" | "yearly"
+
+/** Shape of `GET /profile/overview` (backend `ProfileOverviewResponse`). */
 export interface ProfileOverview {
   display_name: string | null
+  email: string | null
+  /** "with PHENYX since <month year>", or null when unknown. */
+  joined: string | null
+  stellar_color: string | null
   /** Platform slugs for the header badges; empty when nothing is connected. */
   connected_platforms: string[]
-  /** Behavioral snapshot — the engine returns exactly 3 items. */
+  /** "what has stayed with you" constants. */
+  held: { title: string; body: string }[]
+  /** Behavioral snapshot — kept for older clients; the you tab does not render it. */
   snapshot: ProfileSnapshotItem[]
   /** Forward-looking foresight line; null until the engine has generated one. */
   foresight: string | null
+  /** `free` or `pro` — gifted is never returned as product copy. */
+  tier: "free" | "pro"
+  notification_prefs?: Record<string, boolean>
+  /** ISO timestamp of the next monthly charge; null on free, yearly, gifted, or when Stripe is unreachable. */
+  renews_at: string | null
+  /** `monthly` (subscription), `yearly` (one-time), or null (free, gifted). */
+  billing_period: BillingPeriod | null
 }
 
 export async function fetchProfileOverview(): Promise<ProfileOverview | null> {
@@ -88,10 +105,17 @@ export async function fetchProfileOverview(): Promise<ProfileOverview | null> {
 
   return {
     display_name: (profile as { display_name: string | null } | null)?.display_name ?? null,
+    email: user.email ?? null,
+    joined: null,
+    stellar_color: null,
     connected_platforms:
       (persona as { connected_platforms: string[] | null } | null)?.connected_platforms ?? [],
+    held: [],
     snapshot: [],
     foresight: null,
+    tier: "free",
+    renews_at: null,
+    billing_period: null,
   }
 }
 
@@ -110,13 +134,16 @@ export interface PolarisUsage {
   total_tokens: number
 }
 
-/** Weekly Polaris token allowance snapshot (PHE-27), returned alongside each ask. */
+/**
+ * Weekly Polaris allowance snapshot (PHE-27 / PHE-94), returned alongside each
+ * ask. Counted in QUESTIONS: one completed ask is one unit.
+ */
 export interface PolarisAllowance {
   /** ISO week start (Monday) in UTC — the polaris_token_usage.week key. */
   week: string
-  /** Tokens debited this week so far. */
+  /** Questions asked this week so far. */
   used: number
-  /** Tier-derived weekly limit (0 free / 800 pro|gifted). */
+  /** Tier-derived weekly question limit (3 free / 40 full). */
   limit: number
   /** max(0, limit - used). */
   remaining: number
@@ -186,7 +213,7 @@ export interface PolarisThreadSummary {
 export interface PolarisThreadsResponse {
   threads: PolarisThreadSummary[]
   suggested_questions: SuggestedQuestion[]
-  /** Live weekly token snapshot for the idle/chat token pill. */
+  /** Live weekly question allowance for the idle/chat allowance badge. */
   allowance?: PolarisAllowance
 }
 

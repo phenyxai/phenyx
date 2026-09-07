@@ -1,18 +1,23 @@
 "use client";
 
-// PHE-74 — Constellation detail panel.
+// PHE-74 / PHE-93 — Constellation detail panel.
 //
 // Three states: overview | pillar | cluster. Back always steps one level.
-// Overview: "your story, right now" + per-pillar summaries.
-// Pillar: name, area count, pillar text, source tags, cluster cards.
+// Overview: "what you are made of" + one story row per point.
+// Pillar: name, area count, pillar text, source tags, the line that says what
+// the areas amount to when read together (held back on free), area cards.
 // Cluster: observations with evidence traces (PHE-71 EvidenceTrace).
 
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { EvidenceTrace } from "@/components/phenyx/evidence-trace";
+import { useTier } from "@/lib/use-tier";
 import {
   ALL_PILLARS,
+  newObservationCount,
   pillarLabel,
   relativeTime,
+  storyLine,
+  synthesisLine,
   type Cluster,
   type ClusterObservation,
   type ConstellationData,
@@ -37,6 +42,8 @@ export function ConstellationPanel({
   onSelectCluster,
   onBack,
 }: ConstellationPanelProps) {
+  const { isPro } = useTier();
+
   if (selectedPillar && selectedClusterId) {
     const detail = data.pillars[selectedPillar];
     const cluster = detail.clusters.find((c) => c.id === selectedClusterId);
@@ -56,6 +63,7 @@ export function ConstellationPanel({
       <PillarDetailView
         stellar={data.stellar_color}
         detail={data.pillars[selectedPillar]}
+        isPro={isPro}
         onBack={onBack}
         onSelectCluster={onSelectCluster}
       />
@@ -73,12 +81,8 @@ function Overview({
 }) {
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-[13px] font-light lowercase text-[#FFFDFD]/45">
-        tap any point to explore
-      </p>
-
       <section>
-        <SectionLabel>your story, right now</SectionLabel>
+        <SectionLabel>what you are made of</SectionLabel>
         {data.portrait ? (
           <p className="text-[14px] font-light leading-relaxed text-[#FFFDFD]/80">
             {data.portrait}
@@ -90,54 +94,84 @@ function Overview({
         )}
       </section>
 
-      <section>
-        <SectionLabel>pillars</SectionLabel>
-        <ul className="flex flex-col">
-          {ALL_PILLARS.map((pillar) => {
-            const detail = data.pillars[pillar];
-            return (
-              <li key={pillar}>
-                <button
-                  type="button"
-                  onClick={() => onSelectPillar(pillar)}
-                  className="flex w-full cursor-pointer items-center justify-between gap-3 border-b border-[#FFFDFD]/6 py-3 text-left transition-colors hover:text-[#FFFDFD] motion-reduce:transition-none"
-                >
-                  <span
-                    className={`flex items-center gap-2 text-[13px] font-light lowercase ${
-                      detail.active ? "text-[#FFFDFD]/75" : "text-[#FFFDFD]/30"
-                    }`}
-                  >
-                    {pillarLabel(pillar)}
-                    {detail.has_new && <PulsingDot color={data.stellar_color} />}
-                  </span>
-                  <span className="text-[12px] font-light tabular-nums text-[#FFFDFD]/35">
-                    {detail.clusters.length
-                      ? `${detail.clusters.length} area${detail.clusters.length === 1 ? "" : "s"}`
-                      : detail.observation_count}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      <ul className="flex flex-col gap-1.5 border-t border-[#FFFDFD]/6 pt-5">
+        {ALL_PILLARS.map((pillar) => (
+          <li key={pillar}>
+            <StoryRow
+              detail={data.pillars[pillar]}
+              stellar={data.stellar_color}
+              onOpen={() => onSelectPillar(pillar)}
+            />
+          </li>
+        ))}
+      </ul>
     </div>
+  );
+}
+
+// One point, read as a line of story rather than a tally: the point's name,
+// how many of its observations are new, and the first sentence of what it
+// holds (its lens while it has nothing of its own yet).
+function StoryRow({
+  detail,
+  stellar,
+  onOpen,
+}: {
+  detail: PillarDetail;
+  stellar: string;
+  onOpen: () => void;
+}) {
+  const newCount = newObservationCount(detail);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full rounded-[12px] border border-[rgba(255,253,253,0.045)] px-5 py-[18px] text-left transition-colors hover:border-[rgba(var(--s-rgb),0.35)] hover:bg-[#0e0e0e] motion-reduce:transition-none max-[760px]:px-[18px] max-[760px]:py-4"
+    >
+      <div className="mb-1.5 flex items-center gap-2.5">
+        <span
+          className={`text-[10.5px] font-semibold uppercase tracking-[0.14em] ${
+            detail.active
+              ? "text-[rgba(var(--s-rgb),0.9)]"
+              : "text-[rgba(var(--s-rgb),0.5)]"
+          }`}
+        >
+          {pillarLabel(detail.pillar)}
+        </span>
+        {newCount > 0 && (
+          <span className="ml-auto flex items-center gap-1.5 rounded-full border border-[rgba(var(--s-rgb),0.28)] px-[7px] py-[2px] text-[9.5px] uppercase tracking-[0.08em] text-[rgba(var(--s-rgb),0.75)]">
+            <PulsingDot color={stellar} />
+            {newCount} new
+          </span>
+        )}
+      </div>
+      <p
+        className={`text-[13px] font-light leading-[1.55] ${
+          detail.active ? "text-[#FFFDFD]/72" : "text-[#FFFDFD]/45"
+        }`}
+      >
+        {storyLine(detail)}
+      </p>
+    </button>
   );
 }
 
 function PillarDetailView({
   stellar,
   detail,
+  isPro,
   onBack,
   onSelectCluster,
 }: {
   stellar: string;
   detail: PillarDetail;
+  isPro: boolean;
   onBack: () => void;
   onSelectCluster: (clusterId: string) => void;
 }) {
   const areaCount = detail.clusters.length;
   const hasSources = detail.source_platforms.length > 0;
+  const readTogether = synthesisLine(detail, isPro);
 
   return (
     <div className="flex flex-col gap-6">
@@ -187,8 +221,23 @@ function PillarDetailView({
         </section>
       )}
 
+      {/* What the areas amount to when read together, composed from the areas
+          themselves so it cannot drift from what sits underneath. On free the
+          point shows its areas and only says that a full reading exists. */}
+      {readTogether && (
+        <p
+          className={
+            readTogether.locked
+              ? "text-[11.5px] font-light italic tracking-[0.04em] text-[rgba(var(--s-rgb),0.62)]"
+              : "text-[13px] font-light italic leading-[1.75] text-[#FFFDFD]/50"
+          }
+        >
+          {readTogether.text}
+        </p>
+      )}
+
       <section>
-        <SectionLabel>clusters</SectionLabel>
+        <SectionLabel>areas</SectionLabel>
         {detail.clusters.length === 0 ? (
           <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
             no observations yet.

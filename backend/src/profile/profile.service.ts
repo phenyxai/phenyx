@@ -1,20 +1,30 @@
 import { HttpException, Injectable, Logger } from "@nestjs/common";
+import type { Stripe } from "stripe/cjs/stripe.core.js";
 import { SupabaseService } from "../supabase/supabase.service";
 import { PassphraseService } from "../auth/passphrase.service";
+import { StripeService } from "../stripe/stripe.service";
 import { pickHeldConstants, type HeldConstant } from "./held";
 
 /**
- * PHE-30 / PHE-38 / PHE-75 — read model behind `GET /profile/overview`.
+ * PHE-30 / PHE-38 / PHE-75 / PHE-95 — read model behind `GET /profile/overview`.
  *
  * Identity (name, email, joined, tier as free|pro), connected platforms,
- * stellar colour, and four "what has held" constants. Snapshot/foresight are
- * still returned for older clients but Profile v67 does not render them.
+ * stellar colour, four "what has stayed with you" constants, and (v244) the
+ * billing shape behind the subscription modal: how full is paid for and, on a
+ * monthly subscription, when it next renews. Snapshot/foresight are still
+ * returned for older clients but the you tab does not render them.
  */
 
 export interface ProfileSnapshotItem {
   pillar_label: string;
   sentence: string;
 }
+
+/** How full is paid for. `null` when there is no billing (free, gifted). */
+export type BillingPeriod = "monthly" | "yearly";
+
+/** Stripe is consulted per request; a slow answer must not hold the overview. */
+const RENEWAL_LOOKUP_TIMEOUT_MS = 3000;
 
 export const NOTIFICATION_DEFAULTS = {
   new_observations: true,
@@ -45,6 +55,13 @@ export interface ProfileOverviewResponse {
   /** `free` or `pro` — gifted is never returned as product copy. */
   tier: "free" | "pro";
   notification_prefs: NotificationPrefs;
+  /**
+   * ISO timestamp of the next charge on a monthly subscription, read live from
+   * Stripe. Null on free, yearly, gifted, or whenever Stripe cannot be reached.
+   */
+  renews_at: string | null;
+  /** `monthly` (subscription), `yearly` (one-time), or null (free, gifted). */
+  billing_period: BillingPeriod | null;
 }
 
 const SNAPSHOT_LIMIT = 3;
@@ -77,7 +94,8 @@ export class ProfileService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly passphrase: PassphraseService
+    private readonly passphrase: PassphraseService,
+    private readonly stripe: StripeService
   ) {}
 
   async getOverview(userId: string): Promise<ProfileOverviewResponse> {
@@ -87,7 +105,9 @@ export class ProfileService {
       await Promise.all([
         supabase
           .from("user_profiles")
-          .select("display_name, tier, stellar_color, created_at, prompt_times")
+          .select(
+            "display_name, tier, stellar_color, created_at, prompt_times, stripe_subscription_id, subscription_status"
+          )
           .eq("id", userId)
           .maybeSingle(),
         supabase
@@ -131,8 +151,20 @@ export class ProfileService {
     }[];
 
     const rawTier = (profileRes.data?.tier as string | null) ?? "free";
+    const tier = rawTier === "free" ? "free" : "pro";
     const promptTimes =
       (profileRes.data?.prompt_times as Record<string, unknown> | null) ?? {};
+    const subscriptionId =
+      (profileRes.data?.stripe_subscription_id as string | null) ?? null;
+    const billingPeriod = resolveBillingPeriod(
+      tier,
+      (profileRes.data?.subscription_status as string | null) ?? null,
+      subscriptionId
+    );
+    const renewsAt =
+      billingPeriod === "monthly" && subscriptionId
+        ? await this.lookupRenewal(subscriptionId)
+        : null;
 
     return {
       display_name: (profileRes.data?.display_name as string | null) ?? null,
@@ -143,9 +175,32 @@ export class ProfileService {
       held: pickHeldConstants(this.buildHeld(traits, state)),
       snapshot: this.buildSnapshot(traits, state),
       foresight: (state?.foresight as string | null) ?? null,
-      tier: rawTier === "free" ? "free" : "pro",
+      tier,
       notification_prefs: readStoredPrefs(promptTimes),
+      renews_at: renewsAt,
+      billing_period: billingPeriod,
     };
+  }
+
+  /**
+   * Next charge date for a monthly subscription, straight from Stripe (no
+   * cache). Best effort: any error, missing key, or slow answer yields null so
+   * the overview still returns.
+   */
+  private async lookupRenewal(subscriptionId: string): Promise<string | null> {
+    try {
+      const stripe = this.stripe.getClient();
+      const subscription = await withTimeout(
+        stripe.subscriptions.retrieve(subscriptionId),
+        RENEWAL_LOOKUP_TIMEOUT_MS
+      );
+      return renewalFromSubscription(subscription);
+    } catch (err) {
+      this.logger.warn(
+        `renewal lookup failed for ${subscriptionId}: ${String(err)}`
+      );
+      return null;
+    }
   }
 
   async updateIdentity(
@@ -322,13 +377,66 @@ export class ProfileService {
   }
 }
 
+/** The you tab's identity line: "with PHENYX since <month year>". */
 export function formatJoined(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   const weekMs = 7 * 24 * 60 * 60 * 1000;
-  if (Date.now() - d.getTime() < weekMs) return "on phenyx since this week";
-  return `on phenyx since ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  if (Date.now() - d.getTime() < weekMs) return "with PHENYX since this week";
+  return `with PHENYX since ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
+ * How full is paid for, from the columns the Stripe webhook writes:
+ * `yearly_paid` is the one-time yearly price, a live subscription id means the
+ * monthly plan, and `gift` (or nothing on file) has no billing at all.
+ */
+export function resolveBillingPeriod(
+  tier: "free" | "pro",
+  subscriptionStatus: string | null,
+  subscriptionId: string | null
+): BillingPeriod | null {
+  if (tier !== "pro") return null;
+  if (subscriptionStatus === "yearly_paid") return "yearly";
+  if (subscriptionId) return "monthly";
+  return null;
+}
+
+/**
+ * ISO date of the next charge. Stripe API versions from 2025-03-31 carry
+ * `current_period_end` per subscription item; the earliest item period is the
+ * next charge. Older shapes still expose it on the subscription itself.
+ */
+export function renewalFromSubscription(
+  subscription: Pick<Stripe.Subscription, "items"> & {
+    current_period_end?: number | null;
+  }
+): string | null {
+  const ends: number[] = [];
+  for (const item of subscription.items?.data ?? []) {
+    const end = (item as { current_period_end?: unknown }).current_period_end;
+    if (typeof end === "number" && end > 0) ends.push(end);
+  }
+  if (ends.length === 0) {
+    const legacy = subscription.current_period_end;
+    if (typeof legacy === "number" && legacy > 0) ends.push(legacy);
+  }
+  if (ends.length === 0) return null;
+  return new Date(Math.min(...ends) * 1000).toISOString();
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`timed out after ${ms}ms`)),
+      ms
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 function readStoredPrefs(promptTimes: Record<string, unknown>): NotificationPrefs {

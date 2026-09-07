@@ -12,19 +12,20 @@ import {
   StatusLine,
 } from './modal-host'
 
-/** Verbatim pro feature lines from v67 (`phenyx_product_v67.html` MODAL_CONTENT.pro). */
+/** Verbatim from the v244 prototype (`MODAL_CONTENT.pro`, PHE-92). */
 const FEATURES = [
-  'every observation traced to the individual entries behind it, with dates and sources',
-  'the reading underneath an observation, and what it rests on',
-  'polaris: ask about any observation, grounded in your own signals',
-  'a weekly synthesis of how your constellation moved',
-  'your yearly recap, built from every week',
+  'where every observation came from, traced back to the day it happened',
+  'what sits under it, set against what you say about yourself',
+  'your seven points read together rather than one at a time',
+  'polaris, to ask about any of it in your own words',
+  'a weekly look at what shifted, and a yearly look back',
 ]
 
 /**
- * upgrade modal — the pro value proposition and checkout CTA. In-app CTAs hide
- * this from pro/gifted users upstream (PHE-21/26/30); it still renders correctly
- * if opened directly. The CTA starts a monthly pro Stripe checkout.
+ * upgrade modal: what full opens, and the checkout CTA. In-app CTAs hide this
+ * from full accounts upstream (PHE-21/26/30); it still renders correctly if
+ * opened directly. The CTA starts a monthly Stripe checkout. `pro` is the
+ * DB/enum value for the plan; the person only ever reads "full".
  */
 export function UpgradeModal() {
   const router = useRouter()
@@ -66,9 +67,11 @@ export function UpgradeModal() {
 
   return (
     <SettingsDialogContent aria-describedby={undefined}>
-      <ModalHeading title="phenyx pro" />
+      <ModalHeading title="what full opens" />
       <p className="mb-4 text-[12.5px] leading-relaxed text-[#888]">
-        the full observation layer on top of your constellation.
+        free shows you what is true. every observation of the day, and all
+        seven points of your constellation. full is how you find out why it is
+        true, what it means, and what to do about it.
       </p>
 
       <ul className="flex flex-col gap-3">
@@ -86,10 +89,10 @@ export function UpgradeModal() {
 
       <div className="flex flex-col gap-2">
         <PrimaryButton onClick={handleUpgrade} disabled={loading}>
-          {loading ? 'loading…' : 'go pro, $12.99/month'}
+          {loading ? 'loading…' : 'continue with full, $12.99/month'}
         </PrimaryButton>
         <p className="text-center text-[11.5px] text-[#888]">
-          or $99/year. your first month is free. cancel any time.
+          or $99/year. cancel any time.
         </p>
         {error && <StatusLine message={error} tone="error" />}
       </div>

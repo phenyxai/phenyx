@@ -6,7 +6,7 @@ import { localDayNumber } from "@/components/phenyx/daily-header";
 import {
   pickStillTrueForDay,
   type HeldConstant,
-} from "@/app/dashboard/profile/held";
+} from "@/app/dashboard/you/held";
 
 // ============================================================================
 // still true today: one constant from the record (PHE-70 / v67)

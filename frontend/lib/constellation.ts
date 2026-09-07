@@ -39,10 +39,19 @@ export function isLockedPillar(pillar: Pillar): pillar is LockedPillar {
   return (LOCKED_PILLARS as readonly string[]).includes(pillar);
 }
 
-/** Lowercase display label for a pillar (`self_creation` → `self creation`). */
-export function pillarLabel(pillar: Pillar): string {
-  return pillar.replace(/_/g, " ");
-}
+// Pure text helpers (the pillar label, the age line, the synthesis line, the
+// overview story rows) live in `./constellation-text` so they run under plain
+// node for unit tests; they are re-exported here so the app has one import path.
+export {
+  constellationAge,
+  firstSentence,
+  newObservationCount,
+  pillarLabel,
+  PILLAR_LENS,
+  storyLine,
+  synthesisLine,
+} from "./constellation-text";
+export type { ConstellationAge, SynthesisLine } from "./constellation-text";
 
 // ---------------------------------------------------------------------------
 // Deterministic layout. Positions are normalized [0,1] within the canvas box so
