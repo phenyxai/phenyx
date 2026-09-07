@@ -42,8 +42,8 @@ export function HowItWorksSection() {
         <div className="landing-vnext__how" data-reveal>
           <div className="landing-vnext__steps">
             {howItWorksCopy.cards.map((card) => (
-              <article className="landing-vnext__step" key={card.layer}>
-                <p className="landing-vnext__small-label">{card.layer}</p>
+              <article className="landing-vnext__step" key={card.title}>
+                <p className="landing-vnext__small-label">{card.kicker}</p>
                 <h3>{card.title}</h3>
                 <p>{card.body}</p>
               </article>
@@ -66,12 +66,12 @@ export function HowItWorksSection() {
               </div>
             </div>
             <div className="landing-vnext__privacy">
-              <p className="landing-vnext__small-label">{howItWorksCopy.privacyLabel}</p>
+              <p className="landing-vnext__small-label">{howItWorksCopy.evidenceLabel}</p>
               <div className="landing-vnext__privacy-grid">
-                {howItWorksCopy.privacyItems.map((item) => (
-                  <div key={item.promise}>
-                    <h4>{item.promise}</h4>
-                    <p>{item.detail}</p>
+                {howItWorksCopy.evidenceItems.map((item) => (
+                  <div key={item.title}>
+                    <h4>{item.title}</h4>
+                    <p>{item.body}</p>
                   </div>
                 ))}
               </div>
