@@ -20,7 +20,7 @@ export const INTRO_COPY: Record<DashboardTab, string> = {
     "polaris answers what you ask, using only what your constellation has already shown.",
   constellation:
     "each point is a pillar of your identity. tap one to see what it is built from.",
-  profile: "this is what we know about you so far, and where you can manage your data.",
+  you: "this is what we know about you so far, and where you can manage your data.",
 };
 
 export interface IntroBannerProps {

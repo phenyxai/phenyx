@@ -17,7 +17,7 @@ export interface TierState {
  * Reads the signed-in user's tier from user_profiles (keyed by `id`, = auth.users.id)
  * and exposes { tier, isPro } where isPro = hasFullAccess(tier) — true for pro and
  * gifted. The single tier source for the dashboard; Daily observation gating,
- * Constellation timeline gating, and the Profile tier card all read from here.
+ * Constellation timeline gating, and the you tab's plan badge all read from here.
  *
  * Defaults to "free" until the row resolves (and when signed out) so tier-gated UI
  * fails closed — a pro surface is never shown to an unknown/unauthenticated user.
@@ -50,26 +50,28 @@ export function useTier(): TierState {
 
 /**
  * The single authority for tier-dependent shell UI. A pure function of `tier`:
- * toggles the upgrade button's visibility and the tier badge's label/attribute by
- * mutating the DOM (display + textContent + data-tier) on stable elements — never
- * unmounting them — so badge/button keep DOM identity across passes. Called on
- * load and on any tier change.
+ * sets the plan pill's label/attribute (and, where a surface still renders one,
+ * the upgrade button's visibility) by mutating the DOM (display + textContent +
+ * data-tier) on stable elements — never unmounting them — so the pill keeps DOM
+ * identity across passes. Called on load and on any tier change.
  *
- *   - upgrade button: display:none when isPro, else visible.
- *   - tier badge: text reads isPro ? "pro" : "free" (gifted → "pro"; the word
- *     "gifted" is never surfaced as product copy). data-tier carries the raw tier
- *     for styling and analytics.
+ *   - upgrade button (optional): display:none when isPro, else visible. The v244
+ *     sidebar has no upgrade button, so this branch is a no-op when the element
+ *     is absent.
+ *   - plan pill: text reads isPro ? "full" : "free" (gifted → "full"; neither
+ *     "gifted" nor "pro" is ever surfaced as product copy). data-tier carries
+ *     the raw tier for styling and analytics.
  */
 export function applyTierUI(
   tier: string,
-  els: { upgradeButton: HTMLElement | null; badge: HTMLElement | null },
+  els: { upgradeButton?: HTMLElement | null; badge: HTMLElement | null },
 ): void {
   const isPro = hasFullAccess(tier);
   if (els.upgradeButton) {
     els.upgradeButton.style.display = isPro ? "none" : "";
   }
   if (els.badge) {
-    els.badge.textContent = isPro ? "pro" : "free";
+    els.badge.textContent = isPro ? "full" : "free";
     els.badge.dataset.tier = tier;
   }
 }

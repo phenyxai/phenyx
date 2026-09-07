@@ -20,7 +20,7 @@ import { StillTrueToday } from "@/components/phenyx/still-true-today";
 import {
   pickHeldConstants,
   type HeldConstant,
-} from "@/app/dashboard/profile/held";
+} from "@/app/dashboard/you/held";
 import {
   DailyFocus,
   useDailyFocus,

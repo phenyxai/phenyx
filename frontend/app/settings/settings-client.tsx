@@ -4,14 +4,14 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * Legacy /settings surface. v67 settings live on Profile; this route
+ * Legacy /settings surface. v244 settings live at /dashboard/settings; this route
  * forwards so gifted/pause copy is no longer reachable.
  */
 export default function SettingsClient() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/dashboard/profile");
+    router.replace("/dashboard/settings");
   }, [router]);
 
   return (

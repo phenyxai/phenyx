@@ -5,6 +5,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { hexToRgb } from '@/lib/stellar'
 import {
   Dialog,
   DialogOverlay,
@@ -87,6 +88,16 @@ export function SettingsModalsProvider({
   React.useEffect(() => {
     const stored = localStorage.getItem('phenyx_stellar_color')
     if (stored) setStellarColor(stored)
+    // The shell paints with `--s` / `--s-rgb` (sidebar orb, plan pill, gear).
+    // SessionColorProvider in the root layout owns those vars and reconciles
+    // them against user_profiles.stellar_color; this only fills them on a fresh
+    // load where nothing has set them yet, so the shell never renders colourless.
+    const root = document.documentElement
+    if (!root.style.getPropertyValue('--s')) {
+      const color = stored || STELLAR_DEFAULT
+      root.style.setProperty('--s', color)
+      root.style.setProperty('--s-rgb', hexToRgb(color))
+    }
   }, [])
 
   const openModal = React.useCallback((id: SettingsModalId) => setOpenId(id), [])

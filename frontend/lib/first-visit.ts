@@ -17,7 +17,7 @@ import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 // nothing — no hydration mismatch, no flash of a banner that is later hidden.
 // ============================================================================
 
-export type DashboardTab = "daily" | "polaris" | "constellation" | "profile";
+export type DashboardTab = "daily" | "polaris" | "constellation" | "you";
 
 const NS = "phenyx";
 
