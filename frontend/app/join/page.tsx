@@ -162,8 +162,8 @@ export default function JoinPage() {
       // Distinct copy for expired vs. wrong (verbatim per spec).
       setError(
         result.status === "expired"
-          ? "that code has expired. request a new one below."
-          : "that code didn't work. check it and try again."
+          ? "that code has run out. we can send a fresh one."
+          : "that one did not match. no rush, have another look."
       );
       setIsLoading(false);
     } catch {
@@ -469,10 +469,10 @@ export default function JoinPage() {
                 fontWeight: 300,
                 color: "rgba(255,253,253,.55)",
                 lineHeight: 1.7,
-                marginBottom: "24px",
+                marginBottom: "clamp(24px, 3.8vh, 40px)",
               }}
             >
-              a few things first.
+              just enough to make this space yours. you can change these later.
             </p>
 
             <form onSubmit={handleContinue} aria-label="create your account">
@@ -504,7 +504,7 @@ export default function JoinPage() {
                   type="email"
                   autoComplete="email"
                   aria-required="true"
-                  placeholder="we'll send a code to confirm it is you"
+                  placeholder="you@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="auth-input"
@@ -521,13 +521,13 @@ export default function JoinPage() {
                   type="password"
                   autoComplete="new-password"
                   aria-required="true"
-                  placeholder="a phrase or line that means something to you"
+                  placeholder="a private phrase you will remember"
                   value={passphrase}
                   onChange={(e) => setPassphrase(e.target.value)}
                   className="auth-input"
                 />
                 <p style={{ fontSize: "10px", color: "#444", marginTop: "8px", lineHeight: 1.6 }}>
-                  used with your name each time you return.
+                  you will use this with your name when you return.
                 </p>
               </div>
 

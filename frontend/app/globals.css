@@ -1106,7 +1106,10 @@
 
 /* v67 walkthrough layout (PHE-77). Primary action sits on one shared line.
    Form screens (join / sign-in / forgot) must NOT use --onb-block; they size
-   to their own content. */
+   to their own content. v244 (PHE-90): the block is a floor, not a fixed
+   height, so the intro's principles and the seven-chapter rail can run past
+   it; the action stays pinned to the block's bottom edge and the bottom
+   padding reserves its slot plus a 28px gap above it. */
 :root {
   --onb-block: 600px;
   --onb-pad: 44px;
@@ -1141,10 +1144,11 @@
   position: relative;
   width: 100%;
   max-width: 470px;
-  height: var(--onb-block);
+  height: auto;
   min-height: var(--onb-block);
   margin-top: var(--onb-mt);
-  padding: var(--onb-pad) var(--onb-side) calc(var(--onb-pad) + 118px);
+  padding: var(--onb-pad) var(--onb-side)
+    calc(var(--onb-action-bottom) + var(--onb-action-h) + 28px);
   display: flex;
   flex-direction: column;
   text-align: center;
@@ -1192,13 +1196,19 @@
   letter-spacing: .2em;
   text-transform: uppercase;
 }
+/* v244 (PHE-90) heading scale: two lines at most, balanced. */
 .onb-block .onb-h1 {
-  margin-bottom: 0;
+  margin: 0 auto;
+  max-width: 20ch;
   color: #fffdfd;
-  font-size: 21px;
+  font-size: clamp(23px, 2.5vw, 30px);
   font-weight: 300;
   letter-spacing: -.01em;
-  line-height: 1.26;
+  line-height: 1.16;
+  text-wrap: balance;
+}
+@media (max-width: 760px) {
+  .onb-block .onb-h1 { font-size: 22px; }
 }
 .onb-block .onb-h1 b { font-weight: 600; }
 .onb-block .onb-ey + .onb-h1 { margin-top: 0; }

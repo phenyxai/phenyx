@@ -15,6 +15,10 @@ type View = "signin" | "emailcode" | "otp" | "forgot";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// One message for every sign-in failure (empty fields, unknown name, wrong
+// passphrase, lockout) so nothing hints at which part was wrong.
+const SIGNIN_ERROR = "we need both of these to know it is you.";
+
 export default function SignInClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -101,7 +105,7 @@ export default function SignInClient() {
     // Both fields required before submit; the message is intentionally generic
     // (no hint about which field / whether the name exists).
     if (!name.trim() || !passphrase.trim()) {
-      setError("enter your name and passphrase to continue.");
+      setError(SIGNIN_ERROR);
       return;
     }
 
@@ -115,10 +119,10 @@ export default function SignInClient() {
         return;
       }
       // Single generic failure for unknown name / wrong passphrase / lockout.
-      setError("enter your name and passphrase to continue.");
+      setError(SIGNIN_ERROR);
       setIsLoading(false);
     } catch {
-      setError("enter your name and passphrase to continue.");
+      setError(SIGNIN_ERROR);
       setIsLoading(false);
     }
   };
@@ -265,7 +269,7 @@ export default function SignInClient() {
     fontWeight: 300,
     color: "rgba(255,253,253,.55)",
     lineHeight: 1.7,
-    marginBottom: "24px",
+    marginBottom: "clamp(24px, 3.8vh, 40px)",
   };
 
   const linkButtonStyles: React.CSSProperties = {

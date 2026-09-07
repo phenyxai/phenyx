@@ -216,7 +216,7 @@ export default function WelcomePage() {
             e.currentTarget.style.color = stellarColor;
           }}
         >
-          i&apos;m ready
+          continue
         </button>
       </div>
 
