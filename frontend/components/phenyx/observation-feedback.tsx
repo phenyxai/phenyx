@@ -6,7 +6,7 @@ import { postObservationFeedback } from "@/lib/api-client";
 import { trackObservationFeedback } from "@/lib/analytics";
 
 // ============================================================================
-// ObservationFeedback: v67 `does this land?` (PHE-72)
+// ObservationFeedback: `how does this read to you?` (PHE-72 / v67, PHE-92 / v244)
 // ----------------------------------------------------------------------------
 // Expanded card, below evidence/underneath. Three buttons, then confirm copy
 // plus `change it`. Verdicts stored as new | known | reading (never shown).
@@ -30,10 +30,10 @@ export interface ObservationFeedbackProps {
 }
 
 const CONFIRM: Record<ObservationVerdict, string> = {
-  new: "noted as something you had not seen. this changes what surfaces next.",
-  known: "noted as something you already knew. this changes what surfaces next.",
+  new: "noted as something you had not seen. we will keep that in mind when choosing what to bring forward next.",
+  known: "noted as something you already knew. we will keep that in mind when choosing what to bring forward next.",
   reading:
-    "flagged: the records are right, the reading is not. this changes what surfaces next.",
+    "noted: the source details may be right, but this observation does not feel like you. we will keep that in mind when choosing what to bring forward next.",
 };
 
 const BUTTONS: { verdict: ObservationVerdict; label: string; negative?: boolean }[] = [
@@ -183,7 +183,7 @@ export function ObservationFeedback({
               margin: "0 0 7px",
             }}
           >
-            does this land?
+            how does this read to you?
           </p>
           <div
             className="phenyx-fb-row"

@@ -12,16 +12,19 @@ export type PaidAccessTier = "pro" | "gifted";
  * A tier change takes effect on the NEXT gated read: capabilities are resolved
  * per-request from the freshly-read tier, never cached.
  *
- * v244 commercial model:
- * - Free sees every observation body. Evidence traces are limited to the first
- *   two of the local day. Underneath, daily focus, weekly synthesis, and yearly
- *   recap are full-only.
+ * v244 commercial model (PHE-92, PHE-94; v67 gave free two traces a day and
+ * no Polaris):
+ * - Free sees every observation of the day, every body, and the time span each
+ *   one rests on. The evidence trace is never served to free: the door is shown
+ *   on every card and opens none. Underneath, daily focus, weekly synthesis,
+ *   and yearly recap are full-only.
  * - Polaris is open on both tiers and metered by QUESTIONS, not tokens: 3 a
- *   week on free, 40 a week on full (PHE-94). Free hits the upgrade modal at
- *   the limit; full is offered the $4.99 top-up.
- * - Full is $12.99/month or $99/year.
- * - Grandfathered `gifted` rows resolve identically to pro. Neither "gifted"
- *   nor "pro" is ever product copy; the paid tier is called "full".
+ *   week on free, 40 a week on full. Free hits the upgrade modal at the limit;
+ *   full is offered the $4.99 top-up.
+ * - Full (`pro` in the DB) is $12.99/month or $99/year. The person only ever
+ *   reads "full"; "pro" is the enum value, never product copy.
+ * - Grandfathered `gifted` rows resolve identically to pro. The word "gifted"
+ *   is never product copy.
  */
 export interface TierCapabilities {
   /**
@@ -38,8 +41,11 @@ export interface TierCapabilities {
    */
   observationsUnlocked: number;
   /**
-   * How many evidence traces (`where this comes from` / citations / provenance)
-   * leave the server per local day. Free: 2. Pro: Infinity.
+   * How many evidence traces (`what this rests on` / citations / provenance)
+   * leave the server. Free: 0 (v244: the trace is wholly behind full; a served
+   * free row keeps `{ sig, recs }` and its time span so the door has a name).
+   * Pro: Infinity. The gate indexes the all-time `surfaced_at DESC` list, so a
+   * finite budget means "the N freshest rows", not N fresh ones each day.
    */
   evidenceTracesPerDay: number;
   /**
@@ -59,7 +65,7 @@ export interface TierCapabilities {
   trackingOverTime: boolean;
   /** Whether served payloads include provenance (`meta_label`) fields. */
   fullProvenance: boolean;
-  /** Pro-only underneath / "something sits under this one" readings. */
+  /** Full-only underneath / "what sits under this" readings. */
   underneath: boolean;
   /** Pro-only daily pillar focus. */
   dailyFocus: boolean;
@@ -93,7 +99,7 @@ const PRO_CAPABILITIES: TierCapabilities = {
 const FREE_CAPABILITIES: TierCapabilities = {
   paid: false,
   observationsUnlocked: Infinity,
-  evidenceTracesPerDay: 2,
+  evidenceTracesPerDay: 0,
   polarisWeeklyQuestions: 3,
   polarisAccess: true,
   crossPlatformCitations: false,
@@ -112,7 +118,7 @@ export class BillingService {
   /**
    * Resolve the capability set for a tier. This is the read-side counterpart to
    * the generation-time `locked_for_free` flag: the two MUST agree that free
-   * never withholds observation bodies, only traces after the daily budget.
+   * never withholds observation bodies, only the evidence trace behind them.
    */
   capabilitiesFor(tier: string | null | undefined): TierCapabilities {
     const paid = tier === "pro" || tier === "gifted";

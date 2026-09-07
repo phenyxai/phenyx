@@ -14,17 +14,20 @@ import {
 import { ObservationFeedback } from "./observation-feedback";
 
 // ============================================================================
-// ObservationCard: collapsed Daily-feed card (PHE-70 / v67)
+// ObservationCard: collapsed Daily-feed card (PHE-70 / v67, PHE-92 / v244)
 // ----------------------------------------------------------------------------
-// Collapsed: one sentence + pillar tag + chevron. Expanded in place, in order:
+// Collapsed: one sentence with the pillar tag and chevron hugging the right
+// edge (under 760px the tag takes its own top row with the chevron and the
+// sentence spans the width). Expanded in place, in order:
 //   1. supporting points
-//   2. source tags + date span
+//   2. the time span, plus source tags when the trace is unlocked
 //   3. evidence trace / underneath / feedback slot (PHE-71 / PHE-72)
 //   4. ✦ explore
 //
 // The PHE-26 locked-body variant (`unlock on pro`) is gone. Every tier reads
-// the sentence. `observation.locked` means the evidence *trace* is withheld
-// (sources + span omitted); never the body.
+// the sentence and the span of time it reaches back over. `observation.locked`
+// means the evidence *trace* is withheld (account names omitted, the door
+// opens the upgrade modal); never the body, never the span.
 // ============================================================================
 
 /** The rendered observation shape (served by the engine, PHE-37 / PHE-70). */
@@ -42,7 +45,7 @@ export interface Observation {
   points?: string[] | null;
   /** Platform badges, e.g. ["instagram","spotify"]. Omitted when the trace is locked. */
   sources?: string[] | null;
-  /** Date span next to source tags, e.g. "2016 - 2026". */
+  /** Date span, e.g. "2016 - 2026". Served on every tier: how far back the observation reaches. */
   span?: string | null;
   /** Muted meta line, used as a span fallback. */
   meta_line?: string | null;
@@ -50,7 +53,7 @@ export interface Observation {
   explore_prompt?: string | null;
   /** First-ever render to this user → green-glow "new" badge. */
   is_new?: boolean;
-  /** True when the evidence trace is redacted (free, after the daily budget). */
+  /** True when the evidence trace is redacted (free: every observation). */
   locked?: boolean;
   /**
    * True when this card is today's Daily underneath (Pro body or free lock).
@@ -61,7 +64,7 @@ export interface Observation {
   underneath?: Underneath | null;
   /** v66 pattern type. Analytics only; never the observation body. */
   signal_type?: string | null;
-  /** Persisted `does this land?` state. Null when untouched. */
+  /** Persisted `how does this read to you?` state. Null when untouched. */
   feedback?: { verdict: "new" | "known" | "reading" | null; opened: boolean } | null;
 }
 
@@ -122,6 +125,39 @@ function injectCardStyles() {
       0%, 100% { box-shadow: 0 0 4px ${NEW_GREEN}66, 0 0 0 ${NEW_GREEN}00; }
       50%      { box-shadow: 0 0 10px ${NEW_GREEN}99, 0 0 2px ${NEW_GREEN}66; }
     }
+    .phenyx-obs-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      width: 100%;
+    }
+    .phenyx-obs-head .phenyx-obs-text {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .phenyx-obs-head .phenyx-obs-banner {
+      flex: 0 0 auto;
+      align-self: flex-start;
+      white-space: nowrap;
+    }
+    .phenyx-obs-head .phenyx-obs-chevron {
+      flex: 0 0 auto;
+      align-self: flex-start;
+      margin-left: auto;
+    }
+    @media (max-width: 760px) {
+      .phenyx-obs-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "banner chevron" "text text";
+        column-gap: 12px;
+        row-gap: 10px;
+        align-items: center;
+      }
+      .phenyx-obs-head .phenyx-obs-banner { grid-area: banner; justify-self: start; }
+      .phenyx-obs-head .phenyx-obs-chevron { grid-area: chevron; justify-self: end; margin-left: 0; }
+      .phenyx-obs-head .phenyx-obs-text { grid-area: text; width: 100%; max-width: 100%; }
+    }
     @media (prefers-reduced-motion: reduce) {
       .phenyx-obs-new-badge {
         animation: none !important;
@@ -172,10 +208,10 @@ export function ObservationCard({
   const label = pillarLabel(observation.pillar_tag);
   const sentence = observationSentence(observation);
   const points = (observation.points ?? []).filter((p) => p && p.trim());
+  // The span of time stays on free, because it tells the person how far back
+  // the observation reaches. Which accounts it came from does not.
   const sources = observation.locked ? [] : (observation.sources ?? []);
-  const span = observation.locked
-    ? ""
-    : (observation.span ?? observation.meta_line ?? "").trim();
+  const span = (observation.span ?? observation.meta_line ?? "").trim();
 
   return (
     <article
@@ -191,59 +227,18 @@ export function ObservationCard({
               : "#1c1c1c"
         }`,
         borderRadius: 12,
-        padding: expanded ? "30px 32px 32px" : "13px 20px",
+        padding: expanded ? "30px 32px 32px" : "22px 20px 20px",
         position: "relative",
         transition: "border-color 0.35s ease, padding 0.4s ease, background 0.4s ease",
       }}
       className="motion-reduce:transition-none"
     >
-      <span
-        style={{
-          position: "absolute",
-          top: -10,
-          right: 16,
-          zIndex: 2,
-          fontSize: 11.5,
-          letterSpacing: "0.09em",
-          textTransform: "lowercase",
-          color,
-          background: "#0b0b0d",
-          border: `1px solid ${color}6B`,
-          borderRadius: 20,
-          padding: "3px 12px",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-        }}
-      >
-        {label}
-        {observation.is_new && (
-          <span
-            className="phenyx-obs-new-badge"
-            style={{
-              fontSize: 9,
-              fontWeight: 600,
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              color: NEW_GREEN,
-              lineHeight: 1,
-              animation: "phenyx-obs-new-glow 2.4s ease-in-out infinite",
-            }}
-          >
-            new
-          </span>
-        )}
-      </span>
-
       <button
         type="button"
+        className="phenyx-obs-head"
         onClick={onToggle}
         aria-expanded={expanded}
         style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 12,
-          width: "100%",
           background: "none",
           border: "none",
           padding: 0,
@@ -254,8 +249,8 @@ export function ObservationCard({
         }}
       >
         <p
+          className="phenyx-obs-text"
           style={{
-            flex: 1,
             fontSize: expanded ? 16 : 14,
             fontWeight: 300,
             lineHeight: expanded ? 1.72 : 1.75,
@@ -266,10 +261,44 @@ export function ObservationCard({
           {sentence}
         </p>
         <span
+          className="phenyx-obs-banner"
+          style={{
+            fontSize: 11.5,
+            letterSpacing: "0.09em",
+            textTransform: "lowercase",
+            lineHeight: 1.4,
+            color,
+            background: `${color}14`,
+            border: `1px solid ${color}4D`,
+            borderRadius: 20,
+            padding: "3px 12px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          {label}
+          {observation.is_new && (
+            <span
+              className="phenyx-obs-new-badge"
+              style={{
+                fontSize: 9,
+                fontWeight: 600,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: NEW_GREEN,
+                lineHeight: 1,
+                animation: "phenyx-obs-new-glow 2.4s ease-in-out infinite",
+              }}
+            >
+              new
+            </span>
+          )}
+        </span>
+        <span
           className="phenyx-obs-chevron"
           aria-hidden="true"
           style={{
-            flexShrink: 0,
             fontSize: 20,
             lineHeight: 1.2,
             color: expanded ? accent : "rgba(255,253,253,0.52)",

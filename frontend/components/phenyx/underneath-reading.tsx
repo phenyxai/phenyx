@@ -5,11 +5,13 @@ import { useEffect, useId, useState, type CSSProperties, type KeyboardEvent } fr
 import { rememberProReturn } from "./evidence-trace";
 
 // ============================================================================
-// UnderneathReading: `something sits under this one` (PHE-71 / v67)
+// UnderneathReading: `what sits under this` (PHE-71 / v67, PHE-92 / v244)
 // ----------------------------------------------------------------------------
 // At most one per local day on Daily (server-picked). Closed by default.
-// Pro: headline, said-vs-gap, mechanism, the tell, basis.
-// Free: the same label as a lock, no reading payload.
+// Full: headline, said-vs-gap, mechanism, the tell, basis.
+// Free: the same door, named and marked `full ✦`, no reading payload. The
+// reading underneath an observation is the second half of what full buys, so
+// the door stays visible: the depth is legible, which is the whole pull.
 // ============================================================================
 
 export interface Underneath {
@@ -27,7 +29,7 @@ export interface Underneath {
 
 export interface UnderneathReadingProps {
   observationId: string;
-  /** Present for Pro. Absent for free — render the lock, never a hidden body. */
+  /** Present on full. Absent on free: render the door, never a hidden body. */
   underneath?: Underneath | null;
   onUpgrade: () => void;
 }
@@ -44,6 +46,12 @@ function injectStyles() {
       from { opacity: 0; transform: translateY(-4px); }
       to { opacity: 1; transform: none; }
     }
+    .phenyx-ev-locked .phenyx-und-open {
+      opacity: .72;
+      transition: opacity .25s ease, border-color .25s ease;
+    }
+    .phenyx-ev-locked .phenyx-und-open:hover,
+    .phenyx-ev-locked .phenyx-und-open:focus-visible { opacity: 1; }
     @media (prefers-reduced-motion: reduce) {
       .phenyx-und-body { animation: none !important; }
     }
@@ -88,10 +96,8 @@ export function UnderneathReading({
           style={btnStyle}
         >
           <span aria-hidden="true" style={dotStyle} />
-          <span style={{ flex: 1 }}>something sits under this one</span>
-          <span aria-hidden="true" style={lockStyle}>
-            ◆
-          </span>
+          <span style={{ flex: 1 }}>what sits under this</span>
+          <span style={lockStyle}>full ✦</span>
         </button>
       </div>
     );
@@ -131,7 +137,7 @@ export function UnderneathReading({
             boxShadow: open ? "0 0 6px var(--s, #5599FF)" : "none",
           }}
         />
-        <span>something sits under this one</span>
+        <span>what sits under this</span>
       </button>
       <div
         id={bodyId}
@@ -194,8 +200,9 @@ const dotStyle: CSSProperties = {
 const lockStyle: CSSProperties = {
   marginLeft: "auto",
   fontSize: 9,
+  letterSpacing: "0.08em",
   color: "var(--s, #5599FF)",
-  opacity: 0.6,
+  opacity: 0.75,
   flexShrink: 0,
 };
 

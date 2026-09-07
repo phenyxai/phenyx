@@ -3,12 +3,15 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 // ============================================================================
-// EvidenceTrace: `where this comes from` (PHE-71 / v67)
+// EvidenceTrace: `what this rests on` (PHE-71 / v67, PHE-92 / v244)
 // ----------------------------------------------------------------------------
 // Unlocked: a disclosure whose body is `hidden` until open. Order inside:
 // visualization, what we read, what happened in order, what this does not claim.
-// Locked: `<sig> the N entries behind this` opens the Pro modal. Chain fields
-// are absent from the payload — the client keys off that, not a CSS flag.
+// Locked: `<sig> where this comes from  full ✦ ›` opens the upgrade modal. On
+// free the row still names what kind of reading produced the line, so a free
+// reader can see that there IS a floor under the claim; what is held back is
+// the walk through it, entry by entry and source by source. Chain fields are
+// absent from the payload; the client keys off that, not a CSS flag.
 // ============================================================================
 
 export const PRO_RETURN_KEY = "phenyx_pro_return";
@@ -100,6 +103,12 @@ function injectStyles() {
       color: var(--s, #5599FF); font-size: 9.5px; display: flex; align-items: center; justify-content: center;
       font-variant-numeric: tabular-nums;
     }
+    .phenyx-ev-locked .phenyx-ev-btn {
+      opacity: .72;
+      transition: opacity .25s ease, border-color .25s ease;
+    }
+    .phenyx-ev-locked .phenyx-ev-btn:hover,
+    .phenyx-ev-locked .phenyx-ev-btn:focus-visible { opacity: 1; }
     @media (max-width: 560px) {
       .phenyx-ev-rec { grid-template-columns: 1fr !important; }
       .phenyx-ev-rec-why { grid-column: 1 !important; }
@@ -171,11 +180,10 @@ export function EvidenceTrace({
           style={btnStyle}
         >
           <span style={kindStyle}>{evidence.sig}</span>
-          <span style={lineStyle}>
-            the {recs.toLocaleString()} entries behind this
-          </span>
-          <span aria-hidden="true" style={lockStyle}>
-            ◆
+          <span style={lineStyle}>where this comes from</span>
+          <span style={lockStyle}>full ✦</span>
+          <span className="phenyx-ev-arw" aria-hidden="true" style={arwStyle}>
+            ›
           </span>
         </button>
       </div>
@@ -206,7 +214,7 @@ export function EvidenceTrace({
         style={btnStyle}
       >
         <span style={kindStyle}>{evidence.sig}</span>
-        <span style={lineStyle}>where this comes from</span>
+        <span style={lineStyle}>what this rests on</span>
         <span
           className="phenyx-ev-arw"
           aria-hidden="true"
@@ -555,8 +563,9 @@ const arwStyle: CSSProperties = {
 const lockStyle: CSSProperties = {
   marginLeft: "auto",
   fontSize: 9,
+  letterSpacing: "0.08em",
   color: "var(--s, #5599FF)",
-  opacity: 0.6,
+  opacity: 0.75,
   flexShrink: 0,
 };
 

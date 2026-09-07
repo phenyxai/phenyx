@@ -16,68 +16,31 @@ import {
 } from "@/components/phenyx/observation-card";
 import { consumeProReturn, peekProReturn } from "@/components/phenyx/evidence-trace";
 import { IntroBanner } from "@/components/phenyx/intro-banner";
-import { StillTrueToday } from "@/components/phenyx/still-true-today";
-import {
-  pickHeldConstants,
-  type HeldConstant,
-} from "@/app/dashboard/you/held";
-import {
-  DailyFocus,
-  useDailyFocus,
-  type DailyFocusValue,
-} from "@/components/phenyx/daily-focus";
+import { DailyFocus, useDailyFocus } from "@/components/phenyx/daily-focus";
+import { selectDailyObservations } from "./select-daily";
 
 // ============================================================================
-// Daily tab: v67 quieter feed (PHE-70)
+// Daily tab: v244 feed (PHE-92, on the v67 quieter feed from PHE-70)
 // ----------------------------------------------------------------------------
-// Date, one line, ≤4 collapsed observation cards, still true today, Pro daily
-// focus. Observation CONTENT comes from the engine via `apiFetch("/observations")`.
-// The endpoint may not be live yet, so the read fails soft: any error renders
-// the empty state.
+// Date, the mantra of the day with its attribution, four collapsed observation
+// cards, full daily focus. Observation CONTENT comes from the engine via
+// `apiFetch("/observations")`. The read fails soft: any error renders the
+// empty state.
 //
-// Gating: every tier reads every sentence (PHE-69). Free sees evidence traces
-// on the first two of the local day (`observation.locked` = trace withheld).
-// Polar tokens live on the Polaris tab. ✦ explore: Pro routes to Polaris with
-// q + pillar; Free opens the upgrade modal and does not start a chat.
+// Which four: `selectDailyObservations` (one headline leads, one per pillar,
+// a seeded deck dealt through before it repeats). The same four on free and
+// full; what differs is how far into an observation you can go, not how many
+// you are allowed to see. Nothing opens by default except the focused card.
+//
+// Gating: every tier reads every sentence and the time span it rests on. The
+// evidence trace, the underneath reading and ✦ explore are full;
+// `observation.locked` means the trace is withheld and the door opens the
+// upgrade modal. The `still true today` line left this page in v244 (the you
+// tab still carries the held constants).
 // ============================================================================
-
-const DAILY_COUNT = 4;
 
 interface DailyFeedResponse {
   observations?: Observation[];
-}
-
-function selectDailyObservations(
-  observations: Observation[],
-  dayNum: number,
-  focus: DailyFocusValue,
-): Observation[] {
-  if (observations.length === 0) return [];
-
-  const focusKey =
-    focus && focus !== "everything" ? pillarKey(focus) : "";
-
-  if (focusKey) {
-    return observations
-      .filter((o) => pillarKey(o.pillar_tag) === focusKey)
-      .slice(0, DAILY_COUNT);
-  }
-
-  if (observations.length <= DAILY_COUNT) return [...observations];
-
-  const headlines = observations.filter((o) => o.is_new);
-  const rest = observations.filter((o) => !o.is_new);
-  const ordered: Observation[] = [];
-  if (headlines.length) {
-    ordered.push(headlines[dayNum % headlines.length]);
-  }
-  const src = rest.length ? rest : observations;
-  const fill = DAILY_COUNT - ordered.length;
-  for (let i = 0; ordered.length < DAILY_COUNT && i < src.length; i++) {
-    const o = src[((dayNum * Math.max(fill, 1)) + i) % src.length];
-    if (!ordered.includes(o)) ordered.push(o);
-  }
-  return ordered;
 }
 
 export default function DailyTabPage() {
@@ -88,10 +51,7 @@ export default function DailyTabPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [observations, setObservations] = useState<Observation[]>([]);
-  const [profileHeld, setProfileHeld] = useState<HeldConstant[]>(() =>
-    pickHeldConstants([], localDayNumber()),
-  );
-  const [profileHeldReady, setProfileHeldReady] = useState(false);
+  // Nothing opens by default; the focus effect below opens the focused card.
   const [openId, setOpenId] = useState<string | null>(null);
   const [proReturnId, setProReturnId] = useState<string | null>(null);
 
@@ -112,25 +72,6 @@ export default function DailyTabPage() {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    let active = true;
-    apiFetch("/profile/overview")
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`profile ${res.status}`);
-        const body = (await res.json()) as { held?: HeldConstant[] };
-        if (active) setProfileHeld(pickHeldConstants(body.held ?? [], dayNum));
-      })
-      .catch(() => {
-        // Keep the same deterministic fallback Profile renders when unavailable.
-      })
-      .finally(() => {
-        if (active) setProfileHeldReady(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, [dayNum]);
 
   useEffect(() => {
     let active = true;
@@ -235,9 +176,7 @@ export default function DailyTabPage() {
         </p>
       ) : feed.length === 0 ? (
         <p style={{ fontSize: 15, fontWeight: 300, lineHeight: 1.55, color: "rgba(255,253,253,0.4)" }}>
-          {focus && focus !== "everything"
-            ? "nothing on this pillar has surfaced yet. try another, or come back tomorrow."
-            : "your constellation is still gathering. connect more platforms and come back tomorrow."}
+          your constellation is still gathering. connect more platforms and come back tomorrow.
         </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -260,10 +199,6 @@ export default function DailyTabPage() {
             />
           ))}
         </div>
-      )}
-
-      {profileHeldReady && (
-        <StillTrueToday accent={stellarColor} profileHeld={profileHeld} />
       )}
     </section>
   );

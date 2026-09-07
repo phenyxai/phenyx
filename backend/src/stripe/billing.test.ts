@@ -8,11 +8,11 @@ const billing = new BillingService();
 // capabilitiesFor — the single tier resolver (PHE-69 / v67, PHE-94 / v244)
 // ---------------------------------------------------------------------------
 
-test("capabilitiesFor(free): unpaid, all bodies, 2 traces/day, polaris open with 3 questions", () => {
+test("capabilitiesFor(free): unpaid, all bodies, no traces (v244), polaris open with 3 questions", () => {
   const caps = billing.capabilitiesFor("free");
   assert.equal(caps.paid, false);
   assert.equal(caps.observationsUnlocked, Infinity);
-  assert.equal(caps.evidenceTracesPerDay, 2);
+  assert.equal(caps.evidenceTracesPerDay, 0);
   assert.equal(caps.polarisWeeklyQuestions, 3);
   assert.equal(caps.polarisAccess, true);
   assert.equal(caps.crossPlatformCitations, false);

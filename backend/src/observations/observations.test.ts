@@ -277,27 +277,29 @@ test("firstSentence takes the leading clause and strips markup", () => {
   assert.equal(firstSentence("boards of canada returned after <b>six</b> years."), "boards of canada returned after six years.");
 });
 
-test("applyReadGate free tier: all bodies, traces only on first two of the day", () => {
+test("applyReadGate free tier (v244): every body and span, no trace on any row", () => {
   const served = applyReadGate(
-    [row({ id: "fresh" }), row({ id: "older" }), row({ id: "oldest" })],
+    [
+      row({ id: "fresh", evidence_span: "2016 - 2026" }),
+      row({ id: "older", span_start: "2019-03-01T00:00:00Z", span_end: "2024-08-01T00:00:00Z" }),
+      row({ id: "oldest" }),
+    ],
     FREE
   );
   assert.equal(served.length, 3);
+  // Every row keeps the sentence: the day is the same on free and full.
   assert.ok(served.every((o) => o.body === "the body"));
-  // First two of the local day carry citations + provenance.
-  assert.equal(served[0].locked, false);
-  assert.deepEqual(served[0].sources, ["linkedin", "spotify"]);
-  assert.equal(served[0].meta_line, "cross-platform pattern / 6 months");
-  assert.equal(served[1].locked, false);
-  assert.deepEqual(served[1].sources, ["linkedin", "spotify"]);
-  // Third+ keep the sentence; traces are withheld.
-  assert.equal(served[2].locked, true);
-  assert.equal(served[2].body, "the body");
-  assert.equal(served[2].sentence, "the body");
-  assert.equal(served[2].explore_prompt, "the body");
-  assert.equal(served[2].sources, undefined);
+  assert.ok(served.every((o) => o.sentence === "the body"));
+  assert.ok(served.every((o) => o.explore_prompt === "the body"));
+  // Every row is a door: citations + provenance are withheld on all of them.
+  assert.ok(served.every((o) => o.locked === true));
+  assert.ok(served.every((o) => o.sources === undefined));
+  assert.ok(served.every((o) => o.meta_line === undefined));
+  // The time span stays: it says how far back the observation reaches.
+  assert.equal(served[0].span, "2016 – 2026");
+  assert.equal(served[1].span, "2019 – 2024");
+  // No date span on the row: the provenance-label fallback is trace-only.
   assert.equal(served[2].span, undefined);
-  assert.equal(served[2].meta_line, undefined);
 });
 
 test("applyReadGate ships points and span on unlocked traces", () => {
@@ -320,6 +322,8 @@ test("applyReadGate pro/gifted: all unlocked with source_platforms + provenance 
   assert.ok(served.every((o) => o.locked === false));
   assert.ok(served.every((o) => Array.isArray(o.sources) && o.sources!.length === 2));
   assert.ok(served.every((o) => o.meta_line === "cross-platform pattern / 6 months"));
+  // With no date span on the row, an unlocked trace falls back to the label.
+  assert.ok(served.every((o) => o.span === "cross-platform pattern / 6 months"));
 });
 
 test("groupTimelineByPillar groups by pillar and keeps every body for free", () => {
@@ -336,7 +340,8 @@ test("groupTimelineByPillar groups by pillar and keeps every body for free", () 
   const served = groups.flatMap((g) => g.observations);
   assert.equal(served.length, 3);
   assert.ok(served.every((o) => o.body === "the body"));
-  assert.equal(served.filter((o) => o.locked === true).length, 1);
+  // v244: free never receives a trace, on the timeline as on the feed.
+  assert.equal(served.filter((o) => o.locked === true).length, 3);
 });
 
 // ---------------------------------------------------------------------------
@@ -410,7 +415,7 @@ test("redactEvidence drops chart/entries/closer on a locked trace", () => {
   assert.equal(redactEvidence(maraEvidence, true), maraEvidence);
 });
 
-test("applyReadGate free: first two traces keep the chain, later rows keep only sig+recs", () => {
+test("applyReadGate free (v244): every row keeps only sig+recs, never the chain", () => {
   const served = applyReadGate(
     [
       row({
@@ -441,15 +446,28 @@ test("applyReadGate free: first two traces keep the chain, later rows keep only 
     ],
     FREE
   );
-  assert.ok(served[0].evidence?.entries);
-  assert.ok(served[0].evidence?.chart);
-  assert.ok(served[0].evidence?.closer);
-  assert.equal(served[1].evidence?.entries?.length, 0);
-  assert.equal(served[2].locked, true);
+  assert.ok(served.every((o) => o.locked === true));
+  // The door keeps its kind label and count so the client can name it.
+  assert.deepEqual(served[0].evidence, { sig: "frequency", recs: 1847 });
+  assert.deepEqual(served[1].evidence, { sig: "timing", recs: 4 });
   assert.deepEqual(served[2].evidence, { sig: "frequency", recs: 1847 });
-  assert.equal(served[2].evidence?.entries, undefined);
-  assert.equal(served[2].evidence?.chart, undefined);
-  assert.equal(served[2].evidence?.closer, undefined);
+  assert.ok(served.every((o) => o.evidence?.entries === undefined));
+  assert.ok(served.every((o) => o.evidence?.chart === undefined));
+  assert.ok(served.every((o) => o.evidence?.closer === undefined));
+});
+
+test("applyReadGate pro: every row ships the chain", () => {
+  const served = applyReadGate(
+    [
+      row({ id: "one", signal_type: "frequency", assembled_evidence: maraEvidence }),
+      row({ id: "two", signal_type: "frequency", assembled_evidence: maraEvidence }),
+      row({ id: "three", signal_type: "frequency", assembled_evidence: maraEvidence }),
+    ],
+    PRO
+  );
+  assert.ok(served.every((o) => o.locked === false));
+  assert.ok(served.every((o) => Array.isArray(o.evidence?.entries)));
+  assert.ok(served.every((o) => o.evidence?.closer));
 });
 
 test("applyReadGate free: underneath flag without reading payload", () => {
@@ -614,4 +632,106 @@ test("selectActiveUserIds returns empty (no frozen lookup) when no active users"
   const service = makeObservationsService([], ["z"]);
   const ids = await (service as any).selectActiveUserIds();
   assert.deepEqual(ids, []);
+});
+
+// ---------------------------------------------------------------------------
+// PHE-92 (v244) — the served free envelope, end to end through
+// attachEvidenceHierarchy + applyReadGate: a zero trace budget still leaves
+// every row with `{ sig, recs }` and its span, so the door has a name.
+// ---------------------------------------------------------------------------
+
+/**
+ * Fake Supabase keyed by table. Every read chain is a thenable that resolves
+ * to the table's rows; `maybeSingle` resolves to the first row.
+ */
+function makeFeedSupabase(tables: Record<string, Record<string, unknown>[]>) {
+  return {
+    getClient() {
+      return {
+        from(table: string) {
+          const data = tables[table] ?? [];
+          const chain: any = {
+            select: () => chain,
+            eq: () => chain,
+            in: () => chain,
+            order: () => chain,
+            maybeSingle: () => Promise.resolve({ data: data[0] ?? null, error: null }),
+            then: (onF: any, onR: any) =>
+              Promise.resolve({ data, error: null }).then(onF, onR),
+          };
+          return chain;
+        },
+      };
+    },
+  };
+}
+
+function makeFeedService(tier: string) {
+  return new ObservationsService(
+    { get: () => undefined } as any,
+    makeFeedSupabase({
+      user_profiles: [{ tier }],
+      constellation_state: [{ mantra: "the line of the day" }],
+      observations: [
+        {
+          id: "one",
+          pillar: "origin",
+          body: "the body. and the rest.",
+          source_platforms: ["spotify", "chatgpt"],
+          meta_label: "cross-platform pattern / 6 months",
+          is_new: true,
+          locked_for_free: true,
+          surfaced_at: "2026-09-01T00:00:00Z",
+          signal_type: "frequency",
+          record_count: 1847,
+          evidence_span: "2016 - 2026",
+        },
+        {
+          id: "two",
+          pillar: "emergence",
+          body: "another body.",
+          source_platforms: ["youtube"],
+          meta_label: null,
+          is_new: false,
+          locked_for_free: true,
+          surfaced_at: "2026-08-01T00:00:00Z",
+          signal_type: null,
+          record_count: 0,
+        },
+      ],
+      observation_feedback: [],
+      underneath_readings: [],
+      observation_signals: [],
+    }) as any,
+    {} as any,
+    new BillingService()
+  );
+}
+
+test("getDailyFeed free (v244): every row served, span kept, door named, no chain or sources", async () => {
+  const feed = await makeFeedService("free").getDailyFeed("u1");
+  assert.equal(feed.mantra, "the line of the day");
+  assert.equal(feed.observations.length, 2);
+  assert.ok(feed.observations.every((o) => o.locked === true));
+  assert.ok(feed.observations.every((o) => o.sources === undefined));
+  assert.ok(feed.observations.every((o) => o.meta_line === undefined));
+  const [one, two] = feed.observations;
+  assert.equal(one.sentence, "the body.");
+  assert.equal(one.span, "2016 – 2026");
+  assert.deepEqual(one.evidence, { sig: "frequency", recs: 1847 });
+  // No signal type: nothing to name, so no door at all.
+  assert.equal(two.evidence, null);
+  assert.equal(two.span, undefined);
+});
+
+test("getDailyFeed pro: the chain and the sources ship on every row", async () => {
+  const feed = await makeFeedService("pro").getDailyFeed("u1");
+  const [one] = feed.observations;
+  assert.equal(one.locked, false);
+  assert.deepEqual(one.sources, ["spotify", "chatgpt"]);
+  assert.equal(one.meta_line, "cross-platform pattern / 6 months");
+  assert.equal(one.span, "2016 – 2026");
+  assert.equal(one.evidence?.sig, "frequency");
+  assert.ok(Array.isArray(one.evidence?.entries));
+  assert.ok(one.evidence?.closer);
 });
