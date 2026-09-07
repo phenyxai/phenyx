@@ -1,26 +1,32 @@
 "use client";
 
-// PHE-74 — Constellation tab.
+// PHE-74 / PHE-93 — Constellation tab.
 //
-// Canvas + panel (overview | pillar | cluster), then below the fold: your
-// timeline (from account history, first session) and what moved.
+// Header (eyebrow + age line), then the sky and the reading panel. From 981px
+// they sit side by side: the sky is sticky, the panel is a plain column that
+// flows with the page. Under 981px the panel sits below the sky and is brought
+// into view when a point opens. The weekly timeline and "what moved" left this
+// tab in v244; their components stay in the repo, unmounted.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ConstellationCanvas } from "@/components/phenyx/constellation-canvas";
 import { ConstellationPanel } from "@/components/phenyx/constellation-panel";
-import { RecordTimelineView } from "@/components/phenyx/record-timeline";
-import { WhatMoved } from "@/components/phenyx/what-moved";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 import {
+  constellationAge,
   fetchConstellation,
   type ConstellationData,
   type Pillar,
 } from "@/lib/constellation";
 
+/** Below this the panel sits under the sky instead of beside it. */
+const STACKED_QUERY = "(max-width: 980px)";
+
 export default function ConstellationTabPage() {
   const [data, setData] = useState<ConstellationData | null>(null);
   const [selectedPillar, setSelectedPillar] = useState<Pillar | null>(null);
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -64,15 +70,44 @@ export default function ConstellationTabPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [closePoint, selectedClusterId, selectedPillar]);
 
+  // On a phone the panel sits under the sky, so opening a point brings the
+  // reading into view rather than leaving it below the fold.
+  useEffect(() => {
+    if (!selectedPillar) return;
+    if (!window.matchMedia(STACKED_QUERY).matches) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = window.setTimeout(() => {
+      panelRef.current?.scrollIntoView({
+        behavior: reduced ? "auto" : "smooth",
+        block: "nearest",
+      });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [selectedPillar]);
+
+  const age = data ? constellationAge(data) : null;
+
   return (
     <div className="flex min-h-screen flex-col">
       <IntroBanner
         tab="constellation"
         copy={INTRO_COPY.constellation}
-        className="mx-6 mt-6 shrink-0"
+        className="mx-6 mt-6 shrink-0 lg:mx-10"
       />
-      <div className="flex min-h-[min(72vh,720px)] flex-col min-[1100px]:flex-row">
-        <div className="relative min-h-[420px] min-w-0 flex-1">
+
+      <header className="px-6 pb-5 pt-8 lg:px-10">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#FFFDFD]/52">
+          your constellation
+        </p>
+        {age && (
+          <p className="mt-2 text-[13px] font-light lowercase text-[#FFFDFD]/45">
+            {age.label} of your life, from {age.from} to now.
+          </p>
+        )}
+      </header>
+
+      <div className="grid grid-cols-1 items-start gap-[22px] px-6 pb-10 min-[981px]:grid-cols-[minmax(0,1fr)_400px] min-[981px]:gap-[30px] lg:px-10">
+        <div className="relative h-[clamp(420px,52vh,560px)] min-w-0 min-[981px]:sticky min-[981px]:top-5 min-[981px]:h-[clamp(520px,68vh,760px)]">
           {data && (
             <ConstellationCanvas
               data={data}
@@ -83,7 +118,7 @@ export default function ConstellationTabPage() {
           )}
         </div>
 
-        <aside className="w-full shrink-0 overflow-visible overscroll-contain border-t border-[#1a1a1a] px-6 py-8 min-[1100px]:max-h-[calc(100vh-130px)] min-[1100px]:w-[clamp(380px,36vw,500px)] min-[1100px]:overflow-y-auto min-[1100px]:border-t-0 min-[1100px]:border-l min-[1100px]:[&>*]:overflow-visible">
+        <aside ref={panelRef} className="w-full min-w-0">
           {data ? (
             <ConstellationPanel
               data={data}
@@ -100,13 +135,6 @@ export default function ConstellationTabPage() {
           )}
         </aside>
       </div>
-
-      {data && (
-        <div className="border-t border-[#FFFDFD]/6 px-6 py-14 lg:px-10">
-          <RecordTimelineView timeline={data.timeline} />
-          <WhatMoved moved={data.moved} yearlyRecap={data.yearly_recap} />
-        </div>
-      )}
     </div>
   );
 }
