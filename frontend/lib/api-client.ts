@@ -110,13 +110,16 @@ export interface PolarisUsage {
   total_tokens: number
 }
 
-/** Weekly Polaris token allowance snapshot (PHE-27), returned alongside each ask. */
+/**
+ * Weekly Polaris allowance snapshot (PHE-27 / PHE-94), returned alongside each
+ * ask. Counted in QUESTIONS: one completed ask is one unit.
+ */
 export interface PolarisAllowance {
   /** ISO week start (Monday) in UTC — the polaris_token_usage.week key. */
   week: string
-  /** Tokens debited this week so far. */
+  /** Questions asked this week so far. */
   used: number
-  /** Tier-derived weekly limit (0 free / 800 pro|gifted). */
+  /** Tier-derived weekly question limit (3 free / 40 full). */
   limit: number
   /** max(0, limit - used). */
   remaining: number
@@ -186,7 +189,7 @@ export interface PolarisThreadSummary {
 export interface PolarisThreadsResponse {
   threads: PolarisThreadSummary[]
   suggested_questions: SuggestedQuestion[]
-  /** Live weekly token snapshot for the idle/chat token pill. */
+  /** Live weekly question allowance for the idle/chat allowance badge. */
   allowance?: PolarisAllowance
 }
 

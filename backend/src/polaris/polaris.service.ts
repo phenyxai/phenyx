@@ -112,9 +112,10 @@ export class PolarisService {
 
     const supabase = this.supabaseService.getClient();
 
-    // (1) Crisis pre-flight (PHE-39) over the question BEFORE the token gate or any
-    // Claude answer call — no Polaris tokens are ever spent on a crisis turn. The
-    // async gate fails closed (any timeout/HTTP/parse/missing-key error → triggered).
+    // (1) Crisis pre-flight (PHE-39) over the question BEFORE the allowance gate or
+    // any Claude answer call — a crisis turn never counts against the weekly
+    // question allowance. The async gate fails closed (any timeout/HTTP/parse/
+    // missing-key error → triggered).
     const crisisResult = await this.crisis.detectCrisis(question);
     if (crisisResult.triggered) {
       // Best-effort, never throws — persists a sha256 hash of the text only.
@@ -144,8 +145,10 @@ export class PolarisService {
       };
     }
 
-    // (2) Token gate (PHE-27) — short-circuit if over the weekly budget (no Claude
-    // call, no debit). The limit is derived from the live tier at check time.
+    // (2) Allowance gate (PHE-27 / PHE-94) — short-circuit once the week's question
+    // allowance is used up (no Claude call, no debit). The limit (3 free / 40 full)
+    // is derived from the live tier at check time; there is no separate free
+    // lock-out — free simply has a smaller allowance.
     const allowance = await this.tokenBudget.check(userId);
     if (allowance.limit_reached) {
       const threadId = await this.resolveConversation(userId, body.thread_id);
@@ -283,8 +286,10 @@ export class PolarisService {
       answer = `${answer} ${SPARSE_NUDGE}`.trim();
     }
 
-    // (9) Debit the weekly counter by the ACTUAL total tokens, then (10) persist the
-    // conversation + encrypted user/ai messages with the routed pillar tag.
+    // (9) Persist the conversation + encrypted user/ai messages with the routed
+    // pillar tag (the Anthropic token usage is logged on each message), then (10)
+    // debit the weekly meter by ONE question. Token usage is reported to the client
+    // but never drives the meter (PHE-94).
     const threadId = await this.resolveConversation(userId, body.thread_id);
     await this.persistMessage(
       userId,
@@ -306,8 +311,7 @@ export class PolarisService {
     const debited = await this.tokenBudget.debit(
       userId,
       allowance.week,
-      allowance.limit,
-      usage.total_tokens
+      allowance.limit
     );
 
     return {
@@ -326,7 +330,7 @@ export class PolarisService {
   /**
    * Idle-view payload: past threads (most-recent first; the client hides "your
    * chats" when empty), four pillar-tagged questions from the top-scoring
-   * pillars, and the live weekly token allowance for the token pill.
+   * pillars, and the live weekly question allowance for the allowance badge.
    * Ownership is enforced by the `user_id` filter (service-role client bypasses
    * RLS). `preview` decrypts each thread's first user message.
    */
@@ -671,7 +675,8 @@ function buildGroundingBlock(input: {
   return lines.join("\n");
 }
 
-/** Normalize Anthropic usage into the shape we report + debit. total_tokens sums
+/** Normalize Anthropic usage into the shape we report (never debited — the
+ * weekly meter counts questions, PHE-94). total_tokens sums
  * input + output + cache read + cache creation (ticket §9). */
 function normalizeUsage(usage: any): PolarisUsage {
   const input_tokens = Number(usage?.input_tokens ?? 0);

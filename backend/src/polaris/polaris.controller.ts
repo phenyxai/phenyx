@@ -34,7 +34,7 @@ export class PolarisController {
   /**
    * GET /api/polaris/threads — idle-view payload: past conversations, four
    * pillar-tagged questions from the caller's top pillars, and the weekly
-   * token allowance for the token pill.
+   * question allowance for the allowance badge.
    */
   @Get("threads")
   @UseGuards(SupabaseAuthGuard)

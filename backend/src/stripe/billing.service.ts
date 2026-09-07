@@ -12,15 +12,25 @@ export type PaidAccessTier = "pro" | "gifted";
  * A tier change takes effect on the NEXT gated read: capabilities are resolved
  * per-request from the freshly-read tier, never cached.
  *
- * v67 commercial model:
+ * v244 commercial model:
  * - Free sees every observation body. Evidence traces are limited to the first
- *   two of the local day. Underneath, Polaris, daily focus, weekly synthesis,
- *   and yearly recap are Pro.
- * - Pro is $12.99/month or $99/year; 800 weekly Polaris tokens; $4.99 top-up.
- * - Grandfathered `gifted` rows resolve identically to pro. The word "gifted"
- *   is never product copy.
+ *   two of the local day. Underneath, daily focus, weekly synthesis, and yearly
+ *   recap are full-only.
+ * - Polaris is open on both tiers and metered by QUESTIONS, not tokens: 3 a
+ *   week on free, 40 a week on full (PHE-94). Free hits the upgrade modal at
+ *   the limit; full is offered the $4.99 top-up.
+ * - Full is $12.99/month or $99/year.
+ * - Grandfathered `gifted` rows resolve identically to pro. Neither "gifted"
+ *   nor "pro" is ever product copy; the paid tier is called "full".
  */
 export interface TierCapabilities {
+  /**
+   * Whether this is a paid tier (pro or gifted). The single binary free/full
+   * split — {@link BillingService.hasFullAccess} derives from it, so a
+   * capability that free also has (Polaris access, since v244) never doubles
+   * as the paid flag.
+   */
+  paid: boolean;
   /**
    * How many observation *bodies* are served. v67: Infinity for every tier —
    * free reads the full daily feed. `Infinity` (not a magic large number) so a
@@ -32,9 +42,16 @@ export interface TierCapabilities {
    * leave the server per local day. Free: 2. Pro: Infinity.
    */
   evidenceTracesPerDay: number;
-  /** Weekly Polaris token budget. Free: 0 (Polaris locked). Pro: 800. */
-  polarisWeeklyTokens: number;
-  /** Whether Polaris is usable at all (composer, threads, ask). */
+  /**
+   * Weekly Polaris QUESTION allowance (PHE-94). Free: 3. Pro: 40. One completed
+   * ask debits one question regardless of its token cost; see
+   * {@link ../polaris/token-budget.service.ts}.
+   */
+  polarisWeeklyQuestions: number;
+  /**
+   * Whether Polaris is usable at all (composer, threads, ask). True on every
+   * tier since v244 — the weekly question allowance is the only gate.
+   */
   polarisAccess: boolean;
   /** Whether served observation payloads include `source_platforms` citations. */
   crossPlatformCitations: boolean;
@@ -52,14 +69,15 @@ export interface TierCapabilities {
   yearlyRecap: boolean;
   /** Max observation entries per constellation cluster. Free: 2. Pro: Infinity. */
   clusterEntries: number;
-  /** Whether $4.99 weekly token top-ups are offered. */
+  /** Whether the $4.99 weekly question top-up is offered (full only). */
   tokenTopupEnabled: boolean;
 }
 
 const PRO_CAPABILITIES: TierCapabilities = {
+  paid: true,
   observationsUnlocked: Infinity,
   evidenceTracesPerDay: Infinity,
-  polarisWeeklyTokens: 800,
+  polarisWeeklyQuestions: 40,
   polarisAccess: true,
   crossPlatformCitations: true,
   trackingOverTime: true,
@@ -73,10 +91,11 @@ const PRO_CAPABILITIES: TierCapabilities = {
 };
 
 const FREE_CAPABILITIES: TierCapabilities = {
+  paid: false,
   observationsUnlocked: Infinity,
   evidenceTracesPerDay: 2,
-  polarisWeeklyTokens: 0,
-  polarisAccess: false,
+  polarisWeeklyQuestions: 3,
+  polarisAccess: true,
   crossPlatformCitations: false,
   trackingOverTime: false,
   fullProvenance: false,
@@ -102,10 +121,11 @@ export class BillingService {
 
   /**
    * Thin wrapper kept for remaining binary callers. Derived from
-   * {@link capabilitiesFor} so there is a single source of truth for the
-   * free/paid split. Gifted is pro-equivalent.
+   * {@link capabilitiesFor}'s `paid` flag so there is a single source of truth
+   * for the free/full split. Gifted is pro-equivalent. (Before PHE-94 this read
+   * `polarisAccess`, which is now true on free too.)
    */
   hasFullAccess(tier: string | null | undefined): boolean {
-    return this.capabilitiesFor(tier).polarisAccess;
+    return this.capabilitiesFor(tier).paid;
   }
 }

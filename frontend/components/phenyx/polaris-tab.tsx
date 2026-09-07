@@ -10,42 +10,51 @@ import {
   type RefObject,
 } from "react";
 import { useSearchParams } from "next/navigation";
-import * as Popover from "@radix-ui/react-popover";
 
 import {
   askPolaris,
   getPolarisThread,
   getPolarisThreads,
+  type PolarisAllowance,
   type PolarisThreadSummary,
   type SuggestedQuestion,
 } from "@/lib/api-client";
-import { V67_PRICING } from "@/lib/billing";
+import {
+  V67_PRICING,
+  polarisAllowanceLabel,
+  polarisWeeklyQuestionsFor,
+} from "@/lib/billing";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { trackPolarisMessage } from "@/lib/analytics";
 import { useTier } from "@/lib/use-tier";
 
 // ============================================================================
-// PolarisTab: v67 idle + chat surfaces (PHE-73)
+// PolarisTab: v244 idle + chat surfaces (PHE-73, PHE-94)
 // ----------------------------------------------------------------------------
 // Two views behind one flex-column panel (never display:block, which unpins
 // the composer from the foot):
 //
-//   • IDLE: hero + live composer + three explore tabs (questions from your
-//     record, starting points, your chats). Token pill sits on the hero row.
-//   • CHAT: ← · polaris · <pillar> · token pill · new. Messages fill the
+//   • IDLE: centered hero (star, "polaris", tagline, allowance badge) + live
+//     composer + three explore tabs (questions from your constellation,
+//     starting points, your chats).
+//   • CHAT: ← · polaris · <pillar> · allowance badge · new. Messages fill the
 //     panel; composer is pinned to the foot.
 //
-// Free users see a lock that opens the Pro modal. Threads and askPolaris are
-// not fetched or called. Deep-link `/dashboard/polaris?q=...&pillar=...`
+// Every tier gets the composer. The weekly allowance is counted in QUESTIONS
+// (3 on free, 40 on full) and both numbers on the badge come from the backend
+// allowance. The badge, and the at-limit state, open the top-up sheet on full
+// and the upgrade modal on free. Deep-link `/dashboard/polaris?q=...&pillar=...`
 // starts chat with that as the first user turn.
 // ============================================================================
 
 const ACCENT = "var(--s, #5599FF)";
 
-const TOKEN_NOTE =
-  "tokens are a shared weekly amount, not a count of questions — longer conversations use more. the amount resets on its own; a top-up is one-time and does not change the reset.";
+/** Explains the allowance inside the top-up sheet (the old token popover is gone). */
+const ALLOWANCE_NOTE =
+  "questions reset every week. a top-up adds a few more before then and does not change the reset.";
 
-const COMPOSER_PLACEHOLDER = "ask anything. it already has your context.";
+const COMPOSER_PLACEHOLDER =
+  "ask from where you are. polaris already has the context.";
 
 /** v67 starting-point chips (verbatim). Each seeds a chat with its label + pillar. */
 const STARTING_CHIPS: ReadonlyArray<{ label: string; pillar: string }> = [
@@ -96,10 +105,6 @@ function displayPillar(pillar: string | null | undefined): string {
   return pillar.replace(/_/g, "-");
 }
 
-function weeklyTokenCopy(n: number): string {
-  return `${n} weekly tokens`;
-}
-
 function readExploreDeepLink(searchParams: { get: (key: string) => string | null }): {
   q: string;
   pillar: string | null;
@@ -123,7 +128,7 @@ function autosize(el: HTMLTextAreaElement | null) {
 export function PolarisTab() {
   const searchParams = useSearchParams();
   const { openModal } = useSettingsModals();
-  const { isPro } = useTier();
+  const { tier, isPro } = useTier();
 
   const [view, setView] = useState<View>("idle");
   const [explore, setExplore] = useState<ExploreTab>("record");
@@ -131,7 +136,12 @@ export function PolarisTab() {
 
   const [threads, setThreads] = useState<PolarisThreadSummary[]>([]);
   const [suggested, setSuggested] = useState<SuggestedQuestion[]>([]);
-  const [remaining, setRemaining] = useState<number>(V67_PRICING.polarisWeeklyTokens);
+  // Backend allowance snapshot. Until it loads, the badge falls back to the
+  // tier's full allowance so it never reads "0 of 0".
+  const [allowance, setAllowance] = useState<Pick<
+    PolarisAllowance,
+    "remaining" | "limit"
+  > | null>(null);
 
   const [threadId, setThreadId] = useState<string | undefined>(undefined);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -148,28 +158,48 @@ export function PolarisTab() {
   threadIdRef.current = threadId;
   const sessionMessageCountRef = useRef(0);
 
+  const tierLimit = polarisWeeklyQuestionsFor(tier);
+  const limit = allowance?.limit ?? tierLimit;
+  const remaining = allowance?.remaining ?? tierLimit;
+  const allowanceLabel = polarisAllowanceLabel(remaining, tier, limit);
+
+  const applyAllowance = useCallback((next: PolarisAllowance | undefined) => {
+    if (
+      next &&
+      typeof next.remaining === "number" &&
+      typeof next.limit === "number"
+    ) {
+      setAllowance({ remaining: next.remaining, limit: next.limit });
+    }
+  }, []);
+
   const openTopup = useCallback(() => setTopupOpen(true), []);
   const openUpgrade = useCallback(() => openModal("upgrade"), [openModal]);
+  // The allowance badge and the at-limit state: full gets the top-up sheet,
+  // free gets the upgrade modal (prototype `openPolarisAllowance`).
+  const openAllowance = useCallback(() => {
+    if (isPro) openTopup();
+    else openUpgrade();
+  }, [isPro, openTopup, openUpgrade]);
 
   const loadIdle = useCallback(async () => {
     try {
       const data = await getPolarisThreads();
       setThreads(data.threads ?? []);
       setSuggested(data.suggested_questions ?? []);
-      if (typeof data.allowance?.remaining === "number") {
-        setRemaining(data.allowance.remaining);
+      applyAllowance(data.allowance);
+      if (typeof data.allowance?.limit_reached === "boolean") {
         setLimitReached(data.allowance.limit_reached);
       }
     } catch {
       setThreads([]);
       setSuggested([]);
     }
-  }, []);
+  }, [applyAllowance]);
 
   useEffect(() => {
-    if (!isPro) return;
     void loadIdle();
-  }, [loadIdle, isPro]);
+  }, [loadIdle]);
 
   useEffect(() => {
     if (view === "chat") {
@@ -202,14 +232,15 @@ export function PolarisTab() {
         setThreadId(res.thread_id);
         threadIdRef.current = res.thread_id;
         if (res.pillar_tag) setChatFocus(displayPillar(res.pillar_tag));
-        if (typeof res.allowance?.remaining === "number") {
-          setRemaining(res.allowance.remaining);
-        }
+        applyAllowance(res.allowance);
 
         if (res.limit_reached) {
           setLimitReached(true);
-          setRemaining(0);
-          openTopup();
+          setAllowance((prev) => ({
+            remaining: 0,
+            limit: res.allowance?.limit ?? prev?.limit ?? tierLimit,
+          }));
+          openAllowance();
         } else if (res.answer != null) {
           setMessages((prev) => [
             ...prev,
@@ -237,7 +268,7 @@ export function PolarisTab() {
         setSending(false);
       }
     },
-    [sending, openTopup]
+    [sending, openAllowance, applyAllowance, tierLimit]
   );
 
   const openChat = useCallback(
@@ -290,7 +321,7 @@ export function PolarisTab() {
     const q = input.trim();
     if (!q) return;
     if (remaining <= 0) {
-      openTopup();
+      openAllowance();
       return;
     }
     setInput("");
@@ -303,15 +334,14 @@ export function PolarisTab() {
       setView("chat");
     }
     void sendQuestion(q);
-  }, [input, sendQuestion, remaining, openTopup, view]);
+  }, [input, sendQuestion, remaining, openAllowance, view]);
 
-  // Daily ✦ explore (PHE-70) routes Pro users here with ?q=&pillar=. Read the
-  // query on the client so a client-side `router.push` from Daily is picked up
-  // even if this tab was already in the tree. Strip the query with
+  // Daily ✦ explore (PHE-70) routes here with ?q=&pillar=. Read the query on
+  // the client so a client-side `router.push` from Daily is picked up even if
+  // this tab was already in the tree. Strip the query with
   // history.replaceState (not router.replace) so Next does not remount the
   // tab and drop the chat that just started.
   useEffect(() => {
-    if (!isPro) return;
     const { q, pillar } = readExploreDeepLink(searchParams);
     if (!q) return;
     const key = `${q}|${pillar ?? ""}`;
@@ -321,11 +351,7 @@ export function PolarisTab() {
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", "/dashboard/polaris");
     }
-  }, [isPro, searchParams, openChat]);
-
-  if (!isPro) {
-    return <PolarisLock onUpgrade={openUpgrade} />;
-  }
+  }, [searchParams, openChat]);
 
   return (
     <div
@@ -351,25 +377,6 @@ export function PolarisTab() {
             padding: 2px 0 !important;
           }
         }
-        [data-polaris-hero-row] {
-          padding-right: 150px;
-        }
-        [data-polaris-hero-token] {
-          position: absolute;
-          right: 0;
-          top: 50%;
-          transform: translateY(-50%);
-        }
-        @media (max-width: 760px) {
-          [data-polaris-hero-row] {
-            flex-wrap: wrap;
-            padding-right: 0;
-          }
-          [data-polaris-hero-token] {
-            position: static;
-            transform: none;
-          }
-        }
         @media (hover: hover) {
           [data-polaris-question-card]:hover {
             border-color: rgba(var(--s-rgb, 85,153,255),0.4) !important;
@@ -385,12 +392,16 @@ export function PolarisTab() {
           [data-polaris-explore-tab][data-active="false"]:hover {
             color: rgba(255,253,253,0.72) !important;
           }
-          [data-polaris-token-trigger]:hover {
+          [data-polaris-allowance-badge]:hover {
             border-color: rgba(var(--s-rgb, 85,153,255),0.4) !important;
             color: rgba(255,253,253,0.8) !important;
           }
-          [data-polaris-token-trigger]:hover [data-polaris-token-plus] {
+          [data-polaris-allowance-badge]:hover [data-polaris-allowance-plus] {
             color: var(--s, #5599FF) !important;
+          }
+          [data-polaris-topup-cta]:hover {
+            border-color: rgba(var(--s-rgb, 85,153,255),0.6) !important;
+            background: rgba(var(--s-rgb, 85,153,255),0.16) !important;
           }
         }
       `}</style>
@@ -398,7 +409,7 @@ export function PolarisTab() {
         <IdleView
           suggested={suggested}
           threads={threads}
-          remaining={remaining}
+          allowanceLabel={allowanceLabel}
           input={input}
           sending={sending}
           explore={explore}
@@ -408,7 +419,7 @@ export function PolarisTab() {
           onSubmit={submitInput}
           onOpenChat={openChat}
           onOpenThread={openThread}
-          onTopup={openTopup}
+          onAllowance={openAllowance}
         />
       ) : (
         <ChatView
@@ -416,126 +427,26 @@ export function PolarisTab() {
           input={input}
           sending={sending}
           limitReached={limitReached}
+          isPro={isPro}
           error={error}
-          remaining={remaining}
+          allowanceLabel={allowanceLabel}
           chatFocus={chatFocus}
           inputRef={chatInputRef}
           bottomRef={bottomRef}
           onBack={backToIdle}
           onInputChange={setInput}
           onSubmit={submitInput}
-          onTopup={openTopup}
+          onAllowance={openAllowance}
         />
       )}
 
       {topupOpen && (
-        <TopupSheet remaining={remaining} onClose={() => setTopupOpen(false)} />
+        <TopupSheet
+          allowanceLabel={allowanceLabel}
+          onClose={() => setTopupOpen(false)}
+        />
       )}
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Free lock
-// ---------------------------------------------------------------------------
-
-function PolarisLock({ onUpgrade }: { onUpgrade: () => void }) {
-  return (
-    <section
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100%",
-        maxWidth: 480,
-        margin: "0 auto",
-        padding: "48px 24px",
-        textAlign: "center",
-      }}
-    >
-      <span aria-hidden="true" style={{ color: ACCENT, fontSize: 22, marginBottom: 16 }}>
-        ✦
-      </span>
-      <p
-        style={{
-          fontSize: 21,
-          fontWeight: 300,
-          letterSpacing: "-0.02em",
-          color: "#FFFDFD",
-          margin: 0,
-          marginBottom: 18,
-        }}
-      >
-        polaris
-      </p>
-      <button
-        type="button"
-        onClick={onUpgrade}
-        aria-label="polaris is on pro"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 14,
-          background: "transparent",
-          border: "1px solid rgba(255,253,253,0.12)",
-          borderRadius: 16,
-          padding: "28px 32px",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          width: "100%",
-        }}
-      >
-        <LockIcon />
-        <span
-          style={{
-            fontSize: 14,
-            fontWeight: 300,
-            lineHeight: 1.6,
-            color: "rgba(255,253,253,0.55)",
-          }}
-        >
-          polaris is on pro. ask about any observation, grounded in your own record.
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onUpgrade}
-        style={{
-          marginTop: 22,
-          background: "transparent",
-          border: "0.5px solid rgba(255,253,253,0.35)",
-          borderRadius: 999,
-          padding: "10px 18px",
-          fontSize: 13,
-          color: "#FFFDFD",
-          cursor: "pointer",
-          fontFamily: "inherit",
-        }}
-      >
-        go pro, ${V67_PRICING.monthly}/month
-      </button>
-    </section>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="rgba(255,253,253,0.45)"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-    </svg>
   );
 }
 
@@ -546,7 +457,7 @@ function LockIcon() {
 function IdleView({
   suggested,
   threads,
-  remaining,
+  allowanceLabel,
   input,
   sending,
   explore,
@@ -556,11 +467,11 @@ function IdleView({
   onSubmit,
   onOpenChat,
   onOpenThread,
-  onTopup,
+  onAllowance,
 }: {
   suggested: SuggestedQuestion[];
   threads: PolarisThreadSummary[];
-  remaining: number;
+  allowanceLabel: string;
   input: string;
   sending: boolean;
   explore: ExploreTab;
@@ -570,7 +481,7 @@ function IdleView({
   onSubmit: () => void;
   onOpenChat: (seed?: string, pillar?: string | null) => void;
   onOpenThread: (id: string) => void;
-  onTopup: () => void;
+  onAllowance: () => void;
 }) {
   const showChats = threads.length > 0;
   const active = explore === "chats" && !showChats ? "record" : explore;
@@ -589,19 +500,30 @@ function IdleView({
     >
       <div style={{ width: "100%", maxWidth: 760, margin: "0 auto" }}>
         <div
-          data-polaris-hero-row
+          data-polaris-hero
           style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "flex-start",
-            gap: 14,
+            justifyContent: "center",
+            textAlign: "center",
+            gap: 10,
             marginBottom: 26,
-            position: "relative",
-            rowGap: 10,
           }}
         >
-          <span aria-hidden="true" style={{ fontSize: 26, color: ACCENT, flexShrink: 0 }}>
+          <span aria-hidden="true" style={{ fontSize: 30, color: ACCENT, flexShrink: 0 }}>
             ✦
+          </span>
+          <span
+            style={{
+              fontSize: 13,
+              letterSpacing: "0.24em",
+              textTransform: "uppercase",
+              fontWeight: 600,
+              color: "rgba(var(--s-rgb, 85,153,255),0.85)",
+            }}
+          >
+            polaris
           </span>
           <p
             style={{
@@ -611,15 +533,16 @@ function IdleView({
               lineHeight: 1.35,
               letterSpacing: "-0.01em",
               margin: 0,
-              flex: 1,
-              minWidth: 0,
+              textAlign: "center",
             }}
           >
-            what do you want to understand today?
+            what are you curious about today?
           </p>
-          <div data-polaris-hero-token>
-            <TokenPill remaining={remaining} onTopup={onTopup} />
-          </div>
+          <AllowanceBadge
+            label={allowanceLabel}
+            onClick={onAllowance}
+            style={{ margin: "6px auto 0" }}
+          />
         </div>
 
         <div
@@ -666,17 +589,17 @@ function IdleView({
           <div
             style={{
               display: "flex",
-              gap: 2,
+              flexWrap: "wrap",
+              gap: "8px 16px",
               justifyContent: "flex-start",
               marginBottom: 20,
-              marginLeft: -14,
             }}
           >
             <ExploreTabButton
               active={active === "record"}
               onClick={() => onExplore("record")}
             >
-              questions from your record
+              questions from your constellation
             </ExploreTabButton>
             <ExploreTabButton
               active={active === "starts"}
@@ -818,6 +741,7 @@ function ExploreTabButton({
       data-polaris-explore-tab
       data-active={active}
       style={{
+        flexShrink: 0,
         fontFamily: "inherit",
         fontSize: 12,
         letterSpacing: "0.02em",
@@ -843,29 +767,31 @@ function ChatView({
   input,
   sending,
   limitReached,
+  isPro,
   error,
-  remaining,
+  allowanceLabel,
   chatFocus,
   inputRef,
   bottomRef,
   onBack,
   onInputChange,
   onSubmit,
-  onTopup,
+  onAllowance,
 }: {
   messages: ChatMessage[];
   input: string;
   sending: boolean;
   limitReached: boolean;
+  isPro: boolean;
   error: string | null;
-  remaining: number;
+  allowanceLabel: string;
   chatFocus: string | null;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   bottomRef: RefObject<HTMLDivElement | null>;
   onBack: () => void;
   onInputChange: (v: string) => void;
   onSubmit: () => void;
-  onTopup: () => void;
+  onAllowance: () => void;
 }) {
   return (
     <div
@@ -947,7 +873,7 @@ function ChatView({
             flexShrink: 0,
           }}
         >
-          <TokenPill remaining={remaining} onTopup={onTopup} />
+          <AllowanceBadge label={allowanceLabel} onClick={onAllowance} />
           <button type="button" onClick={onBack} style={headerTextBtn}>
             new
           </button>
@@ -1010,11 +936,13 @@ function ChatView({
                   margin: 0,
                 }}
               >
-                you&apos;ve reached this week&apos;s polaris limit. add more to keep going.
+                {isPro
+                  ? "you've reached this week's polaris limit. add more to keep going."
+                  : "you've reached this week's polaris limit. upgrade for more"}
               </p>
               <button
                 type="button"
-                onClick={onTopup}
+                onClick={onAllowance}
                 style={{
                   marginTop: 12,
                   minHeight: 24,
@@ -1029,7 +957,9 @@ function ChatView({
                   textUnderlineOffset: 3,
                 }}
               >
-                add more for ${V67_PRICING.topup}
+                {isPro
+                  ? `add a little more for $${V67_PRICING.topup}`
+                  : `continue with full, $${V67_PRICING.monthly}/month`}
               </button>
             </div>
           )}
@@ -1148,119 +1078,84 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 }
 
 // ---------------------------------------------------------------------------
-// Token pill + top-up sheet
+// Allowance badge + top-up sheet
 // ---------------------------------------------------------------------------
 
-function TokenPill({
-  remaining,
-  onTopup,
+/**
+ * "<n> of <limit> questions left this week" pill, shared by the idle hero and
+ * the chat header. A plain button: full opens the top-up sheet, free opens the
+ * upgrade modal (the parent decides via `onClick`).
+ */
+function AllowanceBadge({
+  label,
+  onClick,
+  style,
 }: {
-  remaining: number;
-  onTopup: () => void;
+  label: string;
+  onClick: () => void;
+  style?: CSSProperties;
 }) {
   return (
-    <Popover.Root>
-      <Popover.Trigger asChild>
-        <button
-          type="button"
-          aria-label={`${weeklyTokenCopy(remaining)}. learn how polaris tokens work`}
-          className="motion-reduce:transition-none"
-          data-polaris-token-trigger
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            minHeight: 24,
-            minWidth: 24,
-            fontFamily: "inherit",
-            fontSize: 11,
-            lineHeight: 1,
-            letterSpacing: "0.02em",
-            color: "rgba(255,253,253,0.5)",
-            padding: "4px 5px 4px 11px",
-            border: "1px solid #242424",
-            borderRadius: 20,
-            whiteSpace: "nowrap",
-            background: "transparent",
-            cursor: "pointer",
-          }}
-        >
-          <span>{weeklyTokenCopy(remaining)}</span>
-          <span
-            aria-hidden="true"
-            data-polaris-token-plus
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 14,
-              height: 14,
-              color: "rgba(255,253,253,0.6)",
-              flexShrink: 0,
-            }}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </span>
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          align="end"
-          sideOffset={8}
-          aria-label="polaris token details"
-          style={{
-            zIndex: 60,
-            width: "min(320px, calc(100vw - 32px))",
-            border: "1px solid #242424",
-            borderRadius: 12,
-            background: "#0e0e0e",
-            padding: 14,
-            color: "rgba(255,253,253,0.72)",
-            boxShadow: "0 12px 32px rgba(0,0,0,0.45)",
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              fontSize: 12,
-              fontWeight: 300,
-              lineHeight: 1.65,
-            }}
-          >
-            {TOKEN_NOTE}
-          </p>
-          <Popover.Close asChild>
-            <button
-              type="button"
-              onClick={onTopup}
-              style={{
-                minHeight: 24,
-                marginTop: 10,
-                border: "none",
-                background: "transparent",
-                padding: "4px 0",
-                color: ACCENT,
-                fontFamily: "inherit",
-                fontSize: 12,
-                cursor: "pointer",
-              }}
-            >
-              add more for ${V67_PRICING.topup}
-            </button>
-          </Popover.Close>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title="how many polaris questions you have left this week"
+      className="motion-reduce:transition-none"
+      data-polaris-allowance-badge
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        minHeight: 24,
+        minWidth: 24,
+        fontFamily: "inherit",
+        fontSize: 11,
+        lineHeight: 1,
+        letterSpacing: "0.02em",
+        color: "rgba(255,253,253,0.5)",
+        padding: "4px 5px 4px 11px",
+        border: "1px solid #242424",
+        borderRadius: 20,
+        whiteSpace: "nowrap",
+        background: "transparent",
+        cursor: "pointer",
+        transition: "border-color 0.2s ease, color 0.2s ease",
+        ...style,
+      }}
+    >
+      <span>{label}</span>
+      <span
+        aria-hidden="true"
+        data-polaris-allowance-plus
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 14,
+          height: 14,
+          color: "rgba(255,253,253,0.6)",
+          flexShrink: 0,
+        }}
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </span>
+    </button>
   );
 }
 
+/**
+ * Top-up sheet (full only). Same chrome as the settings modals (v240): dimmed,
+ * blurred overlay; blue-black gradient box with an accent-tinted border; tinted
+ * primary button. The CTA has no backend yet — it only closes the sheet.
+ */
 function TopupSheet({
-  remaining,
+  allowanceLabel,
   onClose,
 }: {
-  remaining: number;
+  allowanceLabel: string;
   onClose: () => void;
 }) {
   return (
@@ -1273,21 +1168,25 @@ function TopupSheet({
         position: "fixed",
         inset: 0,
         zIndex: 50,
-        background: "rgba(0,0,0,0.55)",
+        background: "rgba(4,5,8,0.78)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 24,
+        padding: 20,
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: "100%",
-          maxWidth: 420,
-          background: "#0E0E0E",
-          border: "1px solid #1C1C1C",
-          borderRadius: 14,
+          width: "min(440px, calc(100vw - 40px))",
+          background:
+            "radial-gradient(120% 88% at 50% -18%, rgba(var(--s-rgb, 85,153,255),0.10), transparent 66%), linear-gradient(180deg, #0c0f16 0%, #090b10 100%)",
+          border: "1px solid rgba(var(--s-rgb, 85,153,255),0.20)",
+          borderRadius: 16,
+          boxShadow:
+            "0 0 0 1px rgba(255,253,253,0.03), 0 30px 80px -20px rgba(0,0,0,0.75)",
           padding: 28,
           color: "#FFFDFD",
         }}
@@ -1297,6 +1196,7 @@ function TopupSheet({
           style={{
             fontSize: 16,
             fontWeight: 500,
+            color: "#FFFDFD",
             margin: "0 0 10px",
           }}
         >
@@ -1306,11 +1206,11 @@ function TopupSheet({
           style={{
             fontSize: 12.5,
             lineHeight: 1.6,
-            color: "#888",
+            color: "rgba(255,253,253,0.52)",
             margin: "0 0 12px",
           }}
         >
-          your weekly amount resets on its own. if you need more before then, you can add extra.
+          your weekly amount resets on its own. if you want more room before then, you can add a little extra.
         </p>
         <p
           style={{
@@ -1320,7 +1220,7 @@ function TopupSheet({
             margin: "0 0 18px",
           }}
         >
-          {TOKEN_NOTE}
+          {ALLOWANCE_NOTE}
         </p>
         <p
           style={{
@@ -1329,35 +1229,39 @@ function TopupSheet({
             margin: "0 0 18px",
           }}
         >
-          {weeklyTokenCopy(remaining)} remaining
+          {allowanceLabel}
         </p>
         <button
           type="button"
           onClick={onClose}
+          className="motion-reduce:transition-none"
+          data-polaris-topup-cta
           style={{
             width: "100%",
-            border: "none",
+            border: "1px solid rgba(var(--s-rgb, 85,153,255),0.38)",
             borderRadius: 10,
             padding: "12px 16px",
-            background: ACCENT,
-            color: "#06060a",
+            background: "rgba(var(--s-rgb, 85,153,255),0.10)",
+            color: "#FFFDFD",
             fontSize: 13,
+            fontWeight: 500,
             fontFamily: "inherit",
             cursor: "pointer",
+            transition: "border-color 0.2s ease, background 0.2s ease",
           }}
         >
-          add more for ${V67_PRICING.topup}
+          add a little more for ${V67_PRICING.topup}
         </button>
         <p
           style={{
             fontSize: 11.5,
-            color: "#888",
+            color: "rgba(255,253,253,0.52)",
             textAlign: "center",
             marginTop: 10,
             lineHeight: 1.6,
           }}
         >
-          one-time. your weekly amount still resets on schedule either way.
+          one time only. your usual weekly amount will still reset as normal.
         </p>
       </div>
     </div>

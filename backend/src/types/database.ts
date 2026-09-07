@@ -405,11 +405,15 @@ export interface PolarisMessage {
   created_at: string;
 }
 
-/** Weekly Polaris token meter; PK (user_id, week). */
+/**
+ * Weekly Polaris allowance meter; PK (user_id, week). Since PHE-94 the meter
+ * counts QUESTIONS (3 free / 40 full): `tokens_used` is reused as the question
+ * count and keeps its historical name (no migration).
+ */
 export interface PolarisTokenUsage {
   user_id: string;
   week: string; // ISO date (YYYY-MM-DD), Monday week start, UTC
-  tokens_used: number;
+  tokens_used: number; // questions asked this week (column name is historical)
   updated_at: string;
 }
 
