@@ -6,7 +6,7 @@ import { useTier } from "@/lib/use-tier";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { apiFetch, type ProfileOverview } from "@/lib/api-client";
 import { colorName } from "@/lib/stellar";
-import { fetchConstellation, type ConstellationData } from "@/lib/constellation";
+import { constellationAge, fetchConstellation, type ConstellationData } from "@/lib/constellation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { IntroBanner } from "@/components/phenyx/intro-banner";
 import { PanelHeader } from "@/components/phenyx/panel-header";
@@ -105,7 +105,11 @@ export default function YouTabPage() {
   const swatch = overview?.stellar_color || stellarColor;
   const stellarName = colorName(swatch);
   const badge = isPro ? "full" : "free";
-  const stats = buildYouStats(constellation, platforms.length);
+  const stats = buildYouStats(
+    constellation,
+    platforms.length,
+    constellation ? constellationAge(constellation) : null,
+  );
 
   return (
     <>

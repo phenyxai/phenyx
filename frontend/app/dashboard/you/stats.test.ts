@@ -2,8 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildYouStats,
-  constellationAge,
-  constellationStartYear,
   formatJoinedSince,
 } from "./stats.ts";
 
@@ -37,30 +35,10 @@ function data(overrides: Record<string, unknown> = {}) {
   } as any;
 }
 
-test("constellationStartYear prefers the first 4-digit year in the span, then tenure.since", () => {
-  assert.equal(constellationStartYear(data()), 2014);
-  assert.equal(constellationStartYear(data({ timeline: { span: ["since 2019", "now"], breaks: [] } })), 2019);
-  assert.equal(constellationStartYear(data({ timeline: { span: [], breaks: [] } })), 2026);
-  assert.equal(
-    constellationStartYear(data({ timeline: { span: [], breaks: [] }, tenure: { years: 0, since: null } })),
-    null,
-  );
-});
-
-test("constellationAge counts months from january of the start year through now", () => {
-  const age = constellationAge(data(), NOW);
-  assert.deepEqual(age, { label: "12 years, 9 months", from: 2014, years: 12, months: 9 });
-});
-
-test("constellationAge uses singular forms and drops a zero months part", () => {
-  assert.equal(constellationAge(data({ timeline: { span: ["2025"], breaks: [] } }), new Date(2026, 0, 15))?.label, "1 year, 1 month");
-  assert.equal(constellationAge(data({ timeline: { span: ["2025"], breaks: [] } }), new Date(2025, 11, 1))?.label, "1 year");
-  assert.equal(constellationAge(data({ timeline: { span: ["2026"], breaks: [] } }), new Date(2026, 0, 1))?.label, "1 month");
-  assert.equal(constellationAge(data({ timeline: { span: [], breaks: [] }, tenure: { years: 0, since: null } }), NOW), null);
-});
+const AGE = { from: 2014, label: "12 years, 9 months" };
 
 test("buildYouStats lays out age, moments, turning points, accounts", () => {
-  const rows = buildYouStats(data(), 7, NOW);
+  const rows = buildYouStats(data(), 7, AGE, NOW);
   assert.deepEqual(rows, [
     { key: "age", label: "age", value: "12 years, 9 months", note: "from 2014 to now" },
     { key: "moments", label: "moments", value: "26", note: "across 12 years" },
@@ -73,20 +51,21 @@ test("buildYouStats omits rows with no value", () => {
   const rows = buildYouStats(
     data({ timeline: { span: [], breaks: [] }, tenure: { years: 0, since: null }, pillars: pillars([]) }),
     0,
+    null,
     NOW,
   );
   assert.deepEqual(rows, []);
 
-  const onlyAccounts = buildYouStats(null, 3, NOW);
+  const onlyAccounts = buildYouStats(null, 3, null, NOW);
   assert.deepEqual(onlyAccounts, [
     { key: "accounts", label: "accounts", value: "3", note: "connected and contributing" },
   ]);
 });
 
 test("buildYouStats drops the moments note inside the first year and says 'across 1 year' after it", () => {
-  const first = buildYouStats(data({ timeline: { span: ["2026"], breaks: [] } }), 0, NOW);
+  const first = buildYouStats(data({ timeline: { span: ["2026"], breaks: [] } }), 0, { from: 2026, label: "9 months" }, NOW);
   assert.equal(first[1].note, null);
-  const second = buildYouStats(data({ timeline: { span: ["2025"], breaks: [] } }), 0, NOW);
+  const second = buildYouStats(data({ timeline: { span: ["2025"], breaks: [] } }), 0, { from: 2025, label: "1 year, 9 months" }, NOW);
   assert.equal(second[1].note, "across 1 year");
 });
 
