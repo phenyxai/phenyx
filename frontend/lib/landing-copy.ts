@@ -37,25 +37,25 @@ export const manifestoCopy = {
     "each one keeps a version of you that is true, but not one shows what it all adds up to.",
     "so there has never been one place that holds all of you at once. every moment came from the same life, but nothing has ever gathered them in the same place.",
   ],
-  emphasis: "so we made one.",
+  emphasis: "here they are read together.",
 } as const;
 
 export const howItWorksCopy = {
   eyebrow: "how it works",
-  headline: "connect, assemble, reveal",
-  subline: "three layers, and nothing invented in any of them.",
+  headline: "the same life, at three magnifications",
+  subline: "you are the thing being looked at, and the looking is done with what you already made.",
   cards: [
-    { layer: "layer one", title: "connect", body: "what you listen to, watch, save, post and build, from only the places you choose." },
-    { layer: "layer two", title: "assemble", body: "everything lands on one timeline, so repeats and shifts finally sit next to each other." },
-    { layer: "layer three", title: "reveal", body: "the shape no single account could show, with the moments and evidence that made it visible." },
+    { kicker: "close up", title: "the moment", body: "one night you kept working, one song you wore out, one thing you saved and never mentioned to anyone." },
+    { kicker: "further back", title: "the pattern", body: "every moment lands on one timeline, so the things that keep coming back finally sit close enough to be read together." },
+    { kicker: "the whole field", title: "the shape", body: "seven points, and the line your life has been drawing between them the entire time." },
   ],
   signalsLabel: "what comes into view",
   signals: ["what keeps returning", "what overlaps", "creative rhythms", "turning points", "how you decide", "what stays with you"],
-  privacyLabel: "what stays yours",
-  privacyItems: [
-    { promise: "your control.", detail: "choose what comes in. disconnect whenever you want." },
-    { promise: "your privacy.", detail: "PHENYX keeps what it learned from your accounts, never a second copy of them." },
-    { promise: "your meaning.", detail: "PHENYX can show what is there. what it means stays yours." },
+  evidenceLabel: "what the evidence is",
+  evidenceItems: [
+    { title: "a moment.", body: "one thing you made, saved or went back to, with the day it happened still attached to it." },
+    { title: "a return.", body: "the same moment arriving again, years later, in a medium you had not used the first time." },
+    { title: "a shape.", body: "what all of that returning has been building toward, without ever announcing itself." },
   ],
 } as const;
 
@@ -65,7 +65,7 @@ export const constellationCopy = {
   lines: [
     "a constellation is not the stars. it is the shape they make once you see them together.",
     "seven points run from where you began to where you are heading, each looking at one question through the evidence of your life.",
-    "it is not a profile you finish. new things appear, old ones return, some fall away, and the shape keeps enough of you to notice when you change.",
+    "new things appear, old ones return, some fall away, and the shape holds enough of you to show when you have changed.",
   ],
   emphasis: "the points stay the same. what fills them is yours.",
   visualizationLabel: "Seven-point constellation: origin, emergence, self-creation, convergence, becoming, recognition, and transcendence.",
