@@ -564,10 +564,16 @@
   white-space: nowrap;
   transition: color 250ms ease;
 }
+/* The link is a 44px tap target with the text centred in it, so the rule is
+   anchored off the vertical centre rather than the box's bottom edge: half a
+   line-height clears the descenders and the remainder reads as an underline.
+   The right edge is pulled in by one letter-space because letter-spacing is
+   added after the final glyph too. */
 .landing-vnext__nav-links a::after {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  top: auto;
+  right: 0.05em;
+  bottom: calc(50% - 0.7em - 5px);
   left: 0;
   height: 1px;
   background: var(--landing-accent);
@@ -578,7 +584,10 @@
 }
 .landing-vnext__nav-links a:hover,
 .landing-vnext__nav-links a[data-active="true"] { color: rgba(255, 253, 253, 0.96); }
-.landing-vnext__nav-links a[data-active="true"]::after { opacity: 0.85; transform: scaleX(1); }
+/* hover previews the same rule the active state uses, dimmer, in the same place */
+.landing-vnext__nav-links a:hover::after { opacity: 0.42; transform: scaleX(1); }
+.landing-vnext__nav-links a[data-active="true"]::after,
+.landing-vnext__nav-links a[data-active="true"]:hover::after { opacity: 0.85; transform: scaleX(1); }
 .landing-vnext__nav-enter,
 .landing-vnext__enter-button {
   display: inline-flex;
@@ -859,7 +868,7 @@
 .landing-vnext [data-reveal][data-visible="true"] { opacity: 1; transform: none; }
 
 .landing-vnext__modal-layer { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.landing-vnext__modal-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(3px); }
+.landing-vnext__modal-overlay { position: absolute; inset: 0; background: rgba(4, 5, 8, 0.78); backdrop-filter: blur(6px); }
 .landing-vnext__modal { position: relative; z-index: 1; width: min(380px, 100%); padding: 36px 32px; border: 1px solid rgba(255, 253, 253, 0.1); border-radius: 16px; background: #0c0c0c; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
 .landing-vnext__modal-close { position: absolute; top: 10px; right: 10px; min-width: 44px; min-height: 44px; border: 0; background: none; color: #888; font: inherit; font-size: 18px; }
 .landing-vnext__modal h2 { margin: 0 0 6px; color: var(--landing-text); font-size: 19px; font-weight: 400; }
@@ -896,12 +905,14 @@
   .landing-vnext__nav-dropdown { position: fixed; top: 66px; right: 20px; left: 20px; z-index: 99; display: flex; flex-direction: column; gap: 2px; padding: 14px; border: 1px solid var(--landing-line); border-radius: 14px; background: rgba(8, 8, 8, 0.98); opacity: 0; pointer-events: none; transform: translateY(-8px); transition: opacity 250ms ease, transform 250ms ease; }
   .landing-vnext__nav-dropdown[data-open="true"] { opacity: 1; pointer-events: auto; transform: none; }
   .landing-vnext__nav-dropdown a { padding: 12px 16px; color: var(--landing-body); font-size: 14px; text-decoration: none; text-align: center; }
+  /* the sheet has no room for a rule under the text, so the current destination is marked on the leading edge */
+  .landing-vnext__nav-dropdown a[data-active="true"] { color: rgba(255, 253, 253, 0.96); box-shadow: inset 2px 0 0 rgba(155, 188, 255, 0.7); }
   .landing-vnext__nav-dropdown button { min-height: 44px; margin-top: 10px; border: 1px solid rgba(255, 253, 253, 0.2); border-radius: 999px; background: transparent; color: var(--landing-text); }
   .landing-vnext__hero { width: 100%; max-width: none; min-height: 100svh; padding: 88px 20px 64px; justify-content: center; text-align: center; }
   .landing-vnext__hero-content { width: 100%; max-width: min(540px, 100%); margin: 0 auto; align-items: center; padding-bottom: 7vh; text-align: center; }
   .landing-vnext__hero h1 { font-size: clamp(33px, 9.5vw, 45px); margin-left: auto; margin-right: auto; }
   .landing-vnext__hero-tagline { font-size: 19px; margin-bottom: 14px; }
-  .landing-vnext__hero-description { max-width: 34ch; margin: 0 auto 40px; font-size: 14px; line-height: 1.6; white-space: normal; }
+  .landing-vnext__hero-description { max-width: 30ch; margin: 0 auto 40px; font-size: 14px; line-height: 1.6; white-space: normal; }
   .landing-vnext__enter-button { align-self: center; margin: 0 auto; }
   .landing-vnext__hero-particles,
   .landing-vnext__scroll-cue { display: none; }
