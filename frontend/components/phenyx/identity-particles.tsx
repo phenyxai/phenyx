@@ -62,7 +62,6 @@ export function IdentityParticles() {
     let mouseY: number | null = null;
     let mouseActive = false;
     let animId = 0;
-    let cueBox: DOMRect | null = null;
     let fieldT0: number | null = null;
     let onScreen = true;
 
@@ -105,11 +104,6 @@ export function IdentityParticles() {
       if (t <= 0) return 0.12;
       if (t >= 1) return 1;
       return 0.12 + 0.88 * (1 - Math.pow(1 - t, 3));
-    }
-
-    function measureCue() {
-      const el = document.querySelector(".landing-vnext__scroll-cue");
-      cueBox = el ? el.getBoundingClientRect() : null;
     }
 
     function resize() {
@@ -160,7 +154,6 @@ export function IdentityParticles() {
     };
     const onResize = () => {
       resize();
-      measureCue();
       initParticles();
     };
 
@@ -210,20 +203,6 @@ export function IdentityParticles() {
         if (p.x < MIN_X) p.x = MIN_X;
         if (p.y < MIN_Y) p.y = MIN_Y;
 
-        if (cueBox) {
-          const fr = field.getBoundingClientRect();
-          const cx = p.x + fr.left;
-          const cy = p.y + fr.top;
-          if (
-            cx > cueBox.left - 46 &&
-            cx < cueBox.right + 46 &&
-            cy > cueBox.top - 34 &&
-            cy < cueBox.bottom + 34
-          ) {
-            continue;
-          }
-        }
-
         if (hero) {
           const fr = field.getBoundingClientRect();
           const hr = hero.getBoundingClientRect();
@@ -259,7 +238,6 @@ export function IdentityParticles() {
     field.addEventListener("mouseleave", onLeave);
     window.addEventListener("resize", onResize);
     resize();
-    measureCue();
     initParticles();
     animId = requestAnimationFrame(draw);
 

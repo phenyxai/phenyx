@@ -89,6 +89,15 @@ export const howItWorksCopy = {
     "what may be next",
   ],
   staysYoursLabel: "what stays yours",
+  // UNVERIFIED PRIVACY CLAIM — do not publish until someone signs this off.
+  // "without keeping a copy of your raw data" is not obviously true of the
+  // shipped backend: `source_records` retains per-record rows keyed by
+  // `external_record_id` with an encrypted `payload_ciphertext` and
+  // `provenance_status = 'retained_source'`, and the Sept 15 source trail leans
+  // on exactly that ("open exact record"). The Onairos path is defensible —
+  // `trait_object` arrives already derived and `redactOnairosForProfile` only
+  // strips credential keys — but `source_records` is the harder half.
+  // Ported verbatim from the designer's export; wording is a legal call.
   staysYoursItems: [
     { title: "your data.", body: "choose what comes in, what stays connected, and when anything leaves." },
     { title: "your privacy.", body: "PHENYX keeps derived context without keeping a copy of your raw data." },
