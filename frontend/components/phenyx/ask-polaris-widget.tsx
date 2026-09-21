@@ -52,7 +52,6 @@ export function AskPolarisWidget() {
   }, []);
 
   const entry = polarisCopy.examples[index];
-  const emphasisAt = entry.answer.indexOf(entry.emphasis);
 
   return (
     <div
@@ -65,11 +64,9 @@ export function AskPolarisWidget() {
       }}
     >
       <div data-fading={isFading}>
-        <p className="landing-vnext__polaris-pillar">{entry.pillar}</p>
+        <p className="landing-vnext__polaris-mode">{entry.mode}</p>
         <p className="landing-vnext__polaris-question">{entry.question}</p>
-        <p className="landing-vnext__polaris-answer">
-          {entry.answer.slice(0, emphasisAt)}<strong>{entry.emphasis}</strong>{entry.answer.slice(emphasisAt + entry.emphasis.length)}
-        </p>
+        <p className="landing-vnext__polaris-answer">{entry.answer}</p>
         <div className="landing-vnext__polaris-meta">
           {entry.sources.map((source) => <span key={source}><i />{source}</span>)}
           <span className="landing-vnext__polaris-span">{entry.span}</span>
@@ -77,7 +74,7 @@ export function AskPolarisWidget() {
       </div>
       <div className="landing-vnext__polaris-dots" aria-label="Polaris examples">
         {polarisCopy.examples.map((example, dotIndex) => (
-          <button key={example.pillar} type="button" aria-label={`show ${example.pillar} example`} aria-current={dotIndex === index ? "true" : undefined} onClick={() => select(dotIndex)} />
+          <button key={example.question} type="button" aria-label={`show ${example.mode} example ${dotIndex + 1}`} aria-current={dotIndex === index ? "true" : undefined} onClick={() => select(dotIndex)} />
         ))}
       </div>
     </div>

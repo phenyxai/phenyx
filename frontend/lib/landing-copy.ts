@@ -1,3 +1,13 @@
+// Landing copy, ported from the Sept 15 drop (internal pass ph550).
+//
+// Source of record: ~/Documents/Phenyx/Sept 15/PHENYX_main_landing (1).html —
+// the landing-only export, which is the canonical marketing dataset. The full
+// demo carries the same landing markup but a different constellation example
+// (Mara's persona); the standalone export wins for the marketing site.
+//
+// Voice note: every string here is stored lowercase. Uppercase is a CSS concern
+// (`text-transform`), matching how the prototype does it — see
+// `.landing-vnext__polaris-mode` and `.landing-vnext__evidence-rows span`.
 export const BRAND = "PHENYX";
 
 export const SECTION_IDS = {
@@ -13,7 +23,7 @@ export const navCopy = {
   brand: BRAND,
   menuLabel: "menu",
   links: [
-    { label: "first look", targetId: SECTION_IDS.about },
+    { label: "your life", targetId: SECTION_IDS.about },
     { label: "how it works", targetId: SECTION_IDS.how },
     { label: "your constellation", targetId: SECTION_IDS.mission },
     { label: "polaris", targetId: SECTION_IDS.polaris },
@@ -23,52 +33,86 @@ export const navCopy = {
 
 export const heroCopy = {
   brand: BRAND,
-  tagline: "your life, taking form",
-  description: "see who you've been, across everything you already use.",
+  tagline: "your life, taking form.",
+  // Two deliberate lines, not one wrapped sentence — the prototype splits these
+  // into separate spans so the break survives every viewport.
+  descriptionLines: ["see who you've been. understand who you are.", "follow who you're becoming."],
   enter: "enter",
-  scroll: "scroll",
 } as const;
 
 export const manifestoCopy = {
-  eyebrow: "first look",
-  headline: "you were never in pieces, only in places",
+  eyebrow: "your life",
+  headline: "parts of you are out there.",
   paragraphs: [
-    "every place you use asks for one part of you: the listener, the maker, the one who saves things for later.",
-    "each one keeps a version of you that is true, but not one shows what it all adds up to.",
-    "so there has never been one place that holds all of you at once. every moment came from the same life, but nothing has ever gathered them in the same place.",
+    "in the music you return to, the work you make, the things you save, the people you meet, the questions you ask, and the way you spend your time.",
+    "each place holds a different part of you. none of them shows how those parts connect, or what they make up together.",
   ],
-  emphasis: "here they are read together.",
+  emphasis: "PHENYX shows you what those parts make up together.",
 } as const;
 
 export const howItWorksCopy = {
-  eyebrow: "how it works",
-  headline: "the same life, at three magnifications",
-  subline: "you are the thing being looked at, and the looking is done with what you already made.",
+  eyebrow: "how phenyx works",
+  headline: "see the whole of who you are.",
+  subline:
+    "connect the places you choose. PHENYX uses the data already there to show how the different parts of your life connect across time.",
+  // One card per product surface. Card order mirrors the product's own tab order.
   cards: [
-    { kicker: "close up", title: "the moment", body: "one night you kept working, one song you wore out, one thing you saved and never mentioned to anyone." },
-    { kicker: "further back", title: "the pattern", body: "every moment lands on one timeline, so the things that keep coming back finally sit close enough to be read together." },
-    { kicker: "the whole field", title: "the shape", body: "seven points, and the line your life has been drawing between them the entire time." },
+    {
+      kicker: "who you've been",
+      title: "constellation",
+      body: "move through seven stages built from your data, with the moments and original evidence behind each one.",
+    },
+    {
+      kicker: "what you missed",
+      title: "discover",
+      body: "resurface forgotten saves, unexpected connections, unfinished threads, and moments worth seeing again.",
+    },
+    {
+      kicker: "clarity + direction",
+      title: "polaris",
+      body: "clarify what something means, weigh a decision, or build a path around how you actually live.",
+    },
+    {
+      kicker: "who you are now",
+      title: "you",
+      body: "see the themes, patterns, and eras that seem to hold across change.",
+    },
   ],
   signalsLabel: "what comes into view",
-  signals: ["what keeps returning", "what overlaps", "creative rhythms", "turning points", "how you decide", "what stays with you"],
-  evidenceLabel: "what the evidence is",
-  evidenceItems: [
-    { title: "a moment.", body: "one thing you made, saved or went back to, with the day it happened still attached to it." },
-    { title: "a return.", body: "the same moment arriving again, years later, in a medium you had not used the first time." },
-    { title: "a shape.", body: "what all of that returning has been building toward, without ever announcing itself." },
+  // Exactly six — HowItWorksSection pairs these positionally with SIGNAL_Y.
+  signals: [
+    "what shaped you",
+    "what keeps returning",
+    "what changed",
+    "what overlaps",
+    "what matters now",
+    "what may be next",
+  ],
+  staysYoursLabel: "what stays yours",
+  staysYoursItems: [
+    { title: "your data.", body: "choose what comes in, what stays connected, and when anything leaves." },
+    { title: "your privacy.", body: "PHENYX keeps derived context without keeping a copy of your raw data." },
+    {
+      title: "your truth.",
+      body: "PHENYX can surface the evidence and patterns. you decide what they mean and what you do with them.",
+    },
   ],
 } as const;
 
 export const constellationCopy = {
   eyebrow: "your constellation",
-  headline: "see how the parts of your life relate",
+  headline: "see how your life takes shape.",
   lines: [
-    "a constellation is not the stars. it is the shape they make once you see them together.",
-    "seven points run from where you began to where you are heading, each looking at one question through the evidence of your life.",
-    "new things appear, old ones return, some fall away, and the shape holds enough of you to show when you have changed.",
+    "each point captures a different stage of your life. inside it, PHENYX brings together what was happening across your interests, work, relationships, habits, ideas, and the changes taking shape around you.",
+    "open a stage to see the moments that made it up, how different parts of your life overlapped, when they happened, and the original sources behind them.",
   ],
-  emphasis: "the points stay the same. what fills them is yours.",
-  visualizationLabel: "Seven-point constellation: origin, emergence, self-creation, convergence, becoming, recognition, and transcendence.",
+  emphasis: "start with the whole. follow what pulls you closer.",
+  visualizationLabel:
+    "Seven-point constellation: origin, emergence, self-creation, convergence, becoming, recognition, and transcendence.",
+  // The note now sits ABOVE the example rather than below it, so the reader is
+  // told it is an example before reading one.
+  exampleNote: "an example of what can surface within each stage",
+  exampleToggleLabel: "see what shapes each point",
   previewHeadline: "your identity. finally in one place.",
   previewSubline: "we help you connect it all through moments of reflection.",
   previewBrandLabel: BRAND,
@@ -81,104 +125,160 @@ export interface ConstellationPoint {
   year: string;
   question: string;
   summary: string;
+  /**
+   * [label, source, evidence]. The first cell used to be a date; in the Sept 15
+   * dataset it is a category label ("curiosity", "making", "recovery") and the
+   * source cell may name more than one platform ("oura + strava").
+   */
   rows: readonly (readonly [string, string, string])[];
   observation: string;
-  star?: string;
-  starSub?: string;
 }
 
 export const constellationPoints: readonly ConstellationPoint[] = [
   {
-    name: "origin", year: "2016–17", question: "what has been with me longer than i realized?", summary: "four things arrive, none of them chosen.",
+    name: "origin",
+    year: "2016–17",
+    question: "what was already there before i had words for it?",
+    summary: "your earliest record already shows a pull toward self-directed learning and making things your own.",
     rows: [
-      ["mar 2016", "spotify", "one album, 214 plays that year, the one you still put on to work"],
-      ["aug 2016", "youtube", "forty hours on colour grading, then nothing at all for three years"],
-      ["feb 2017", "pinterest", "a board you name someday, nine saves, every one a room at dusk"],
-      ["nov 2017", "instagram", "your first photograph with no people in it, taken at six in the morning"],
+      ["curiosity", "youtube", "saved videos keep returning to cognitive psychology, film breakdowns, and learning systems"],
+      ["focus", "spotify", "“Instant Crush” by Daft Punk keeps returning across your exam-period playlists"],
+      ["influence", "netflix", "Black Mirror, The Good Place, and Abstract: The Art of Design are among the titles you return to most"],
     ],
-    observation: "none of these was a decision. three of the four are about light, and you would not say that word for another five years.",
+    observation: "before there was a plan, there was already a consistent way you learned and focused.",
   },
   {
-    name: "emergence", year: "2018–20", question: "what was becoming important before i named it?", summary: "four accounts, one subject.",
+    name: "emergence",
+    year: "2018–20",
+    question: "what started taking shape before i named it?",
+    summary: "your attention shifts from learning about other people’s work to testing ideas of your own.",
     rows: [
-      ["apr 2018", "pinterest", "three hundred and forty saves that spring, sixty-one of them the same doorway at different hours"],
-      ["sep 2018", "letterboxd", "forty films rated, and the four you rewatched share one cinematographer"],
-      ["jun 2019", "instagram", "you stop posting at midday and start posting within an hour of sunrise"],
-      ["jan 2020", "youtube", "you stop watching interviews and start watching people light a set, six hours to seventy-one"],
+      ["making", "github", "side projects shift from tutorial clones to original interface prototypes"],
+      ["taste", "instagram", "saved posts begin mixing interaction details with live-show photography, interiors, and personal style"],
+      ["direction", "linkedin", "internships and your portfolio begin using product design as the consistent role and project focus"],
     ],
-    observation: "you called yourself a photographer in 2021. the evidence says colourist, and it starts in april 2018.",
+    observation: "the interest becomes more specific once learning, making, and career choices start moving together.",
   },
   {
-    name: "self-creation", year: "2020–22", question: "what have i built on purpose?", summary: "the first thing that does not stop.",
+    name: "self-creation",
+    year: "2020–22",
+    question: "what did i begin choosing on purpose?",
+    summary: "you start building a life around the kind of work you want to keep doing.",
     rows: [
-      ["may 2020", "github", "your ninth repository, a grading tool, and the first with a commit after day thirty"],
-      ["oct 2020", "instagram", "the ratio inverts, from eighty percent other people's frames to seventy-six percent your own"],
-      ["jun 2021", "youtube", "four hundred and twelve hours on grading, ninety-one percent of it before nine in the morning"],
-      ["mar 2022", "linkedin", "you put the word colourist in your title, five years after the first forty hours"],
+      ["commitment", "github", "the projects you keep returning to are interfaces and tools built around people"],
+      ["routine", "strava", "morning runs keep showing up before the days when you settle into your longest work sessions"],
+      ["recovery", "netflix", "comfort rewatches like The Good Place and Spirited Away keep showing up after your heaviest project weeks"],
     ],
-    observation: "the eight repositories you abandoned are what make the ninth mean something. from first frame to naming yourself took five years.",
+    observation: "the change here is not just more activity. your choices start reinforcing one another.",
   },
   {
-    name: "convergence", year: "2023", question: "which parts of my life are less separate than they seem?", summary: "six weeks where all of it moves at once.",
+    name: "convergence",
+    year: "2023",
+    question: "which parts of my life started moving together?",
+    summary: "career questions, environment, and daily rhythm all shift within the same six weeks.",
     rows: [
-      ["feb 2023", "pinterest", "one hundred and ninety saves in fourteen days, every one an interior, then three the month after"],
-      ["mar 2023", "spotify", "the album from 2016 becomes the only thing you play while grading"],
-      ["mar 2023", "chatgpt", "the same question four times in seven days, about working for yourself"],
-      ["apr 2023", "strava", "your first run in eleven months, then forty-three in twelve weeks, all before nine"],
+      ["direction", "chatgpt", "questions increasingly center on what to build next, how to make decisions, and what kind of work feels worth doing"],
+      ["environment", "pinterest", "saved references mix wearable concepts with interiors, objects, typography, and spaces you want to live in"],
+      ["perspective", "reddit", "saved threads keep circling HCI, city life, music gear, and how technology changes everyday behavior"],
     ],
-    observation: "the reference, the music, the question and the hour all turned inside six weeks. none of the four accounts could see the other three, so at the time it felt like four unrelated moods.",
+    observation: "what felt like separate changes reads more clearly as one turn toward greater independence.",
   },
   {
-    name: "becoming", year: "2024–25", question: "what is changing in me right now?", summary: "the turn is still happening.",
+    name: "becoming",
+    year: "2024–25",
+    question: "what is changing in me right now?",
+    summary: "the record shows less exploration for its own sake and more commitment to a direction.",
     rows: [
-      ["feb 2024", "strava", "distance up every month for eleven months, still before nine"],
-      ["may 2024", "chatgpt", "how do i falls from sixty-eight percent of what you ask to thirty-one, and should i rises from four to twenty-nine"],
-      ["sep 2024", "pinterest", "the someday board takes thirty-one saves after seven years of fewer than five"],
-      ["feb 2025", "netflix", "three new series abandoned inside two episodes, and four you know rewatched for the lighting"],
+      ["language", "claude", "“what kind of designer do i want to become?” keeps returning alongside questions about the kind of life you want around the work"],
+      ["energy", "oura", "your strongest weeks tend to follow steadier sleep and more consistent mornings"],
+      ["expression", "x + instagram", "you share less just to post and more when you actually have something you want to say"],
     ],
-    observation: "the questions changed four months before the work did, and the board that woke up is the one you named someday in 2017. this is a return, not a beginning.",
+    observation: "the pattern is getting clearer: less searching, more choosing and finishing.",
   },
   {
-    name: "recognition", year: "2025–now", question: "what has stayed consistent long enough for me to see it?", summary: "what was never loud enough to notice in one year.",
+    name: "recognition",
+    year: "2025–now",
+    question: "what has held long enough for me to trust it?",
+    summary: "your best work keeps appearing under the same conditions across different years and projects.",
     rows: [
-      ["nine years", "spotify", "the 2016 album appears in every year since, never above three percent, never absent"],
-      ["seven years", "pinterest", "three colours across nineteen boards, sixty-one percent of everything you save"],
-      ["five years", "github", "thirty-four of your forty-one finished projects landed in november"],
-      ["four years", "oura", "your steadiest sleep weeks are your highest output weeks, seventy-eight percent of the time"],
+      ["focus", "spotify", "“Instant Crush,” “Hard Times,” and “Everything in Its Right Place” keep returning during your strongest work weeks"],
+      ["method", "github", "finished projects tend to come from weeks when one problem stays in focus"],
+      ["support", "oura + strava", "steadier sleep and morning movement repeatedly show up around your best work"],
     ],
-    observation: "you work at dawn, you finish in november, and you have saved the same three colours since before you owned a camera. this is the method you have been trying to describe since 2022.",
+    observation: "the record now shows a repeatable way you work well, not a one-time burst.",
   },
   {
-    name: "transcendence", year: "ahead", question: "who am i becoming, and where is this going?", summary: "where the other six are already pointing.",
-    star: "someone who makes the thing they have been looking at since 2016.",
-    starSub: "three directions are open, and this is the one with nine years behind it.",
+    name: "transcendence",
+    year: "ahead",
+    question: "what larger direction is taking shape?",
+    summary:
+      "your work is beginning to converge around a broader vision: designing products that shape how people experience technology.",
     rows: [
-      ["most evidence", "youtube, github", "the craft. forty hours in 2016 became four hundred in 2021, and it has not stopped"],
-      ["gaining", "strava, oura", "the life around it. body and work have kept the same hours since 2023"],
-      ["still open", "pinterest", "the someday board, named in 2017, opened again last year"],
+      ["direction", "github + claude", "recent projects and prompts keep returning to interfaces, wearables, and human experience"],
+      ["voice", "linkedin + x", "your public work increasingly connects technology with identity, culture, and everyday experience"],
+      ["environment", "pinterest + netflix", "saved references and watched titles keep returning to speculative interfaces, physical spaces, sci-fi, and human-centered technology"],
     ],
-    observation: "origin handed you four accidents and three of them were the same thing. every stage since has been that one thing getting clearer, and the direction you feed is the one that becomes you.",
+    observation:
+      "the thread is becoming clearer: not just making products, but shaping how people experience technology.",
   },
 ] as const;
 
+export interface PolarisExample {
+  /** A Polaris mode — clarify / understand / decide — not a constellation pillar. */
+  mode: string;
+  question: string;
+  answer: string;
+  sources: readonly string[];
+  span: string;
+}
+
 export const polarisCopy = {
   eyebrow: "polaris",
-  headline: "follow one thread all the way through",
-  leadStrong: "the constellation lets you see yourself. polaris lets you use what you see.",
-  lead: "ask about something you keep returning to, or where it might be leading. polaris answers from the context already here, so you never start by explaining yourself.",
-  observation: "and when you arrive with no question, a few things come forward on their own.",
-  thesis: "you bring the question. the context is already here.",
+  headline: "clarify what matters. decide what comes next.",
+  lead: "polaris starts with the same context. clarify what a pattern means, weigh a decision, or build a path around how you actually live.",
+  thesis: "you do not have to explain yourself from the beginning.",
   examples: [
-    { pillar: "convergence", question: '"am i moving as fast as i think i am?"', answer: "you tend to describe the work as fast, but what you save and return to has slowed steadily across three years, on both accounts.", emphasis: "three years", sources: ["spotify", "pinterest"], span: "3 years / 2 sources" },
-    { pillar: "becoming", question: '"is there any warning before something shifts in me?"', answer: "yes. what you listen to drops in tempo about nine days before you go quiet. it has held 14 of the last 17 times.", emphasis: "nine days", sources: ["spotify", "instagram"], span: "17 releases / 3 years" },
-    { pillar: "origin", question: '"what was actually going on with me in 2019?"', answer: "march 2019 is where it turns. shoegaze fell from 40% of your listening to under 3%, and what replaced it is what you still play today.", emphasis: "march 2019", sources: ["spotify", "pinterest"], span: "march 2019 / 11 years" },
-  ],
+    {
+      mode: "clarify",
+      question: '"why do i keep coming back to film if i built my career in product?"',
+      answer:
+        "film never really left. it stayed inside the images you saved, the projects you sustained, and the language that appeared in your private AI conversations years before it reached your professional identity.",
+      sources: ["pinterest", "github", "linkedin", "claude"],
+      span: "7 years",
+    },
+    {
+      mode: "decide",
+      question: '"what conditions keep showing up when i do my best work?"',
+      answer:
+        "steadier sleep, an earlier start, and one project held in focus keep showing up around the days you actually finish what you started.",
+      sources: ["github", "oura", "spotify"],
+      span: "31 of 40 days",
+    },
+    {
+      mode: "decide",
+      question: '"what kind of routine am i most likely to actually keep?"',
+      answer:
+        "shorter morning workouts, steadier sleep, and one lighter day before the weekend show up in your most consistent weeks. start with that rhythm.",
+      sources: ["oura", "strava", "chatgpt"],
+      span: "18 months",
+    },
+  ] as readonly PolarisExample[],
 } as const;
 
-export const ctaCopy = { headline: "look again", subline: "there is more of you here than you can currently see.", enter: "enter" } as const;
+export const ctaCopy = {
+  headline: "see who you are becoming.",
+  subline: "your data already holds the context.",
+  enter: "enter",
+} as const;
 
 export const footerCopy = {
-  copyright: "© 2026 PHENYX INC.", contactEmail: "contact@phenyxai.com", privacyLabel: "privacy", termsLabel: "terms", privacyHref: "/privacy-policy", termsHref: "/terms",
+  brand: BRAND,
+  copyright: "© 2026 PHENYX INC.",
+  contactEmail: "contact@phenyxai.com",
+  privacyLabel: "privacy",
+  termsLabel: "terms",
+  privacyHref: "/privacy-policy",
+  termsHref: "/terms",
 } as const;
 
 export const entryModalCopy = {

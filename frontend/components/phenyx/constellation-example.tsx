@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { constellationPoints } from "@/lib/landing-copy";
+import { constellationCopy, constellationPoints } from "@/lib/landing-copy";
 
 export function ConstellationExample() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -9,7 +9,9 @@ export function ConstellationExample() {
 
   return (
     <div className="landing-vnext__example" data-reveal>
-      <p className="landing-vnext__small-label">the same seven, seen by time</p>
+      {/* The disclaimer leads: say it is an example before showing one. */}
+      <p className="landing-vnext__example-note">{constellationCopy.exampleNote}</p>
+      <p className="landing-vnext__small-label">{constellationCopy.exampleToggleLabel}</p>
       <div className="landing-vnext__example-tabs" role="tablist" aria-label="the seven points">
         {constellationPoints.map((item, index) => (
           <button
@@ -30,22 +32,15 @@ export function ConstellationExample() {
       <div className="landing-vnext__example-body" key={point.name} role="tabpanel">
         <h3>{point.question}</h3>
         <p>{point.summary}</p>
-        {point.star && (
-          <div className="landing-vnext__north-star">
-            <strong>{point.star}</strong>
-            <span>{point.starSub}</span>
-          </div>
-        )}
         <div className="landing-vnext__evidence-rows">
-          {point.rows.map(([when, source, evidence]) => (
-            <div key={`${when}-${source}`}>
-              <span>{when}</span><em>{source}</em><p>{evidence}</p>
+          {point.rows.map(([label, source, evidence]) => (
+            <div key={`${label}-${source}`}>
+              <span>{label}</span><em>{source}</em><p>{evidence}</p>
             </div>
           ))}
         </div>
         <p className="landing-vnext__observation">{point.observation}</p>
       </div>
-      <p className="landing-vnext__example-note">an example. yours is built only from the accounts you connect.</p>
     </div>
   );
 }

@@ -66,9 +66,9 @@ export function HowItWorksSection() {
               </div>
             </div>
             <div className="landing-vnext__privacy">
-              <p className="landing-vnext__small-label">{howItWorksCopy.evidenceLabel}</p>
+              <p className="landing-vnext__small-label">{howItWorksCopy.staysYoursLabel}</p>
               <div className="landing-vnext__privacy-grid">
-                {howItWorksCopy.evidenceItems.map((item) => (
+                {howItWorksCopy.staysYoursItems.map((item) => (
                   <div key={item.title}>
                     <h4>{item.title}</h4>
                     <p>{item.body}</p>

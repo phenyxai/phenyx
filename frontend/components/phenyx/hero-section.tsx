@@ -10,10 +10,11 @@ export function HeroSection({ onEnterClick }: { onEnterClick: () => void }) {
       <div className="landing-vnext__hero-content">
         <h1>{heroCopy.brand}</h1>
         <p className="landing-vnext__hero-tagline">{heroCopy.tagline}</p>
-        <p className="landing-vnext__hero-description">{heroCopy.description}</p>
+        <p className="landing-vnext__hero-description">
+          {heroCopy.descriptionLines.map((line) => <span key={line}>{line}</span>)}
+        </p>
         <EnterButton onClick={onEnterClick} label={heroCopy.enter} />
       </div>
-      <div className="landing-vnext__scroll-cue" aria-hidden="true"><span />{heroCopy.scroll}</div>
     </header>
   );
 }

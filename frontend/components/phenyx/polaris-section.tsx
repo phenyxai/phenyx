@@ -9,8 +9,7 @@ export function PolarisSection() {
         <h2 data-reveal>{polarisCopy.headline}</h2>
         <div className="landing-vnext__polaris-grid" data-reveal>
           <div className="landing-vnext__polaris-copy">
-            <p><strong>{polarisCopy.leadStrong}</strong>{" "}{polarisCopy.lead}</p>
-            <p>{polarisCopy.observation}</p>
+            <p>{polarisCopy.lead}</p>
             <p className="landing-vnext__thesis">{polarisCopy.thesis}</p>
           </div>
           <AskPolarisWidget />
