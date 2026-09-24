@@ -1,184 +1,354 @@
+// Landing copy, ported from the Sept 23 landing export (internal pass v740).
+//
+// Source of record: `PHENYX main landing new.html` (2026-09-23), the landing-only
+// export that supersedes the Sept 15 drop (ph550). v740 folds the separate
+// constellation and polaris chapters into one orbit under "how it works",
+// adds insights as a fourth part, and replaces the "what stays yours" band
+// with an "our vision" chapter that walks the life of your data.
+//
+// Voice note: every string here is stored lowercase. Uppercase is a CSS concern
+// (`text-transform`), matching how the prototype does it.
 export const BRAND = "PHENYX";
 
 export const SECTION_IDS = {
   top: "s0-top",
   about: "s0-about",
   how: "s0-how",
-  mission: "s0-mission",
-  polaris: "s0-polaris",
+  promise: "s0-promise",
   cta: "s0-cta",
 } as const;
+
+/** The page's chapters, top to bottom. Scroll-spy and chapter focus both walk this. */
+export const SECTION_ORDER = [
+  SECTION_IDS.top,
+  SECTION_IDS.about,
+  SECTION_IDS.how,
+  SECTION_IDS.promise,
+  SECTION_IDS.cta,
+] as const;
 
 export const navCopy = {
   brand: BRAND,
   menuLabel: "menu",
   links: [
-    { label: "first look", targetId: SECTION_IDS.about },
+    { label: "your life", targetId: SECTION_IDS.about },
     { label: "how it works", targetId: SECTION_IDS.how },
-    { label: "your constellation", targetId: SECTION_IDS.mission },
-    { label: "polaris", targetId: SECTION_IDS.polaris },
+    { label: "our vision", targetId: SECTION_IDS.promise },
   ],
   enter: "enter",
 } as const;
 
 export const heroCopy = {
   brand: BRAND,
-  tagline: "your life, taking form",
-  description: "see who you've been, across everything you already use.",
+  tagline: "your life, taking form.",
+  // Two deliberate lines, not one wrapped sentence — the prototype splits these
+  // into separate spans so the break survives every viewport.
+  descriptionLines: ["see who you’ve been, understand who you are,", "and follow who you’re becoming."],
   enter: "enter",
-  scroll: "scroll",
 } as const;
 
 export const manifestoCopy = {
-  eyebrow: "first look",
-  headline: "you were never in pieces, only in places",
+  eyebrow: "your life",
+  headline: "parts of you are out there.",
   paragraphs: [
-    "every place you use asks for one part of you: the listener, the maker, the one who saves things for later.",
-    "each one keeps a version of you that is true, but not one shows what it all adds up to.",
-    "so there has never been one place that holds all of you at once. every moment came from the same life, but nothing has ever gathered them in the same place.",
+    "in the music you replay, the work you make, the things you save and the questions you ask, each place holding one piece of you.",
   ],
-  emphasis: "here they are read together.",
+  emphasis: "PHENYX shows you what they make together.",
 } as const;
 
 export const howItWorksCopy = {
-  eyebrow: "how it works",
-  headline: "the same life, at three magnifications",
-  subline: "you are the thing being looked at, and the looking is done with what you already made.",
-  cards: [
-    { kicker: "close up", title: "the moment", body: "one night you kept working, one song you wore out, one thing you saved and never mentioned to anyone." },
-    { kicker: "further back", title: "the pattern", body: "every moment lands on one timeline, so the things that keep coming back finally sit close enough to be read together." },
-    { kicker: "the whole field", title: "the shape", body: "seven points, and the line your life has been drawing between them the entire time." },
+  eyebrow: "how phenyx works",
+  headline: "see the whole of who you are.",
+  subline: "connect the places you choose. PHENYX uses them to answer four questions about your life.",
+  orbitLabel: "the four parts of PHENYX",
+  /** Prefix for each orbit point's accessible name: "show constellation". */
+  orbitNodeLabel: "show",
+  // Orbit order: 12, 3, 6 and 9 o'clock. The trail sweeps a quarter per slide.
+  slides: [
+    {
+      kicker: "constellation",
+      title: "how did i get here?",
+      line: "your life in seven stages, built from your data, with the source behind every moment.",
+    },
+    {
+      kicker: "insights",
+      title: "why do i keep coming back to this?",
+      line: "the patterns running across your accounts, and where each one came from.",
+    },
+    {
+      kicker: "discover",
+      title: "what else might i love?",
+      line: "something new from beyond your data, chosen because of it.",
+    },
+    {
+      kicker: "polaris",
+      title: "what should i do next?",
+      line: "ask about a decision or a plan. you never start from the beginning.",
+    },
   ],
-  signalsLabel: "what comes into view",
-  signals: ["what keeps returning", "what overlaps", "creative rhythms", "turning points", "how you decide", "what stays with you"],
-  evidenceLabel: "what the evidence is",
-  evidenceItems: [
-    { title: "a moment.", body: "one thing you made, saved or went back to, with the day it happened still attached to it." },
-    { title: "a return.", body: "the same moment arriving again, years later, in a medium you had not used the first time." },
-    { title: "a shape.", body: "what all of that returning has been building toward, without ever announcing itself." },
-  ],
+  stageMapLabel: "seven stages",
+  stageHint: "click any point to open the years inside it.",
 } as const;
 
-export const constellationCopy = {
-  eyebrow: "your constellation",
-  headline: "see how the parts of your life relate",
-  lines: [
-    "a constellation is not the stars. it is the shape they make once you see them together.",
-    "seven points run from where you began to where you are heading, each looking at one question through the evidence of your life.",
-    "new things appear, old ones return, some fall away, and the shape holds enough of you to show when you have changed.",
-  ],
-  emphasis: "the points stay the same. what fills them is yours.",
-  visualizationLabel: "Seven-point constellation: origin, emergence, self-creation, convergence, becoming, recognition, and transcendence.",
-  previewHeadline: "your identity. finally in one place.",
-  previewSubline: "we help you connect it all through moments of reflection.",
-  previewBrandLabel: BRAND,
-  previewConstellationLabel: "your constellation",
-  reflectLabel: "reflect.",
-} as const;
-
-export interface ConstellationPoint {
+export interface ConstellationStage {
   name: string;
   year: string;
   question: string;
-  summary: string;
-  rows: readonly (readonly [string, string, string])[];
-  observation: string;
-  star?: string;
-  starSub?: string;
+  /** [source, moment]. Two per stage: the viewer lays them out side by side. */
+  rows: readonly (readonly [string, string])[];
 }
 
-export const constellationPoints: readonly ConstellationPoint[] = [
+// The prototype's dataset carries a third row per stage for the full demo; the
+// landing viewer only ever shows the first two, so only those are kept.
+export const constellationStages: readonly ConstellationStage[] = [
   {
-    name: "origin", year: "2016–17", question: "what has been with me longer than i realized?", summary: "four things arrive, none of them chosen.",
+    name: "origin",
+    year: "2016–17",
+    question: "what was already there before i had words for it?",
     rows: [
-      ["mar 2016", "spotify", "one album, 214 plays that year, the one you still put on to work"],
-      ["aug 2016", "youtube", "forty hours on colour grading, then nothing at all for three years"],
-      ["feb 2017", "pinterest", "a board you name someday, nine saves, every one a room at dusk"],
-      ["nov 2017", "instagram", "your first photograph with no people in it, taken at six in the morning"],
+      ["youtube", "you watched how title sequences were made, then called it wasting time."],
+      ["spotify", "one album, played through every exam week since."],
     ],
-    observation: "none of these was a decision. three of the four are about light, and you would not say that word for another five years.",
   },
   {
-    name: "emergence", year: "2018–20", question: "what was becoming important before i named it?", summary: "four accounts, one subject.",
+    name: "emergence",
+    year: "2018–20",
+    question: "what started taking shape before i named it?",
     rows: [
-      ["apr 2018", "pinterest", "three hundred and forty saves that spring, sixty-one of them the same doorway at different hours"],
-      ["sep 2018", "letterboxd", "forty films rated, and the four you rewatched share one cinematographer"],
-      ["jun 2019", "instagram", "you stop posting at midday and start posting within an hour of sunrise"],
-      ["jan 2020", "youtube", "you stop watching interviews and start watching people light a set, six hours to seventy-one"],
+      ["instagram", "you started posting the flyers instead of the nights out."],
+      ["figma", "you opened it for a class project and never closed it."],
     ],
-    observation: "you called yourself a photographer in 2021. the evidence says colourist, and it starts in april 2018.",
   },
   {
-    name: "self-creation", year: "2020–22", question: "what have i built on purpose?", summary: "the first thing that does not stop.",
+    name: "self-creation",
+    year: "2020–22",
+    question: "what did i begin choosing on purpose?",
     rows: [
-      ["may 2020", "github", "your ninth repository, a grading tool, and the first with a commit after day thirty"],
-      ["oct 2020", "instagram", "the ratio inverts, from eighty percent other people's frames to seventy-six percent your own"],
-      ["jun 2021", "youtube", "four hundred and twelve hours on grading, ninety-one percent of it before nine in the morning"],
-      ["mar 2022", "linkedin", "you put the word colourist in your title, five years after the first forty hours"],
+      ["figma", "forty-one posters for campus events, all of them yours."],
+      ["notion", "you started keeping a real project list, and finishing things."],
     ],
-    observation: "the eight repositories you abandoned are what make the ninth mean something. from first frame to naming yourself took five years.",
   },
   {
-    name: "convergence", year: "2023", question: "which parts of my life are less separate than they seem?", summary: "six weeks where all of it moves at once.",
+    name: "convergence",
+    year: "2023",
+    question: "which parts of my life started moving together?",
     rows: [
-      ["feb 2023", "pinterest", "one hundred and ninety saves in fourteen days, every one an interior, then three the month after"],
-      ["mar 2023", "spotify", "the album from 2016 becomes the only thing you play while grading"],
-      ["mar 2023", "chatgpt", "the same question four times in seven days, about working for yourself"],
-      ["apr 2023", "strava", "your first run in eleven months, then forty-three in twelve weeks, all before nine"],
+      ["chatgpt", "cognitive science questions and design questions in the same chats."],
+      ["spotify", "the same three albums under every studio night."],
     ],
-    observation: "the reference, the music, the question and the hour all turned inside six weeks. none of the four accounts could see the other three, so at the time it felt like four unrelated moods.",
   },
   {
-    name: "becoming", year: "2024–25", question: "what is changing in me right now?", summary: "the turn is still happening.",
+    name: "becoming",
+    year: "2024–25",
+    question: "what is changing in me right now?",
     rows: [
-      ["feb 2024", "strava", "distance up every month for eleven months, still before nine"],
-      ["may 2024", "chatgpt", "how do i falls from sixty-eight percent of what you ask to thirty-one, and should i rises from four to twenty-nine"],
-      ["sep 2024", "pinterest", "the someday board takes thirty-one saves after seven years of fewer than five"],
-      ["feb 2025", "netflix", "three new series abandoned inside two episodes, and four you know rewatched for the lighting"],
+      ["figma", "posters give way to screens, and screens to prototypes."],
+      ["chatgpt", '"is product design a real job for someone like me?" keeps returning.'],
     ],
-    observation: "the questions changed four months before the work did, and the board that woke up is the one you named someday in 2017. this is a return, not a beginning.",
   },
   {
-    name: "recognition", year: "2025–now", question: "what has stayed consistent long enough for me to see it?", summary: "what was never loud enough to notice in one year.",
+    name: "recognition",
+    year: "2025–now",
+    question: "what has stayed with me the whole time?",
     rows: [
-      ["nine years", "spotify", "the 2016 album appears in every year since, never above three percent, never absent"],
-      ["seven years", "pinterest", "three colours across nineteen boards, sixty-one percent of everything you save"],
-      ["five years", "github", "thirty-four of your forty-one finished projects landed in november"],
-      ["four years", "oura", "your steadiest sleep weeks are your highest output weeks, seventy-eight percent of the time"],
+      ["pinterest", "you have been saving type since you were fifteen."],
+      ["notion", "what you finish is what you start before noon on a sunday."],
     ],
-    observation: "you work at dawn, you finish in november, and you have saved the same three colours since before you owned a camera. this is the method you have been trying to describe since 2022.",
   },
   {
-    name: "transcendence", year: "ahead", question: "who am i becoming, and where is this going?", summary: "where the other six are already pointing.",
-    star: "someone who makes the thing they have been looking at since 2016.",
-    starSub: "three directions are open, and this is the one with nine years behind it.",
+    name: "transcendence",
+    year: "ahead",
+    question: "what larger direction is taking shape?",
     rows: [
-      ["most evidence", "youtube, github", "the craft. forty hours in 2016 became four hundred in 2021, and it has not stopped"],
-      ["gaining", "strava, oura", "the life around it. body and work have kept the same hours since 2023"],
-      ["still open", "pinterest", "the someday board, named in 2017, opened again last year"],
+      ["figma + chatgpt", "you keep making things that explain themselves."],
+      ["instagram", "you explain the work now, and people reply."],
     ],
-    observation: "origin handed you four accidents and three of them were the same thing. every stage since has been that one thing getting clearer, and the direction you feed is the one that becomes you.",
+  },
+];
+
+/** Star positions in a 300×170 box, one per stage, and the lines between them by star index. */
+export const constellationMap = {
+  stars: [
+    [48.2, 139.0],
+    [115.2, 137.5],
+    [64.2, 80.7],
+    [117.8, 87.8],
+    [179.5, 82.2],
+    [230.4, 69.4],
+    [251.8, 31.0],
+  ],
+  lines: [
+    [0, 1],
+    [0, 2],
+    [1, 3],
+    [2, 3],
+    [3, 4],
+    [4, 5],
+    [5, 6],
+  ],
+} as const satisfies { stars: readonly (readonly [number, number])[]; lines: readonly (readonly [number, number])[] };
+
+export type InsightVisual =
+  /** One character per finished project: "1" if it was started before 9am. */
+  | { kind: "bars"; pattern: string }
+  | { kind: "return"; points: readonly { at: number; label: string }[] };
+
+export interface InsightPattern {
+  claim: string;
+  visual: InsightVisual;
+  proof: string;
+  sources: readonly string[];
+  span: string;
+}
+
+export const insightPatterns: readonly InsightPattern[] = [
+  {
+    claim: "your best work happens before anyone else is awake.",
+    visual: { kind: "bars", pattern: "11011101111101111" },
+    proof: "14 of your last 17 finished projects were started before 9am. you have never once planned it that way.",
+    sources: ["figma", "notion", "spotify"],
+    span: "18 months",
+  },
+  {
+    claim: "you have been saving the same thing since you were fifteen.",
+    visual: {
+      kind: "return",
+      points: [
+        { at: 5, label: "2018" },
+        { at: 34, label: "2021" },
+        { at: 62, label: "2023" },
+        { at: 90, label: "now" },
+      ],
+    },
+    proof: "type and posters, through three phones, two majors, and every app you moved into.",
+    sources: ["pinterest", "instagram", "figma"],
+    span: "7 years",
+  },
+];
+
+export const discoverFinds = [
+  {
+    kind: "a rabbit hole",
+    name: "kinetic typography",
+    description: "type that moves, and why it reads differently once it does.",
+    why: "because your saves keep drifting from posters to motion",
+  },
+  {
+    kind: "an idea",
+    name: "affordances",
+    description: "why a door tells you to push before you touch it.",
+    why: "because your two majors keep meeting in the same chats",
+  },
+  {
+    kind: "a dare",
+    name: "redesign the worst screen you used today",
+    description: "one hour, one screen, before class.",
+    why: "because your best work starts early and small",
   },
 ] as const;
 
-export const polarisCopy = {
-  eyebrow: "polaris",
-  headline: "follow one thread all the way through",
-  leadStrong: "the constellation lets you see yourself. polaris lets you use what you see.",
-  lead: "ask about something you keep returning to, or where it might be leading. polaris answers from the context already here, so you never start by explaining yourself.",
-  observation: "and when you arrive with no question, a few things come forward on their own.",
-  thesis: "you bring the question. the context is already here.",
-  examples: [
-    { pillar: "convergence", question: '"am i moving as fast as i think i am?"', answer: "you tend to describe the work as fast, but what you save and return to has slowed steadily across three years, on both accounts.", emphasis: "three years", sources: ["spotify", "pinterest"], span: "3 years / 2 sources" },
-    { pillar: "becoming", question: '"is there any warning before something shifts in me?"', answer: "yes. what you listen to drops in tempo about nine days before you go quiet. it has held 14 of the last 17 times.", emphasis: "nine days", sources: ["spotify", "instagram"], span: "17 releases / 3 years" },
-    { pillar: "origin", question: '"what was actually going on with me in 2019?"', answer: "march 2019 is where it turns. shoegaze fell from 40% of your listening to under 3%, and what replaced it is what you still play today.", emphasis: "march 2019", sources: ["spotify", "pinterest"], span: "march 2019 / 11 years" },
-  ],
+export const polarisExample = {
+  ask: "should i apply for the product design internship, or keep freelancing?",
+  answer:
+    "apply. the posters already taught you the craft, and the internship gives you the one thing freelancing cannot, which is watching someone senior make the calls you are still guessing at.",
+  sources: ["figma", "linkedin", "notion", "chatgpt"],
+  span: "7 years",
+  evidence: {
+    label: "show me the evidence",
+    title: "what this is built on",
+    rows: [
+      ["figma", "forty-one posters, nine screens, and a prototype you rebuilt three times."],
+      ["chatgpt", "you have asked whether this counts as a real job eleven times since march."],
+      ["notion + spotify", "everything you finished began on a quiet sunday morning."],
+    ],
+  },
+  plan: {
+    label: "turn it into a plan",
+    title: "your next four weeks",
+    steps: [
+      "keep sunday mornings for your own work. every project you finished started there.",
+      "three screens from your own week, redesigned and written up, since your posts that explain the thinking are the ones people answer.",
+      "apply by the fourteenth. we will ask again after, with the work in hand.",
+    ],
+  },
+  backLabel: "back to the answer",
 } as const;
 
-export const ctaCopy = { headline: "look again", subline: "there is more of you here than you can currently see.", enter: "enter" } as const;
+export type PromiseVisual =
+  | { kind: "choose"; toggles: readonly { name: string; state: "on" | "flip" }[] }
+  | { kind: "protect" }
+  | { kind: "show"; observation: string; sources: readonly string[] }
+  | { kind: "decide"; observation: string; yes: string; no: string }
+  | { kind: "leave"; accounts: readonly string[] };
+
+export interface PromiseStation {
+  title: string;
+  body: string;
+  visual: PromiseVisual;
+}
+
+// Privacy claims below are product promises, not decoration. What backs them
+// today: source payloads and Polaris turns are AES-256-GCM at rest
+// (`backend/src/common/encryption.service.ts`), and `/account/export` returns
+// the whole account (settings → data management). "never sold" is policy.
+export const promiseCopy = {
+  eyebrow: "our vision",
+  headline: "your life should stay yours.",
+  lede: "what happens to your data, from the moment you connect to the moment you decide to go.",
+  stations: [
+    {
+      title: "you choose.",
+      body: "only the places you connect, one at a time.",
+      visual: {
+        kind: "choose",
+        toggles: [
+          { name: "spotify", state: "on" },
+          { name: "instagram", state: "flip" },
+          { name: "figma", state: "on" },
+        ],
+      },
+    },
+    {
+      title: "we protect.",
+      body: "encrypted wherever it rests or travels, and never sold.",
+      visual: { kind: "protect" },
+    },
+    {
+      title: "we show.",
+      body: "every observation opens onto where it came from.",
+      visual: { kind: "show", observation: "your best work starts early.", sources: ["figma", "notion"] },
+    },
+    {
+      title: "you decide.",
+      body: "whether something fits is always yours to say.",
+      visual: { kind: "decide", observation: "type keeps coming back.", yes: "this is me", no: "not quite" },
+    },
+    {
+      title: "you can leave.",
+      body: "disconnect one account, or take all of it with you.",
+      visual: { kind: "leave", accounts: ["spotify", "instagram", "figma"] },
+    },
+  ] as readonly PromiseStation[],
+  close: "what's yours has always been yours.",
+} as const;
+
+export const ctaCopy = {
+  headline: "see who you are becoming.",
+  subline: "it is all already yours. come and see it whole.",
+  enter: "enter",
+} as const;
 
 export const footerCopy = {
-  copyright: "© 2026 PHENYX INC.", contactEmail: "contact@phenyxai.com", privacyLabel: "privacy", termsLabel: "terms", privacyHref: "/privacy-policy", termsHref: "/terms",
+  brand: BRAND,
+  copyright: "© 2026 PHENYX INC.",
+  contactEmail: "contact@phenyxai.com",
+  // The v740 export drops these two links. They stay: on `main` this footer is
+  // the only public way to reach the privacy policy and terms, and the waitlist
+  // there collects email addresses.
+  privacyLabel: "privacy",
+  termsLabel: "terms",
+  privacyHref: "/privacy-policy",
+  termsHref: "/terms",
 } as const;
 
 export const entryModalCopy = {

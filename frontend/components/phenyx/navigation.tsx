@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { navCopy, SECTION_IDS } from "@/lib/landing-copy";
+import { navCopy, SECTION_IDS, SECTION_ORDER } from "@/lib/landing-copy";
 
 interface NavigationProps { onEnterClick: () => void }
 
@@ -32,16 +32,8 @@ export function Navigation({ onEnterClick }: NavigationProps) {
   // and the closing call to action are read but own no link, so above the first
   // section and below the last nothing is current, which is also information.
   useEffect(() => {
-    const order = [
-      SECTION_IDS.top,
-      SECTION_IDS.about,
-      SECTION_IDS.how,
-      SECTION_IDS.mission,
-      SECTION_IDS.polaris,
-      SECTION_IDS.cta,
-    ];
     const owned = new Set<string>(navCopy.links.map((link) => link.targetId));
-    const sections = order
+    const sections = SECTION_ORDER
       .map((id) => document.getElementById(id))
       .filter((section): section is HTMLElement => Boolean(section));
     if (!sections.length) return;
