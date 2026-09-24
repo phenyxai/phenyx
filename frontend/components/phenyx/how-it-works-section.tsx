@@ -160,8 +160,8 @@ export function HowItWorksSection() {
     <section id={SECTION_IDS.how} className="landing-vnext__section">
       <div className="landing-vnext__inner">
         <p className="landing-vnext__eyebrow" data-reveal>{howItWorksCopy.eyebrow}</p>
-        <h2 data-reveal>{howItWorksCopy.headline}</h2>
-        <p className="landing-vnext__section-lead" data-reveal>{howItWorksCopy.subline}</p>
+        <h2 data-reveal="1">{howItWorksCopy.headline}</h2>
+        <p className="landing-vnext__section-lead" data-reveal="2">{howItWorksCopy.subline}</p>
 
         <div
           ref={orbitRef}

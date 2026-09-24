@@ -9,8 +9,8 @@ import { PromiseSection } from "@/components/phenyx/promise-section";
 import { CtaSection } from "@/components/phenyx/cta-section";
 import { FooterSection } from "@/components/phenyx/footer-section";
 import { EntryModal } from "@/components/phenyx/entry-modal";
-import { CustomCursor } from "@/components/phenyx/custom-cursor";
 import { ScrollIndicator } from "@/components/phenyx/scroll-indicator";
+import { watchLandingScroll } from "@/components/phenyx/landing-dom";
 import { useChapterFocus } from "@/components/phenyx/use-chapter-focus";
 import { SECTION_ORDER } from "@/lib/landing-copy";
 
@@ -22,25 +22,35 @@ export default function Home() {
 
   useEffect(() => {
     const targets = document.querySelectorAll<HTMLElement>("[data-reveal]");
+    if (!targets.length) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) {
       targets.forEach((target) => target.setAttribute("data-visible", "true"));
       return;
     }
+    const reveal = (target: Element) => {
+      target.setAttribute("data-visible", "true");
+      observer.unobserve(target);
+    };
     const observer = new IntersectionObserver(
-      (entries) => entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        entry.target.setAttribute("data-visible", "true");
-        observer.unobserve(entry.target);
-      }),
+      (entries) => entries.forEach((entry) => { if (entry.isIntersecting) reveal(entry.target); }),
       { threshold: 0.12, rootMargin: "0px 0px -8% 0px" },
     );
     targets.forEach((target) => observer.observe(target));
-    return () => observer.disconnect();
+    // A nav jump can carry a block from below the fold to above it without it
+    // ever intersecting, so anything the reader has already passed is revealed
+    // on scroll too.
+    const sweep = () => targets.forEach((target) => {
+      if (target.getAttribute("data-visible") !== "true" && target.getBoundingClientRect().top < window.innerHeight * 0.92) reveal(target);
+    });
+    const stop = watchLandingScroll(targets[0], sweep);
+    return () => {
+      observer.disconnect();
+      stop();
+    };
   }, []);
 
   return (
     <>
-      <CustomCursor />
       <main className="landing-vnext">
         <Navigation onEnterClick={openEntryModal} />
 

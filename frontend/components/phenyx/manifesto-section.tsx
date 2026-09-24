@@ -19,11 +19,11 @@ export function ManifestoSection() {
     <section id={SECTION_IDS.about} className="landing-vnext__section landing-vnext__about">
       <div className="landing-vnext__inner">
         <p className="landing-vnext__eyebrow" data-reveal>{manifestoCopy.eyebrow}</p>
-        <h2 data-reveal>{manifestoCopy.headline}</h2>
-        <div className="landing-vnext__about-grid" data-reveal>
+        <h2 data-reveal="1">{manifestoCopy.headline}</h2>
+        <div className="landing-vnext__about-grid">
           <div className="landing-vnext__about-copy">
-            {manifestoCopy.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-            <p className="landing-vnext__thesis">{manifestoCopy.emphasis}</p>
+            {manifestoCopy.paragraphs.map((paragraph) => <p key={paragraph} data-reveal="2">{paragraph}</p>)}
+            <p className="landing-vnext__thesis" data-reveal="3">{manifestoCopy.emphasis}</p>
           </div>
           <div className="landing-vnext__platform-field">
             <PlatformField prefersReducedMotion={reducedMotion} />

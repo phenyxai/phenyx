@@ -20,5 +20,5 @@ export function HeroSection({ onEnterClick }: { onEnterClick: () => void }) {
 }
 
 export function EnterButton({ onClick, label }: { onClick: () => void; label: string }) {
-  return <button type="button" className="landing-vnext__enter-button" onClick={onClick}>{label}</button>;
+  return <button type="button" className="landing-vnext__enter-button" onClick={onClick}><span>{label}</span></button>;
 }

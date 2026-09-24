@@ -2,13 +2,45 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const DESKTOP_ICONS = [
-  "spotify", "chatgpt", "tiktok", "youtube", "instagram", "pinterest",
-  "claude", "reddit", "netflix", "gemini", "linkedin", "strava",
-] as const;
-const MOBILE_ICONS = ["spotify", "chatgpt", "youtube", "instagram", "pinterest", "claude"] as const;
+// The field of connector icons beside "parts of you are out there", ported
+// from the Sept 23 export. Each icon starts at an art-directed anchor (a
+// percentage of the field) for the layout the width calls for, then drifts;
+// hovering one sends it elsewhere. With reduced motion the icons stay on
+// their anchors.
+type IconKey =
+  | "chatgpt" | "gemini" | "spotify" | "instagram" | "github" | "linkedin" | "youtube"
+  | "pinterest" | "tiktok" | "reddit" | "netflix" | "oura" | "strava";
+type Anchor = readonly [IconKey, number, number];
 
-type IconKey = (typeof DESKTOP_ICONS)[number];
+const DESKTOP_LAYOUT: readonly Anchor[] = [
+  ["spotify", 11, 22], ["chatgpt", 44, 14], ["gemini", 62, 27], ["youtube", 87, 19],
+  ["instagram", 9, 70], ["pinterest", 31, 51], ["reddit", 50, 76], ["linkedin", 76, 52],
+  ["github", 34, 34], ["netflix", 24, 38], ["tiktok", 66, 62], ["oura", 40, 89], ["strava", 92, 40],
+];
+// the wide stacked (tablet) treatment, which uses the whole field
+const COMPACT_LAYOUT: readonly Anchor[] = [
+  ["spotify", 7, 68], ["chatgpt", 55, 55], ["gemini", 72, 14], ["youtube", 27, 22],
+  ["instagram", 68, 76], ["pinterest", 37, 62], ["reddit", 17, 10], ["linkedin", 86, 58],
+  ["github", 42, 38], ["netflix", 8, 43], ["tiktok", 90, 20], ["oura", 46, 9], ["strava", 29, 80],
+];
+const MOBILE_LAYOUT: readonly Anchor[] = [
+  ["spotify", 7, 68], ["chatgpt", 55, 55], ["youtube", 27, 22], ["instagram", 72, 75],
+  ["pinterest", 36, 62], ["reddit", 15, 11], ["linkedin", 84, 54], ["github", 46, 38], ["tiktok", 89, 20],
+  ["netflix", 7, 42], ["gemini", 57, 12],
+];
+
+/** How many icons a width shows. The field only re-lays itself out when this changes. */
+function iconCountFor(width: number) {
+  if (width <= 760) return 10;
+  if (width <= 980) return 9;
+  return 12;
+}
+
+function layoutFor(width: number): readonly Anchor[] {
+  const layout = width <= 760 ? MOBILE_LAYOUT : width <= 1100 ? COMPACT_LAYOUT : DESKTOP_LAYOUT;
+  return layout.slice(0, iconCountFor(width));
+}
+
 type MotionState = "arriving" | "idle" | "leaving" | "returning";
 type Point = { x: number; y: number; weight?: number };
 
@@ -34,15 +66,10 @@ interface Body {
 const LABELS: Partial<Record<IconKey, string>> = {
   chatgpt: "ChatGPT",
   linkedin: "LinkedIn",
+  oura: "Oura",
   tiktok: "TikTok",
   youtube: "YouTube",
 };
-
-function iconsForWidth(width: number): IconKey[] {
-  if (width <= 760) return [...MOBILE_ICONS];
-  if (width <= 980) return [...DESKTOP_ICONS.slice(0, 7)];
-  return [...DESKTOP_ICONS];
-}
 
 function smoothstep(value: number) {
   return value * value * (3 - 2 * value);
@@ -56,16 +83,28 @@ function hash(value: number) {
 export function PlatformField({ prefersReducedMotion = false }: { prefersReducedMotion?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const elementRefs = useRef(new Map<IconKey, HTMLDivElement>());
-  const [icons, setIcons] = useState<IconKey[]>([...DESKTOP_ICONS]);
+  const [anchors, setAnchors] = useState<readonly Anchor[]>(() => DESKTOP_LAYOUT.slice(0, 12));
+  const icons = anchors.map(([icon]) => icon);
 
   useEffect(() => {
-    const sync = () => {
-      const next = iconsForWidth(window.innerWidth);
-      setIcons((current) => current.join() === next.join() ? current : next);
+    let count = iconCountFor(window.innerWidth);
+    setAnchors(layoutFor(window.innerWidth));
+    let pending: ReturnType<typeof setTimeout> | undefined;
+    // Within a band a resize only rescales positions (the frame loop does
+    // that); crossing into a band with a different count lays the field out
+    // again, so it never wipes and respawns while someone drags a window.
+    const onResize = () => {
+      const next = iconCountFor(window.innerWidth);
+      if (next === count) return;
+      count = next;
+      clearTimeout(pending);
+      pending = setTimeout(() => setAnchors(layoutFor(window.innerWidth)), 140);
     };
-    sync();
-    window.addEventListener("resize", sync);
-    return () => window.removeEventListener("resize", sync);
+    window.addEventListener("resize", onResize);
+    return () => {
+      clearTimeout(pending);
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -75,12 +114,12 @@ export function PlatformField({ prefersReducedMotion = false }: { prefersReduced
     let width = field.clientWidth || 640;
     let height = field.clientHeight || 360;
     const isMobile = window.innerWidth <= 760;
-    const size = isMobile ? 50 : 54;
+    const size = isMobile ? 46 : 54;
     const radius = size / 2;
     const speed = isMobile ? 5 : 7.5;
     const drift = isMobile ? 5 : 8;
     const padding = radius + 8;
-    let idealDistance = Math.min(120, Math.sqrt(((width - padding * 2) * (height - padding * 2)) / (icons.length * 1.7)));
+    let idealDistance = Math.min(120, Math.sqrt(((width - padding * 2) * (height - padding * 2)) / (anchors.length * 1.7)));
     const distanceFloor = size + drift * 2 + 8;
     const minimumJump = Math.min(180, Math.hypot(width - padding * 2, height - padding * 2) * 0.3);
     const pointer = { x: -10000, y: -10000 };
@@ -120,11 +159,14 @@ export function PlatformField({ prefersReducedMotion = false }: { prefersReduced
       body.box.style.top = `${body.y - radius}px`;
     };
 
-    icons.forEach((key, index) => {
+    anchors.forEach(([key, anchorX, anchorY], index) => {
       const box = elementRefs.current.get(key);
       const aura = box?.querySelector<HTMLSpanElement>(".landing-vnext__platform-aura");
       if (!box || !aura) return;
-      const position = pickPosition(bodies, [], 0);
+      const position = {
+        x: padding + (width - padding * 2) * (anchorX / 100),
+        y: padding + (height - padding * 2) * (anchorY / 100),
+      };
       const angle = hash(index * 17 + 3) * Math.PI * 2;
       const body: Body = {
         box, aura, x: position.x, y: position.y, past: [{ ...position }],
@@ -196,7 +238,7 @@ export function PlatformField({ prefersReducedMotion = false }: { prefersReduced
           bodies.forEach((body) => { body.x *= scaleX; body.y *= scaleY; });
           width = nextWidth;
           height = nextHeight;
-          idealDistance = Math.min(120, Math.sqrt(((width - padding * 2) * (height - padding * 2)) / (icons.length * 1.7)));
+          idealDistance = Math.min(120, Math.sqrt(((width - padding * 2) * (height - padding * 2)) / (anchors.length * 1.7)));
         }
       }
 
@@ -332,7 +374,7 @@ export function PlatformField({ prefersReducedMotion = false }: { prefersReduced
       cancelAnimationFrame(animationFrame);
       cleanups.forEach((cleanup) => cleanup());
     };
-  }, [icons, prefersReducedMotion]);
+  }, [anchors, prefersReducedMotion]);
 
   return (
     <div ref={containerRef} className="relative h-full w-full overflow-visible">
@@ -358,28 +400,30 @@ export function PlatformField({ prefersReducedMotion = false }: { prefersReduced
 function PlatformIcon({ icon }: { icon: IconKey }) {
   switch (icon) {
     case "chatgpt":
-      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22.28 9.82a5.98 5.98 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-3.99 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.05 6.05 0 0 0 5.77-4.21 5.98 5.98 0 0 0 3.99-2.9 6.05 6.05 0 0 0-.74-7.07Zm-9.02 12.61a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.79.79 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.49 4.5ZM3.6 18.3a4.47 4.47 0 0 1-.54-3.01l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95A4.5 4.5 0 0 1 3.6 18.3ZM2.34 7.9a4.49 4.49 0 0 1 2.35-1.97v5.67a.77.77 0 0 0 .38.66l5.82 3.36-2.02 1.17a.08.08 0 0 1-.07 0L4 14a4.5 4.5 0 0 1-1.66-6.1Zm16.6 3.86-5.83-3.4 2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.68a.79.79 0 0 0-.4-.65Zm2.01-3.02-.14-.09-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.24V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.49 4.49 0 0 1 6.67 4.65ZM8.31 12.86l-2.02-1.17a.08.08 0 0 1-.04-.06V6.06a4.49 4.49 0 0 1 7.36-3.45l-.14.08L8.7 5.45a.79.79 0 0 0-.39.68v6.73Zm1.1-2.37 2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5v-3Z" /></svg>;
-    case "claude":
-      return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">{Array.from({ length: 12 }, (_, index) => <path key={index} d="M12 12 L12 2.4" transform={`rotate(${index * 30} 12 12)`} />)}</svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#AFC6F2" d="M22.28 9.82a5.98 5.98 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-3.99 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.05 6.05 0 0 0 5.77-4.21 5.98 5.98 0 0 0 3.99-2.9 6.05 6.05 0 0 0-.74-7.07Zm-9.02 12.61a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.79.79 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.49 4.5ZM3.6 18.3a4.47 4.47 0 0 1-.54-3.01l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65ZM2.34 7.9a4.49 4.49 0 0 1 2.35-1.97V11.6a.77.77 0 0 0 .38.66l5.82 3.36-2.02 1.17a.08.08 0 0 1-.07 0L4 14a4.5 4.5 0 0 1-1.66-6.1Zm16.6 3.86-5.83-3.4L15.13 7.2a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.68a.79.79 0 0 0-.4-.65Zm2.01-3.02-.14-.09-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.24V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.49 4.49 0 0 1 6.67 4.65ZM8.31 12.86l-2.02-1.17a.08.08 0 0 1-.04-.06V6.06a4.49 4.49 0 0 1 7.36-3.45l-.14.08L8.7 5.45a.79.79 0 0 0-.39.68v6.73Zm1.1-2.37 2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5v-3Z" /></svg>;
     case "gemini":
-      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.5c.62 5.5 4.38 9.26 9.88 9.88v1.24c-5.5.62-9.26 4.38-9.88 9.88h-1.24c-.62-5.5-4.38-9.26-9.88-9.88v-1.24c5.5-.62 9.26-4.38 9.88-9.88H12Z" /></svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#AFC6F2" d="M12 1.5c.62 5.5 4.38 9.26 9.88 9.88v1.24c-5.5.62-9.26 4.38-9.88 9.88h-1.24c-.62-5.5-4.38-9.26-9.88-9.88v-1.24c5.5-.62 9.26-4.38 9.88-9.88H12Z" /></svg>;
     case "spotify":
-      return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" /><path d="M16.9 16.35a.62.62 0 0 1-.86.21c-2.35-1.44-5.3-1.76-8.79-.96a.62.62 0 1 1-.28-1.21c3.81-.87 7.08-.5 9.72 1.11.29.18.38.56.21.85Z" fill="#080808" /><path d="M18.2 13.44a.78.78 0 0 1-1.07.26c-2.69-1.65-6.79-2.13-9.97-1.17a.78.78 0 1 1-.45-1.49c3.63-1.1 8.15-.56 11.24 1.33.36.23.48.7.25 1.07Z" fill="#080808" /><path d="M18.31 10.42c-3.23-1.92-8.55-2.09-11.63-1.16a.93.93 0 1 1-.54-1.79c3.54-1.07 9.42-.87 13.13 1.34a.93.93 0 1 1-.96 1.61Z" fill="#080808" /></svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#AFC6F2" /><path d="M16.9 16.35a.62.62 0 0 1-.86.21c-2.35-1.44-5.3-1.76-8.79-.96a.62.62 0 1 1-.28-1.21c3.81-.87 7.08-.5 9.72 1.11.29.18.38.56.21.85Z" fill="#080808" /><path d="M18.2 13.44a.78.78 0 0 1-1.07.26c-2.69-1.65-6.79-2.13-9.97-1.17a.78.78 0 1 1-.45-1.49c3.63-1.1 8.15-.56 11.24 1.33.36.23.48.7.25 1.07Z" fill="#080808" /><path d="M18.31 10.42c-3.23-1.92-8.55-2.09-11.63-1.16a.93.93 0 1 1-.54-1.79c3.54-1.07 9.42-.87 13.13 1.34a.93.93 0 1 1-.96 1.61Z" fill="#080808" /></svg>;
     case "instagram":
-      return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><rect x="3" y="3" width="18" height="18" rx="5.2" stroke="currentColor" strokeWidth="1.7" /><circle cx="12" cy="12" r="3.9" stroke="currentColor" strokeWidth="1.7" /><circle cx="17.1" cy="6.9" r="1.15" fill="currentColor" /></svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><rect x="3" y="3" width="18" height="18" rx="5.2" stroke="#AFC6F2" strokeWidth="1.7" /><circle cx="12" cy="12" r="3.9" stroke="#AFC6F2" strokeWidth="1.7" /><circle cx="17.1" cy="6.9" r="1.15" fill="#AFC6F2" /></svg>;
+    case "github":
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#AFC6F2" d="M12 .7C5.65.7.5 5.85.5 12.2c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.23c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.16 1.18a10.98 10.98 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.82 1.19 3.08 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.79.56A11.51 11.51 0 0 0 23.5 12.2C23.5 5.85 18.35.7 12 .7Z" /></svg>;
+    case "oura":
+      return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><circle cx="12" cy="12" r="8.2" stroke="#AFC6F2" strokeWidth="3.1" /></svg>;
     case "linkedin":
-      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.03-1.85-3.03-1.85 0-2.14 1.44-2.14 2.93v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12ZM7.12 20.45H3.56V9h3.56v11.45Z" /></svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#AFC6F2" d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.03-1.85-3.03-1.85 0-2.14 1.44-2.14 2.93v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12ZM7.12 20.45H3.56V9h3.56v11.45Z" /></svg>;
     case "youtube":
-      return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.58 7.19a2.51 2.51 0 0 0-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42a2.51 2.51 0 0 0-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81a2.51 2.51 0 0 0 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42a2.51 2.51 0 0 0 1.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81Z" fill="currentColor" /><path d="M10 15.02 15.2 12 10 8.98v6.04Z" fill="#080808" /></svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.58 7.19a2.51 2.51 0 0 0-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42a2.51 2.51 0 0 0-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81a2.51 2.51 0 0 0 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42a2.51 2.51 0 0 0 1.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81Z" fill="#AFC6F2" /><path d="M10 15.02 15.2 12 10 8.98v6.04Z" fill="#080808" /></svg>;
     case "pinterest":
-      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.2a9.8 9.8 0 0 0-3.57 18.93c-.03-.78 0-1.74.2-2.58l1.03-4.39s-.26-.52-.26-1.3c0-1.22.7-2.13 1.58-2.13.74 0 1.1.56 1.1 1.22 0 .74-.47 1.86-.71 2.9-.2.88.44 1.59 1.3 1.59 1.56 0 2.61-2 2.61-4.36 0-1.8-1.22-3.16-3.44-3.16-2.5 0-4.06 1.87-4.06 3.95 0 .72.21 1.22.53 1.61.15.18.17.25.12.45l-.17.69c-.06.22-.25.3-.46.22-1.28-.52-1.88-1.92-1.88-3.48 0-2.58 2.18-5.67 6.48-5.67 3.45 0 5.71 2.5 5.71 5.17 0 3.53-1.96 6.15-4.86 6.15-.97 0-1.87-.52-2.18-1.11l-.6 2.31c-.22.83-.64 1.8-1.03 2.5.78.24 1.61.37 2.47.37a9.8 9.8 0 1 0 0-19.6Z" /></svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#AFC6F2" d="M12 2.2a9.8 9.8 0 0 0-3.57 18.93c-.03-.78 0-1.74.2-2.58l1.03-4.39s-.26-.52-.26-1.3c0-1.22.7-2.13 1.58-2.13.74 0 1.1.56 1.1 1.22 0 .74-.47 1.86-.71 2.9-.2.88.44 1.59 1.3 1.59 1.56 0 2.61-2 2.61-4.36 0-1.8-1.22-3.16-3.44-3.16-2.5 0-4.06 1.87-4.06 3.95 0 .72.21 1.22.53 1.61.15.18.17.25.12.45l-.17.69c-.06.22-.25.3-.46.22-1.28-.52-1.88-1.92-1.88-3.48 0-2.58 2.18-5.67 6.48-5.67 3.45 0 5.71 2.5 5.71 5.17 0 3.53-1.96 6.15-4.86 6.15-.97 0-1.87-.52-2.18-1.11l-.6 2.31c-.22.83-.64 1.8-1.03 2.5.78.24 1.61.37 2.47.37a9.8 9.8 0 1 0 0-19.6Z" /></svg>;
     case "tiktok":
-      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.6 5.82a4.28 4.28 0 0 1-1.06-2.82h-3.1v12.42a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 1 1 .76-5.07V9.71a5.69 5.69 0 0 0-.76-.05 5.69 5.69 0 1 0 5.69 5.74V9.01a7.35 7.35 0 0 0 4.29 1.37V7.28a4.29 4.29 0 0 1-3.23-1.46Z" /></svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#AFC6F2" d="M16.6 5.82a4.28 4.28 0 0 1-1.06-2.82h-3.1v12.42a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 1 1 .76-5.07V9.71a5.69 5.69 0 0 0-.76-.05 5.69 5.69 0 1 0 5.69 5.74V9.01a7.35 7.35 0 0 0 4.29 1.37V7.28a4.29 4.29 0 0 1-3.23-1.46Z" /></svg>;
     case "reddit":
-      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22 11.82a2.2 2.2 0 0 0-3.73-1.58 10.79 10.79 0 0 0-5.86-1.86l1-4.7 3.27.7a1.57 1.57 0 1 0 .17-1.02l-3.86-.82a.5.5 0 0 0-.6.39l-1.13 5.44a10.79 10.79 0 0 0-5.94 1.87A2.2 2.2 0 1 0 3.1 14.1c-.03.22-.05.44-.5.66 0 3.36 3.93 6.09 8.78 6.09s8.78-2.73 8.78-6.09c0-.22-.02-.44-.05-.65A2.2 2.2 0 0 0 22 11.82ZM7.28 13.4a1.57 1.57 0 1 1 3.14 0 1.57 1.57 0 0 1-3.14 0Zm8.8 4.16c-1.08 1.08-3.14 1.16-3.75 1.16s-2.68-.08-3.75-1.16a.41.41 0 0 1 .58-.58c.68.68 2.14.92 3.17.92s2.49-.24 3.17-.92a.41.41 0 1 1 .58.58Zm-.29-2.6a1.57 1.57 0 1 1 0-3.14 1.57 1.57 0 0 1 0 3.14Z" /></svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#AFC6F2" d="M22 11.82a2.2 2.2 0 0 0-3.73-1.58 10.79 10.79 0 0 0-5.86-1.86l1-4.7 3.27.7a1.57 1.57 0 1 0 .17-1.02l-3.86-.82a.5.5 0 0 0-.6.39l-1.13 5.44a10.79 10.79 0 0 0-5.94 1.87A2.2 2.2 0 1 0 3.1 14.1c-.03.22-.05.44-.5.66 0 3.36 3.93 6.09 8.78 6.09s8.78-2.73 8.78-6.09c0-.22-.02-.44-.05-.65A2.2 2.2 0 0 0 22 11.82ZM7.28 13.4a1.57 1.57 0 1 1 3.14 0 1.57 1.57 0 0 1-3.14 0Zm8.8 4.16c-1.08 1.08-3.14 1.16-3.75 1.16s-2.68-.08-3.75-1.16a.41.41 0 0 1 .58-.58c.68.68 2.14.92 3.17.92s2.49-.24 3.17-.92a.41.41 0 1 1 .58.58Zm-.29-2.6a1.57 1.57 0 1 1 0-3.14 1.57 1.57 0 0 1 0 3.14Z" /></svg>;
     case "netflix":
-      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5.4 2h3.94l5.32 15.06V2h3.94v20h-3.83L9.34 6.44V22H5.4V2Z" /></svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#AFC6F2" d="M5.4 2h3.94l5.32 15.06V2h3.94v20h-3.83L9.34 6.44V22H5.4V2Z" /></svg>;
     case "strava":
-      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.6 2 3.4 14.1h3.7L9.6 9l2.5 5.1h3.6L9.6 2Z" /><path fill="rgba(175,198,242,.58)" d="M16.1 14.1 14.5 17l-1.6-2.9h-2.6L14.5 22l4.2-7.9h-2.6Z" /></svg>;
+      return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#AFC6F2" d="M9.6 2 3.4 14.1h3.7L9.6 9l2.5 5.1h3.6L9.6 2Z" /><path fill="rgba(175,198,242,.58)" d="M16.1 14.1 14.5 17l-1.6-2.9h-2.6L14.5 22l4.2-7.9h-2.6Z" /></svg>;
   }
 }

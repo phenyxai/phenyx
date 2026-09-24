@@ -342,13 +342,6 @@ export const footerCopy = {
   brand: BRAND,
   copyright: "© 2026 PHENYX INC.",
   contactEmail: "contact@phenyxai.com",
-  // The v740 export drops these two links. They stay: on `main` this footer is
-  // the only public way to reach the privacy policy and terms, and the waitlist
-  // there collects email addresses.
-  privacyLabel: "privacy",
-  termsLabel: "terms",
-  privacyHref: "/privacy-policy",
-  termsHref: "/terms",
 } as const;
 
 export const entryModalCopy = {
