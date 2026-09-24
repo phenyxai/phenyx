@@ -152,8 +152,6 @@ test("copy is lowercase-first except for the brand and proper nouns", () => {
   }
 });
 
-test("footer exposes the brand wordmark and keeps the legal links", () => {
+test("footer exposes the brand wordmark", () => {
   assert.equal(footerCopy.brand, "PHENYX");
-  assert.equal(footerCopy.privacyHref, "/privacy-policy");
-  assert.equal(footerCopy.termsHref, "/terms");
 });

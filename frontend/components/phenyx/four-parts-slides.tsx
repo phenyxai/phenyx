@@ -36,9 +36,9 @@ function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-function Chips({ sources, span }: { sources: readonly string[]; span: string }) {
+function Chips({ sources, span, shown }: { sources: readonly string[]; span: string; shown?: boolean }) {
   return (
-    <span className="landing-vnext__chips">
+    <span className="landing-vnext__chips" data-shown={shown}>
       {sources.map((source) => <i key={source}>{source}</i>)}
       <em>{span}</em>
     </span>
@@ -84,7 +84,7 @@ export function ConstellationSlide({ active, onHold }: SlideExampleProps) {
   const lastIndex = constellationStages.length - 1;
 
   return (
-    <div className="landing-vnext__orbit-example">
+    <div className="landing-vnext__orbit-example landing-vnext__constellation">
       <p className="landing-vnext__stage-name">
         <b>{stage.name}</b>
         <span>{stage.year}</span>
@@ -241,17 +241,15 @@ export function PolarisSlide({ active, onHold }: SlideExampleProps) {
         <span className="sr-only">{answer}</span>
         <span aria-hidden="true">{answer.slice(0, typed)}</span>
       </p>
-      <div className="landing-vnext__polaris-after" data-shown={!isTyping}>
-        <Chips sources={polarisExample.sources} span={polarisExample.span} />
-        <p className="landing-vnext__polaris-next">
-          <button type="button" aria-pressed={view === "evidence"} onClick={() => showView("evidence")}>
-            {polarisExample.evidence.label}
-          </button>
-          <button type="button" aria-pressed={view === "plan"} onClick={() => showView("plan")}>
-            {polarisExample.plan.label}
-          </button>
-        </p>
-      </div>
+      <Chips sources={polarisExample.sources} span={polarisExample.span} shown={!isTyping} />
+      <p className="landing-vnext__polaris-next" data-shown={!isTyping}>
+        <button type="button" aria-pressed={view === "evidence"} onClick={() => showView("evidence")}>
+          {polarisExample.evidence.label}
+        </button>
+        <button type="button" aria-pressed={view === "plan"} onClick={() => showView("plan")}>
+          {polarisExample.plan.label}
+        </button>
+      </p>
       {view ? (
         <div className="landing-vnext__polaris-view" key={view}>
           {view === "evidence" ? (

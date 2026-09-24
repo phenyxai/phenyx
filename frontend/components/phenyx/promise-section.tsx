@@ -11,7 +11,8 @@ import { railLayout, stationDelays } from "@/lib/landing-motion";
 
 const RUN_MS = 11000;
 
-type Phase = "idle" | "play" | "done";
+// "still" is the reduced-motion end state: every station lit, no run along the rail.
+type Phase = "idle" | "play" | "done" | "still";
 
 function StationVisual({ visual }: { visual: PromiseVisual }) {
   switch (visual.kind) {
@@ -95,7 +96,7 @@ export function PromiseSection() {
     const run = () => {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         setLit(promiseCopy.stations.map(() => true));
-        setPhase("done");
+        setPhase("still");
         return;
       }
       const layout = placeRail();
@@ -132,8 +133,8 @@ export function PromiseSection() {
     <section id={SECTION_IDS.promise} className="landing-vnext__section landing-vnext__promise">
       <div className="landing-vnext__inner">
         <p className="landing-vnext__eyebrow" data-reveal>{promiseCopy.eyebrow}</p>
-        <h2 data-reveal>{promiseCopy.headline}</h2>
-        <p className="landing-vnext__section-lead" data-reveal>{promiseCopy.lede}</p>
+        <h2 data-reveal="1">{promiseCopy.headline}</h2>
+        <p className="landing-vnext__section-lead" data-reveal="2">{promiseCopy.lede}</p>
 
         <div
           ref={storyRef}
@@ -158,7 +159,7 @@ export function PromiseSection() {
             ))}
           </ol>
         </div>
-        <p className="landing-vnext__thesis landing-vnext__promise-close" data-shown={phase === "done"}>
+        <p className="landing-vnext__thesis landing-vnext__promise-close" data-reveal="3" data-shown={phase === "done" || phase === "still"}>
           {promiseCopy.close}
         </p>
       </div>
