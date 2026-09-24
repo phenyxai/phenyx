@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "node --test \"lib/**/*.test.ts\" \"app/**/*.test.ts\" \"components/**/*.test.ts\"",
     "lint": "eslint ."
   },
   "dependencies": {
