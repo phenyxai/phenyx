@@ -5,17 +5,20 @@ import { Navigation } from "@/components/phenyx/navigation";
 import { HeroSection } from "@/components/phenyx/hero-section";
 import { ManifestoSection } from "@/components/phenyx/manifesto-section";
 import { HowItWorksSection } from "@/components/phenyx/how-it-works-section";
-import { MissionSection } from "@/components/phenyx/mission-section";
-import { PolarisSection } from "@/components/phenyx/polaris-section";
+import { PromiseSection } from "@/components/phenyx/promise-section";
 import { CtaSection } from "@/components/phenyx/cta-section";
 import { FooterSection } from "@/components/phenyx/footer-section";
 import { EntryModal } from "@/components/phenyx/entry-modal";
 import { CustomCursor } from "@/components/phenyx/custom-cursor";
+import { ScrollIndicator } from "@/components/phenyx/scroll-indicator";
+import { useChapterFocus } from "@/components/phenyx/use-chapter-focus";
+import { SECTION_ORDER } from "@/lib/landing-copy";
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const openEntryModal = () => setIsModalOpen(true);
   const closeEntryModal = () => setIsModalOpen(false);
+  useChapterFocus(SECTION_ORDER);
 
   useEffect(() => {
     const targets = document.querySelectorAll<HTMLElement>("[data-reveal]");
@@ -42,14 +45,13 @@ export default function Home() {
         <Navigation onEnterClick={openEntryModal} />
 
         <HeroSection onEnterClick={openEntryModal} />
+        <ScrollIndicator />
 
         <ManifestoSection />
 
         <HowItWorksSection />
 
-        <MissionSection />
-
-        <PolarisSection />
+        <PromiseSection />
 
         <CtaSection onEnterClick={openEntryModal} />
 
