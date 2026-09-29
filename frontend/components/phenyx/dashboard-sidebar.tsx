@@ -7,6 +7,7 @@ import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { useTier, applyTierUI } from "@/lib/use-tier";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { trackTabVisit, trackTabDuration } from "@/lib/analytics";
+import { DRAWER_ID, useDashboardDrawer } from "@/components/phenyx/dashboard-drawer";
 
 /**
  * Nav items in fixed product order. Rendered in array order — never sorted.
@@ -26,6 +27,10 @@ const ORB_STYLE = {
     "radial-gradient(circle at 42% 42%, var(--s) 0%, var(--s) 42%, color-mix(in srgb, var(--s) 55%, transparent) 60%, transparent 100%)",
   boxShadow: "0 0 10px color-mix(in srgb, var(--s) 40%, transparent)",
 } as const;
+
+/** Shared by the sidebar close button and the top bar toggle. */
+const ICON_BUTTON =
+  "h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#FFFDFD]/10 text-[#FFFDFD]/80 transition-colors active:bg-[#FFFDFD]/[0.06] motion-reduce:transition-none";
 
 /** First word of a display name; "you" when there is none to show. */
 function firstName(displayName: string | null | undefined): string {
@@ -49,8 +54,10 @@ async function fetchFirstName(userId: string): Promise<string> {
  * segment (no client-only tab state that can desync from the URL).
  *
  * Top to bottom: brand block (stellar orb + PHENYX + plan pill), the four tab
- * links, and the account row (first name + settings gear). Hidden at or below
- * 760px, where MobileBottomNav takes over.
+ * links, and the account row (first name + settings gear). At or below 760px
+ * it becomes an off-canvas drawer (see dashboard-drawer.tsx), opened from
+ * MobileTopBar or MobileBottomNav; closed, it is inert so its links drop out of
+ * the tab order.
  *
  * The plan pill's label is applied through the single applyTierUI() authority
  * on load and on any tier change; the pill is always rendered and only mutated,
@@ -61,6 +68,9 @@ export function DashboardSidebar() {
   const segment = useSelectedLayoutSegment();
   const { tier } = useTier();
   const { openId } = useSettingsModals();
+  const { open, isPhone, setOpen } = useDashboardDrawer();
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   const badgeRef = useRef<HTMLSpanElement>(null);
   const [name, setName] = useState("you");
@@ -120,6 +130,28 @@ export function DashboardSidebar() {
     applyTierUI(tier, { badge: badgeRef.current });
   }, [tier]);
 
+  // Drawer: a navigation closes it (covers back/forward too).
+  useEffect(() => {
+    setOpen(false);
+  }, [segment, setOpen]);
+
+  // Drawer focus: move into the drawer on open and back to whatever opened it
+  // on close. Escape closes.
+  useEffect(() => {
+    if (!open) {
+      returnFocusRef.current?.focus();
+      returnFocusRef.current = null;
+      return;
+    }
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, setOpen]);
+
   // Tab engagement: on each segment change, emit a tab_duration for the tab
   // being left, then a tab_visit for the newly-active tab. The first run (mount)
   // emits the landing tab_visit with previous=null and no duration. Fires on
@@ -139,8 +171,14 @@ export function DashboardSidebar() {
 
   return (
     <nav
+      id={DRAWER_ID}
       aria-label="dashboard"
-      className="sticky top-0 flex h-screen w-[240px] shrink-0 flex-col border-r border-[#1a1a1a] bg-[#0A0A0A] px-5 py-7 [@media(max-width:760px)]:hidden"
+      inert={isPhone && !open}
+      className={`flex shrink-0 flex-col border-r border-[#1a1a1a] bg-[#0A0A0A] px-5 pt-7 [@media(min-width:761px)]:sticky [@media(min-width:761px)]:top-0 [@media(min-width:761px)]:h-screen [@media(min-width:761px)]:w-[240px] [@media(min-width:761px)]:pb-7 [@media(max-width:760px)]:fixed [@media(max-width:760px)]:inset-y-0 [@media(max-width:760px)]:left-0 [@media(max-width:760px)]:z-[140] [@media(max-width:760px)]:w-[min(280px,84vw)] [@media(max-width:760px)]:pb-[calc(20px+env(safe-area-inset-bottom,0px))] [@media(max-width:760px)]:transition-transform [@media(max-width:760px)]:duration-300 [@media(max-width:760px)]:ease-out motion-reduce:transition-none ${
+        open
+          ? "[@media(max-width:760px)]:translate-x-0 [@media(max-width:760px)]:shadow-[0_0_40px_rgba(0,0,0,0.6)]"
+          : "[@media(max-width:760px)]:-translate-x-full"
+      }`}
     >
       {/* Brand block: stellar orb + wordmark + plan pill. Pill text + data-tier
           owned by applyTierUI; the static "free" / data-tier here is the
@@ -155,6 +193,17 @@ export function DashboardSidebar() {
         >
           free
         </span>
+        <button
+          ref={closeRef}
+          type="button"
+          aria-label="close menu"
+          onClick={() => setOpen(false)}
+          className={`${ICON_BUTTON} [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden`}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
       </div>
 
       {/* Tab nav — rendered in TABS order, never sorted. */}
@@ -166,6 +215,7 @@ export function DashboardSidebar() {
               <Link
                 href={`/dashboard/${tab.id}`}
                 aria-current={isActive ? "page" : undefined}
+                onClick={() => setOpen(false)}
                 className={`block rounded-xl px-3 py-[11px] text-[14px] lowercase transition-colors motion-reduce:transition-none ${
                   isActive
                     ? "bg-[#FFFDFD]/[0.05] font-medium text-[#FFFDFD]/90"
@@ -187,7 +237,10 @@ export function DashboardSidebar() {
           type="button"
           aria-label="settings"
           aria-current={isSettings ? "page" : undefined}
-          onClick={() => router.push("/dashboard/settings")}
+          onClick={() => {
+            setOpen(false);
+            router.push("/dashboard/settings");
+          }}
           className={`ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none ${
             isSettings
               ? "border-[rgba(var(--s-rgb),0.35)] bg-[rgba(var(--s-rgb),0.10)] text-[#FFFDFD]"
@@ -211,5 +264,32 @@ export function DashboardSidebar() {
         </button>
       </div>
     </nav>
+  );
+}
+
+/**
+ * Phone-width top bar: the brand mark and the hamburger that toggles the
+ * sidebar drawer. Rendered at the top of the main column; hidden above 760px,
+ * where the sidebar is always in view.
+ */
+export function MobileTopBar() {
+  const { open, toggle } = useDashboardDrawer();
+  return (
+    <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2.5 border-b border-[#FFFDFD]/[0.07] bg-[rgba(8,8,8,0.94)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden">
+      <button
+        type="button"
+        aria-label={open ? "close menu" : "open menu"}
+        aria-expanded={open}
+        aria-controls={DRAWER_ID}
+        onClick={toggle}
+        className={`${ICON_BUTTON} flex`}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+      <span aria-hidden="true" className="h-[16px] w-[16px] shrink-0 rounded-full" style={ORB_STYLE} />
+      <span className="text-[12px] font-semibold tracking-[0.14em] text-[#FFFDFD]">PHENYX</span>
+    </header>
   );
 }
