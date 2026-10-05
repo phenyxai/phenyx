@@ -129,13 +129,7 @@ function StoryRow({
       className="w-full rounded-[12px] border border-[rgba(255,253,253,0.045)] px-5 py-[18px] text-left transition-colors hover:border-[rgba(var(--s-rgb),0.35)] hover:bg-[#0e0e0e] motion-reduce:transition-none max-[760px]:px-[18px] max-[760px]:py-4"
     >
       <div className="mb-1.5 flex items-center gap-2.5">
-        <span
-          className={`text-[10.5px] font-semibold uppercase tracking-[0.14em] ${
-            detail.active
-              ? "text-[rgba(var(--s-rgb),0.9)]"
-              : "text-[rgba(var(--s-rgb),0.5)]"
-          }`}
-        >
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[rgba(var(--s-rgb),0.9)]">
           {pillarLabel(detail.pillar)}
         </span>
         {newCount > 0 && (
@@ -145,11 +139,7 @@ function StoryRow({
           </span>
         )}
       </div>
-      <p
-        className={`text-[13px] font-light leading-[1.55] ${
-          detail.active ? "text-[#FFFDFD]/72" : "text-[#FFFDFD]/45"
-        }`}
-      >
+      <p className="text-[13px] font-light leading-[1.55] text-[#FFFDFD]/72">
         {storyLine(detail)}
       </p>
     </button>

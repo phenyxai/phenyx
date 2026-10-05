@@ -7,11 +7,12 @@
 // uses) because this surface needs a requestAnimationFrame pulse loop, DPR-aware
 // backing-store scaling, and pixel hit-testing that the static SVG map does not.
 //
-// - Four active pillars fill/glow in the user's stellar color; a pillar carrying
-//   a new observation pulses and shows a new-signal dot.
-// - Unformed pillars (becoming|recognition|transcendence until they carry
-//   observations) render dim: no pulse, no new-signal dot. They are still
-//   keyboard-reachable overlay buttons.
+// - PHE-100: all seven points fill/glow in the user's stellar color, joined by
+//   the seven lines in `constellation-shape`. A thin point (no synthesis and no
+//   observations yet) is drawn quietly with a softer core and halo, never
+//   dropped. A point carrying a new observation pulses and shows a dot.
+// - Points carry no names on the map; the name heads the panel once a point is
+//   opened. Screen readers get the name from each overlay button.
 // - The RAF loop pauses when the document is hidden (visibilitychange) and is
 //   skipped entirely under prefers-reduced-motion, which draws a single static
 //   frame instead.
@@ -21,17 +22,14 @@ import {
   ALL_PILLARS,
   EDGES,
   NODE_LAYOUT,
-  isLockedPillar,
   pillarLabel,
   type ConstellationData,
   type Pillar,
 } from "@/lib/constellation";
 
-const PADDING = 46; // keeps edge nodes + labels off the canvas border
+const PADDING = 28; // keeps edge nodes and their glow off the canvas border
 const BASE_RADIUS = 5.5;
-const LOCKED_RADIUS = 4;
 const HIT_SLOP = 14;
-const LABEL_SAFE_X = 14; // a label never starts or ends closer than this to a side edge
 
 interface NodePixel {
   pillar: Pillar;
@@ -82,9 +80,10 @@ export function ConstellationCanvas({
       const pos = NODE_LAYOUT[pillar];
       return {
         pillar,
-        x: PADDING + pos.x * innerW,
+        // Half-pixel centre so the vertical spine's 1px lines stay crisp at 1x.
+        x: Math.round(PADDING + pos.x * innerW) + 0.5,
         y: PADDING + pos.y * innerH,
-        r: isLockedPillar(pillar) ? LOCKED_RADIUS : BASE_RADIUS,
+        r: BASE_RADIUS,
       };
     });
     nodePixelsRef.current = next;
@@ -107,13 +106,11 @@ export function ConstellationCanvas({
 
     // Faint, non-interactive edges.
     ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255,253,253,0.16)";
     for (const [a, b] of EDGES) {
       const na = pixelByPillar.get(a);
       const nb = pixelByPillar.get(b);
       if (!na || !nb) continue;
-      const lit =
-        current.pillars[a].active && current.pillars[b].active ? 0.16 : 0.07;
-      ctx.strokeStyle = `rgba(255,253,253,${lit})`;
       ctx.beginPath();
       ctx.moveTo(na.x, na.y);
       ctx.lineTo(nb.x, nb.y);
@@ -127,89 +124,52 @@ export function ConstellationCanvas({
       const detail = current.pillars[node.pillar];
       const isSelected = selectedRef.current === node.pillar;
 
-      if (!detail.active) {
-        // Unformed pillar: dim ring, no fill, no glow, no pulse.
+      const thin = detail.observation_count === 0 && !detail.synthesis;
+
+      // Stellar glow. Pulse amplitude only when carrying a new observation,
+      // otherwise a steady halo; a thin point keeps the halo low.
+      const pulse = detail.has_new ? 0.45 + phase * 0.55 : thin ? 0.3 : 0.6;
+      const glowRadius = node.r + 8 + (detail.has_new ? phase * 5 : 3);
+
+      const gradient = ctx.createRadialGradient(
+        node.x,
+        node.y,
+        0,
+        node.x,
+        node.y,
+        glowRadius,
+      );
+      gradient.addColorStop(0, withAlpha(stellar, 0.55 * pulse));
+      gradient.addColorStop(1, withAlpha(stellar, 0));
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Core.
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+      ctx.fillStyle = thin ? withAlpha(stellar, 0.55) : stellar;
+      ctx.fill();
+
+      // Selection ring.
+      if (isSelected) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255,253,253,0.16)";
+        ctx.arc(node.x, node.y, node.r + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = withAlpha(stellar, 0.7);
         ctx.lineWidth = 1;
         ctx.stroke();
-        if (isSelected) {
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, node.r + 4, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(255,253,253,0.35)";
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        }
-      } else {
-        // Active pillar: stellar glow. Pulse amplitude only when carrying a new
-        // observation, otherwise a steady halo.
-        const pulse = detail.has_new ? 0.45 + phase * 0.55 : 0.6;
-        const glowRadius = node.r + 8 + (detail.has_new ? phase * 5 : 3);
-
-        const gradient = ctx.createRadialGradient(
-          node.x,
-          node.y,
-          0,
-          node.x,
-          node.y,
-          glowRadius,
-        );
-        gradient.addColorStop(0, withAlpha(stellar, 0.55 * pulse));
-        gradient.addColorStop(1, withAlpha(stellar, 0));
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Core.
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
-        ctx.fillStyle = stellar;
-        ctx.fill();
-
-        // Selection ring.
-        if (isSelected) {
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, node.r + 4, 0, Math.PI * 2);
-          ctx.strokeStyle = withAlpha(stellar, 0.7);
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        }
-
-        // New-signal dot, top-right of the core.
-        if (detail.has_new) {
-          const dx = node.x + node.r + 2;
-          const dy = node.y - node.r - 2;
-          ctx.beginPath();
-          ctx.arc(dx, dy, 2, 0, Math.PI * 2);
-          ctx.fillStyle = "#FFFDFD";
-          ctx.fill();
-        }
       }
 
-      // Label, kept inside the canvas: near a side edge the text anchors to
-      // that edge instead of centring on the point, and the baseline is
-      // clamped so a low or high point never pushes its name off the sky.
-      const label = pillarLabel(node.pillar);
-      ctx.font = "300 11px system-ui, -apple-system, sans-serif";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = detail.active
-        ? "rgba(255,253,253,0.6)"
-        : "rgba(255,253,253,0.28)";
-      const half = ctx.measureText(label).width / 2;
-      let labelX = node.x;
-      let align: CanvasTextAlign = "center";
-      if (node.x - half < LABEL_SAFE_X) {
-        align = "left";
-        labelX = LABEL_SAFE_X;
-      } else if (node.x + half > w - LABEL_SAFE_X) {
-        align = "right";
-        labelX = w - LABEL_SAFE_X;
+      // New-signal dot, top-right of the core.
+      if (detail.has_new) {
+        const dx = node.x + node.r + 2;
+        const dy = node.y - node.r - 2;
+        ctx.beginPath();
+        ctx.arc(dx, dy, 2, 0, Math.PI * 2);
+        ctx.fillStyle = "#FFFDFD";
+        ctx.fill();
       }
-      ctx.textAlign = align;
-      const labelY = Math.max(16, Math.min(h - 12, node.y + node.r + 12));
-      ctx.fillText(label, labelX, labelY);
     }
   }, []);
 
@@ -409,7 +369,7 @@ export function ConstellationCanvas({
       </p>
       <p id={liveId} className="sr-only" role="status" aria-live="polite">
         {selectedPillar
-          ? `${pillarLabel(selectedPillar)} opened. details are in the panel beside the constellation.`
+          ? `${pillarLabel(selectedPillar)} opened. details are in the panel below the constellation.`
           : ""}
       </p>
     </div>

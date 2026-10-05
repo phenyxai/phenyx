@@ -16,7 +16,6 @@ import {
   type ClusterObservationInput,
 } from "./clusters";
 import {
-  ACTIVE_PILLARS,
   NODE_LAYOUT,
   PILLARS,
   tenureYears,
@@ -45,13 +44,11 @@ export interface ConstellationPoint {
   x: number;
   y: number;
   z: number;
-  active: boolean;
   has_new: boolean;
 }
 
 export interface ConstellationPillar {
   pillar: Pillar;
-  active: boolean;
   score: number | null;
   synthesis: string | null;
   observation_count: number;
@@ -220,7 +217,6 @@ export class ConstellationService {
       points: pillars.map((p) => ({
         pillar: p.pillar,
         ...NODE_LAYOUT[p.pillar],
-        active: p.active,
         has_new: p.has_new,
       })),
       pillars,
@@ -264,7 +260,6 @@ export class ConstellationService {
       }
       return {
         pillar,
-        active: ACTIVE_PILLARS.has(pillar),
         score: this.readScore(state, pillar),
         synthesis: this.readSynthesis(state, pillar),
         observation_count: observationCount,

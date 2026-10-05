@@ -2,10 +2,11 @@
 
 // PHE-74 / PHE-93 — Constellation tab.
 //
-// Header (eyebrow + age line), then the sky and the reading panel. From 981px
-// they sit side by side: the sky is sticky, the panel is a plain column that
-// flows with the page. Under 981px the panel sits below the sky and is brought
-// into view when a point opens. The weekly timeline and "what moved" left this
+// Header (eyebrow + age line), then the sky and the reading panel. PHE-100: at
+// every width the sky takes the top ~65% of the viewport (never full height)
+// and the panel reads below it, brought into view when a point opens. The sky
+// is capped as wide as it is tall so the seven-point shape keeps its
+// proportions on wide screens. The weekly timeline and "what moved" left this
 // tab in v244; their components stay in the repo, unmounted.
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,9 +19,6 @@ import {
   type ConstellationData,
   type Pillar,
 } from "@/lib/constellation";
-
-/** Below this the panel sits under the sky instead of beside it. */
-const STACKED_QUERY = "(max-width: 980px)";
 
 export default function ConstellationTabPage() {
   const [data, setData] = useState<ConstellationData | null>(null);
@@ -70,11 +68,10 @@ export default function ConstellationTabPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [closePoint, selectedClusterId, selectedPillar]);
 
-  // On a phone the panel sits under the sky, so opening a point brings the
-  // reading into view rather than leaving it below the fold.
+  // The panel sits under the sky, so opening a point brings the reading into
+  // view rather than leaving it below the fold.
   useEffect(() => {
     if (!selectedPillar) return;
-    if (!window.matchMedia(STACKED_QUERY).matches) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(() => {
       panelRef.current?.scrollIntoView({
@@ -106,8 +103,8 @@ export default function ConstellationTabPage() {
         )}
       </header>
 
-      <div className="grid grid-cols-1 items-start gap-[22px] px-6 pb-10 min-[981px]:grid-cols-[minmax(0,1fr)_400px] min-[981px]:gap-[30px] lg:px-10">
-        <div className="relative h-[clamp(420px,52vh,560px)] min-w-0 min-[981px]:sticky min-[981px]:top-5 min-[981px]:h-[clamp(520px,68vh,760px)]">
+      <div className="flex flex-col items-center gap-[22px] px-6 pb-10 lg:px-10">
+        <div className="relative h-[clamp(320px,65svh,760px)] w-full max-w-[65svh]">
           {data && (
             <ConstellationCanvas
               data={data}
@@ -118,7 +115,7 @@ export default function ConstellationTabPage() {
           )}
         </div>
 
-        <aside ref={panelRef} className="w-full min-w-0">
+        <aside ref={panelRef} className="w-full min-w-0 max-w-[640px]">
           {data ? (
             <ConstellationPanel
               data={data}

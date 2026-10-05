@@ -21,6 +21,7 @@ import {
   assignParticlesToNodes,
   formationTimeline,
 } from "@/lib/constellation-reveal";
+import { ALL_PILLARS, EDGES, NODE_LAYOUT } from "@/lib/constellation-shape";
 
 const STELLAR_PALETTE = [
   "#CC3300", "#E84422", "#E87722", "#E8B822",
@@ -42,7 +43,7 @@ const STELLAR_PALETTE = [
 //
 // Flow: welcome (separate /welcome route) → fork → manifesto (s4B) →
 //       constellation_intro (s4C) → polaris_intro (s5B) → connect (s6 Onairos)
-//       → synthesizing → reveal → done (→ Daily). s4A/s5A ship but are not on
+//       → synthesizing → reveal → done (→ Constellation). s4A/s5A ship but are not on
 //       the live path.
 //
 // The fork branches: "see how it works" → manifesto; "connect my accounts"
@@ -168,17 +169,16 @@ interface Particle {
 
 // ----------------------------------------------------------------------------
 // Synthesis result captured for the reveal's node-glow (PHE-18 → consumed by
-// PHE-19). Mirrors the 4 ACTIVE pillar scores from `constellation_state`
-// (0-100 ints) plus their synthesis paragraphs; the engine round-trips extra
-// fields, so an index signature keeps any additional payload intact. The 3
-// LOCKED pillars (becoming/recognition/transcendence) carry no score.
+// PHE-19). Mirrors the seven pillar scores from `constellation_state`
+// (0-100 ints, PHE-100) plus their synthesis paragraphs; the engine round-trips
+// extra fields, so an index signature keeps any additional payload intact.
 //
 // Lifecycle:
 //   - null  → synthesis hasn't landed yet, OR it failed, OR no trigger ran.
-//             The reveal (PHE-19) falls back to neutral/equal glow on the 4
-//             active nodes; the dashboard hydrates the real scores later.
+//             The reveal (PHE-19) falls back to neutral/equal glow on all
+//             seven nodes; the dashboard hydrates the real scores later.
 //   - set   → synthesis resolved before/while the reveal plays; PHE-19 reads
-//             these score fields to scale active-node glow intensity.
+//             these score fields to scale node glow intensity.
 // Node POSITIONS never depend on this — only glow intensity does.
 // ----------------------------------------------------------------------------
 interface ConstellationState {
@@ -186,6 +186,9 @@ interface ConstellationState {
   emergence_score?: number | null;
   self_creation_score?: number | null;
   convergence_score?: number | null;
+  becoming_score?: number | null;
+  recognition_score?: number | null;
+  transcendence_score?: number | null;
   [key: string]: unknown;
 }
 
@@ -207,7 +210,7 @@ export default function OnboardingPage() {
   // Synthesis result for the reveal's node-glow (PHE-18). Holds the resolved
   // `constellation_state` scores IF synthesis lands while the user is still in
   // the flow; stays null on failure/absence (reveal falls back to neutral glow).
-  // PHE-19 reads this to drive active-node glow intensity.
+  // PHE-19 reads this to drive node glow intensity.
   // Reveal-glow scores (PHE-19). Synthesis now runs server-side via the verified
   // /onairos/connect callback (PHE-40) rather than a client round-trip, so these
   // scores are not fetched inline; the reveal uses its neutral fallback glow and
@@ -743,11 +746,12 @@ export default function OnboardingPage() {
         {/* The cinematic payoff: a full-viewport canvas particle animation   */}
         {/* that materializes the constellation in 5 phases                  */}
         {/* (APPEAR→FLOAT→CONDENSE→LINES→REVEAL) into 7 nodes + 7 canonical    */}
-        {/* edges, lands the reveal line, and AUTO-ADVANCES to Daily.         */}
-        {/* It reads `constellationState` for active-node glow intensity      */}
+        {/* edges, lands the reveal line, and AUTO-ADVANCES to /dashboard,    */}
+        {/* which redirects to Constellation, the home screen (PHE-100).      */}
+        {/* It reads `constellationState` for node glow intensity             */}
         {/* (null → neutral fallback). `prefers-reduced-motion` snaps the     */}
         {/* finished constellation + line in ≤2s. On auto-advance it sets     */}
-        {/* onboarding_step = done BEFORE routing to /dashboard (Daily);      */}
+        {/* onboarding_step = done BEFORE routing to /dashboard;             */}
         {/* order so the dashboard never bounces back into onboarding); the   */}
         {/* transition is independent of synthesis outcome. RevealScreen owns  */}
         {/* its own full-screen canvas + rAF loop + label interval and cleans  */}
@@ -788,44 +792,34 @@ export default function OnboardingPage() {
 // SVG / React-state build, a fundamentally different paradigm from this
 // imperative particle-system rAF loop (200 particles condensing into 7 nodes).
 //
-// Canonical Pillar Model (spec 03-onboarding-reveal.md "Pillar Model"):
-//   idx 0-3 ACTIVE  (ORIGIN, EMERGENCE, SELF-CREATION, CONVERGENCE) — glow in
-//                    stellarColor, intensity ∝ synthesis score.
-//   idx 4-6 LOCKED  (BECOMING, RECOGNITION, TRANSCENDENCE) — render dim always.
-// Node POSITIONS are fixed (never depend on score) — only glow intensity does.
+// Pillar model (PHE-100, spec doc 2): all seven nodes glow in stellarColor,
+// intensity ∝ synthesis score. Node POSITIONS and the seven lines come from
+// `lib/constellation-shape`, shared with the constellation tab, so the shape
+// that forms here is the shape the person lands on. Positions never depend on
+// score; only glow intensity does.
 // ============================================================================
 
-// The exact reveal line (v67 formation end card). Auto-advances to Daily.
+// The exact reveal line (v67 formation end card). Auto-advances to /dashboard.
 const REVEAL_LINE = "none of it is new. it is only in one piece now.";
 
 // Every phase derives from this one total-duration decision. The selected
 // 17.085s value is 15% faster than the original 20.1s choreography.
 const FORMATION = formationTimeline(FORMATION_ANIMATION_DURATION_MS);
 
-// Canonical 7 pillars (index 0-6). nx/ny are fractions of the viewport.
-// ORIGIN bottom anchor; EMERGENCE+SELF-CREATION form a diamond into the
-// CONVERGENCE hub; a vertical chain rises through the 3 locked to TRANSCENDENCE.
-const PILLARS: { nx: number; ny: number; active: boolean; baseR: number }[] = [
-  { nx: 0.5, ny: 0.9, active: true, baseR: 4 }, // 0 ORIGIN
-  { nx: 0.33, ny: 0.72, active: true, baseR: 4 }, // 1 EMERGENCE
-  { nx: 0.67, ny: 0.72, active: true, baseR: 4 }, // 2 SELF-CREATION
-  { nx: 0.5, ny: 0.56, active: true, baseR: 5.5 }, // 3 CONVERGENCE (hub — larger)
-  { nx: 0.5, ny: 0.41, active: false, baseR: 4 }, // 4 BECOMING (locked)
-  { nx: 0.5, ny: 0.26, active: false, baseR: 4 }, // 5 RECOGNITION (locked)
-  { nx: 0.5, ny: 0.11, active: false, baseR: 4 }, // 6 TRANSCENDENCE (locked)
-];
+// The seven pillars in ALL_PILLARS order (index 0-6). nx/ny are fractions of
+// the viewport. CONVERGENCE is the hub and draws larger.
+const PILLARS = ALL_PILLARS.map((pillar) => ({
+  nx: NODE_LAYOUT[pillar].x,
+  ny: NODE_LAYOUT[pillar].y,
+  baseR: pillar === "convergence" ? 5.5 : 4,
+}));
 
-// Canonical 7-edge list (draw order). Each edge draws only once BOTH its
-// endpoint nodes are locked.
-const CLINES: [number, number][] = [
-  [0, 1],
-  [0, 2],
-  [1, 3],
-  [2, 3],
-  [3, 4],
-  [4, 5],
-  [5, 6],
-];
+// The seven lines as index pairs, in draw order. Each line draws only once
+// BOTH its endpoint nodes are locked into place.
+const CLINES: [number, number][] = EDGES.map(([a, b]) => [
+  ALL_PILLARS.indexOf(a),
+  ALL_PILLARS.indexOf(b),
+]);
 
 // SLABELS — cycling FLOAT labels (one per pillar) + the closing label.
 const SLABELS = [
@@ -839,13 +833,8 @@ const SLABELS = [
   "it's all here",
 ];
 
-// Maps active-pillar index → its `constellation_state` score field.
-const SCORE_FIELDS = [
-  "origin_score",
-  "emergence_score",
-  "self_creation_score",
-  "convergence_score",
-] as const;
+// Maps pillar index → its `constellation_state` score field.
+const SCORE_FIELDS = ALL_PILLARS.map((pillar) => `${pillar}_score` as const);
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
@@ -929,14 +918,12 @@ function RevealScreen({
     window.addEventListener("resize", sizeCanvas);
 
     const [sr, sg, sb] = hexToRgb(stellarColor);
-    const LOCKED: [number, number, number] = [96, 106, 122]; // dim grey-blue
 
-    // Per-pillar glow alpha from synthesis score. Active: 0.30..0.92 by score;
-    // null/absent score → neutral fallback (0.6 norm). Locked: fixed dim.
-    const glow = PILLARS.map((p, i) => {
-      if (!p.active) return { rgb: LOCKED, alpha: 0.16, norm: 0 };
+    // Per-pillar glow alpha from synthesis score: 0.30..0.92 by score;
+    // null/absent score → neutral fallback (0.6 norm).
+    const glow = SCORE_FIELDS.map((field) => {
       const raw = constellationState
-        ? (constellationState[SCORE_FIELDS[i]] as number | null | undefined)
+        ? (constellationState[field] as number | null | undefined)
         : null;
       const norm = typeof raw === "number" ? clamp01(raw / 100) : 0.6;
       return { rgb: [sr, sg, sb] as [number, number, number], alpha: 0.3 + norm * 0.62, norm };
@@ -950,13 +937,12 @@ function RevealScreen({
       baseR: number,
       rgb: [number, number, number],
       alpha: number,
-      active: boolean,
       t: number,
       i: number,
     ) => {
       const [r, g, b] = rgb;
-      // Subtle breathing pulse on active nodes only.
-      const a = active ? alpha * (0.86 + 0.14 * Math.sin(t / 600 + i)) : alpha;
+      // Subtle breathing pulse.
+      const a = alpha * (0.86 + 0.14 * Math.sin(t / 600 + i));
       // Outer radial glow.
       let grad = ctx.createRadialGradient(x, y, 0, x, y, baseR * 7);
       grad.addColorStop(0, `rgba(${r},${g},${b},${a * 0.42})`);
@@ -1015,7 +1001,7 @@ function RevealScreen({
       ctx.clearRect(0, 0, W, H);
       CLINES.forEach(([i, j]) => drawEdge(np[i].x, np[i].y, np[j].x, np[j].y, 1));
       PILLARS.forEach((p, i) =>
-        drawNode(np[i].x, np[i].y, p.baseR, glow[i].rgb, glow[i].alpha, p.active, 0, i),
+        drawNode(np[i].x, np[i].y, p.baseR, glow[i].rgb, glow[i].alpha, 0, i),
       );
       setLoadVisible(false);
       setRevealText(REVEAL_LINE);
@@ -1168,7 +1154,7 @@ function RevealScreen({
       // Nodes (CONDENSE) — draw only locked nodes.
       PILLARS.forEach((p, i) => {
         if (!nodeLocked(i, t)) return;
-        drawNode(np[i].x, np[i].y, p.baseR, glow[i].rgb, glow[i].alpha, p.active, t, i);
+        drawNode(np[i].x, np[i].y, p.baseR, glow[i].rgb, glow[i].alpha, t, i);
       });
 
       rafRef.current = requestAnimationFrame(loop);
