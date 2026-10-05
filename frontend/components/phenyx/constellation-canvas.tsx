@@ -8,9 +8,13 @@
 // backing-store scaling, and pixel hit-testing that the static SVG map does not.
 //
 // - PHE-100: all seven points fill/glow in the user's stellar color, joined by
-//   the seven lines in `constellation-shape`. A thin point (no synthesis and no
-//   observations yet) is drawn quietly with a softer core and halo, never
-//   dropped. A point carrying a new observation pulses and shows a dot.
+//   the seven lines in `constellation-shape`: the Big Dipper, from real star
+//   positions, scaled uniformly (never stretched) and sized by each star's real
+//   brightness. A faint dotted pointer continues past self-creation (Dubhe)
+//   along the line from origin (Merak), toward polaris. A thin point (no
+//   synthesis and no observations yet) is drawn quietly with a softer core and
+//   halo, never dropped. A point carrying a new observation pulses and shows a
+//   dot.
 // - Points carry no names on the map; the name heads the panel once a point is
 //   opened. Screen readers get the name from each overlay button.
 // - The RAF loop pauses when the document is hidden (visibilitychange) and is
@@ -18,17 +22,16 @@
 //   frame instead.
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { pillarLabel, type ConstellationData, type Pillar } from "@/lib/constellation";
 import {
   ALL_PILLARS,
   EDGES,
-  NODE_LAYOUT,
-  pillarLabel,
-  type ConstellationData,
-  type Pillar,
-} from "@/lib/constellation";
+  POINTER,
+  STAR_RADIUS,
+  fitShape,
+} from "@/lib/constellation-shape";
 
 const PADDING = 28; // keeps edge nodes and their glow off the canvas border
-const BASE_RADIUS = 5.5;
 const HIT_SLOP = 14;
 
 interface NodePixel {
@@ -70,22 +73,15 @@ export function ConstellationCanvas({
   dataRef.current = data;
   selectedRef.current = selectedPillar;
 
-  // Map the deterministic normalized layout into CSS-pixel centers for the
-  // current canvas size. `z` is intentionally not consulted here — the draw is
-  // 2D; z only round-trips through the node model.
+  // Fit the real shape uniformly into the canvas (never stretched) and take
+  // CSS-pixel centers. `z` is not consulted; the draw is 2D.
   const computeNodePixels = useCallback((w: number, h: number) => {
-    const innerW = Math.max(0, w - PADDING * 2);
-    const innerH = Math.max(0, h - PADDING * 2);
-    const next = ALL_PILLARS.map((pillar) => {
-      const pos = NODE_LAYOUT[pillar];
-      return {
-        pillar,
-        // Half-pixel centre so the vertical spine's 1px lines stay crisp at 1x.
-        x: Math.round(PADDING + pos.x * innerW) + 0.5,
-        y: PADDING + pos.y * innerH,
-        r: BASE_RADIUS,
-      };
-    });
+    const next = fitShape(
+      PADDING,
+      PADDING,
+      Math.max(0, w - PADDING * 2),
+      Math.max(0, h - PADDING * 2),
+    ).map((node) => ({ ...node, r: STAR_RADIUS[node.pillar] }));
     nodePixelsRef.current = next;
     setOverlayNodes(next);
   }, []);
@@ -115,6 +111,28 @@ export function ConstellationCanvas({
       ctx.moveTo(na.x, na.y);
       ctx.lineTo(nb.x, nb.y);
       ctx.stroke();
+    }
+
+    // The pointer: a dotted guide past self-creation, one pointer-gap long,
+    // fading out toward polaris. Not a line of the shape and not clickable.
+    const from = pixelByPillar.get(POINTER[0]);
+    const to = pixelByPillar.get(POINTER[1]);
+    if (from && to) {
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const sx = to.x + (dx / len) * (to.r + 6);
+      const sy = to.y + (dy / len) * (to.r + 6);
+      const fade = ctx.createLinearGradient(sx, sy, to.x + dx, to.y + dy);
+      fade.addColorStop(0, "rgba(255,253,253,0.16)");
+      fade.addColorStop(1, "rgba(255,253,253,0)");
+      ctx.strokeStyle = fade;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(to.x + dx, to.y + dy);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
 
     // Slow pulse phase in [0,1]; static (0.5) when animation is suppressed.

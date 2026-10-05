@@ -21,7 +21,7 @@ import {
   assignParticlesToNodes,
   formationTimeline,
 } from "@/lib/constellation-reveal";
-import { ALL_PILLARS, EDGES, NODE_LAYOUT } from "@/lib/constellation-shape";
+import { ALL_PILLARS, EDGES, STAR_RADIUS, fitShape } from "@/lib/constellation-shape";
 
 const STELLAR_PALETTE = [
   "#CC3300", "#E84422", "#E87722", "#E8B822",
@@ -793,10 +793,11 @@ export default function OnboardingPage() {
 // imperative particle-system rAF loop (200 particles condensing into 7 nodes).
 //
 // Pillar model (PHE-100, spec doc 2): all seven nodes glow in stellarColor,
-// intensity ∝ synthesis score. Node POSITIONS and the seven lines come from
-// `lib/constellation-shape`, shared with the constellation tab, so the shape
-// that forms here is the shape the person lands on. Positions never depend on
-// score; only glow intensity does.
+// intensity ∝ synthesis score. Node POSITIONS, sizes and the seven lines come
+// from `lib/constellation-shape` (the Big Dipper, from real star positions),
+// shared with the constellation tab, so the shape that forms here is the shape
+// the person lands on. Positions never depend on score; only glow intensity
+// does.
 // ============================================================================
 
 // The exact reveal line (v67 formation end card). Auto-advances to /dashboard.
@@ -806,13 +807,9 @@ const REVEAL_LINE = "none of it is new. it is only in one piece now.";
 // 17.085s value is 15% faster than the original 20.1s choreography.
 const FORMATION = formationTimeline(FORMATION_ANIMATION_DURATION_MS);
 
-// The seven pillars in ALL_PILLARS order (index 0-6). nx/ny are fractions of
-// the viewport. CONVERGENCE is the hub and draws larger.
-const PILLARS = ALL_PILLARS.map((pillar) => ({
-  nx: NODE_LAYOUT[pillar].x,
-  ny: NODE_LAYOUT[pillar].y,
-  baseR: pillar === "convergence" ? 5.5 : 4,
-}));
+// The seven pillars in ALL_PILLARS order (index 0-6), each sized from its
+// star's real brightness.
+const PILLARS = ALL_PILLARS.map((pillar) => ({ baseR: STAR_RADIUS[pillar] * 0.9 }));
 
 // The seven lines as index pairs, in draw order. Each line draws only once
 // BOTH its endpoint nodes are locked into place.
@@ -929,7 +926,9 @@ function RevealScreen({
       return { rgb: [sr, sg, sb] as [number, number, number], alpha: 0.3 + norm * 0.62, norm };
     });
 
-    const nodePos = () => PILLARS.map((p) => ({ x: p.nx * W, y: p.ny * H }));
+    // The shape fitted uniformly (never stretched) into the viewport, inside
+    // the same margins the formation has always used.
+    const nodePos = () => fitShape(W * 0.05, H * 0.11, W * 0.9, H * 0.79);
 
     const drawNode = (
       x: number,

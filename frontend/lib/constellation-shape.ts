@@ -1,9 +1,14 @@
-// PHE-100 — The constellation's fixed shape: seven points, seven lines.
+// PHE-100 — The constellation's fixed shape: the Big Dipper.
 //
-// One source for the onboarding formation and the constellation tab, so the
-// picture that forms is the picture the person lands on. The shape never
-// depends on what generation returns: a point with no data is drawn thin,
-// never dropped. Kept free of imports so it loads under plain `node --test`;
+// The seven points and seven lines in spec doc 2 are exactly the Dipper's
+// stick figure: a four-star bowl (origin, emergence, convergence,
+// self-creation) and a three-star handle (becoming, recognition,
+// transcendence) hanging off convergence. Positions come from the real stars,
+// so the shape is the one people can find in the sky. It never depends on
+// what generation returns: a point with no data is drawn thin, never dropped.
+//
+// One source for the onboarding formation and the constellation tab. Kept free
+// of imports so it loads under plain `node --test`;
 // `backend/src/constellation/layout.ts` mirrors NODE_LAYOUT for the API.
 
 export const ALL_PILLARS = [
@@ -25,19 +30,19 @@ export interface Vec3 {
 }
 
 /**
- * Normalized [0,1] centers within the drawing box. Origin anchors the bottom,
- * emergence and self-creation form a diamond into convergence, and a spine
- * rises through becoming and recognition to transcendence. `z` is reserved for
- * a future 3D layer and never read by the 2D draw.
+ * The star each pillar sits on: ICRS J2000 position in degrees and V
+ * magnitude, from SIMBAD (checked 2026-10-05; Mizar is Mizar A). Merak and
+ * Dubhe are the pointer stars: the line from origin through self-creation
+ * leads to Polaris.
  */
-export const NODE_LAYOUT: Record<Pillar, Vec3> = {
-  origin: { x: 0.5, y: 0.9, z: 0.0 },
-  emergence: { x: 0.33, y: 0.72, z: 0.1 },
-  self_creation: { x: 0.67, y: 0.72, z: 0.2 },
-  convergence: { x: 0.5, y: 0.56, z: 0.3 },
-  becoming: { x: 0.5, y: 0.41, z: 0.4 },
-  recognition: { x: 0.5, y: 0.26, z: 0.5 },
-  transcendence: { x: 0.5, y: 0.11, z: 0.6 },
+export const STARS: Record<Pillar, { star: string; ra: number; dec: number; mag: number }> = {
+  origin: { star: "merak", ra: 165.4603, dec: 56.3824, mag: 2.37 },
+  emergence: { star: "phecda", ra: 178.4577, dec: 53.6948, mag: 2.44 },
+  self_creation: { star: "dubhe", ra: 165.932, dec: 61.751, mag: 1.79 },
+  convergence: { star: "megrez", ra: 183.8565, dec: 57.0326, mag: 3.32 },
+  becoming: { star: "alioth", ra: 193.5073, dec: 55.9598, mag: 1.77 },
+  recognition: { star: "mizar", ra: 200.9814, dec: 54.9254, mag: 2.22 },
+  transcendence: { star: "alkaid", ra: 206.8852, dec: 49.3133, mag: 1.86 },
 };
 
 /** The seven lines, in formation draw order (spec doc 2). */
@@ -50,3 +55,81 @@ export const EDGES: readonly [Pillar, Pillar][] = [
   ["becoming", "recognition"],
   ["recognition", "transcendence"],
 ];
+
+/** The pointer stars: a faint guide continues past the second, toward polaris. */
+export const POINTER: readonly [Pillar, Pillar] = ["origin", "self_creation"];
+
+/**
+ * Gnomonic projection about the figure's centre as seen from Earth (east left
+ * of north), then turned a quarter so the handle rises: origin at the bottom,
+ * transcendence at the top. A turn is how the real sky moves through a night;
+ * the figure is never mirrored. Each axis is normalized to [0,1]; ASPECT keeps
+ * the true width/height so drawing never stretches it.
+ */
+function project(): { layout: Record<Pillar, Vec3>; aspect: number } {
+  const rad = Math.PI / 180;
+  const unit = (p: Pillar) => {
+    const a = STARS[p].ra * rad;
+    const d = STARS[p].dec * rad;
+    return [Math.cos(d) * Math.cos(a), Math.cos(d) * Math.sin(a), Math.sin(d)];
+  };
+  const sum = ALL_PILLARS.map(unit).reduce((s, v) => s.map((c, i) => c + v[i]));
+  const a0 = Math.atan2(sum[1], sum[0]);
+  const d0 = Math.atan2(sum[2], Math.hypot(sum[0], sum[1]));
+
+  const raw = ALL_PILLARS.map((p) => {
+    const a = STARS[p].ra * rad;
+    const d = STARS[p].dec * rad;
+    const cosc = Math.sin(d0) * Math.sin(d) + Math.cos(d0) * Math.cos(d) * Math.cos(a - a0);
+    const east = (Math.cos(d) * Math.sin(a - a0)) / cosc;
+    const north =
+      (Math.cos(d0) * Math.sin(d) - Math.sin(d0) * Math.cos(d) * Math.cos(a - a0)) / cosc;
+    // Sky view on screen is (x, y) = (-east, -north); a quarter turn clockwise
+    // gives (north, -east).
+    return { x: north, y: -east };
+  });
+  const xs = raw.map((r) => r.x);
+  const ys = raw.map((r) => r.y);
+  const [minX, spanX] = [Math.min(...xs), Math.max(...xs) - Math.min(...xs)];
+  const [minY, spanY] = [Math.min(...ys), Math.max(...ys) - Math.min(...ys)];
+
+  const layout = {} as Record<Pillar, Vec3>;
+  ALL_PILLARS.forEach((p, i) => {
+    layout[p] = { x: (raw[i].x - minX) / spanX, y: (raw[i].y - minY) / spanY, z: i / 10 };
+  });
+  return { layout, aspect: spanX / spanY };
+}
+
+const projected = project();
+
+/** Normalized [0,1] centers per axis. `z` is reserved for a future 3D layer. */
+export const NODE_LAYOUT: Record<Pillar, Vec3> = projected.layout;
+
+/** True width / height of the figure (about 0.48: tall and narrow). */
+export const SHAPE_ASPECT = projected.aspect;
+
+/** Core radius in px from real brightness: brighter stars draw larger. */
+export const STAR_RADIUS: Record<Pillar, number> = Object.fromEntries(
+  ALL_PILLARS.map((p) => [p, Math.max(2.5, 6.5 - 1.1 * STARS[p].mag)])
+) as Record<Pillar, number>;
+
+/**
+ * Pixel centers for the figure scaled uniformly into a box and centered in it,
+ * in ALL_PILLARS order. Never stretched, whatever the box's proportions.
+ */
+export function fitShape(
+  left: number,
+  top: number,
+  width: number,
+  height: number
+): { pillar: Pillar; x: number; y: number }[] {
+  const h = Math.max(0, Math.min(height, width / SHAPE_ASPECT));
+  const w = h * SHAPE_ASPECT;
+  const x0 = left + (width - w) / 2;
+  const y0 = top + (height - h) / 2;
+  return ALL_PILLARS.map((pillar) => ({
+    pillar,
+    x: x0 + NODE_LAYOUT[pillar].x * w,
+    y: y0 + NODE_LAYOUT[pillar].y * h,
+  }));
+}

@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ALL_PILLARS, EDGES, NODE_LAYOUT } from "./constellation-shape.ts";
+import {
+  ALL_PILLARS,
+  EDGES,
+  NODE_LAYOUT,
+  SHAPE_ASPECT,
+  STARS,
+  fitShape,
+} from "./constellation-shape.ts";
 
 test("the constellation is always seven points and the seven spec lines", () => {
   assert.equal(ALL_PILLARS.length, 7);
@@ -23,4 +30,37 @@ test("the constellation is always seven points and the seven spec lines", () => 
     const { x, y } = NODE_LAYOUT[pillar];
     assert.ok(x >= 0 && x <= 1 && y >= 0 && y <= 1, `${pillar} is off the map`);
   }
+});
+
+test("the shape is the real Big Dipper, upright and undistorted", () => {
+  assert.deepEqual(
+    ALL_PILLARS.map((p) => STARS[p].star),
+    ["merak", "phecda", "dubhe", "megrez", "alioth", "mizar", "alkaid"]
+  );
+  // Upright: origin at the bottom, transcendence at the top.
+  assert.equal(NODE_LAYOUT.origin.y, 1);
+  assert.equal(NODE_LAYOUT.transcendence.y, 0);
+
+  // Fitted into any box, on-screen distances keep the real angular ratios
+  // (within the projection's ~3% off-centre error), so the figure is never
+  // stretched. Compare the pointer pair with each handle segment.
+  const rad = Math.PI / 180;
+  const angle = (a: (typeof ALL_PILLARS)[number], b: (typeof ALL_PILLARS)[number]) => {
+    const [p, q] = [STARS[a], STARS[b]];
+    return Math.acos(
+      Math.sin(p.dec * rad) * Math.sin(q.dec * rad) +
+        Math.cos(p.dec * rad) * Math.cos(q.dec * rad) * Math.cos((p.ra - q.ra) * rad)
+    );
+  };
+  for (const [w, h] of [[327, 527], [1200, 520], [300, 300]]) {
+    const px = Object.fromEntries(fitShape(0, 0, w, h).map((n) => [n.pillar, n]));
+    const dist = (a: (typeof ALL_PILLARS)[number], b: (typeof ALL_PILLARS)[number]) =>
+      Math.hypot(px[a].x - px[b].x, px[a].y - px[b].y);
+    for (const [a, b] of EDGES.slice(4)) {
+      const onScreen = dist("origin", "self_creation") / dist(a, b);
+      const inSky = angle("origin", "self_creation") / angle(a, b);
+      assert.ok(Math.abs(onScreen / inSky - 1) < 0.03, `${a}>${b} distorted in ${w}x${h}`);
+    }
+  }
+  assert.ok(SHAPE_ASPECT > 0.4 && SHAPE_ASPECT < 0.6);
 });
