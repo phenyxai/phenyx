@@ -4,7 +4,7 @@
 //
 // Header (eyebrow + age line), then the sky and the reading panel. PHE-100:
 // below 1024px the sky takes the top ~65% of the viewport (never full height)
-// with the panel under it; from 1024px the tall Big Dipper sits in a sticky
+// with the panel under it; from 1024px the Big Dipper sits in a sticky
 // column beside a 440px panel, so a point and its reading are seen together.
 // Opening a point never scrolls the page: the panel swaps in place (fade out,
 // then float in), and the map stays where it is. The weekly timeline and

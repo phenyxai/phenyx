@@ -4,7 +4,8 @@
 // stick figure: a four-star bowl (origin, emergence, convergence,
 // self-creation) and a three-star handle (becoming, recognition,
 // transcendence) hanging off convergence. Positions come from the real stars,
-// so the shape is the one people can find in the sky. It never depends on
+// turned 160° so the story climbs from origin at the left to transcendence at
+// the top right, so the shape is the one people can find in the sky. It never depends on
 // what generation returns: a point with no data is drawn thin, never dropped.
 //
 // One source for the onboarding formation and the constellation tab. Kept free
@@ -60,11 +61,18 @@ export const EDGES: readonly [Pillar, Pillar][] = [
 export const POINTER: readonly [Pillar, Pillar] = ["origin", "self_creation"];
 
 /**
- * Gnomonic projection about the figure's centre as seen from Earth (east left
- * of north), then turned a quarter so the handle rises: origin at the bottom,
- * transcendence at the top. A turn is how the real sky moves through a night;
- * the figure is never mirrored. Each axis is normalized to [0,1]; ASPECT keeps
- * the true width/height so drawing never stretches it.
+ * Clockwise turn, in degrees, from the north-up sky view (east to the left).
+ * 90 stands the handle upright; 160 (picked from the rotation preview,
+ * 2026-10-05) lays the figure on a rising diagonal: origin at the left,
+ * climbing to transcendence at the top right. A turn is how the real sky moves
+ * through a night; the figure is never mirrored.
+ */
+export const ROTATION_DEG = 160;
+
+/**
+ * Gnomonic projection about the figure's centre as seen from Earth, turned by
+ * ROTATION_DEG. Each axis is normalized to [0,1]; SHAPE_ASPECT keeps the true
+ * width/height so drawing never stretches it.
  */
 function project(): { layout: Record<Pillar, Vec3>; aspect: number } {
   const rad = Math.PI / 180;
@@ -76,6 +84,8 @@ function project(): { layout: Record<Pillar, Vec3>; aspect: number } {
   const sum = ALL_PILLARS.map(unit).reduce((s, v) => s.map((c, i) => c + v[i]));
   const a0 = Math.atan2(sum[1], sum[0]);
   const d0 = Math.atan2(sum[2], Math.hypot(sum[0], sum[1]));
+  const cos = Math.cos(ROTATION_DEG * rad);
+  const sin = Math.sin(ROTATION_DEG * rad);
 
   const raw = ALL_PILLARS.map((p) => {
     const a = STARS[p].ra * rad;
@@ -84,9 +94,10 @@ function project(): { layout: Record<Pillar, Vec3>; aspect: number } {
     const east = (Math.cos(d) * Math.sin(a - a0)) / cosc;
     const north =
       (Math.cos(d0) * Math.sin(d) - Math.sin(d0) * Math.cos(d) * Math.cos(a - a0)) / cosc;
-    // Sky view on screen is (x, y) = (-east, -north); a quarter turn clockwise
-    // gives (north, -east).
-    return { x: north, y: -east };
+    // Sky view on screen (y down) is (x, y) = (-east, -north); turn it
+    // clockwise by ROTATION_DEG.
+    const [x, y] = [-east, -north];
+    return { x: x * cos - y * sin, y: x * sin + y * cos };
   });
   const xs = raw.map((r) => r.x);
   const ys = raw.map((r) => r.y);
@@ -105,7 +116,7 @@ const projected = project();
 /** Normalized [0,1] centers per axis. `z` is reserved for a future 3D layer. */
 export const NODE_LAYOUT: Record<Pillar, Vec3> = projected.layout;
 
-/** True width / height of the figure (about 0.48: tall and narrow). */
+/** True width / height of the figure at ROTATION_DEG (about 1.1 at 160°). */
 export const SHAPE_ASPECT = projected.aspect;
 
 /** Core radius in px from real brightness: brighter stars draw larger. */

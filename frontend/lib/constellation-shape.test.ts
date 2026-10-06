@@ -4,6 +4,7 @@ import {
   ALL_PILLARS,
   EDGES,
   NODE_LAYOUT,
+  ROTATION_DEG,
   SHAPE_ASPECT,
   STARS,
   fitShape,
@@ -32,14 +33,17 @@ test("the constellation is always seven points and the seven spec lines", () => 
   }
 });
 
-test("the shape is the real Big Dipper, upright and undistorted", () => {
+test("the shape is the real Big Dipper, turned 160° and undistorted", () => {
   assert.deepEqual(
     ALL_PILLARS.map((p) => STARS[p].star),
     ["merak", "phecda", "dubhe", "megrez", "alioth", "mizar", "alkaid"]
   );
-  // Upright: origin at the bottom, transcendence at the top.
-  assert.equal(NODE_LAYOUT.origin.y, 1);
+  // Rising diagonal: origin at the left edge, transcendence at the top right.
+  assert.equal(ROTATION_DEG, 160);
+  assert.equal(NODE_LAYOUT.origin.x, 0);
+  assert.equal(NODE_LAYOUT.transcendence.x, 1);
   assert.equal(NODE_LAYOUT.transcendence.y, 0);
+  assert.ok(NODE_LAYOUT.origin.y > NODE_LAYOUT.transcendence.y, "the story climbs");
 
   // Fitted into any box, on-screen distances keep the real angular ratios
   // (within the projection's ~3% off-centre error), so the figure is never
@@ -62,5 +66,5 @@ test("the shape is the real Big Dipper, upright and undistorted", () => {
       assert.ok(Math.abs(onScreen / inSky - 1) < 0.03, `${a}>${b} distorted in ${w}x${h}`);
     }
   }
-  assert.ok(SHAPE_ASPECT > 0.4 && SHAPE_ASPECT < 0.6);
+  assert.ok(SHAPE_ASPECT > 1 && SHAPE_ASPECT < 1.2);
 });
