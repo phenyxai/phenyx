@@ -1374,7 +1374,8 @@
 .auth-form-alt:hover { color: #FFFDFD; }
 
 /* PHE-100: the constellation tab from 1024px, the sky in a sticky column
-   beside a 440px reading panel. Plain CSS outside Tailwind's layers on
+   beside a 440px reading panel. The sky keeps the ticket's ~65% of the screen
+   height (never full height); the reading sits beside it instead of below. Plain CSS outside Tailwind's layers on
    purpose: the onairos SDK ships a second Tailwind build whose plain
    utilities (flex, relative, ...) land after ours and override lg: variants,
    and unlayered rules win over any layer. */
@@ -1388,8 +1389,7 @@
   .constellation-split > .constellation-sky {
     position: sticky;
     top: 20px;
-    height: clamp(480px, calc(100svh - 140px), 860px);
-    max-width: none;
+    height: clamp(420px, 65svh, 760px);
   }
   .constellation-split > aside {
     max-width: none;

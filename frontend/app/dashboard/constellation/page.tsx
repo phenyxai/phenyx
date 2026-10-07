@@ -129,7 +129,7 @@ export default function ConstellationTabPage() {
         {/* Phones (with the dashboard's top bar and 72px bottom nav): the map
             leaves room under it for the opened point's name and the start of
             its story, about 65% of the space between the two bars. */}
-        <div className="constellation-sky relative h-[clamp(320px,65svh,760px)] w-full max-w-[65svh] [@media(max-width:760px)]:h-[clamp(300px,calc(100svh-370px),620px)]">
+        <div className="constellation-sky relative h-[clamp(320px,65svh,760px)] w-full [@media(max-width:760px)]:h-[clamp(300px,calc(100svh-370px),620px)]">
           {data && (
             <ConstellationCanvas
               data={data}

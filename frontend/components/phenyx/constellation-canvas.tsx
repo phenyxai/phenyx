@@ -113,26 +113,37 @@ export function ConstellationCanvas({
       ctx.stroke();
     }
 
-    // The pointer: a dotted guide past self-creation, one pointer-gap long,
-    // fading out toward polaris. Not a line of the shape and not clickable.
+    // The pointer: a dotted guide past self-creation, up to one pointer-gap
+    // long, fading out toward polaris. It stops where it would leave the
+    // canvas so the fade always finishes on screen. Not a line of the shape
+    // and not clickable.
     const from = pixelByPillar.get(POINTER[0]);
     const to = pixelByPillar.get(POINTER[1]);
     if (from && to) {
-      const dx = to.x - from.x;
-      const dy = to.y - from.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const sx = to.x + (dx / len) * (to.r + 6);
-      const sy = to.y + (dy / len) * (to.r + 6);
-      const fade = ctx.createLinearGradient(sx, sy, to.x + dx, to.y + dy);
-      fade.addColorStop(0, "rgba(255,253,253,0.16)");
-      fade.addColorStop(1, "rgba(255,253,253,0)");
-      ctx.strokeStyle = fade;
-      ctx.setLineDash([2, 4]);
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(to.x + dx, to.y + dy);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      const gx = to.x - from.x;
+      const gy = to.y - from.y;
+      const gap = Math.hypot(gx, gy) || 1;
+      // Fraction of the gap that fits before the canvas edge (4px inset).
+      const fit = (pos: number, d: number, size: number) =>
+        d > 0 ? (size - 4 - pos) / d : d < 0 ? (4 - pos) / d : Infinity;
+      const t = Math.max(0, Math.min(1, fit(to.x, gx, w), fit(to.y, gy, h)));
+      const dx = gx * t;
+      const dy = gy * t;
+      // Too little room past the star (e.g. a very short canvas): skip it.
+      if (Math.hypot(dx, dy) > to.r + 14) {
+        const sx = to.x + (gx / gap) * (to.r + 6);
+        const sy = to.y + (gy / gap) * (to.r + 6);
+        const fade = ctx.createLinearGradient(sx, sy, to.x + dx, to.y + dy);
+        fade.addColorStop(0, "rgba(255,253,253,0.16)");
+        fade.addColorStop(1, "rgba(255,253,253,0)");
+        ctx.strokeStyle = fade;
+        ctx.setLineDash([2, 4]);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(to.x + dx, to.y + dy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
     }
 
     // Slow pulse phase in [0,1]; static (0.5) when animation is suppressed.
@@ -387,7 +398,7 @@ export function ConstellationCanvas({
       </p>
       <p id={liveId} className="sr-only" role="status" aria-live="polite">
         {selectedPillar
-          ? `${pillarLabel(selectedPillar)} opened. details are in the panel below the constellation.`
+          ? `${pillarLabel(selectedPillar)} opened. details are in the panel.`
           : ""}
       </p>
     </div>

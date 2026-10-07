@@ -148,7 +148,9 @@ function StoryRow({
 }
 
 // A small outlined arrow with a 44px tap area. At either end of the story the
-// slot stays empty so the pill never shifts.
+// button stays rendered but disabled (aria-disabled, so it keeps focus): a
+// keyboard user who steps onto transcendence keeps their place instead of
+// focus falling back to the page.
 function StepButton({
   to,
   direction,
@@ -158,13 +160,17 @@ function StepButton({
   direction: "previous" | "next";
   onSelect: (pillar: Pillar) => void;
 }) {
-  if (!to) return <span className="h-7 w-7" aria-hidden="true" />;
   return (
     <button
       type="button"
-      onClick={() => onSelect(to)}
-      aria-label={`${direction} point: ${pillarLabel(to)}`}
-      className="relative flex h-7 w-7 items-center justify-center rounded-full border border-[#FFFDFD]/12 text-[13px] text-[#FFFDFD]/55 transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] hover:border-[rgba(var(--s-rgb),0.6)] hover:text-[rgb(var(--s-rgb))] motion-reduce:transition-none"
+      aria-disabled={!to}
+      onClick={() => to && onSelect(to)}
+      aria-label={to ? `${direction} point: ${pillarLabel(to)}` : `no ${direction} point`}
+      className={`relative flex h-7 w-7 items-center justify-center rounded-full border border-[#FFFDFD]/12 text-[13px] transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] motion-reduce:transition-none ${
+        to
+          ? "text-[#FFFDFD]/55 hover:border-[rgba(var(--s-rgb),0.6)] hover:text-[rgb(var(--s-rgb))]"
+          : "cursor-default text-[#FFFDFD]/20"
+      }`}
     >
       <span aria-hidden="true">{direction === "previous" ? "‹" : "›"}</span>
     </button>

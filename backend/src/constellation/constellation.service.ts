@@ -16,7 +16,6 @@ import {
   type ClusterObservationInput,
 } from "./clusters";
 import {
-  NODE_LAYOUT,
   PILLARS,
   tenureYears,
   type Pillar,
@@ -33,19 +32,11 @@ import {
 /**
  * PHE-74 — read model behind `GET /constellation`.
  *
- * Returns the seven canvas points, portrait, per-pillar clusters (free: at most
+ * Returns the portrait, all seven pillars with their clusters (free: at most
  * two observation entries per cluster, remainder omitted), below-fold timeline
  * from account history, what-moved pairs, and PHENYX tenure. Yearly recap is
  * Pro + tenure ≥ 1 year only.
  */
-
-export interface ConstellationPoint {
-  pillar: Pillar;
-  x: number;
-  y: number;
-  z: number;
-  has_new: boolean;
-}
 
 export interface ConstellationPillar {
   pillar: Pillar;
@@ -71,7 +62,6 @@ export interface ConstellationResponse {
   portrait: unknown;
   mantra: string | null;
   foresight: string | null;
-  points: ConstellationPoint[];
   pillars: ConstellationPillar[];
   timeline: RecordTimeline;
   moved: MovedPair[];
@@ -214,11 +204,6 @@ export class ConstellationService {
       portrait: state?.portrait ?? null,
       mantra: (state?.mantra as string | null) ?? null,
       foresight: (state?.foresight as string | null) ?? null,
-      points: pillars.map((p) => ({
-        pillar: p.pillar,
-        ...NODE_LAYOUT[p.pillar],
-        has_new: p.has_new,
-      })),
       pillars,
       timeline: buildRecordTimeline(
         (spanRes.data?.occurred_at as string | null) ?? null,

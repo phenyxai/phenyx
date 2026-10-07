@@ -10,7 +10,7 @@
 //
 // One source for the onboarding formation and the constellation tab. Kept free
 // of imports so it loads under plain `node --test`;
-// `backend/src/constellation/layout.ts` mirrors NODE_LAYOUT for the API.
+// The API sends no positions; the client alone decides where points sit.
 
 export const ALL_PILLARS = [
   "origin",

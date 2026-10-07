@@ -50,6 +50,12 @@ return only a valid json object in this exact shape, with no preamble, markdown 
   "transcendence": { "score": 0-100, "synthesis": "string" }
 }`;
 
+/** Seven paragraphs plus JSON need well over 2000 tokens; only used tokens are billed. */
+const SYNTHESIS_MAX_TOKENS = 4096;
+const SYNTHESIS_ATTEMPTS = 2;
+
+type PillarSyntheses = Partial<Record<(typeof PILLARS)[number], { score: number; synthesis: string }>>;
+
 interface GeneratePromptsBody {
   userId?: string;
   onairosData?: any;
@@ -81,68 +87,28 @@ export class PersonaService {
 
       // Call Claude for synthesis. [Voice Standard] (cached) + [task instructions];
       // the per-request Onairos data stays in the user message, after the cached prefix.
+      // A reply cut off at max_tokens, or one that does not read as JSON, gets
+      // one more try before the run fails.
       const system = await this.voiceStandard.buildSystemBlocks(TASK_INSTRUCTIONS);
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": this.config.get<string>("ANTHROPIC_API_KEY") as string,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 2000,
-          system,
-          messages: [
-            {
-              role: "user",
-              content: `Here is the user's Onairos data: ${JSON.stringify(
-                sanitizedOnairosData
-              )}`,
-            },
-          ],
-        }),
-      });
-
-      const claude: any = await res.json();
-
-      if (!claude.content?.[0]?.text) {
-        // eslint-disable-next-line no-console
-        console.error("Claude response missing content:", claude);
-        throw new HttpException({ error: "synthesis_failed" }, 500);
+      let synthesis: PillarSyntheses | null = null;
+      for (let attempt = 1; attempt <= SYNTHESIS_ATTEMPTS && !synthesis; attempt++) {
+        const claude = await this.requestSynthesis(system, sanitizedOnairosData);
+        const text = claude?.content?.[0]?.text;
+        if (claude?.stop_reason === "max_tokens" || typeof text !== "string") {
+          // eslint-disable-next-line no-console
+          console.error(
+            `synthesis reply unusable (attempt ${attempt}):`,
+            claude?.stop_reason ?? "no content"
+          );
+          continue;
+        }
+        synthesis = this.readPillars(text);
+        if (!synthesis) {
+          // eslint-disable-next-line no-console
+          console.error(`synthesis reply unreadable (attempt ${attempt})`);
+        }
       }
-
-      // PHE-100: Claude is asked for all seven pillars, but whatever it returns,
-      // a missing or malformed pillar is skipped instead of failing the run. Its
-      // columns are left out of the upsert, so a refresh keeps the last good
-      // value and a first run leaves it null; either way the constellation still
-      // draws all seven points. Only a reply with no usable pillar fails.
-      const synthesis: Record<string, { score: number; synthesis: string }> = {};
-
-      try {
-        const parsed = JSON.parse(claude.content[0].text.trim());
-        for (const p of PILLARS) {
-          const raw = parsed?.[p];
-          if (typeof raw?.score !== "number" || typeof raw?.synthesis !== "string") {
-            continue;
-          }
-          synthesis[p] = {
-            // constellation_state only accepts integers 0..100.
-            score: Math.round(Math.min(100, Math.max(0, raw.score))),
-            // Plain-text guard — strip any markup the model slipped in.
-            synthesis: this.voiceStandard.sanitizeProse(raw.synthesis),
-          };
-        }
-        if (Object.keys(synthesis).length === 0) {
-          throw new Error("no usable pillar");
-        }
-      } catch (parseError) {
-        // eslint-disable-next-line no-console
-        console.error(
-          "Failed to parse Claude response:",
-          parseError,
-          claude.content[0].text
-        );
+      if (!synthesis) {
         throw new HttpException({ error: "synthesis_failed" }, 500);
       }
 
@@ -162,6 +128,19 @@ export class PersonaService {
         .select("version")
         .eq("user_id", userId)
         .single();
+
+      // PHE-100: a first run saves whatever came back (a missing part is drawn
+      // thin). A refresh only replaces the snapshot when all seven parts came
+      // back, so one version never mixes text from two runs; otherwise the last
+      // full snapshot stays untouched and the run fails for the caller to log.
+      const missing = PILLARS.filter((p) => !synthesis![p]);
+      if (existingState && missing.length > 0) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `synthesis refresh incomplete (missing ${missing.join(", ")}); keeping version ${existingState.version}`
+        );
+        throw new HttpException({ error: "synthesis_incomplete" }, 500);
+      }
 
       const newVersion = existingState ? existingState.version + 1 : 1;
 
@@ -214,5 +193,58 @@ export class PersonaService {
       console.error("synthesize-constellation error:", error);
       throw new HttpException({ error: "synthesis_failed" }, 500);
     }
+  }
+
+  private async requestSynthesis(system: unknown, onairosData: unknown): Promise<any> {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": this.config.get<string>("ANTHROPIC_API_KEY") as string,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: SYNTHESIS_MAX_TOKENS,
+        system,
+        messages: [
+          {
+            role: "user",
+            content: `Here is the user's Onairos data: ${JSON.stringify(onairosData)}`,
+          },
+        ],
+      }),
+    });
+    return res.json();
+  }
+
+  /**
+   * Read the seven-pillar JSON reply, tolerating a ```json fence around it.
+   * A missing or malformed pillar is skipped; null when the reply is not JSON
+   * or holds no usable pillar at all.
+   */
+  private readPillars(text: string): PillarSyntheses | null {
+    const body = text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "");
+    let parsed: any;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      return null;
+    }
+    const out: PillarSyntheses = {};
+    for (const p of PILLARS) {
+      const raw = parsed?.[p];
+      if (typeof raw?.score !== "number" || typeof raw?.synthesis !== "string") continue;
+      out[p] = {
+        // constellation_state only accepts integers 0..100.
+        score: Math.round(Math.min(100, Math.max(0, raw.score))),
+        // Plain-text guard — strip any markup the model slipped in.
+        synthesis: this.voiceStandard.sanitizeProse(raw.synthesis),
+      };
+    }
+    return Object.keys(out).length > 0 ? out : null;
   }
 }
