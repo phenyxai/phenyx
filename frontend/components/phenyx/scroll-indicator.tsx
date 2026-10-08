@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { watchLandingScroll } from "./landing-dom";
 
 // The dot at the foot of the hero that says there is more below. It waits for
-// the hero to settle before appearing and leaves as soon as the reader scrolls.
+// the hero to settle before appearing and leaves as soon as the reader scrolls,
+// or while the waitlist modal has the reader's attention.
 
 const APPEAR_AFTER_MS = 900;
 const HIDE_AFTER_PX = 60;
 
-export function ScrollIndicator() {
+export function ScrollIndicator({ isHidden = false }: { isHidden?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -25,5 +26,5 @@ export function ScrollIndicator() {
     };
   }, []);
 
-  return <div ref={ref} className="landing-vnext__scroll-cue" data-visible={isReady && !isScrolled} aria-hidden="true" />;
+  return <div ref={ref} className="landing-vnext__scroll-cue" data-visible={isReady && !isScrolled && !isHidden} aria-hidden="true" />;
 }
