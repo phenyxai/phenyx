@@ -6,6 +6,8 @@
  * is the only place chain fields are stripped for free users.
  */
 
+import { normalizeDateSpan } from "../voice-standard/sanitize-prose";
+
 export const SIGNAL_CLOSER: Record<string, string> = {
   frequency:
     "counted, not interpreted. the comparison is what makes it worth looking at.",
@@ -309,12 +311,13 @@ export function buildEvidence(input: {
   entries: EvidenceEntry[];
 }): Evidence {
   const sources = input.sources.filter(Boolean);
+  const span = input.span ? normalizeDateSpan(input.span) : null;
   return {
     sig: input.sig,
     recs: input.recs,
     sources,
-    span: input.span || undefined,
-    certainty: certaintyCopy(input.n, input.span, sources.length),
+    span: span || undefined,
+    certainty: certaintyCopy(input.n, span, sources.length),
     chart: chartFromMetric(input.sig, input.metric ?? null),
     entries: input.entries,
     closer: SIGNAL_CLOSER[input.sig] || SIGNAL_CLOSER.frequency,

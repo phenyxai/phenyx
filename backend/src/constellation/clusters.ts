@@ -6,7 +6,7 @@
  * The API must omit observations past the cluster cap — never send teasers.
  */
 
-import { firstSentence } from "../observations/gating";
+import { firstSentence, formatObservationSpan } from "../observations/gating";
 import type { Evidence } from "../observations/evidence";
 import { CORE_CLUSTER_LABEL, type Pillar } from "./layout";
 
@@ -64,18 +64,6 @@ function asStringArray(value: unknown): string[] {
   return value.filter((x): x is string => typeof x === "string" && x.trim().length > 0);
 }
 
-function formatSpan(row: ClusterObservationInput): string | null {
-  if (row.evidence_span && row.evidence_span.trim()) return row.evidence_span.trim();
-  const start = row.span_start ? new Date(row.span_start) : null;
-  const end = row.span_end ? new Date(row.span_end) : null;
-  const year = (d: Date) =>
-    Number.isNaN(d.getTime()) ? null : String(d.getUTCFullYear());
-  const a = start ? year(start) : null;
-  const b = end ? year(end) : null;
-  if (a && b) return a === b ? a : `${a} - ${b}`;
-  return null;
-}
-
 function clusterPreview(
   synthesis: string | null | undefined,
   observations: ClusterObservationInput[]
@@ -106,7 +94,7 @@ function serveObservation(
     body: row.body,
     points: points.length ? points : undefined,
     sources: tracesUnlocked && sources.length ? sources : undefined,
-    span: tracesUnlocked ? formatSpan(row) : undefined,
+    span: tracesUnlocked ? formatObservationSpan(row) : undefined,
     surfaced_at: row.surfaced_at,
     is_new: row.is_new,
     locked: !tracesUnlocked,

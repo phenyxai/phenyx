@@ -11,7 +11,6 @@ import {
   PILLAR_ORDER,
   isValidPillar,
   collapseOverlappingCandidates,
-  normalizeDateSpan,
   formatObservationSpan,
   buildInsertRows,
   applyReadGate,
@@ -221,9 +220,7 @@ export class ObservationsService {
           recs: Number(signal?.record_count ?? recs),
           n: Number(signal?.evidence_n ?? n),
           sources: (signal?.sources?.length ? signal.sources : sources) as string[],
-          span: signal?.canonical_span
-            ? normalizeDateSpan(signal.canonical_span)
-            : span,
+          span: signal?.canonical_span || span,
           metric,
           entries: signal ? entriesBySignal.get(signal.id) ?? [] : [],
         });

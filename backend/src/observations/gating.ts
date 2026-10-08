@@ -1,5 +1,6 @@
 import { computeSignalHash, normalizePillar, normalizeSignalKey } from "./signal-hash";
 import type { TierCapabilities } from "../stripe/billing.service";
+import { normalizeDateSpan } from "../voice-standard/sanitize-prose";
 import {
   redactEvidence,
   type Evidence,
@@ -217,7 +218,7 @@ export function buildInsertRows(
       pillar: normalizePillar(c.pillar),
       body: c.body,
       source_platforms: c.source_platforms,
-      meta_label: c.meta_label && c.meta_label.trim() ? c.meta_label : null,
+      meta_label: c.meta_label && c.meta_label.trim() ? normalizeDateSpan(c.meta_label) : null,
       is_new: true,
       // Stamp after dedup so the free budget applies to unique rows, not
       // collapsed duplicates that never land in `observations`.
@@ -312,10 +313,6 @@ export function firstSentence(body: string): string {
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((x): x is string => typeof x === "string" && x.trim().length > 0);
-}
-
-export function normalizeDateSpan(span: string): string {
-  return span.replace(/\b(\d{4})\s*[-–—]\s*(\d{4})\b/g, "$1 – $2");
 }
 
 export function formatObservationSpan(
