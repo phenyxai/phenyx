@@ -56,7 +56,7 @@ export default function Home() {
         <Navigation onEnterClick={openWaitlist} />
 
         <HeroSection onEnterClick={openWaitlist} />
-        <ScrollIndicator />
+        <ScrollIndicator isHidden={isModalOpen} />
 
         <ManifestoSection />
 
