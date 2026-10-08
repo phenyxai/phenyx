@@ -113,7 +113,10 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
           backgroundColor: "#0A0A0A",
           border: "1px solid rgba(255,253,253,0.08)",
           opacity: isFading ? 0 : 1,
-        }}
+          // The global input focus ring reads --color-stellar; tint it to the
+          // brand color here instead of the default blue.
+          "--color-stellar": sessionColor,
+        } as React.CSSProperties}
         onClick={(e) => e.stopPropagation()}
       >
         <button
