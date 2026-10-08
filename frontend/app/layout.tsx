@@ -65,12 +65,12 @@ export const metadata: Metadata = {
     google: 'add-your-google-search-console-verification-code-here',
   },
   icons: {
+    // The SVG is the tab icon wherever it is supported; the PNG covers Safari.
+    // The larger sizes live in site.webmanifest so they never win the tab.
     icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml', sizes: 'any' },
       { url: '/favicon.png', type: 'image/png', sizes: '32x32' },
-      { url: '/icon.png', type: 'image/png', sizes: '192x192' },
-      { url: '/phenyx-logo.png', type: 'image/png', sizes: '512x512' },
     ],
-    shortcut: '/favicon.png',
     apple: '/apple-icon.png',
   },
   manifest: '/site.webmanifest',
