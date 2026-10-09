@@ -13,7 +13,7 @@
 
 import { apiFetch } from "@/lib/api-client";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { STELLAR_DEFAULT } from "@/lib/stellar";
+import { BRAND_BLUE } from "@/lib/stellar";
 import type { Evidence } from "@/components/phenyx/evidence-trace";
 
 // ---------------------------------------------------------------------------
@@ -265,7 +265,7 @@ function cachedStellarColor(): string {
     const stored = localStorage.getItem("phenyx_stellar_color");
     if (stored) return stored;
   }
-  return STELLAR_DEFAULT;
+  return BRAND_BLUE;
 }
 
 /**

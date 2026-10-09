@@ -3,57 +3,64 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* PHE-98 color system. Each person has three colors: black for backgrounds,
+   white for text (opacity sets the hierarchy) and their accent. Brand blue is
+   PHENYX's alone: the brand and the sign-in / create-account buttons. Red,
+   yellow and green mark errors, warnings and success, nothing else. Product
+   components read these tokens and never a literal. Each color has an -rgb
+   twin for rgba(var(--x-rgb), a). */
 :root {
-  --background: #0D0D0C;
-  --foreground: #FFFDFD;
-  --card: #0D0D0C;
-  --card-foreground: #FFFDFD;
-  --popover: #0D0D0C;
-  --popover-foreground: #FFFDFD;
-  --primary: #FFFDFD;
-  --primary-foreground: #0D0D0C;
-  --secondary: #1a1a1a;
-  --secondary-foreground: #FFFDFD;
-  --muted: #1a1a1a;
-  --muted-foreground: #888888;
-  --accent: #E8451E;
-  --accent-foreground: #FFFDFD;
-  --destructive: #E8451E;
-  --destructive-foreground: #FFFDFD;
-  --border: #2a2a2a;
-  --input: #1a1a1a;
-  --ring: #E8451E;
+  --black: #0A0A0A;
+  --black-rgb: 10, 10, 10;
+  --white: #FFFDFD;
+  --white-rgb: 255, 253, 253;
+  --brand: #5599FF;
+  --brand-rgb: 85, 153, 255;
+  --red: #E5484D;
+  --red-rgb: 229, 72, 77;
+  --yellow: #F2C94C;
+  --yellow-rgb: 242, 201, 76;
+  --green: #4ADE80;
+  --green-rgb: 74, 222, 128;
+
+  /* The accent. SessionColorProvider overwrites both with the person's
+     user_profiles.stellar_color; brand blue stands in before sign-in. */
+  --s: var(--brand);
+  --s-rgb: var(--brand-rgb);
+
+  /* shadcn tokens, pointed at the system above. */
+  --background: var(--black);
+  --foreground: var(--white);
+  --card: var(--black);
+  --card-foreground: var(--white);
+  --popover: var(--black);
+  --popover-foreground: var(--white);
+  --primary: var(--white);
+  --primary-foreground: var(--black);
+  --secondary: rgba(var(--white-rgb), 0.06);
+  --secondary-foreground: var(--white);
+  --muted: rgba(var(--white-rgb), 0.06);
+  --muted-foreground: rgba(var(--white-rgb), 0.5);
+  --accent: var(--s);
+  --accent-foreground: var(--black);
+  --destructive: var(--red);
+  --destructive-foreground: var(--white);
+  --border: rgba(var(--white-rgb), 0.12);
+  --input: rgba(var(--white-rgb), 0.06);
+  --ring: var(--s);
   --radius: 0.625rem;
-
-  /* PHENYX design system */
-  --color-bg: #0A0A0A;
-  --color-surface: #0E0E0E;
-  --color-border: #1C1C1C;
-  --color-text: #FFFDFD;
-  --color-subtle: #555555;
-  --color-stellar: #5599FF;
-  --s-rgb: 85, 153, 255;
-
-  /* Stellar palette */
-  --stellar-1: #CC3300;
-  --stellar-2: #E84422;
-  --stellar-3: #E87722;
-  --stellar-4: #E8B822;
-  --stellar-5: #D4C87A;
-  --stellar-6: #C8C8C8;
-  --stellar-7: #88AAEE;
-  --stellar-8: #77BBFF;
-  --stellar-9: #5599FF;
-  --stellar-10: #4488EE;
-  --stellar-11: #3366DD;
-  --stellar-12: #2255CC;
-  --stellar-13: #1144BB;
-  --stellar-14: #0033AA;
 }
 
 @theme inline {
   --font-sans: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --default-transition-duration: 200ms;
+  --color-black: var(--black);
+  --color-white: var(--white);
+  --color-brand: var(--brand);
+  --color-red: var(--red);
+  --color-yellow: var(--yellow);
+  --color-green: var(--green);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -87,8 +94,22 @@
     outline: none;
   }
   *:focus-visible {
-    outline: 2px solid var(--color-stellar);
+    outline: 2px solid var(--s);
     outline-offset: 2px;
+  }
+  /* The one hover rule: anything clickable warms its text and border to the
+     accent. !important in the base layer outranks component classes and
+     inline styles, so no component defines its own hover color. Filled
+     buttons opt out through .btn-brand / .btn-solid (they are already
+     colored), and destructive actions through .btn-danger so they stay red;
+     the landing and legal pages keep their own export-driven states. */
+  :where(a, button, summary, [role="button"]) {
+    transition-property: color, border-color, background-color, opacity;
+    transition-duration: 0.2s;
+  }
+  :where(a, button, summary, [role="button"]):not(:disabled, [aria-disabled="true"], .btn-brand, .btn-solid, .btn-danger, .landing-vnext *, .legal-doc *):hover {
+    color: var(--s) !important;
+    border-color: var(--s) !important;
   }
   html, body {
     font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
@@ -104,9 +125,9 @@
   }
   /* Global input styling for dark theme */
   input:not(.auth-input):not(.onb-otp-input), textarea, select {
-    background: #0d0d0d !important;
-    color: #FFFDFD !important;
-    border: 0.5px solid #1e1e1e !important;
+    background: var(--black) !important;
+    color: var(--white) !important;
+    border: 0.5px solid rgba(var(--white-rgb), 0.08) !important;
     border-radius: 10px !important;
     padding: 12px 16px !important;
     font-size: 14px !important;
@@ -116,16 +137,37 @@
     -webkit-appearance: none !important;
   }
   input:not(.auth-input):not(.onb-otp-input)::placeholder, textarea::placeholder {
-    color: #333 !important;
+    color: rgba(var(--white-rgb), 0.18) !important;
   }
   input:not(.auth-input):not(.onb-otp-input):focus, textarea:focus {
-    border-color: var(--color-stellar) !important;
+    border-color: var(--s) !important;
     outline: none !important;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-stellar) 8%, transparent) !important;
+    box-shadow: 0 0 0 3px rgba(var(--s-rgb), 0.08) !important;
   }
   input:not(.auth-input):not(.onb-otp-input):focus-visible, textarea:focus-visible {
     outline: none !important;
   }
+}
+
+/* Primary buttons. Sign-in and create-account carry brand blue and fill with
+   it on hover; every other primary action carries the person's accent and
+   takes a light accent fill on hover (text and border come from the shared
+   hover rule above). */
+.btn-brand {
+  border: 1px solid var(--brand);
+  background: transparent;
+  color: var(--brand);
+}
+.btn-brand:hover:not(:disabled) {
+  background: var(--brand);
+  color: var(--black);
+}
+.btn-primary:hover:not(:disabled) {
+  background: rgba(var(--s-rgb), 0.12);
+}
+/* Filled accent buttons (the polaris send button) dim slightly on hover. */
+.btn-solid:hover:not(:disabled) {
+  opacity: 0.85;
 }
 
 /* Fade in animations */
@@ -1260,7 +1302,7 @@
 .onb-block .onb-h1 {
   margin: 0 auto;
   max-width: 20ch;
-  color: #fffdfd;
+  color: var(--white);
   font-size: clamp(23px, 2.5vw, 30px);
   font-weight: 300;
   letter-spacing: -.01em;
@@ -1285,9 +1327,9 @@
   padding: 18px 0 !important;
   background: transparent !important;
   border: none !important;
-  border-bottom: 1px solid #1a1a1a !important;
+  border-bottom: 1px solid rgba(var(--white-rgb), 0.065) !important;
   border-radius: 0 !important;
-  color: #fffdfd !important;
+  color: var(--white) !important;
   font-size: 34px !important;
 }
 
@@ -1313,7 +1355,7 @@
   border: none;
   font-family: inherit;
   font-size: 11.5px;
-  color: rgba(255, 253, 253, 0.58);
+  color: rgba(var(--white-rgb), 0.58);
   cursor: pointer;
   padding: 7px 0 5px;
   margin-left: auto;
@@ -1325,14 +1367,13 @@
   transition: color 0.2s ease;
 }
 
-.auth-field-link:hover { color: rgba(255, 253, 253, 0.8); }
 
 .auth-input {
   width: 100% !important;
-  background: rgba(255, 253, 253, 0.022) !important;
-  border: 1px solid rgba(255, 253, 253, 0.09) !important;
+  background: rgba(var(--white-rgb), 0.022) !important;
+  border: 1px solid rgba(var(--white-rgb), 0.09) !important;
   border-radius: 10px !important;
-  color: #fffdfd !important;
+  color: var(--white) !important;
   font-family: inherit;
   font-size: 15px !important;
   font-weight: 300 !important;
@@ -1342,7 +1383,7 @@
   transition: border-color 0.28s ease, background 0.28s ease, box-shadow 0.32s ease;
 }
 
-.auth-input::placeholder { color: #6d6d6d !important; }
+.auth-input::placeholder { color: rgba(var(--white-rgb), 0.4) !important; }
 
 .auth-input:focus {
   border-color: rgba(var(--s-rgb), 0.5) !important;
@@ -1353,7 +1394,7 @@
 .auth-form-foot {
   margin-top: 22px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 253, 253, 0.055);
+  border-top: 1px solid rgba(var(--white-rgb), 0.055);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1364,11 +1405,9 @@
   border: none;
   font-family: inherit;
   font-size: 11.5px;
-  color: var(--color-stellar);
+  color: var(--s);
   cursor: pointer;
   padding: 6px 0;
   text-align: center;
   transition: color 0.2s ease;
 }
-
-.auth-form-alt:hover { color: #FFFDFD; }

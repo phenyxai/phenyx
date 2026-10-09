@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { STELLAR_DEFAULT, hexToRgb } from "@/lib/stellar";
 import { passphraseResetConfirm } from "@/lib/api-client";
 
 // form = enter a new passphrase. done = it's set, sign in again. The token comes
@@ -16,27 +15,11 @@ export default function ResetClient() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
 
-  const [stellarColor, setStellarColor] = useState("#5599FF");
   const [view, setView] = useState<View>("form");
   const [newPassphrase, setNewPassphrase] = useState("");
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) {
-      setStellarColor(stored);
-      document.documentElement.style.setProperty("--color-stellar", stored);
-      document.documentElement.style.setProperty("--s-rgb", hexToRgb(stored));
-    } else {
-      // Pre-auth: no persisted identity yet. Use the deterministic default accent
-      // (not random) rather than inventing an identity color on the client.
-      setStellarColor(STELLAR_DEFAULT);
-      document.documentElement.style.setProperty("--color-stellar", STELLAR_DEFAULT);
-      document.documentElement.style.setProperty("--s-rgb", hexToRgb(STELLAR_DEFAULT));
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,22 +77,19 @@ export default function ResetClient() {
     cursor: "pointer",
     transition: "all 0.25s ease",
     textAlign: "center",
-    background: "transparent",
-    border: "1px solid #4d4d4d",
-    color: "rgba(255,253,253,.92)",
   };
 
   const labelStyles: React.CSSProperties = {
     display: "block",
     fontSize: "11px",
     letterSpacing: "0.13em",
-    color: "rgba(255,253,253,.5)",
+    color: "rgba(var(--white-rgb), .5)",
     textTransform: "uppercase",
     marginBottom: "6px",
   };
 
   return (
-    <main className="min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 animate-fade-in">
+    <main className="min-h-screen bg-black flex flex-col items-center justify-center px-4 animate-fade-in">
       {/* Topbar */}
       <header
         className="fixed top-0 left-0 right-0 flex items-center justify-between"
@@ -128,7 +108,7 @@ export default function ResetClient() {
               fontSize: "11px",
               letterSpacing: "0.2em",
               fontWeight: 600,
-              color: "#FFFDFD",
+              color: "var(--white)",
               opacity: 0.9,
             }}
           >
@@ -145,7 +125,7 @@ export default function ResetClient() {
               style={{
                 fontSize: "21px",
                 fontWeight: 300,
-                color: "#FFFDFD",
+                color: "var(--white)",
                 letterSpacing: "-0.01em",
                 lineHeight: 1.26,
                 marginBottom: "8px",
@@ -157,7 +137,7 @@ export default function ResetClient() {
               style={{
                 fontSize: "14.5px",
                 fontWeight: 300,
-                color: "rgba(255,253,253,.55)",
+                color: "rgba(var(--white-rgb), .55)",
                 lineHeight: 1.7,
                 marginBottom: "24px",
               }}
@@ -182,7 +162,7 @@ export default function ResetClient() {
               style={{
                 fontSize: "21px",
                 fontWeight: 300,
-                color: "#FFFDFD",
+                color: "var(--white)",
                 letterSpacing: "-0.01em",
                 lineHeight: 1.26,
                 marginBottom: "8px",
@@ -194,7 +174,7 @@ export default function ResetClient() {
               style={{
                 fontSize: "14.5px",
                 fontWeight: 300,
-                color: "rgba(255,253,253,.55)",
+                color: "rgba(var(--white-rgb), .55)",
                 lineHeight: 1.7,
                 marginBottom: "24px",
               }}
@@ -241,7 +221,7 @@ export default function ResetClient() {
                 <p
                   role="alert"
                   aria-live="polite"
-                  style={{ fontSize: "11px", color: "#E84422", marginTop: "16px" }}
+                  style={{ fontSize: "11px", color: "var(--red)", marginTop: "16px" }}
                 >
                   {error}
                 </p>
@@ -251,17 +231,8 @@ export default function ResetClient() {
                 type="submit"
                 disabled={isLoading}
                 aria-label="set passphrase"
+                className="btn-brand"
                 style={{ ...sendButtonStyles, marginTop: "26px" }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.borderColor = stellarColor;
-                  e.currentTarget.style.color = stellarColor;
-                }}
               >
                 {isLoading ? "..." : "set passphrase"}
               </button>

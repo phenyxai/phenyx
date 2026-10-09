@@ -35,11 +35,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Keyboard users can jump past the nav; visually hidden until focused. */}
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:rounded-md focus:border focus:border-[var(--s)] focus:bg-[#101013] focus:px-[18px] focus:py-3 focus:text-[13px] focus:tracking-[0.02em] focus:text-[#FFFDFD] focus:no-underline"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:rounded-md focus:border focus:border-[var(--s)] focus:bg-white/[0.025] focus:px-[18px] focus:py-3 focus:text-[13px] focus:tracking-[0.02em] focus:text-white focus:no-underline"
         >
           skip to content
         </a>
-        <div className="flex min-h-screen bg-[#0A0A0A] text-[#FFFDFD]">
+        <div className="flex min-h-screen bg-black text-white">
           <DashboardSidebar />
           <main
             id="main"

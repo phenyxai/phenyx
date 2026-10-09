@@ -2,24 +2,24 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { fetchProfile } from "@/lib/api-client";
-import { STELLAR_DEFAULT, hexToRgb } from "@/lib/stellar";
+import { BRAND_BLUE, hexToRgb } from "@/lib/stellar";
 
 // PHE-13: the session color is the user's persisted, server-assigned identity
 // (user_profiles.stellar_color) — never random. This provider is the single
 // source of truth: on shell mount it resolves that color and publishes it as the
-// CSS vars `--s` / `--s-rgb` (read by the orb, cursor, and accent glows), with
-// `--color-stellar` kept in sync for existing consumers of the legacy var.
+// CSS vars `--s` / `--s-rgb`, the accent token every component reads
+// (PHE-98). Before sign-in globals.css leaves both on brand blue.
 
 interface SessionColorContextType {
   sessionColor: string;
 }
 
 const SessionColorContext = createContext<SessionColorContextType>({
-  sessionColor: STELLAR_DEFAULT,
+  sessionColor: BRAND_BLUE,
 });
 
 export function SessionColorProvider({ children }: { children: ReactNode }) {
-  const [sessionColor, setSessionColor] = useState<string>(STELLAR_DEFAULT);
+  const [sessionColor, setSessionColor] = useState<string>(BRAND_BLUE);
 
   useEffect(() => {
     let active = true;
@@ -30,18 +30,15 @@ export function SessionColorProvider({ children }: { children: ReactNode }) {
       const root = document.documentElement;
       root.style.setProperty("--s", color);
       root.style.setProperty("--s-rgb", hexToRgb(color));
-      // Keep the legacy accent var in sync so existing screens stay consistent.
-      root.style.setProperty("--color-stellar", color);
       localStorage.setItem("phenyx_stellar_color", color);
     };
 
     // Optimistic paint from the last persisted value (avoids a flash on reload)...
     const stored = localStorage.getItem("phenyx_stellar_color");
     if (stored) apply(stored);
-    else apply(STELLAR_DEFAULT);
 
     // ...then reconcile against the authoritative server-assigned color. Anonymous
-    // visitors have no profile, so the deterministic default stands (no random).
+    // visitors have no profile, so the brand-blue default stands.
     fetchProfile()
       .then((profile) => {
         if (profile?.stellar_color) apply(profile.stellar_color);

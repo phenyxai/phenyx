@@ -94,13 +94,13 @@ function injectStyles() {
       to { opacity: 1; transform: none; }
     }
     .phenyx-ev-chain { list-style: none; margin: 2px 0 0; padding: 0; counter-reset: evstep; }
-    .phenyx-ev-chain > li { position: relative; padding: 0 0 22px 26px; border-left: 1px solid rgba(var(--s-rgb, 85, 153, 255), .22); margin-left: 5px; }
+    .phenyx-ev-chain > li { position: relative; padding: 0 0 22px 26px; border-left: 1px solid rgba(var(--s-rgb), .22); margin-left: 5px; }
     .phenyx-ev-chain > li:last-child { padding-bottom: 2px; border-left-color: transparent; }
     .phenyx-ev-chain > li::before {
       counter-increment: evstep; content: counter(evstep);
       position: absolute; left: -8px; top: 0; width: 16px; height: 16px; border-radius: 50%;
-      background: #080808; border: 1px solid rgba(var(--s-rgb, 85, 153, 255), .4);
-      color: var(--s, #5599FF); font-size: 9.5px; display: flex; align-items: center; justify-content: center;
+      background: var(--black); border: 1px solid rgba(var(--s-rgb), .4);
+      color: var(--s); font-size: 9.5px; display: flex; align-items: center; justify-content: center;
       font-variant-numeric: tabular-nums;
     }
     .phenyx-ev-locked .phenyx-ev-btn {
@@ -256,7 +256,7 @@ export function EvidenceTrace({
                       className="phenyx-ev-rec"
                       style={{
                         ...recRow,
-                        borderTop: i === 0 ? "none" : "1px solid #131313",
+                        borderTop: i === 0 ? "none" : "1px solid rgba(var(--white-rgb), 0.035)",
                         paddingTop: i === 0 ? 0 : 8,
                       }}
                     >
@@ -298,9 +298,9 @@ export function EvidenceTrace({
 }
 
 function EvidenceChartFigure({ chart }: { chart: EvidenceChart }) {
-  const S = "var(--s, #5599FF)";
-  const G = "rgba(255,253,253,.13)";
-  const F = "rgba(255,253,253,.4)";
+  const S = "var(--s)";
+  const G = "rgba(var(--white-rgb), .13)";
+  const F = "rgba(var(--white-rgb), .4)";
   const fmt = (x: number) => (x >= 1000 ? x.toLocaleString() : String(x));
 
   let h = 46;
@@ -521,7 +521,7 @@ function EvidenceChartFigure({ chart }: { chart: EvidenceChart }) {
 
 const rowWrap: CSSProperties = {
   marginTop: 11,
-  borderTop: "1px solid #171717",
+  borderTop: "1px solid rgba(var(--white-rgb), 0.055)",
   paddingTop: 9,
 };
 
@@ -537,13 +537,13 @@ const btnStyle: CSSProperties = {
   cursor: "pointer",
   textAlign: "left",
   fontFamily: "inherit",
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   fontSize: 10.5,
   letterSpacing: "0.05em",
 };
 
 const kindStyle: CSSProperties = {
-  color: "var(--s, #5599FF)",
+  color: "var(--s)",
   opacity: 0.75,
   letterSpacing: "0.09em",
 };
@@ -564,7 +564,7 @@ const lockStyle: CSSProperties = {
   marginLeft: "auto",
   fontSize: 9,
   letterSpacing: "0.08em",
-  color: "var(--s, #5599FF)",
+  color: "var(--s)",
   opacity: 0.75,
   flexShrink: 0,
 };
@@ -574,14 +574,14 @@ const stepStyle: CSSProperties = {
   fontSize: 10,
   letterSpacing: "0.09em",
   textTransform: "uppercase",
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   margin: "1px 0 8px",
 };
 
 const chainP: CSSProperties = {
   fontSize: 12.5,
   lineHeight: 1.72,
-  color: "rgba(255,253,253,.7)",
+  color: "rgba(var(--white-rgb), .7)",
   margin: 0,
   maxWidth: "62ch",
 };
@@ -592,7 +592,7 @@ const recLbl: CSSProperties = {
   gap: 10,
   fontSize: 9.5,
   letterSpacing: "0.14em",
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   textTransform: "uppercase",
   margin: "0 0 9px",
 };
@@ -600,7 +600,7 @@ const recLbl: CSSProperties = {
 const recLblCount: CSSProperties = {
   fontSize: 9.5,
   letterSpacing: "0.06em",
-  color: "rgba(var(--s-rgb, 85, 153, 255), .55)",
+  color: "rgba(var(--s-rgb), .55)",
   textTransform: "none",
 };
 
@@ -615,31 +615,31 @@ const recRow: CSSProperties = {
 };
 
 const recWhen: CSSProperties = {
-  color: "rgba(255,253,253,.5)",
+  color: "rgba(var(--white-rgb), .5)",
   fontVariantNumeric: "tabular-nums",
   letterSpacing: "0.01em",
 };
 
 const recSrc: CSSProperties = {
-  color: "var(--s, #5599FF)",
+  color: "var(--s)",
   opacity: 0.7,
   fontSize: 10,
   letterSpacing: "0.06em",
 };
 
-const recWhat: CSSProperties = { color: "rgba(255,253,253,.62)" };
+const recWhat: CSSProperties = { color: "rgba(var(--white-rgb), .62)" };
 
 const recWhy: CSSProperties = {
   gridColumn: 3,
   fontSize: 9.5,
   letterSpacing: "0.07em",
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   marginTop: 2,
 };
 
 const recMore: CSSProperties = {
   fontSize: 10.5,
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   margin: "9px 0 0",
 };
 
@@ -659,17 +659,17 @@ const exportBtn: CSSProperties = {
 
 const noteStyle: CSSProperties = {
   fontSize: 12,
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   margin: "20px 0 0",
   lineHeight: 1.7,
   paddingTop: 18,
-  borderTop: "1px solid #151515",
+  borderTop: "1px solid rgba(var(--white-rgb), 0.045)",
   maxWidth: "62ch",
 };
 
 const noteLbl: CSSProperties = {
   display: "block",
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   letterSpacing: "0.06em",
   fontSize: 10,
   marginBottom: 3,

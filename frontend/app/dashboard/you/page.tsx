@@ -16,7 +16,7 @@ import { buildYouStats, formatJoinedSince } from "./stats";
 /** Section labels are lowercase in source; the uppercase treatment is styling. */
 function SectionLabel({ children }: { children: string }) {
   return (
-    <h2 className="mb-5 text-[11px] font-semibold tracking-[0.15em] text-[#FFFDFD]/52 uppercase">
+    <h2 className="mb-5 text-[11px] font-semibold tracking-[0.15em] text-white/52 uppercase">
       {children}
     </h2>
   );
@@ -123,11 +123,11 @@ export default function YouTabPage() {
         <div className="w-full max-w-[820px]">
           <PanelHeader eyebrow="you" title="everything gathered here so far" />
 
-          <div className="mb-[38px] flex flex-wrap items-start gap-x-14 gap-y-8 border-b border-[rgba(255,253,253,0.045)] pb-8">
+          <div className="mb-[38px] flex flex-wrap items-start gap-x-14 gap-y-8 border-b border-white/[0.045] pb-8">
             <div className="flex min-w-[200px] flex-col gap-1">
               <div className="flex items-center gap-2.5">
                 {displayName && (
-                  <p className="text-[15px] font-medium tracking-[-0.01em] text-[#FFFDFD]">
+                  <p className="text-[15px] font-medium tracking-[-0.01em] text-white">
                     {displayName}
                   </p>
                 )}
@@ -135,7 +135,7 @@ export default function YouTabPage() {
                   className={`inline-flex shrink-0 items-center rounded-full border px-[7px] py-0.5 text-[9px] tracking-[0.14em] uppercase ${
                     isPro
                       ? "border-[rgba(var(--s-rgb),0.4)] text-[var(--s)]"
-                      : "border-[#FFFDFD]/18 text-[#FFFDFD]/50"
+                      : "border-white/18 text-white/50"
                   }`}
                 >
                   {badge}
@@ -145,7 +145,7 @@ export default function YouTabPage() {
                   title="edit name and email"
                   aria-label="edit name and email"
                   onClick={() => openModal("edit-profile")}
-                  className="flex min-h-[26px] min-w-[26px] items-center justify-center p-1.5 text-[#FFFDFD]/60 transition-colors hover:text-[var(--s)]"
+                  className="flex min-h-[26px] min-w-[26px] items-center justify-center p-1.5 text-white/60 transition-colors"
                 >
                   <svg
                     width="13"
@@ -163,12 +163,12 @@ export default function YouTabPage() {
                 </button>
               </div>
               {email && (
-                <p className="text-[13px] tracking-[0.02em] text-[#FFFDFD]/62">
+                <p className="text-[13px] tracking-[0.02em] text-white/62">
                   {email}
                 </p>
               )}
               {joined && (
-                <p className="mt-1 text-[11px] tracking-[0.02em] text-[#FFFDFD]/50">
+                <p className="mt-1 text-[11px] tracking-[0.02em] text-white/50">
                   {joined}
                 </p>
               )}
@@ -178,12 +178,12 @@ export default function YouTabPage() {
               <SectionLabel>connected platforms</SectionLabel>
               <div className="flex flex-wrap gap-1.5">
                 {platforms.length === 0 ? (
-                  <p className="text-[11px] text-[#888]">no platforms connected.</p>
+                  <p className="text-[11px] text-white/50">no platforms connected.</p>
                 ) : (
                   platforms.map((platform) => (
                     <span
                       key={platform}
-                      className="rounded-lg border border-[rgba(185,213,255,0.16)] px-[9px] py-0.5 text-[11px] tracking-[0.03em] lowercase text-[#888]"
+                      className="rounded-lg border border-[rgba(var(--s-rgb),0.16)] px-[9px] py-0.5 text-[11px] tracking-[0.03em] lowercase text-white/50"
                     >
                       {platform}
                     </span>
@@ -203,7 +203,7 @@ export default function YouTabPage() {
                   }}
                   aria-hidden="true"
                 />
-                <p className="text-[13.5px] font-light leading-relaxed text-[#FFFDFD]/72">
+                <p className="text-[13.5px] font-light leading-relaxed text-white/72">
                   {stellarName}
                 </p>
               </div>
@@ -217,16 +217,16 @@ export default function YouTabPage() {
                 {stats.map((row) => (
                   <div
                     key={row.key}
-                    className="grid grid-cols-[minmax(0,140px)_auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1 border-b border-[rgba(255,253,253,0.06)] py-2.5 last:border-b-0 max-sm:grid-cols-[1fr_auto]"
+                    className="grid grid-cols-[minmax(0,140px)_auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1 border-b border-white/6 py-2.5 last:border-b-0 max-sm:grid-cols-[1fr_auto]"
                   >
-                    <dt className="text-[12px] tracking-[0.12em] text-[rgba(255,253,253,0.5)] uppercase">
+                    <dt className="text-[12px] tracking-[0.12em] text-white/50 uppercase">
                       {row.label}
                     </dt>
-                    <dd className="m-0 text-[17px] font-normal text-[rgba(255,253,253,0.92)]">
+                    <dd className="m-0 text-[17px] font-normal text-white/92">
                       {row.value}
                     </dd>
                     {row.note && (
-                      <dd className="m-0 text-[13px] text-[rgba(255,253,253,0.55)] max-sm:col-span-full">
+                      <dd className="m-0 text-[13px] text-white/55 max-sm:col-span-full">
                         {row.note}
                       </dd>
                     )}
@@ -242,12 +242,12 @@ export default function YouTabPage() {
               {held.map((item) => (
                 <div
                   key={item.title}
-                  className="rounded-xl border border-[rgba(255,253,253,0.045)] bg-[#FFFDFD]/[0.008] px-[22px] py-5"
+                  className="rounded-xl border border-white/[0.045] bg-white/[0.008] px-[22px] py-5"
                 >
                   <p className="mb-1.5 text-[13px] tracking-[0.01em] text-[var(--s)]">
                     {item.title}
                   </p>
-                  <p className="text-[13px] leading-relaxed text-[#FFFDFD]/78">
+                  <p className="text-[13px] leading-relaxed text-white/78">
                     {item.body}
                   </p>
                 </div>

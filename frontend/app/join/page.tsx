@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { STELLAR_DEFAULT, hexToRgb } from "@/lib/stellar";
 import { signupStart, otpSend, otpVerify } from "@/lib/api-client";
 import { setSessionFromTokens } from "@/lib/supabase-browser";
 import { setOtpFlowContext, clearOtpFlowContext } from "@/lib/otp-flow-context";
@@ -24,7 +23,6 @@ interface StoredDraft {
 
 export default function JoinPage() {
   const router = useRouter();
-  const [stellarColor, setStellarColor] = useState("#5599FF");
   const [screen, setScreen] = useState<Screen>("s1");
 
   // s1 fields — name, email, passphrase. Nothing else.
@@ -42,19 +40,6 @@ export default function JoinPage() {
   const [showResend, setShowResend] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) {
-      setStellarColor(stored);
-      document.documentElement.style.setProperty("--color-stellar", stored);
-      document.documentElement.style.setProperty("--s-rgb", hexToRgb(stored));
-    } else {
-      // Pre-auth: no persisted identity yet. Use the deterministic default accent
-      // (not random) — the server-assigned color is adopted after account creation.
-      setStellarColor(STELLAR_DEFAULT);
-      document.documentElement.style.setProperty("--color-stellar", STELLAR_DEFAULT);
-      document.documentElement.style.setProperty("--s-rgb", hexToRgb(STELLAR_DEFAULT));
-    }
-
     // Rehydrate a staged draft so refreshing s2 keeps the OTP screen. An expired
     // draft is discarded and the user restarts at s1.
     try {
@@ -106,7 +91,6 @@ export default function JoinPage() {
 
     setIsLoading(true);
     try {
-      localStorage.setItem("phenyx_stellar_color", stellarColor);
       setOtpFlowContext("signup");
 
       const { draft_id, maskedEmail: masked } = await signupStart({
@@ -216,16 +200,13 @@ export default function JoinPage() {
     cursor: "pointer",
     transition: "all 0.25s ease",
     textAlign: "center",
-    background: "transparent",
-    border: "1px solid #4d4d4d",
-    color: "rgba(255,253,253,.92)",
   };
 
   const labelStyles: React.CSSProperties = {
     display: "block",
     fontSize: "11px",
     letterSpacing: "0.13em",
-    color: "rgba(255,253,253,.5)",
+    color: "rgba(var(--white-rgb), .5)",
     textTransform: "uppercase",
     marginBottom: "6px",
   };
@@ -234,8 +215,8 @@ export default function JoinPage() {
     <main
       className={
         screen === "s2"
-          ? "onb-v67 min-h-screen bg-[#080808] animate-fade-in"
-          : "min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 animate-fade-in"
+          ? "onb-v67 min-h-screen bg-black animate-fade-in"
+          : "min-h-screen bg-black flex flex-col items-center justify-center px-4 animate-fade-in"
       }
     >
       {/* Topbar */}
@@ -256,7 +237,7 @@ export default function JoinPage() {
               fontSize: "11px",
               letterSpacing: "0.2em",
               fontWeight: 600,
-              color: "#FFFDFD",
+              color: "var(--white)",
               opacity: 0.9,
             }}
           >
@@ -267,7 +248,7 @@ export default function JoinPage() {
           <Link
             href="/signin"
             className="transition-opacity hover:opacity-100"
-            style={{ color: stellarColor, opacity: 0.8 }}
+            style={{ color: "var(--s)", opacity: 0.8 }}
             aria-label="sign in to your existing account"
           >
             sign in
@@ -295,7 +276,7 @@ export default function JoinPage() {
               style={{
                 fontSize: "14.5px",
                 fontWeight: 300,
-                color: "rgba(255,253,253,.55)",
+                color: "rgba(var(--white-rgb), .55)",
                 lineHeight: 1.7,
                 marginBottom: "10px",
               }}
@@ -305,7 +286,7 @@ export default function JoinPage() {
             <p
               className="onb-otp-address"
               style={{
-                color: "#FFFDFD",
+                color: "var(--white)",
                 fontSize: "13px",
                 letterSpacing: ".02em",
                 marginBottom: 0,
@@ -338,9 +319,9 @@ export default function JoinPage() {
                   style={{
                     background: "transparent",
                     border: "none",
-                    borderBottom: "1px solid #2a2a2a",
+                    borderBottom: "1px solid rgba(var(--white-rgb), 0.13)",
                     borderRadius: "0",
-                    color: "#FFFDFD",
+                    color: "var(--white)",
                     fontSize: "34px",
                     letterSpacing: "0.5em",
                     textIndent: "0.5em",
@@ -349,8 +330,8 @@ export default function JoinPage() {
                     padding: "18px 0",
                     transition: "border-color 0.2s ease",
                   }}
-                  onFocus={(e) => (e.target.style.borderBottomColor = stellarColor)}
-                  onBlur={(e) => (e.target.style.borderBottomColor = "#2a2a2a")}
+                  onFocus={(e) => (e.target.style.borderBottomColor = "var(--s)")}
+                  onBlur={(e) => (e.target.style.borderBottomColor = "rgba(var(--white-rgb), 0.13)")}
                 />
               </div>
 
@@ -363,7 +344,7 @@ export default function JoinPage() {
                   <p
                     style={{
                       fontSize: "11px",
-                      color: "#E84422",
+                      color: "var(--red)",
                       textAlign: "center",
                     }}
                   >
@@ -377,18 +358,8 @@ export default function JoinPage() {
                 disabled={isLoading}
                 aria-busy={isLoading}
                 aria-label="verify my code"
-                className="onb-action"
+                className="onb-action btn-brand"
                 style={sendButtonStyles}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.borderColor = stellarColor;
-                  e.currentTarget.style.color = stellarColor;
-                }}
               >
                 {isLoading ? "verifying..." : "continue"}
               </button>
@@ -397,7 +368,7 @@ export default function JoinPage() {
                 className="onb-otp-resend"
                 aria-live="polite"
                 style={{
-                  color: "rgba(255,253,253,.5)",
+                  color: "rgba(var(--white-rgb), .5)",
                   fontSize: "12px",
                   textAlign: "center",
                 }}
@@ -434,7 +405,7 @@ export default function JoinPage() {
                 className="onb-back"
                 style={{
                   fontSize: "12px",
-                  color: "rgba(255,253,253,.55)",
+                  color: "rgba(var(--white-rgb), .55)",
                   textAlign: "center",
                   cursor: "pointer",
                   background: "none",
@@ -442,8 +413,6 @@ export default function JoinPage() {
                   fontFamily: "inherit",
                   transition: "color 0.2s ease",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,253,253,.55)")}
               >
                 back
               </button>
@@ -455,7 +424,7 @@ export default function JoinPage() {
               style={{
                 fontSize: "21px",
                 fontWeight: 300,
-                color: "#FFFDFD",
+                color: "var(--white)",
                 letterSpacing: "-0.01em",
                 lineHeight: 1.26,
                 marginBottom: "8px",
@@ -467,7 +436,7 @@ export default function JoinPage() {
               style={{
                 fontSize: "14.5px",
                 fontWeight: 300,
-                color: "rgba(255,253,253,.55)",
+                color: "rgba(var(--white-rgb), .55)",
                 lineHeight: 1.7,
                 marginBottom: "clamp(24px, 3.8vh, 40px)",
               }}
@@ -526,7 +495,7 @@ export default function JoinPage() {
                   onChange={(e) => setPassphrase(e.target.value)}
                   className="auth-input"
                 />
-                <p style={{ fontSize: "10px", color: "#444", marginTop: "8px", lineHeight: 1.6 }}>
+                <p style={{ fontSize: "10px", color: "rgba(var(--white-rgb), 0.25)", marginTop: "8px", lineHeight: 1.6 }}>
                   you will use this with your name when you return.
                 </p>
               </div>
@@ -535,7 +504,7 @@ export default function JoinPage() {
                 <p
                   role="alert"
                   aria-live="polite"
-                  style={{ fontSize: "11px", color: "#E84422", marginTop: "16px" }}
+                  style={{ fontSize: "11px", color: "var(--red)", marginTop: "16px" }}
                 >
                   {error}
                 </p>
@@ -545,17 +514,8 @@ export default function JoinPage() {
                 type="submit"
                 disabled={isLoading}
                 aria-label="continue"
+                className="btn-brand"
                 style={{ ...sendButtonStyles, marginTop: "26px" }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.borderColor = stellarColor;
-                  e.currentTarget.style.color = stellarColor;
-                }}
               >
                 {isLoading ? "..." : "continue"}
               </button>

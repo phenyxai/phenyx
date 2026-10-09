@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { fetchProfile } from "@/lib/api-client";
-import { STELLAR_DEFAULT, colorName, hexToRgb } from "@/lib/stellar";
+import { BRAND_BLUE, colorName, hexToRgb } from "@/lib/stellar";
 
 /**
  * s3 — the stellar color reveal. The color is the account's persisted, immutable
@@ -15,7 +15,7 @@ import { STELLAR_DEFAULT, colorName, hexToRgb } from "@/lib/stellar";
  */
 export default function WelcomePage() {
   const router = useRouter();
-  const [stellarColor, setStellarColor] = useState(STELLAR_DEFAULT);
+  const [stellarColor, setStellarColor] = useState(BRAND_BLUE);
   const [firstName, setFirstName] = useState("traveler");
   const [mounted, setMounted] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -32,7 +32,6 @@ export default function WelcomePage() {
       const root = document.documentElement;
       root.style.setProperty("--s", color);
       root.style.setProperty("--s-rgb", hexToRgb(color));
-      root.style.setProperty("--color-stellar", color);
     };
 
     // Paint the last-known color immediately to avoid a flash, then reconcile
@@ -77,7 +76,7 @@ export default function WelcomePage() {
   };
 
   if (!mounted) {
-    return <div style={{ minHeight: "100vh", background: "#080808" }} />;
+    return <div style={{ minHeight: "100vh", background: "var(--black)" }} />;
   }
 
   // Reduced motion gets no transition/translate; full motion fades + lifts in.
@@ -90,7 +89,7 @@ export default function WelcomePage() {
       className={`onb-v67${reduceMotion ? "" : " animate-fade-in"}`}
       style={{
         minHeight: "100vh",
-        background: "#080808",
+        background: "var(--black)",
         position: "relative",
       }}
     >
@@ -124,7 +123,7 @@ export default function WelcomePage() {
           <span
             style={{
               fontSize: "11px",
-              color: "#666",
+              color: "rgba(var(--white-rgb), 0.38)",
               letterSpacing: "0.08em",
               fontWeight: 300,
             }}
@@ -142,8 +141,8 @@ export default function WelcomePage() {
               width: "16px",
               height: "16px",
               borderRadius: "50%",
-              background: stellarColor,
-              boxShadow: `0 0 24px ${stellarColor}, 0 0 48px color-mix(in srgb, ${stellarColor} 50%, transparent)`,
+              background: "var(--s)",
+              boxShadow: "0 0 24px var(--s), 0 0 48px rgba(var(--s-rgb), 0.5)",
               opacity: orbVisible ? 1 : 0,
               transform: orbVisible ? "scale(1)" : "scale(0.6)",
               transition,
@@ -166,7 +165,7 @@ export default function WelcomePage() {
               style={{
                 fontSize: "21px",
                 fontWeight: 300,
-                color: "#FFFDFD",
+                color: "var(--white)",
                 letterSpacing: "-0.02em",
                 margin: 0,
               }}
@@ -177,7 +176,7 @@ export default function WelcomePage() {
               style={{
                 fontSize: "13px",
                 fontWeight: 300,
-                color: "#666",
+                color: "rgba(var(--white-rgb), 0.38)",
                 lineHeight: 1.6,
                 margin: 0,
               }}
@@ -188,32 +187,21 @@ export default function WelcomePage() {
         </div>
 
         <button
-          className="onb-action"
+          className="onb-action btn-primary"
           onClick={handleContinue}
           style={{
-            background: "transparent",
-            border: `0.5px solid ${stellarColor}`,
+            border: "0.5px solid var(--s)",
             borderRadius: "10px",
             padding: "14px 32px",
             fontSize: "13px",
             fontWeight: 400,
-            color: stellarColor,
+            color: "var(--s)",
             cursor: "pointer",
             transition: reduceMotion ? "none" : "all 0.2s ease",
             fontFamily: "inherit",
             width: "100%",
             opacity: copyVisible ? 1 : 0,
             pointerEvents: copyVisible ? "auto" : "none",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#FFFDFD";
-            e.currentTarget.style.borderColor = "#FFFDFD";
-            e.currentTarget.style.color = "#0A0A0A";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.borderColor = stellarColor;
-            e.currentTarget.style.color = stellarColor;
           }}
         >
           continue

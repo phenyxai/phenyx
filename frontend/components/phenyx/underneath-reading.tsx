@@ -134,7 +134,7 @@ export function UnderneathReading({
           style={{
             ...dotStyle,
             opacity: open ? 1 : 0.5,
-            boxShadow: open ? "0 0 6px var(--s, #5599FF)" : "none",
+            boxShadow: open ? "0 0 6px var(--s)" : "none",
           }}
         />
         <span>what sits under this</span>
@@ -184,7 +184,7 @@ const btnStyle: CSSProperties = {
   fontFamily: "inherit",
   fontSize: 10.5,
   letterSpacing: "0.05em",
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   textAlign: "left",
 };
 
@@ -192,7 +192,7 @@ const dotStyle: CSSProperties = {
   width: 5,
   height: 5,
   borderRadius: "50%",
-  background: "var(--s, #5599FF)",
+  background: "var(--s)",
   opacity: 0.5,
   flexShrink: 0,
 };
@@ -201,7 +201,7 @@ const lockStyle: CSSProperties = {
   marginLeft: "auto",
   fontSize: 9,
   letterSpacing: "0.08em",
-  color: "var(--s, #5599FF)",
+  color: "var(--s)",
   opacity: 0.75,
   flexShrink: 0,
 };
@@ -209,17 +209,17 @@ const lockStyle: CSSProperties = {
 const headStyle: CSSProperties = {
   fontSize: 14.5,
   lineHeight: 1.6,
-  color: "rgba(255,253,253,.92)",
+  color: "rgba(var(--white-rgb), .92)",
   margin: "0 0 11px",
   letterSpacing: "-0.01em",
   paddingLeft: 13,
-  borderLeft: "2px solid rgba(var(--s-rgb, 85, 153, 255), .4)",
+  borderLeft: "2px solid rgba(var(--s-rgb), .4)",
 };
 
 const saidStyle: CSSProperties = {
   fontSize: 13,
   fontStyle: "italic",
-  color: "rgba(255,253,253,.72)",
+  color: "rgba(var(--white-rgb), .72)",
   margin: "0 0 9px",
   lineHeight: 1.5,
 };
@@ -228,7 +228,7 @@ const saidMeta: CSSProperties = {
   display: "block",
   fontStyle: "normal",
   fontSize: 10,
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   marginTop: 4,
   letterSpacing: "0.04em",
 };
@@ -236,7 +236,7 @@ const saidMeta: CSSProperties = {
 const vsStyle: CSSProperties = {
   fontSize: 12.5,
   lineHeight: 1.6,
-  color: "var(--s, #5599FF)",
+  color: "var(--s)",
   opacity: 0.9,
   margin: "0 0 9px",
 };
@@ -244,14 +244,14 @@ const vsStyle: CSSProperties = {
 const mechStyle: CSSProperties = {
   fontSize: 12.5,
   lineHeight: 1.62,
-  color: "rgba(255,253,253,.6)",
+  color: "rgba(var(--white-rgb), .6)",
   margin: "0 0 9px",
 };
 
 const tellStyle: CSSProperties = {
   fontSize: 11.5,
   lineHeight: 1.55,
-  color: "rgba(255,253,253,.5)",
+  color: "rgba(var(--white-rgb), .5)",
   margin: "0 0 9px",
   display: "flex",
   gap: 9,
@@ -259,7 +259,7 @@ const tellStyle: CSSProperties = {
 };
 
 const tellLbl: CSSProperties = {
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   letterSpacing: "0.06em",
   fontSize: 10,
   flex: "0 0 42px",
@@ -269,10 +269,10 @@ const tellLbl: CSSProperties = {
 const basisStyle: CSSProperties = {
   fontSize: 10.5,
   lineHeight: 1.55,
-  color: "rgba(255,253,253,.52)",
+  color: "rgba(var(--white-rgb), .52)",
   margin: "0 0 11px",
   paddingTop: 8,
-  borderTop: "1px solid #151515",
+  borderTop: "1px solid rgba(var(--white-rgb), 0.045)",
 };
 
 export default UnderneathReading;

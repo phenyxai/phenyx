@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { STELLAR_DEFAULT, hexToRgb } from "@/lib/stellar";
 import { signin, otpSend, otpVerify, passphraseResetRequest } from "@/lib/api-client";
 import { supabaseBrowser as supabase, setSessionFromTokens } from "@/lib/supabase-browser";
 import { setOtpFlowContext, clearOtpFlowContext } from "@/lib/otp-flow-context";
@@ -24,7 +23,6 @@ export default function SignInClient() {
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
 
-  const [stellarColor, setStellarColor] = useState("#5599FF");
   const [view, setView] = useState<View>("signin");
 
   // ssignin fields.
@@ -42,21 +40,6 @@ export default function SignInClient() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showResend, setShowResend] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) {
-      setStellarColor(stored);
-      document.documentElement.style.setProperty("--color-stellar", stored);
-      document.documentElement.style.setProperty("--s-rgb", hexToRgb(stored));
-    } else {
-      // Pre-auth: no persisted identity yet. Use the deterministic default accent
-      // (not random); the persisted color is adopted once the user signs in.
-      setStellarColor(STELLAR_DEFAULT);
-      document.documentElement.style.setProperty("--color-stellar", STELLAR_DEFAULT);
-      document.documentElement.style.setProperty("--s-rgb", hexToRgb(STELLAR_DEFAULT));
-    }
-  }, []);
 
   useEffect(() => {
     if (view === "otp") {
@@ -241,16 +224,13 @@ export default function SignInClient() {
     cursor: "pointer",
     transition: "all 0.25s ease",
     textAlign: "center",
-    background: "transparent",
-    border: "1px solid #4d4d4d",
-    color: "rgba(255,253,253,.92)",
   };
 
   const labelStyles: React.CSSProperties = {
     display: "block",
     fontSize: "11px",
     letterSpacing: "0.13em",
-    color: "rgba(255,253,253,.5)",
+    color: "rgba(var(--white-rgb), .5)",
     textTransform: "uppercase",
     marginBottom: "6px",
   };
@@ -258,7 +238,7 @@ export default function SignInClient() {
   const headingStyles: React.CSSProperties = {
     fontSize: "21px",
     fontWeight: 300,
-    color: "#FFFDFD",
+    color: "var(--white)",
     letterSpacing: "-0.01em",
     lineHeight: 1.26,
     marginBottom: "8px",
@@ -267,14 +247,14 @@ export default function SignInClient() {
   const subStyles: React.CSSProperties = {
     fontSize: "14.5px",
     fontWeight: 300,
-    color: "rgba(255,253,253,.55)",
+    color: "rgba(var(--white-rgb), .55)",
     lineHeight: 1.7,
     marginBottom: "clamp(24px, 3.8vh, 40px)",
   };
 
   const linkButtonStyles: React.CSSProperties = {
     fontSize: "11px",
-    color: "#555",
+    color: "rgba(var(--white-rgb), 0.32)",
     textAlign: "center",
     cursor: "pointer",
     display: "block",
@@ -285,23 +265,12 @@ export default function SignInClient() {
     transition: "color 0.2s ease",
   };
 
-  const onPrimaryEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.background = "#FFFDFD";
-    e.currentTarget.style.borderColor = "#FFFDFD";
-    e.currentTarget.style.color = "#0A0A0A";
-  };
-  const onPrimaryLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.background = "transparent";
-    e.currentTarget.style.borderColor = stellarColor;
-    e.currentTarget.style.color = stellarColor;
-  };
-
   return (
     <main
       className={
         view === "otp"
-          ? "onb-v67 min-h-screen bg-[#080808] animate-fade-in"
-          : "min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 animate-fade-in"
+          ? "onb-v67 min-h-screen bg-black animate-fade-in"
+          : "min-h-screen bg-black flex flex-col items-center justify-center px-4 animate-fade-in"
       }
     >
       {/* Topbar */}
@@ -322,7 +291,7 @@ export default function SignInClient() {
               fontSize: "11px",
               letterSpacing: "0.2em",
               fontWeight: 600,
-              color: "#FFFDFD",
+              color: "var(--white)",
               opacity: 0.9,
             }}
           >
@@ -332,7 +301,7 @@ export default function SignInClient() {
         <Link
           href="/join"
           className="transition-opacity hover:opacity-100"
-          style={{ color: stellarColor, opacity: 0.8, fontSize: "11px" }}
+          style={{ color: "var(--s)", opacity: 0.8, fontSize: "11px" }}
           aria-label="create an account"
         >
           create an account
@@ -397,7 +366,7 @@ export default function SignInClient() {
                 <p
                   role="alert"
                   aria-live="polite"
-                  style={{ fontSize: "11px", color: "#E84422", marginTop: "16px" }}
+                  style={{ fontSize: "11px", color: "var(--red)", marginTop: "16px" }}
                 >
                   {error}
                 </p>
@@ -407,9 +376,8 @@ export default function SignInClient() {
                 type="submit"
                 disabled={isLoading}
                 aria-label="enter"
+                className="btn-brand"
                 style={{ ...sendButtonStyles, marginTop: "26px" }}
-                onMouseEnter={onPrimaryEnter}
-                onMouseLeave={onPrimaryLeave}
               >
                 {isLoading ? "..." : "enter"}
               </button>
@@ -460,7 +428,7 @@ export default function SignInClient() {
                 <p
                   role="alert"
                   aria-live="polite"
-                  style={{ fontSize: "11px", color: "#E84422", marginTop: "16px" }}
+                  style={{ fontSize: "11px", color: "var(--red)", marginTop: "16px" }}
                 >
                   {error}
                 </p>
@@ -470,9 +438,8 @@ export default function SignInClient() {
                 type="submit"
                 disabled={isLoading}
                 aria-label="send code"
+                className="btn-brand"
                 style={{ ...sendButtonStyles, marginTop: "26px" }}
-                onMouseEnter={onPrimaryEnter}
-                onMouseLeave={onPrimaryLeave}
               >
                 {isLoading ? "sending..." : "send code"}
               </button>
@@ -482,8 +449,6 @@ export default function SignInClient() {
               type="button"
               onClick={goToSignin}
               style={{ ...linkButtonStyles, marginTop: "20px" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
             >
               back to sign in
             </button>
@@ -498,7 +463,7 @@ export default function SignInClient() {
               style={{
                 fontSize: "14.5px",
                 fontWeight: 300,
-                color: "rgba(255,253,253,.55)",
+                color: "rgba(var(--white-rgb), .55)",
                 lineHeight: 1.7,
                 marginBottom: "10px",
               }}
@@ -508,7 +473,7 @@ export default function SignInClient() {
             <p
               className="onb-otp-address"
               style={{
-                color: "#FFFDFD",
+                color: "var(--white)",
                 fontSize: "13px",
                 letterSpacing: ".02em",
                 marginBottom: 0,
@@ -538,9 +503,9 @@ export default function SignInClient() {
                   style={{
                     background: "transparent",
                     border: "none",
-                    borderBottom: "1px solid #2a2a2a",
+                    borderBottom: "1px solid rgba(var(--white-rgb), 0.13)",
                     borderRadius: "0",
-                    color: "#FFFDFD",
+                    color: "var(--white)",
                     fontSize: "34px",
                     letterSpacing: "0.5em",
                     textIndent: "0.5em",
@@ -549,14 +514,14 @@ export default function SignInClient() {
                     padding: "18px 0",
                     transition: "border-color 0.2s ease",
                   }}
-                  onFocus={(e) => (e.target.style.borderBottomColor = stellarColor)}
-                  onBlur={(e) => (e.target.style.borderBottomColor = "#2a2a2a")}
+                  onFocus={(e) => (e.target.style.borderBottomColor = "var(--s)")}
+                  onBlur={(e) => (e.target.style.borderBottomColor = "rgba(var(--white-rgb), 0.13)")}
                 />
               </div>
 
               <div role="alert" aria-live="polite" style={{ minHeight: "20px", marginTop: "8px" }}>
                 {error && (
-                  <p style={{ fontSize: "11px", color: "#E84422", textAlign: "center" }}>
+                  <p style={{ fontSize: "11px", color: "var(--red)", textAlign: "center" }}>
                     {error}
                   </p>
                 )}
@@ -567,10 +532,8 @@ export default function SignInClient() {
                 disabled={isLoading}
                 aria-busy={isLoading}
                 aria-label="verify my code"
-                className="onb-action"
+                className="onb-action btn-brand"
                 style={sendButtonStyles}
-                onMouseEnter={onPrimaryEnter}
-                onMouseLeave={onPrimaryLeave}
               >
                 {isLoading ? "verifying..." : "continue"}
               </button>
@@ -579,7 +542,7 @@ export default function SignInClient() {
                 className="onb-otp-resend"
                 aria-live="polite"
                 style={{
-                  color: "rgba(255,253,253,.5)",
+                  color: "rgba(var(--white-rgb), .5)",
                   fontSize: "12px",
                   textAlign: "center",
                 }}
@@ -616,7 +579,7 @@ export default function SignInClient() {
                 className="onb-back"
                 style={{
                   fontSize: "12px",
-                  color: "rgba(255,253,253,.55)",
+                  color: "rgba(var(--white-rgb), .55)",
                   textAlign: "center",
                   cursor: "pointer",
                   background: "none",
@@ -624,10 +587,6 @@ export default function SignInClient() {
                   fontFamily: "inherit",
                   transition: "color 0.2s ease",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = "rgba(255,253,253,.55)")
-                }
               >
                 back
               </button>
@@ -647,7 +606,7 @@ export default function SignInClient() {
                 <p
                   role="status"
                   aria-live="polite"
-                  style={{ fontSize: "13px", color: "#FFFDFD", lineHeight: 1.7, marginBottom: "24px" }}
+                  style={{ fontSize: "13px", color: "var(--white)", lineHeight: 1.7, marginBottom: "24px" }}
                 >
                   reset link sent. check your inbox.
                 </p>
@@ -655,8 +614,6 @@ export default function SignInClient() {
                   type="button"
                   onClick={goToSignin}
                   style={linkButtonStyles}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
                 >
                   back to sign in
                 </button>
@@ -685,7 +642,7 @@ export default function SignInClient() {
                     <p
                       role="alert"
                       aria-live="polite"
-                      style={{ fontSize: "11px", color: "#E84422", marginTop: "16px" }}
+                      style={{ fontSize: "11px", color: "var(--red)", marginTop: "16px" }}
                     >
                       {error}
                     </p>
@@ -695,9 +652,8 @@ export default function SignInClient() {
                     type="submit"
                     disabled={isLoading}
                     aria-label="send reset link"
+                    className="btn-brand"
                     style={{ ...sendButtonStyles, marginTop: "26px" }}
-                    onMouseEnter={onPrimaryEnter}
-                    onMouseLeave={onPrimaryLeave}
                   >
                     {isLoading ? "sending..." : "send reset link"}
                   </button>
@@ -707,8 +663,6 @@ export default function SignInClient() {
                   type="button"
                   onClick={goToSignin}
                   style={{ ...linkButtonStyles, marginTop: "20px" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
                 >
                   back to sign in
                 </button>

@@ -67,7 +67,7 @@ const GROUPS: SettingsGroup[] = [
 /** Section labels are lowercase in source; the uppercase treatment is styling. */
 function SectionLabel({ children }: { children: string }) {
   return (
-    <h2 className="mb-5 text-[11px] font-semibold tracking-[0.15em] text-[#FFFDFD]/52 uppercase">
+    <h2 className="mb-5 text-[11px] font-semibold tracking-[0.15em] text-white/52 uppercase">
       {children}
     </h2>
   );
@@ -82,7 +82,7 @@ function GroupLabel({
 }) {
   return (
     <p
-      className={`mb-0.5 text-[10.5px] font-semibold tracking-[0.14em] text-[#FFFDFD]/42 uppercase ${
+      className={`mb-0.5 text-[10.5px] font-semibold tracking-[0.14em] text-white/42 uppercase ${
         first ? "" : "mt-[26px]"
       }`}
     >
@@ -156,29 +156,29 @@ export default function SettingsPage() {
           <div className="flex flex-wrap items-center gap-2.5">
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-[#FFFDFD]/62 no-underline transition-colors hover:text-[#999]"
+              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-white/62 no-underline transition-colors"
             >
               {CONTACT_EMAIL}
             </a>
-            <span className="text-[11.5px] text-[#888]">·</span>
+            <span className="text-[11.5px] text-white/50">·</span>
             <button
               type="button"
               onClick={() => openModal("feedback")}
-              className="inline-block border-0 bg-transparent py-1.5 text-[11px] tracking-[0.02em] text-[#FFFDFD]/62 transition-colors hover:text-[#999]"
+              className="inline-block border-0 bg-transparent py-1.5 text-[11px] tracking-[0.02em] text-white/62 transition-colors"
             >
               share feedback
             </button>
-            <span className="text-[11.5px] text-[#888]">·</span>
+            <span className="text-[11.5px] text-white/50">·</span>
             <a
               href="/privacy-policy"
-              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-[#FFFDFD]/62 no-underline transition-colors hover:text-[#999]"
+              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-white/62 no-underline transition-colors"
             >
               privacy policy
             </a>
-            <span className="text-[11.5px] text-[#888]">·</span>
+            <span className="text-[11.5px] text-white/50">·</span>
             <a
               href="/terms"
-              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-[#FFFDFD]/62 no-underline transition-colors hover:text-[#999]"
+              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-white/62 no-underline transition-colors"
             >
               terms
             </a>
@@ -208,18 +208,18 @@ function SettingsRowButton({
     <button
       type="button"
       onClick={onClick}
-      className="ps-row group relative flex w-full cursor-pointer items-center border-0 border-b border-[rgba(255,253,253,0.045)] bg-transparent py-[15px] text-left font-[inherit] text-[14px] text-[#FFFDFD]/85 transition-colors duration-200 after:pointer-events-none after:absolute after:right-0 after:-bottom-px after:left-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(var(--s-rgb),0.55)_18%,rgba(var(--s-rgb),0.55)_82%,transparent)] after:opacity-0 after:transition-opacity after:duration-[450ms] before:pointer-events-none before:absolute before:right-0 before:-bottom-[7px] before:left-0 before:h-[13px] before:bg-[radial-gradient(ellipse_at_center,rgba(var(--s-rgb),0.20),transparent_72%)] before:opacity-0 before:blur-[3px] before:transition-opacity before:duration-500 last:border-b-0 hover:text-[#FFFDFD] hover:after:opacity-100 hover:before:opacity-100 [@media(pointer:coarse)]:py-[22px]"
+      className="ps-row group relative flex w-full cursor-pointer items-center border-0 border-b border-white/[0.045] bg-transparent py-[15px] text-left font-[inherit] text-[14px] text-white/85 transition-colors duration-200 last:border-b-0 [@media(pointer:coarse)]:py-[22px]"
     >
       <span className="ps-label flex min-w-0 flex-col gap-[3px] text-left">
         <span>{label}</span>
-        <span className="ps-sub text-[11.5px] font-light tracking-normal text-[#FFFDFD]/45">
+        <span className="ps-sub text-[11.5px] font-light tracking-normal text-white/45">
           {sub}
         </span>
       </span>
       {trailing ?? (
         <span
           aria-hidden="true"
-          className="ps-arrow ml-6 shrink-0 text-[11px] text-[#888] transition-[color,transform] duration-[350ms] ease-[cubic-bezier(.22,.61,.36,1)] group-hover:translate-x-[3px] group-hover:text-[var(--s)]"
+          className="ps-arrow ml-6 shrink-0 text-[11px] text-white/50 transition-[color,transform] duration-[350ms] ease-[cubic-bezier(.22,.61,.36,1)] group-hover:translate-x-[3px] group-hover:text-[var(--s)]"
         >
           →
         </span>

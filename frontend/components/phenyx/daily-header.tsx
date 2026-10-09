@@ -109,7 +109,7 @@ export function DailyHeader({ now, signpost }: DailyHeaderProps) {
           fontWeight: 400,
           letterSpacing: "0.04em",
           lineHeight: 1,
-          color: "rgba(255,253,253,0.5)",
+          color: "rgba(var(--white-rgb), 0.5)",
           margin: 0,
           marginBottom: 6,
         }}
@@ -122,7 +122,7 @@ export function DailyHeader({ now, signpost }: DailyHeaderProps) {
           fontWeight: 500,
           letterSpacing: "0.18em",
           textTransform: "uppercase",
-          color: "rgba(var(--s-rgb, 85, 153, 255), 0.72)",
+          color: "rgba(var(--s-rgb), 0.72)",
           margin: "18px 0 8px",
         }}
       >
@@ -134,7 +134,7 @@ export function DailyHeader({ now, signpost }: DailyHeaderProps) {
           fontWeight: 400,
           lineHeight: 1.5,
           letterSpacing: "0.01em",
-          color: "rgba(255,253,253,0.92)",
+          color: "rgba(var(--white-rgb), 0.92)",
           margin: "16px 0 28px",
           maxWidth: 620,
         }}
@@ -145,7 +145,7 @@ export function DailyHeader({ now, signpost }: DailyHeaderProps) {
         style={{
           fontSize: 12.5,
           letterSpacing: "0.01em",
-          color: "rgba(255,253,253,0.44)",
+          color: "rgba(var(--white-rgb), 0.44)",
           margin: "9px 0 30px",
         }}
       >

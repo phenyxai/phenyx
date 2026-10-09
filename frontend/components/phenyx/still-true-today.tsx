@@ -24,7 +24,7 @@ export interface StillTrueTodayProps {
 
 export function StillTrueToday({
   now,
-  accent = "var(--s, #5599FF)",
+  accent = "var(--s)",
   profileHeld = [],
 }: StillTrueTodayProps) {
   const [mountedNow, setMountedNow] = useState<Date | null>(now ?? null);
@@ -40,7 +40,7 @@ export function StillTrueToday({
       style={{
         marginTop: 34,
         paddingTop: 22,
-        borderTop: "1px solid rgba(255,253,253,0.06)",
+        borderTop: "1px solid rgba(var(--white-rgb), 0.06)",
       }}
     >
       <p
@@ -49,7 +49,7 @@ export function StillTrueToday({
           fontWeight: 600,
           letterSpacing: "0.14em",
           textTransform: "uppercase",
-          color: "rgba(255,253,253,0.6)",
+          color: "rgba(var(--white-rgb), 0.6)",
           margin: "0 0 10px",
         }}
       >
@@ -69,7 +69,7 @@ export function StillTrueToday({
           fontSize: 14,
           fontWeight: 300,
           lineHeight: 1.65,
-          color: "rgba(255,253,253,0.62)",
+          color: "rgba(var(--white-rgb), 0.62)",
           margin: 0,
           maxWidth: "56ch",
         }}

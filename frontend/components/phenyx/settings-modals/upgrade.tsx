@@ -68,7 +68,7 @@ export function UpgradeModal() {
   return (
     <SettingsDialogContent aria-describedby={undefined}>
       <ModalHeading title="what full opens" />
-      <p className="mb-4 text-[12.5px] leading-relaxed text-[#888]">
+      <p className="mb-4 text-[12.5px] leading-relaxed text-white/50">
         free shows you what is true. every observation of the day, and all
         seven points of your constellation. full is how you find out why it is
         true, what it means, and what to do about it.
@@ -77,10 +77,10 @@ export function UpgradeModal() {
       <ul className="flex flex-col gap-3">
         {FEATURES.map((feature) => (
           <li key={feature} className="flex items-start gap-2.5">
-            <span aria-hidden="true" className="text-[var(--stellar)]">
+            <span aria-hidden="true" className="text-[var(--s)]">
               ✦
             </span>
-            <span className="text-xs leading-relaxed text-[#ccc]">
+            <span className="text-xs leading-relaxed text-white/80">
               {feature}
             </span>
           </li>
@@ -91,7 +91,7 @@ export function UpgradeModal() {
         <PrimaryButton onClick={handleUpgrade} disabled={loading}>
           {loading ? 'loading…' : 'continue with full, $12.99/month'}
         </PrimaryButton>
-        <p className="text-center text-[11.5px] text-[#888]">
+        <p className="text-center text-[11.5px] text-white/50">
           or $99/year. cancel any time.
         </p>
         {error && <StatusLine message={error} tone="error" />}

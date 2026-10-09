@@ -117,7 +117,7 @@ test("getOverview on a monthly subscription reads renews_at from Stripe", async 
     makeSupabase({
       display_name: "mara",
       tier: "pro",
-      stellar_color: "#5599FF",
+      stellar_color: "#4488EE",
       created_at: "2026-02-14T12:00:00.000Z",
       prompt_times: {},
       stripe_subscription_id: "sub_123",

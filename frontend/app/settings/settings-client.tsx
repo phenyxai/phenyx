@@ -17,7 +17,7 @@ export default function SettingsClient() {
   return (
     <main
       aria-label="your settings"
-      className="flex min-h-screen items-center justify-center bg-[#0A0A0A]"
+      className="flex min-h-screen items-center justify-center bg-black"
     />
   );
 }

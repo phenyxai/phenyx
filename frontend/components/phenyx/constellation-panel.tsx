@@ -84,17 +84,17 @@ function Overview({
       <section>
         <SectionLabel>what you are made of</SectionLabel>
         {data.portrait ? (
-          <p className="text-[14px] font-light leading-relaxed text-[#FFFDFD]/80">
+          <p className="text-[14px] font-light leading-relaxed text-white/80">
             {data.portrait}
           </p>
         ) : (
-          <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
+          <p className="text-[13px] font-light italic text-white/30">
             forming.
           </p>
         )}
       </section>
 
-      <ul className="flex flex-col gap-1.5 border-t border-[#FFFDFD]/6 pt-5">
+      <ul className="flex flex-col gap-1.5 border-t border-white/6 pt-5">
         {ALL_PILLARS.map((pillar) => (
           <li key={pillar}>
             <StoryRow
@@ -126,7 +126,7 @@ function StoryRow({
     <button
       type="button"
       onClick={onOpen}
-      className="w-full rounded-[12px] border border-[rgba(255,253,253,0.045)] px-5 py-[18px] text-left transition-colors hover:border-[rgba(var(--s-rgb),0.35)] hover:bg-[#0e0e0e] motion-reduce:transition-none max-[760px]:px-[18px] max-[760px]:py-4"
+      className="w-full rounded-[12px] border border-white/[0.045] px-5 py-[18px] text-left transition-colors hover:bg-white/[0.015] motion-reduce:transition-none max-[760px]:px-[18px] max-[760px]:py-4"
     >
       <div className="mb-1.5 flex items-center gap-2.5">
         <span
@@ -147,7 +147,7 @@ function StoryRow({
       </div>
       <p
         className={`text-[13px] font-light leading-[1.55] ${
-          detail.active ? "text-[#FFFDFD]/72" : "text-[#FFFDFD]/45"
+          detail.active ? "text-white/72" : "text-white/45"
         }`}
       >
         {storyLine(detail)}
@@ -178,29 +178,29 @@ function PillarDetailView({
       <button
         type="button"
         onClick={onBack}
-        className="self-start text-[12px] font-light lowercase text-[#FFFDFD]/45 transition-colors hover:text-[#FFFDFD]/80 motion-reduce:transition-none"
+        className="self-start text-[12px] font-light lowercase text-white/45 transition-colors motion-reduce:transition-none"
       >
         ← all pillars
       </button>
 
       <div className="flex items-center justify-between gap-3">
         <span
-          className="rounded-full px-3 py-1 text-[12px] lowercase text-[#0A0A0A]"
+          className="rounded-full px-3 py-1 text-[12px] lowercase text-black"
           style={{ background: stellar }}
         >
           {pillarLabel(detail.pillar)}
         </span>
-        <span className="text-[12px] font-light tabular-nums text-[#FFFDFD]/40">
+        <span className="text-[12px] font-light tabular-nums text-white/40">
           {areaCount} {areaCount === 1 ? "area" : "areas"}
         </span>
       </div>
 
       {detail.synthesis ? (
-        <p className="text-[14px] font-light leading-relaxed text-[#FFFDFD]/80">
+        <p className="text-[14px] font-light leading-relaxed text-white/80">
           {detail.synthesis}
         </p>
       ) : (
-        <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
+        <p className="text-[13px] font-light italic text-white/30">
           forming.
         </p>
       )}
@@ -212,7 +212,7 @@ function PillarDetailView({
             {detail.source_platforms.map((platform) => (
               <span
                 key={platform}
-                className="rounded-full border border-[#FFFDFD]/12 px-2.5 py-0.5 text-[11px] lowercase text-[#FFFDFD]/55"
+                className="rounded-full border border-white/12 px-2.5 py-0.5 text-[11px] lowercase text-white/55"
               >
                 {platform}
               </span>
@@ -229,7 +229,7 @@ function PillarDetailView({
           className={
             readTogether.locked
               ? "text-[11.5px] font-light italic tracking-[0.04em] text-[rgba(var(--s-rgb),0.62)]"
-              : "text-[13px] font-light italic leading-[1.75] text-[#FFFDFD]/50"
+              : "text-[13px] font-light italic leading-[1.75] text-white/50"
           }
         >
           {readTogether.text}
@@ -239,7 +239,7 @@ function PillarDetailView({
       <section>
         <SectionLabel>areas</SectionLabel>
         {detail.clusters.length === 0 ? (
-          <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
+          <p className="text-[13px] font-light italic text-white/30">
             no observations yet.
           </p>
         ) : (
@@ -270,17 +270,17 @@ function ClusterCard({
     <button
       type="button"
       onClick={onOpen}
-      className={`rounded-[10px] border bg-[#0c0c0c] px-4 py-3.5 text-left transition-colors hover:border-[rgba(var(--s-rgb),0.35)] hover:bg-[#0f0f0f] motion-reduce:transition-none ${
+      className={`rounded-[10px] border bg-black px-4 py-3.5 text-left transition-colors hover:bg-white/2 motion-reduce:transition-none ${
         cluster.has_new
-          ? "border-l-2 border-[#1e1e1e] border-l-[var(--s)]"
-          : "border-[#1e1e1e]"
+          ? "border-l-2 border-white/8 border-l-[var(--s)]"
+          : "border-white/8"
       }`}
     >
-      <p className="mb-1 text-[13px] font-medium lowercase tracking-wide text-[#FFFDFD]/80">
+      <p className="mb-1 text-[13px] font-medium lowercase tracking-wide text-white/80">
         {cluster.label}
       </p>
       {cluster.preview && (
-        <p className="mt-1 max-w-[62ch] text-[13px] font-light leading-relaxed text-[#FFFDFD]/50">
+        <p className="mt-1 max-w-[62ch] text-[13px] font-light leading-relaxed text-white/50">
           {cluster.preview}
         </p>
       )}
@@ -310,25 +310,25 @@ function ClusterDetail({
       <button
         type="button"
         onClick={onBack}
-        className="self-start text-[12px] font-light lowercase text-[#FFFDFD]/45 transition-colors hover:text-[#FFFDFD]/80 motion-reduce:transition-none"
+        className="self-start text-[12px] font-light lowercase text-white/45 transition-colors motion-reduce:transition-none"
       >
         ← {pillarLabel(pillar.pillar)}
       </button>
 
       <div className="flex items-center justify-between gap-3">
         <span
-          className="rounded-full px-3 py-1 text-[12px] lowercase text-[#0A0A0A]"
+          className="rounded-full px-3 py-1 text-[12px] lowercase text-black"
           style={{ background: stellar }}
         >
           {pillarLabel(pillar.pillar)}
         </span>
-        <span className="text-[12px] font-light lowercase text-[#FFFDFD]/40">
+        <span className="text-[12px] font-light lowercase text-white/40">
           {cluster.label}
         </span>
       </div>
 
       {cluster.preview ? (
-        <p className="text-[14px] font-light leading-relaxed text-[#FFFDFD]/80">
+        <p className="text-[14px] font-light leading-relaxed text-white/80">
           {cluster.preview}
         </p>
       ) : null}
@@ -338,7 +338,7 @@ function ClusterDetail({
           {cluster.source_platforms.map((platform) => (
             <span
               key={platform}
-              className="rounded-full border border-[#FFFDFD]/12 px-2.5 py-0.5 text-[11px] lowercase text-[#FFFDFD]/55"
+              className="rounded-full border border-white/12 px-2.5 py-0.5 text-[11px] lowercase text-white/55"
             >
               {platform}
             </span>
@@ -348,7 +348,7 @@ function ClusterDetail({
 
       <section>
         {cluster.observations.length === 0 ? (
-          <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
+          <p className="text-[13px] font-light italic text-white/30">
             no observations yet.
           </p>
         ) : (
@@ -384,7 +384,7 @@ function ClusterObservationRow({
     <li className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
         {entry.surfaced_at && (
-          <span className="text-[11px] font-light lowercase text-[#FFFDFD]/35">
+          <span className="text-[11px] font-light lowercase text-white/35">
             {relativeTime(entry.surfaced_at)}
           </span>
         )}
@@ -398,14 +398,14 @@ function ClusterObservationRow({
         )}
       </div>
       {entry.body && (
-        <p className="text-[13px] font-light leading-relaxed text-[#FFFDFD]/75">
+        <p className="text-[13px] font-light leading-relaxed text-white/75">
           {entry.body}
         </p>
       )}
       {entry.points && entry.points.length > 0 && (
         <ul className="mt-1 flex flex-col gap-1 pl-0">
           {entry.points.map((point) => (
-            <li key={point} className="text-[12px] font-light text-[#FFFDFD]/50">
+            <li key={point} className="text-[12px] font-light text-white/50">
               {point}
             </li>
           ))}
@@ -422,7 +422,7 @@ function ClusterObservationRow({
             </span>
           ))}
           {entry.span && (
-            <span className="text-[10px] text-[#FFFDFD]/35">{entry.span}</span>
+            <span className="text-[10px] text-white/35">{entry.span}</span>
           )}
         </div>
       )}
@@ -439,7 +439,7 @@ function ClusterObservationRow({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-2.5 text-[11px] uppercase tracking-[0.15em] text-[#FFFDFD]/30">
+    <p className="mb-2.5 text-[11px] uppercase tracking-[0.15em] text-white/30">
       {children}
     </p>
   );

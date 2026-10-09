@@ -159,7 +159,7 @@ export default function DailyTabPage() {
             fontWeight: 600,
             letterSpacing: "0.12em",
             textTransform: "uppercase",
-            color: "rgba(255,253,253,0.5)",
+            color: "rgba(var(--white-rgb), 0.5)",
             margin: 0,
           }}
         >
@@ -171,11 +171,11 @@ export default function DailyTabPage() {
       </div>
 
       {loading ? (
-        <p style={{ fontSize: 14, fontWeight: 300, color: "rgba(255,253,253,0.35)" }}>
+        <p style={{ fontSize: 14, fontWeight: 300, color: "rgba(var(--white-rgb), 0.35)" }}>
           loading…
         </p>
       ) : feed.length === 0 ? (
-        <p style={{ fontSize: 15, fontWeight: 300, lineHeight: 1.55, color: "rgba(255,253,253,0.4)" }}>
+        <p style={{ fontSize: 15, fontWeight: 300, lineHeight: 1.55, color: "rgba(var(--white-rgb), 0.4)" }}>
           your constellation is still gathering. connect more platforms and come back tomorrow.
         </p>
       ) : (

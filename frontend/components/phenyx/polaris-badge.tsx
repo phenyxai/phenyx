@@ -6,8 +6,8 @@ import type { CSSProperties } from "react";
 // ============================================================================
 // PolarisBadge — reusable Polaris identity pill (PHE-16)
 // ----------------------------------------------------------------------------
-// A small pill containing a blinking dot + the `POLARIS` label, tinted in the
-// Polaris/stellar blue. Extracted as a standalone component so the same
+// A small pill containing a blinking dot + the `POLARIS` label, tinted flat in
+// the person's accent (PHE-98: the ✦ polaris tag is an accent hint). Extracted as a standalone component so the same
 // markup/CSS is reused across surfaces (the onboarding Polaris-intro screen
 // here, and the dashboard Polaris tab later) without duplicating the blink
 // keyframe.
@@ -28,8 +28,6 @@ import type { CSSProperties } from "react";
 // ============================================================================
 
 export interface PolarisBadgeProps {
-  /** Tint color for the dot, label, border, and fill. Defaults to Polaris blue. */
-  color?: string;
   /** Pill scale. `sm` is the compact onboarding/dashboard size; `md` is larger. */
   size?: "sm" | "md";
   /**
@@ -43,9 +41,6 @@ export interface PolarisBadgeProps {
   /** Optional extra class names appended to the pill. */
   className?: string;
 }
-
-// Default Polaris/stellar blue (matches the lighter end of the stellar palette).
-const DEFAULT_POLARIS_BLUE = "#77BBFF";
 
 const SIZES = {
   sm: { padV: 4, padH: 10, dot: 6, gap: 7, font: 9, radius: 999 },
@@ -77,7 +72,6 @@ function injectPolarisBadgeStyles() {
 }
 
 export function PolarisBadge({
-  color = DEFAULT_POLARIS_BLUE,
   size = "sm",
   frozen = false,
   style,
@@ -99,10 +93,10 @@ export function PolarisBadge({
         gap: `${s.gap}px`,
         padding: `${s.padV}px ${s.padH}px`,
         borderRadius: `${s.radius}px`,
-        border: `0.5px solid ${color}`,
-        // Low-alpha fill of the tint color, plus the tint as the label color.
-        background: `${color}14`,
-        color,
+        border: "0.5px solid var(--s)",
+        // Low-alpha fill of the accent, plus the accent as the label color.
+        background: "rgba(var(--s-rgb), 0.08)",
+        color: "var(--s)",
         fontSize: `${s.font}px`,
         fontWeight: 600,
         letterSpacing: "0.22em",
@@ -119,8 +113,8 @@ export function PolarisBadge({
           width: `${s.dot}px`,
           height: `${s.dot}px`,
           borderRadius: "50%",
-          background: color,
-          boxShadow: `0 0 6px ${color}`,
+          background: "var(--s)",
+          boxShadow: "0 0 6px var(--s)",
           flexShrink: 0,
           // The blink is CSS-keyframe driven; `frozen` short-circuits it.
           opacity: frozen ? 1 : undefined,

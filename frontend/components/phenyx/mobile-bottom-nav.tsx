@@ -73,7 +73,7 @@ function Icon({ children, strokeWidth = 1.7 }: { children: ReactNode; strokeWidt
 const ITEM_BASE =
   "flex min-w-0 flex-1 flex-col items-center gap-[3px] px-0.5 py-1.5 transition-colors motion-reduce:transition-none";
 const ITEM_ON = "text-[var(--s)]";
-const ITEM_OFF = "text-[#FFFDFD]/50";
+const ITEM_OFF = "text-white/50";
 
 export function MobileBottomNav() {
   const segment = useSelectedLayoutSegment();
@@ -83,7 +83,7 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label="sections"
-      className="fixed inset-x-0 bottom-0 z-[120] items-stretch justify-around border-t border-[#FFFDFD]/[0.07] bg-[rgba(8,8,8,0.94)] px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden"
+      className="fixed inset-x-0 bottom-0 z-[120] items-stretch justify-around border-t border-white/[0.07] bg-black/94 px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden"
     >
       {BAR_ITEMS.map((item) => {
         const isActive = active === item.id;

@@ -91,7 +91,7 @@ export function DailyFocus({ accent, value, onChange }: DailyFocusProps) {
           fontSize: 11,
           letterSpacing: "0.06em",
           lineHeight: 1.5,
-          color: "rgba(255,253,253,0.85)",
+          color: "rgba(var(--white-rgb), 0.85)",
           opacity: 0.75,
         }}
       >
@@ -111,16 +111,10 @@ export function DailyFocus({ accent, value, onChange }: DailyFocusProps) {
           border: "none",
           fontFamily: "inherit",
           fontSize: 11.5,
-          color: "rgba(255,253,253,0.52)",
+          color: "rgba(var(--white-rgb), 0.52)",
           cursor: "pointer",
           padding: "0 0 0 8px",
           letterSpacing: "0.04em",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.color = accent;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.color = "rgba(255,253,253,0.52)";
         }}
       >
         {value ? "change" : "set"}
@@ -148,13 +142,13 @@ export function DailyFocus({ accent, value, onChange }: DailyFocusProps) {
                 aria-selected={on}
                 onClick={() => choose(pillar)}
                 style={{
-                  background: on ? `rgba(255,253,253,0.06)` : "transparent",
-                  border: `0.5px solid ${on ? accent : "rgba(255,253,253,0.14)"}`,
+                  background: on ? `rgba(var(--white-rgb), 0.06)` : "transparent",
+                  border: `0.5px solid ${on ? accent : "rgba(var(--white-rgb), 0.14)"}`,
                   borderRadius: 999,
                   padding: "4px 10px",
                   fontSize: 11,
                   letterSpacing: "0.04em",
-                  color: on ? accent : "rgba(255,253,253,0.55)",
+                  color: on ? accent : "rgba(var(--white-rgb), 0.55)",
                   cursor: "pointer",
                   fontFamily: "inherit",
                 }}
@@ -170,12 +164,12 @@ export function DailyFocus({ accent, value, onChange }: DailyFocusProps) {
             onClick={() => choose("everything")}
             style={{
               background: "transparent",
-              border: "0.5px solid rgba(255,253,253,0.14)",
+              border: "0.5px solid rgba(var(--white-rgb), 0.14)",
               borderRadius: 999,
               padding: "4px 10px",
               fontSize: 11,
               letterSpacing: "0.04em",
-              color: "rgba(255,253,253,0.55)",
+              color: "rgba(var(--white-rgb), 0.55)",
               cursor: "pointer",
               fontFamily: "inherit",
             }}
@@ -191,7 +185,7 @@ export function DailyFocus({ accent, value, onChange }: DailyFocusProps) {
                 border: "none",
                 fontFamily: "inherit",
                 fontSize: 11,
-                color: "rgba(255,253,253,0.4)",
+                color: "rgba(var(--white-rgb), 0.4)",
                 cursor: "pointer",
                 padding: "4px 6px",
               }}

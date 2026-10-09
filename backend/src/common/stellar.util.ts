@@ -8,6 +8,10 @@ import { createHash } from "crypto";
  * the backfill migration (`stellar_color_for`). A divergence would make a freshly
  * created account's displayed color differ from a backfilled one for the same
  * inputs. Order is significant — the hash maps onto these indices.
+ *
+ * PHE-98: brand blue (#5599FF) belongs to PHENYX alone, so it is not in the
+ * pool; the 13-color mapping lives in `stellar_color_for` as of the PHE-98
+ * migration, and a check constraint keeps it off user_profiles.
  */
 export const STELLAR = [
   "#CC3300",
@@ -19,7 +23,6 @@ export const STELLAR = [
   "#CCDDFF",
   "#88AAEE",
   "#77BBFF",
-  "#5599FF",
   "#4488EE",
   "#3366DD",
   "#2255CC",
@@ -32,11 +35,11 @@ export const STELLAR = [
  * Input is the immutable pair `id + created_at` (the account's `id` column value
  * concatenated with the ISO-8601 `created_at`). We take SHA-256 of that string,
  * read the first 7 hex digits as a 28-bit unsigned integer, and index the palette
- * by `n mod 14`. The same `(id, createdAtIso)` always yields the same hex, so the
+ * by `n mod 13`. The same `(id, createdAtIso)` always yields the same hex, so the
  * color is stable and immutable for the life of the account.
  *
  * The SQL function `public.stellar_color_for` (backfill migration) mirrors this
- * exactly: same SHA-256, same 7-hex-digit (28-bit) slice, same `mod 14`, same
+ * exactly: same SHA-256, same 7-hex-digit (28-bit) slice, same `mod 13`, same
  * palette — so a backfilled row and a row created here resolve to the identical
  * hex for identical inputs.
  *

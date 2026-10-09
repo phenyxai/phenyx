@@ -80,7 +80,7 @@ export function OnairosButtonWrapper({
       <div
         role="alert"
         style={{
-          color: "#E84422",
+          color: "var(--red)",
           fontSize: "12px",
           padding: "12px",
           maxWidth: 360,
@@ -94,7 +94,7 @@ export function OnairosButtonWrapper({
 
   if (!initialized) {
     return (
-      <div style={{ color: "#666", fontSize: "12px", padding: "12px" }}>
+      <div style={{ color: "rgba(var(--white-rgb), 0.38)", fontSize: "12px", padding: "12px" }}>
         initializing onairos...
       </div>
     );

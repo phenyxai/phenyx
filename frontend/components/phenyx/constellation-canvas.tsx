@@ -26,6 +26,8 @@ import {
   type ConstellationData,
   type Pillar,
 } from "@/lib/constellation";
+import { hexToRgb } from "@/lib/stellar";
+import { cssVar } from "@/lib/utils";
 
 const PADDING = 46; // keeps edge nodes + labels off the canvas border
 const BASE_RADIUS = 5.5;
@@ -104,6 +106,7 @@ export function ConstellationCanvas({
     const nodes = nodePixelsRef.current;
     const pixelByPillar = new Map(nodes.map((n) => [n.pillar, n]));
     const stellar = current.stellar_color;
+    const white = cssVar("--white-rgb");
 
     // Faint, non-interactive edges.
     ctx.lineWidth = 1;
@@ -113,7 +116,7 @@ export function ConstellationCanvas({
       if (!na || !nb) continue;
       const lit =
         current.pillars[a].active && current.pillars[b].active ? 0.16 : 0.07;
-      ctx.strokeStyle = `rgba(255,253,253,${lit})`;
+      ctx.strokeStyle = `rgba(${white},${lit})`;
       ctx.beginPath();
       ctx.moveTo(na.x, na.y);
       ctx.lineTo(nb.x, nb.y);
@@ -131,13 +134,13 @@ export function ConstellationCanvas({
         // Unformed pillar: dim ring, no fill, no glow, no pulse.
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255,253,253,0.16)";
+        ctx.strokeStyle = `rgba(${white},0.16)`;
         ctx.lineWidth = 1;
         ctx.stroke();
         if (isSelected) {
           ctx.beginPath();
           ctx.arc(node.x, node.y, node.r + 4, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(255,253,253,0.35)";
+          ctx.strokeStyle = `rgba(${white},0.35)`;
           ctx.lineWidth = 1;
           ctx.stroke();
         }
@@ -183,7 +186,7 @@ export function ConstellationCanvas({
           const dy = node.y - node.r - 2;
           ctx.beginPath();
           ctx.arc(dx, dy, 2, 0, Math.PI * 2);
-          ctx.fillStyle = "#FFFDFD";
+          ctx.fillStyle = `rgb(${white})`;
           ctx.fill();
         }
       }
@@ -194,9 +197,7 @@ export function ConstellationCanvas({
       const label = pillarLabel(node.pillar);
       ctx.font = "300 11px system-ui, -apple-system, sans-serif";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = detail.active
-        ? "rgba(255,253,253,0.6)"
-        : "rgba(255,253,253,0.28)";
+      ctx.fillStyle = `rgba(${white},${detail.active ? 0.6 : 0.28})`;
       const half = ctx.measureText(label).width / 2;
       let labelX = node.x;
       let align: CanvasTextAlign = "center";
@@ -395,7 +396,7 @@ export function ConstellationCanvas({
                 setKbIndex(i);
                 onSelectPillar(node.pillar);
               }}
-              className="pointer-events-auto absolute h-11 w-11 -translate-x-1/2 -translate-y-1/2 rounded-full border-0 bg-transparent p-0 focus-visible:bg-[#FFFDFD]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--s,#88AAEE)] motion-reduce:transition-none"
+              className="pointer-events-auto absolute h-11 w-11 -translate-x-1/2 -translate-y-1/2 rounded-full border-0 bg-transparent p-0 focus-visible:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--s)] motion-reduce:transition-none"
               style={{ left: node.x, top: node.y }}
             />
           );
@@ -418,8 +419,5 @@ export function ConstellationCanvas({
 
 /** Blend a hex color with an alpha channel, tolerant of malformed input. */
 function withAlpha(hex: string, alpha: number): string {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return `rgba(85,153,255,${alpha})`;
-  const n = parseInt(m[1], 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  return `rgba(${hexToRgb(hex)}, ${alpha})`;
 }

@@ -77,7 +77,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#080808',
+  themeColor: 'var(--black)',
   width: 'device-width',
   initialScale: 1,
 }
@@ -91,7 +91,7 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body
         suppressHydrationWarning
-        className={`${plusJakartaSans.variable} antialiased bg-[#0A0A0A] text-[#FFFDFD]`}
+        className={`${plusJakartaSans.variable} antialiased bg-black text-white`}
       >
         <SessionColorProvider>
           {children}

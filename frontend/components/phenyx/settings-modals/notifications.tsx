@@ -76,7 +76,7 @@ export function NotificationsModal() {
             key={key}
             className="flex cursor-pointer items-center justify-between gap-4"
           >
-            <span className="text-xs text-[#aaa]">{label}</span>
+            <span className="text-xs text-white/65">{label}</span>
             <Switch
               aria-label={label}
               checked={prefs[key]}
@@ -85,7 +85,7 @@ export function NotificationsModal() {
                 setPrefs(next)
                 void persist(next)
               }}
-              className="data-[state=checked]:bg-[var(--stellar)]"
+              className="data-[state=checked]:bg-[var(--s)]"
             />
           </label>
         ))}

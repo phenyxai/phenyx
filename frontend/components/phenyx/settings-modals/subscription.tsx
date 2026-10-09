@@ -202,27 +202,27 @@ export function SubscriptionModal() {
       ) : (
         <div>
           <div className="mb-1 flex items-baseline gap-3">
-            <span className="text-[22px] font-normal text-[#FFFDFD]">
+            <span className="text-[22px] font-normal text-white">
               {planName}
             </span>
-            <span className="text-[13px] text-[rgba(var(--stellar-rgb),0.9)]">
+            <span className="text-[13px] text-[rgba(var(--s-rgb),0.9)]">
               {price}
             </span>
           </div>
-          <p className="mb-[18px] text-[12px] text-[rgba(255,253,253,0.5)]">
+          <p className="mb-[18px] text-[12px] text-white/50">
             {renewLine}
           </p>
 
-          <p className="mb-1.5 text-[10.5px] tracking-[0.14em] text-[rgba(255,253,253,0.44)] uppercase">
+          <p className="mb-1.5 text-[10.5px] tracking-[0.14em] text-white/44 uppercase">
             what&apos;s included
           </p>
           <ul className="mb-[18px] flex flex-col">
             {included.map((line) => (
               <li
                 key={line}
-                className="flex items-start gap-2.5 border-b border-[rgba(255,253,253,0.06)] py-2 text-[12.5px] leading-relaxed text-[rgba(255,253,253,0.68)]"
+                className="flex items-start gap-2.5 border-b border-white/6 py-2 text-[12.5px] leading-relaxed text-white/68"
               >
-                <span aria-hidden="true" className="shrink-0 text-[var(--stellar)]">
+                <span aria-hidden="true" className="shrink-0 text-[var(--s)]">
                   ✦
                 </span>
                 {line}
@@ -235,7 +235,7 @@ export function SubscriptionModal() {
               <PrimaryButton onClick={handleUpgrade} disabled={busy}>
                 {busy ? 'loading…' : `upgrade to full · ${MONTHLY}/month`}
               </PrimaryButton>
-              <p className="mt-2.5 text-center text-[11.5px] text-[rgba(255,253,253,0.5)]">
+              <p className="mt-2.5 text-center text-[11.5px] text-white/50">
                 or {YEARLY}/year. cancel any time.
               </p>
             </>
@@ -247,11 +247,11 @@ export function SubscriptionModal() {
                 type="button"
                 onClick={handleSwitchToFree}
                 disabled={busy}
-                className="w-full rounded-[10px] border border-[rgba(255,253,253,0.14)] bg-transparent px-6 py-3 text-xs text-[rgba(255,253,253,0.7)] transition-colors hover:border-[rgba(255,253,253,0.28)] hover:text-[#FFFDFD] disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-[10px] border border-white/14 bg-transparent px-6 py-3 text-xs text-white/70 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy ? 'loading…' : 'switch to free'}
               </button>
-              <p className="mt-2.5 text-center text-[11.5px] text-[rgba(255,253,253,0.5)]">
+              <p className="mt-2.5 text-center text-[11.5px] text-white/50">
                 cancel any time. you keep full until the period ends.
               </p>
             </>

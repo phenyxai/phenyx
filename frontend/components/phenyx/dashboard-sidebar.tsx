@@ -30,7 +30,7 @@ const ORB_STYLE = {
 
 /** Shared by the sidebar close button and the top bar toggle. */
 const ICON_BUTTON =
-  "h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#FFFDFD]/10 text-[#FFFDFD]/80 transition-colors active:bg-[#FFFDFD]/[0.06] motion-reduce:transition-none";
+  "h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-white/80 transition-colors active:bg-white/[0.06] motion-reduce:transition-none";
 
 /** First word of a display name; "you" when there is none to show. */
 function firstName(displayName: string | null | undefined): string {
@@ -174,18 +174,18 @@ export function DashboardSidebar() {
       id={DRAWER_ID}
       aria-label="dashboard"
       inert={isPhone && !open}
-      className={`flex shrink-0 flex-col border-r border-[#1a1a1a] bg-[#0A0A0A] px-5 pt-7 [@media(min-width:761px)]:sticky [@media(min-width:761px)]:top-0 [@media(min-width:761px)]:h-screen [@media(min-width:761px)]:w-[240px] [@media(min-width:761px)]:pb-7 [@media(max-width:760px)]:fixed [@media(max-width:760px)]:inset-y-0 [@media(max-width:760px)]:left-0 [@media(max-width:760px)]:z-[140] [@media(max-width:760px)]:w-[min(280px,84vw)] [@media(max-width:760px)]:pb-[calc(20px+env(safe-area-inset-bottom,0px))] [@media(max-width:760px)]:transition-transform [@media(max-width:760px)]:duration-300 [@media(max-width:760px)]:ease-out motion-reduce:transition-none ${
+      className={`flex shrink-0 flex-col border-r border-white/[0.065] bg-black px-5 pt-7 [@media(min-width:761px)]:sticky [@media(min-width:761px)]:top-0 [@media(min-width:761px)]:h-screen [@media(min-width:761px)]:w-[240px] [@media(min-width:761px)]:pb-7 [@media(max-width:760px)]:fixed [@media(max-width:760px)]:inset-y-0 [@media(max-width:760px)]:left-0 [@media(max-width:760px)]:z-[140] [@media(max-width:760px)]:w-[min(280px,84vw)] [@media(max-width:760px)]:pb-[calc(20px+env(safe-area-inset-bottom,0px))] [@media(max-width:760px)]:transition-transform [@media(max-width:760px)]:duration-300 [@media(max-width:760px)]:ease-out motion-reduce:transition-none ${
         open
-          ? "[@media(max-width:760px)]:translate-x-0 [@media(max-width:760px)]:shadow-[0_0_40px_rgba(0,0,0,0.6)]"
+          ? "[@media(max-width:760px)]:translate-x-0 [@media(max-width:760px)]:shadow-[0_0_40px_rgba(var(--black-rgb), 0.6)]"
           : "[@media(max-width:760px)]:-translate-x-full"
       }`}
     >
       {/* Brand block: stellar orb + wordmark + plan pill. Pill text + data-tier
           owned by applyTierUI; the static "free" / data-tier here is the
           pre-load default. */}
-      <div className="mb-2 flex items-center gap-2.5 border-b border-[#FFFDFD]/[0.07] pb-[18px]">
+      <div className="mb-2 flex items-center gap-2.5 border-b border-white/[0.07] pb-[18px]">
         <span aria-hidden="true" className="h-[18px] w-[18px] shrink-0 rounded-full" style={ORB_STYLE} />
-        <span className="text-[12.5px] font-semibold tracking-[0.14em] text-[#FFFDFD]">PHENYX</span>
+        <span className="text-[12.5px] font-semibold tracking-[0.14em] text-white">PHENYX</span>
         <span
           ref={badgeRef}
           data-tier="free"
@@ -218,8 +218,8 @@ export function DashboardSidebar() {
                 onClick={() => setOpen(false)}
                 className={`block rounded-xl px-3 py-[11px] text-[14px] lowercase transition-colors motion-reduce:transition-none ${
                   isActive
-                    ? "bg-[#FFFDFD]/[0.05] font-medium text-[#FFFDFD]/90"
-                    : "text-[#FFFDFD]/50 hover:bg-[#FFFDFD]/[0.04] hover:text-[#FFFDFD]/70"
+                    ? "bg-[rgba(var(--s-rgb),0.08)] font-medium text-[var(--s)]"
+                    : "text-white/50 hover:bg-white/[0.04]"
                 }`}
               >
                 {tab.label}
@@ -231,8 +231,8 @@ export function DashboardSidebar() {
 
       {/* Account row: first name + settings gear. The gear lights up in the
           accent while the settings segment is active. */}
-      <div className="mt-auto flex items-center gap-[11px] border-t border-[#FFFDFD]/[0.07] pt-3.5">
-        <span className="min-w-0 truncate text-[13.5px] font-medium text-[#FFFDFD]">{name}</span>
+      <div className="mt-auto flex items-center gap-[11px] border-t border-white/[0.07] pt-3.5">
+        <span className="min-w-0 truncate text-[13.5px] font-medium text-white">{name}</span>
         <button
           type="button"
           aria-label="settings"
@@ -243,8 +243,8 @@ export function DashboardSidebar() {
           }}
           className={`ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none ${
             isSettings
-              ? "border-[rgba(var(--s-rgb),0.35)] bg-[rgba(var(--s-rgb),0.10)] text-[#FFFDFD]"
-              : "border-[#FFFDFD]/10 text-[#FFFDFD]/70 hover:border-[#FFFDFD]/20 hover:bg-[#FFFDFD]/[0.05] hover:text-[#FFFDFD]"
+              ? "border-[rgba(var(--s-rgb),0.35)] bg-[rgba(var(--s-rgb),0.10)] text-[var(--s)]"
+              : "border-white/10 text-white/70 hover:bg-white/[0.05]"
           }`}
         >
           <svg
@@ -275,7 +275,7 @@ export function DashboardSidebar() {
 export function MobileTopBar() {
   const { open, toggle } = useDashboardDrawer();
   return (
-    <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2.5 border-b border-[#FFFDFD]/[0.07] bg-[rgba(8,8,8,0.94)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden">
+    <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2.5 border-b border-white/[0.07] bg-black/94 px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden">
       <button
         type="button"
         aria-label={open ? "close menu" : "open menu"}
@@ -289,7 +289,7 @@ export function MobileTopBar() {
         </svg>
       </button>
       <span aria-hidden="true" className="h-[16px] w-[16px] shrink-0 rounded-full" style={ORB_STYLE} />
-      <span className="text-[12px] font-semibold tracking-[0.14em] text-[#FFFDFD]">PHENYX</span>
+      <span className="text-[12px] font-semibold tracking-[0.14em] text-white">PHENYX</span>
     </header>
   );
 }

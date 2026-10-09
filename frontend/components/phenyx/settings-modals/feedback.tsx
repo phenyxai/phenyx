@@ -65,7 +65,7 @@ export function FeedbackModal() {
             aria-label={`${star} ${star === 1 ? 'star' : 'stars'}`}
             onClick={() => setRating(star)}
             className="text-2xl leading-none transition-colors"
-            style={{ color: star <= rating ? 'var(--stellar)' : '#333' }}
+            style={{ color: star <= rating ? 'var(--s)' : 'rgba(var(--white-rgb), 0.18)' }}
           >
             {star <= rating ? '★' : '☆'}
           </button>
@@ -76,7 +76,7 @@ export function FeedbackModal() {
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         placeholder="what would you like to tell us?"
-        className="min-h-24 border-[#222] bg-[#111] text-[13px] text-[#FFFDFD] placeholder:text-[#555] focus-visible:border-[var(--stellar)] focus-visible:ring-0"
+        className="min-h-24 border-white/10 bg-white/3 text-[13px] text-white placeholder:text-white/32 focus-visible:border-[var(--s)] focus-visible:ring-0"
       />
 
       <div className="flex flex-col gap-3">

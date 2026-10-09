@@ -39,7 +39,6 @@ interface UserProfile {
 export default function DailyPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [stellarColor, setStellarColor] = useState("#5599FF");
   const [userId, setUserId] = useState<string | null>(null);
   
   // Data state
@@ -58,8 +57,6 @@ export default function DailyPage() {
   const [skippedPillar, setSkippedPillar] = useState<Pillar | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) setStellarColor(stored);
     setMounted(true);
     fetchData();
   }, []);
@@ -85,7 +82,6 @@ export default function DailyPage() {
     setConstellationState(stateData);
     
     if (profileData?.stellar_color) {
-      setStellarColor(profileData.stellar_color);
     }
 
     // Determine target pillar (lowest score)
@@ -250,7 +246,7 @@ export default function DailyPage() {
     return (
       <main style={{ 
         minHeight: "100vh", 
-        background: "#0A0A0A", 
+        background: "var(--black)", 
         display: "flex", 
         flexDirection: "column",
         alignItems: "center", 
@@ -260,7 +256,7 @@ export default function DailyPage() {
         <p style={{ 
           fontSize: 22, 
           fontWeight: 300, 
-          color: "#FFFDFD", 
+          color: "var(--white)", 
           textAlign: "center",
           marginBottom: 12
         }}>
@@ -268,7 +264,7 @@ export default function DailyPage() {
         </p>
         <p style={{ 
           fontSize: 15, 
-          color: "rgba(255,253,253,0.5)", 
+          color: "rgba(var(--white-rgb), 0.5)", 
           textAlign: "center",
           marginBottom: 32
         }}>
@@ -276,26 +272,16 @@ export default function DailyPage() {
         </p>
         <button
           onClick={() => router.push("/dashboard/constellation")}
+          className="btn-primary"
           style={{
-            background: "transparent",
-            border: `0.5px solid ${stellarColor}`,
+            border: "0.5px solid var(--s)",
             borderRadius: 999,
             padding: "12px 28px",
             fontSize: 13,
-            color: stellarColor,
+            color: "var(--s)",
             cursor: "pointer",
             fontFamily: "inherit",
             transition: "all 0.2s ease"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#FFFDFD";
-            e.currentTarget.style.borderColor = "#FFFDFD";
-            e.currentTarget.style.color = "#0A0A0A";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.borderColor = stellarColor;
-            e.currentTarget.style.color = stellarColor;
           }}
         >
           view constellation
@@ -309,7 +295,7 @@ export default function DailyPage() {
     return (
       <main style={{ 
         minHeight: "100vh", 
-        background: "#0A0A0A", 
+        background: "var(--black)", 
         display: "flex", 
         flexDirection: "column",
         alignItems: "center", 
@@ -325,13 +311,13 @@ export default function DailyPage() {
           display: "flex",
           alignItems: "center",
           padding: "16px 24px",
-          borderBottom: "0.5px solid #1a1a1a",
-          background: "#0A0A0A"
+          borderBottom: "0.5px solid rgba(var(--white-rgb), 0.065)",
+          background: "var(--black)"
         }}>
           <button
             onClick={() => router.push("/dashboard/constellation")}
             aria-label="go back to constellation"
-            style={{ background: "none", border: "none", color: "#666", fontSize: 18, cursor: "pointer", padding: 0, marginRight: 12 }}
+            style={{ background: "none", border: "none", color: "rgba(var(--white-rgb), 0.38)", fontSize: 18, cursor: "pointer", padding: 0, marginRight: 12 }}
           >
             ←
           </button>
@@ -343,7 +329,7 @@ export default function DailyPage() {
         <p style={{ 
           fontSize: 22, 
           fontWeight: 300, 
-          color: "rgba(255,253,253,0.6)", 
+          color: "rgba(var(--white-rgb), 0.6)", 
           textAlign: "center",
           marginBottom: 12
         }}>
@@ -351,7 +337,7 @@ export default function DailyPage() {
         </p>
         <p style={{ 
           fontSize: 13, 
-          color: "rgba(255,253,253,0.3)", 
+          color: "rgba(var(--white-rgb), 0.3)", 
           textAlign: "center"
         }}>
           prompts open at the times you set. come back then.
@@ -362,18 +348,18 @@ export default function DailyPage() {
 
   // Open prompt card view
   return (
-    <main style={{ minHeight: "100vh", background: "#0A0A0A", color: "#FFFDFD" }}>
+    <main style={{ minHeight: "100vh", background: "var(--black)", color: "var(--white)" }}>
       {/* Topbar */}
       <header style={{
         display: "flex",
         alignItems: "center",
         padding: "16px 24px",
-        borderBottom: "0.5px solid #1a1a1a"
+        borderBottom: "0.5px solid rgba(var(--white-rgb), 0.065)"
       }}>
         <button
           onClick={() => router.push("/dashboard/constellation")}
           aria-label="go back to constellation"
-          style={{ background: "none", border: "none", color: "#666", fontSize: 18, cursor: "pointer", padding: 0, marginRight: 12 }}
+          style={{ background: "none", border: "none", color: "rgba(var(--white-rgb), 0.38)", fontSize: 18, cursor: "pointer", padding: 0, marginRight: 12 }}
         >
           ←
         </button>
@@ -391,7 +377,7 @@ export default function DailyPage() {
               fontSize: 11, 
               textTransform: "uppercase", 
               letterSpacing: "0.15em", 
-              color: "rgba(255,253,253,0.35)",
+              color: "rgba(var(--white-rgb), 0.35)",
               marginBottom: 6
             }}>
               {formatPillarName(targetPillar)}
@@ -400,7 +386,7 @@ export default function DailyPage() {
             {/* Generated from constellation */}
             <p style={{ 
               fontSize: 11, 
-              color: "rgba(255,253,253,0.2)",
+              color: "rgba(var(--white-rgb), 0.2)",
               marginBottom: 24
             }}>
               generated from your constellation
@@ -408,14 +394,14 @@ export default function DailyPage() {
 
             {/* Prompt question */}
             {isLoadingPrompt ? (
-              <p style={{ fontSize: 22, fontWeight: 300, color: "rgba(255,253,253,0.3)" }}>
+              <p style={{ fontSize: 22, fontWeight: 300, color: "rgba(var(--white-rgb), 0.3)" }}>
                 generating your prompt...
               </p>
             ) : generatedPrompt ? (
               <p style={{ 
                 fontSize: 22, 
                 fontWeight: 300, 
-                color: "#FFFDFD", 
+                color: "var(--white)", 
                 lineHeight: 1.5,
                 maxWidth: 560,
                 textTransform: "lowercase",
@@ -424,7 +410,7 @@ export default function DailyPage() {
                 {generatedPrompt}
               </p>
             ) : (
-              <p style={{ fontSize: 22, fontWeight: 300, color: "rgba(255,253,253,0.3)" }}>
+              <p style={{ fontSize: 22, fontWeight: 300, color: "rgba(var(--white-rgb), 0.3)" }}>
                 loading...
               </p>
             )}
@@ -438,11 +424,11 @@ export default function DailyPage() {
               style={{
                 width: "100%",
                 minHeight: 180,
-                background: "#0d0d0d",
-                border: "0.5px solid #1e1e1e",
+                background: "var(--black)",
+                border: "0.5px solid rgba(var(--white-rgb), 0.08)",
                 borderRadius: 10,
                 padding: "16px",
-                color: "#FFFDFD",
+                color: "var(--white)",
                 fontSize: 14,
                 fontWeight: 300,
                 fontFamily: "inherit",
@@ -452,11 +438,11 @@ export default function DailyPage() {
                 marginBottom: 16
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = stellarColor;
-                e.target.style.boxShadow = `0 0 0 3px color-mix(in srgb, ${stellarColor} 8%, transparent)`;
+                e.target.style.borderColor = "var(--s)";
+                e.target.style.boxShadow = "0 0 0 3px rgba(var(--s-rgb), 0.08)";
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = "#1e1e1e";
+                e.target.style.borderColor = "rgba(var(--white-rgb), 0.08)";
                 e.target.style.boxShadow = "none";
               }}
             />
@@ -466,31 +452,19 @@ export default function DailyPage() {
               onClick={handleContinue}
               disabled={isSubmitting || !reflectionText.trim()}
               aria-busy={isSubmitting}
+              className="btn-primary"
               style={{
                 width: "100%",
-                background: "transparent",
-                border: `0.5px solid ${stellarColor}`,
+                border: "0.5px solid var(--s)",
                 borderRadius: 999,
                 padding: "14px 24px",
                 fontSize: 13,
-                color: stellarColor,
+                color: "var(--s)",
                 cursor: reflectionText.trim() ? "pointer" : "not-allowed",
                 fontFamily: "inherit",
                 opacity: reflectionText.trim() ? 1 : 0.5,
                 transition: "all 0.2s ease",
                 marginBottom: 16
-              }}
-              onMouseEnter={(e) => {
-                if (reflectionText.trim()) {
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.borderColor = stellarColor;
-                e.currentTarget.style.color = stellarColor;
               }}
             >
               {isSubmitting ? "saving..." : "continue"}
@@ -505,7 +479,7 @@ export default function DailyPage() {
                 background: "none",
                 border: "none",
                 fontSize: 13,
-                color: "rgba(255,253,253,0.25)",
+                color: "rgba(var(--white-rgb), 0.25)",
                 textAlign: "center",
                 cursor: "pointer",
                 fontFamily: "inherit",
@@ -525,8 +499,8 @@ export default function DailyPage() {
               aria-label={`${formatPillarName(pillar)} — locked`}
               aria-disabled="true"
               style={{
-                background: "#0E0E0E",
-                border: "0.5px solid #1C1C1C",
+                background: "rgba(var(--white-rgb), 0.015)",
+                border: "0.5px solid rgba(var(--white-rgb), 0.075)",
                 borderRadius: 10,
                 padding: "16px 18px",
                 marginBottom: 8
@@ -536,7 +510,7 @@ export default function DailyPage() {
                 fontSize: 11, 
                 textTransform: "uppercase", 
                 letterSpacing: "0.15em", 
-                color: "rgba(255,253,253,0.2)",
+                color: "rgba(var(--white-rgb), 0.2)",
                 margin: 0,
                 marginBottom: 6
               }}>
@@ -544,7 +518,7 @@ export default function DailyPage() {
               </p>
               <p style={{ 
                 fontSize: 13, 
-                color: "rgba(255,253,253,0.2)",
+                color: "rgba(var(--white-rgb), 0.2)",
                 fontStyle: "italic",
                 margin: 0
               }}>

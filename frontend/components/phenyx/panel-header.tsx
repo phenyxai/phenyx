@@ -18,14 +18,14 @@ export function PanelHeader({
         {eyebrow}
       </p>
       <h1
-        className={`text-[clamp(24px,2.6vw,34px)] font-light leading-[1.16] tracking-[-0.02em] text-[rgba(255,253,253,0.96)] ${
+        className={`text-[clamp(24px,2.6vw,34px)] font-light leading-[1.16] tracking-[-0.02em] text-white/96 ${
           sub ? "mb-3" : ""
         }`}
       >
         {title}
       </h1>
       {sub && (
-        <p className="max-w-[52ch] text-[15px] leading-[1.7] text-[rgba(255,253,253,0.6)]">
+        <p className="max-w-[52ch] text-[15px] leading-[1.7] text-white/60">
           {sub}
         </p>
       )}

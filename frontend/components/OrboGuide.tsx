@@ -142,19 +142,19 @@ export function OrboGuide({ page, stellarColor, motivation, onComplete }: OrboGu
             position: "fixed",
             top: Math.min(position.top + 50, window.innerHeight - 200),
             left: Math.min(Math.max(position.left - 100, 16), window.innerWidth - 260),
-            background: "#0E0E0E",
+            background: "rgba(var(--white-rgb), 0.015)",
             border: `0.5px solid color-mix(in srgb, ${stellarColor} 35%, transparent)`,
             borderRadius: 12,
             padding: "16px 20px",
             maxWidth: 240,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+            boxShadow: "0 8px 32px rgba(var(--black-rgb), 0.6)",
             zIndex: 1001,
           }}
         >
           <p
             style={{
               fontSize: 12,
-              color: "#FFFDFD",
+              color: "var(--white)",
               fontWeight: 300,
               lineHeight: 1.7,
               margin: 0,
@@ -176,12 +176,6 @@ export function OrboGuide({ page, stellarColor, motivation, onComplete }: OrboGu
               cursor: "pointer",
               fontFamily: "inherit",
               transition: "background 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = `color-mix(in srgb, ${stellarColor} 10%, transparent)`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
             }}
           >
             {buttonText}

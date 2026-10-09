@@ -5,7 +5,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { hexToRgb } from '@/lib/stellar'
+import { useSessionColor } from '@/contexts/session-color-context'
 import {
   Dialog,
   DialogOverlay,
@@ -58,8 +58,6 @@ export type SettingsModalId =
   | 'upgrade'
   | 'subscription'
 
-const STELLAR_DEFAULT = '#5599FF'
-
 interface SettingsModalsContextValue {
   /** The currently open modal id, or null when nothing is open. */
   openId: SettingsModalId | null
@@ -85,22 +83,7 @@ export function SettingsModalsProvider({
   children: React.ReactNode
 }) {
   const [openId, setOpenId] = React.useState<SettingsModalId | null>(null)
-  const [stellarColor, setStellarColor] = React.useState(STELLAR_DEFAULT)
-
-  React.useEffect(() => {
-    const stored = localStorage.getItem('phenyx_stellar_color')
-    if (stored) setStellarColor(stored)
-    // The shell paints with `--s` / `--s-rgb` (sidebar orb, plan pill, gear).
-    // SessionColorProvider in the root layout owns those vars and reconciles
-    // them against user_profiles.stellar_color; this only fills them on a fresh
-    // load where nothing has set them yet, so the shell never renders colourless.
-    const root = document.documentElement
-    if (!root.style.getPropertyValue('--s')) {
-      const color = stored || STELLAR_DEFAULT
-      root.style.setProperty('--s', color)
-      root.style.setProperty('--s-rgb', hexToRgb(color))
-    }
-  }, [])
+  const { sessionColor: stellarColor } = useSessionColor()
 
   const openModal = React.useCallback((id: SettingsModalId) => setOpenId(id), [])
   const closeModal = React.useCallback(() => setOpenId(null), [])
@@ -147,8 +130,8 @@ export function useSettingsModals(): SettingsModalsContextValue {
 
 // ---------------------------------------------------------------------------
 // Shared, PHENYX-styled building blocks for the individual modals. These mirror
-// shadcn's DialogContent but apply the v244 blue-black chrome (prototype style
-// id `v240-modal-coverage-and-colour`) and disable the open/close animation
+// shadcn's DialogContent but apply the PHENYX chrome (flat black, accent edge;
+// PHE-98 replaced the v244 blue-black gradient) and disable the open/close animation
 // under `prefers-reduced-motion`. The overlay scrim itself is the default in
 // `components/ui/dialog.tsx` (and alert-dialog), so every dialog shares it.
 // ---------------------------------------------------------------------------
@@ -163,24 +146,18 @@ const contentBaseClassName = cn(
   'overflow-y-auto rounded-2xl border p-6 duration-200',
 )
 
-/** The modal surface: an accent-tinted light source over a blue-black ground. */
-function modalSurfaceStyle(stellarColor: string): React.CSSProperties {
-  const rgb = hexToRgb(stellarColor)
-  return {
-    background: `radial-gradient(120% 88% at 50% -18%, rgba(${rgb},0.10), transparent 66%), linear-gradient(180deg, #0c0f16 0%, #090b10 100%)`,
-    borderColor: `rgba(${rgb},0.20)`,
-    boxShadow:
-      '0 0 0 1px rgba(255,253,253,0.03), 0 30px 80px -20px rgba(0,0,0,0.75)',
-    color: '#FFFDFD',
-    '--stellar': stellarColor,
-    '--stellar-rgb': rgb,
-  } as React.CSSProperties
+/** The modal surface: flat black with an accent edge (PHE-98: no gradients). */
+const modalSurfaceStyle: React.CSSProperties = {
+  background: 'var(--black)',
+  borderColor: 'rgba(var(--s-rgb), 0.2)',
+  boxShadow:
+    '0 0 0 1px rgba(var(--white-rgb), 0.03), 0 30px 80px -20px rgba(var(--black-rgb), 0.75)',
+  color: 'var(--white)',
 }
 
 /**
- * Styled dialog content shared by every settings modal. Wires the stellar accent
- * to the `--stellar` / `--stellar-rgb` CSS vars so buttons/toggles can pick it
- * up via Tailwind, and renders the close button. Pass `aria-describedby={undefined}`
+ * Styled dialog content shared by every settings modal: the flat surface above
+ * plus the close button. Buttons and toggles read the accent from `--s`. Pass `aria-describedby={undefined}`
  * for modals without a subtitle to keep Radix from warning about a missing
  * description.
  */
@@ -190,20 +167,19 @@ export function SettingsDialogContent({
   children,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content>) {
-  const { stellarColor } = useSettingsModals()
   return (
     <DialogPortal>
       <DialogOverlay className="motion-reduce:animate-none" />
       <DialogPrimitive.Content
         data-slot="settings-dialog-content"
         className={cn(contentBaseClassName, className)}
-        style={{ ...modalSurfaceStyle(stellarColor), ...style }}
+        style={{ ...modalSurfaceStyle, ...style }}
         {...props}
       >
         {children}
         <DialogPrimitive.Close
           aria-label="close"
-          className="absolute top-4 right-4 rounded-sm text-[#FFFDFD]/55 opacity-80 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-[var(--stellar)] focus:outline-hidden [&_svg]:size-4"
+          className="absolute top-4 right-4 rounded-sm text-white/55 opacity-80 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-[var(--s)] focus:outline-hidden [&_svg]:size-4"
         >
           <XIcon />
           <span className="sr-only">close</span>
@@ -223,11 +199,11 @@ export function ModalHeading({
 }) {
   return (
     <div className="flex flex-col gap-2 pr-6">
-      <DialogTitle className="text-base leading-none font-medium lowercase text-[#FFFDFD]">
+      <DialogTitle className="text-base leading-none font-medium lowercase text-white">
         {title}
       </DialogTitle>
       {subtitle && (
-        <DialogDescription className="text-xs leading-relaxed text-[rgba(255,253,253,0.70)]">
+        <DialogDescription className="text-xs leading-relaxed text-white/70">
           {subtitle}
         </DialogDescription>
       )}
@@ -244,7 +220,7 @@ export function GhostButton({
     <button
       type="button"
       className={cn(
-        'rounded-lg border border-[var(--stellar)] px-6 py-2.5 text-xs text-[var(--stellar)] transition-colors hover:bg-[#FFFDFD] hover:text-[#0A0A0A] disabled:cursor-not-allowed disabled:opacity-50',
+        'rounded-lg border border-[var(--s)] px-6 py-2.5 text-xs text-[var(--s)] transition-colors disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -265,7 +241,7 @@ export function PrimaryButton({
     <button
       type="button"
       className={cn(
-        'w-full rounded-[10px] border border-[rgba(var(--stellar-rgb),0.38)] bg-[rgba(var(--stellar-rgb),0.10)] px-6 py-3 text-xs font-medium text-[#FFFDFD] transition-colors hover:bg-[rgba(var(--stellar-rgb),0.18)] disabled:cursor-not-allowed disabled:opacity-50',
+        'w-full rounded-[10px] border border-[rgba(var(--s-rgb),0.38)] bg-[rgba(var(--s-rgb),0.10)] px-6 py-3 text-xs font-medium text-white transition-colors hover:bg-[rgba(var(--s-rgb),0.18)] disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -282,7 +258,7 @@ export function DangerButton({
     <button
       type="button"
       className={cn(
-        'rounded-lg border border-[#3a1010] px-5 py-2.5 text-xs text-[#6a2020] transition-colors hover:bg-[#3a1010] hover:text-[#FFFDFD] disabled:cursor-not-allowed disabled:opacity-50',
+        'btn-danger rounded-lg border border-red/25 px-5 py-2.5 text-xs text-red/70 transition-colors hover:bg-red/15 disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -310,32 +286,31 @@ export function DangerConfirm({
   cancelLabel?: string
   onConfirm: () => void | Promise<void>
 }) {
-  const { stellarColor } = useSettingsModals()
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
       <AlertDialogContent
         className="rounded-2xl motion-reduce:animate-none motion-reduce:transition-none"
         style={{
-          ...modalSurfaceStyle(stellarColor),
-          borderColor: '#3a1010',
+          ...modalSurfaceStyle,
+          borderColor: 'rgba(var(--red-rgb), 0.25)',
         }}
       >
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-base font-medium lowercase text-[#FFFDFD]">
+          <AlertDialogTitle className="text-base font-medium lowercase text-white">
             {title}
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-xs leading-relaxed text-[#888]">
+          <AlertDialogDescription className="text-xs leading-relaxed text-white/50">
             {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="border-[#333] bg-transparent text-xs text-[#888] hover:bg-[#1a1a1a] hover:text-[#FFFDFD]">
+          <AlertDialogCancel className="border-white/18 bg-transparent text-xs text-white/50 hover:bg-white/[0.065]">
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={() => onConfirm()}
-            className="border-none bg-[#3a1010] text-xs text-[#FFFDFD] hover:bg-[#511616]"
+            className="btn-danger border-none bg-red/25 text-xs text-white hover:bg-red/35"
           >
             {confirmLabel}
           </AlertDialogAction>
@@ -345,7 +320,7 @@ export function DangerConfirm({
   )
 }
 
-/** Inline status line — stellar for success, red for error. */
+/** Inline status line: green for success, red for error. */
 export function StatusLine({
   message,
   tone = 'success',
@@ -359,7 +334,7 @@ export function StatusLine({
       role="status"
       aria-live="polite"
       className="text-xs"
-      style={{ color: tone === 'error' ? '#c97a6a' : 'var(--stellar)' }}
+      style={{ color: tone === 'error' ? 'var(--red)' : 'var(--green)' }}
     >
       {message}
     </p>
@@ -370,14 +345,14 @@ export function StatusLine({
 export function ModalErr({ message }: { message: string }) {
   if (!message) return null
   return (
-    <p role="alert" className="text-[11.5px] leading-normal text-[#c97a6a]">
+    <p role="alert" className="text-[11.5px] leading-normal text-red">
       {message}
     </p>
   )
 }
 
 const fieldInputClassName =
-  'w-full border-0 border-b border-[#1a1a1a] bg-transparent px-0 py-2 text-base text-[#FFFDFD] outline-none placeholder:text-[14px] placeholder:font-light placeholder:text-[#FFFDFD]/50 focus:border-[var(--stellar)]'
+  'w-full border-0 border-b border-white/[0.065] bg-transparent px-0 py-2 text-base text-white outline-none placeholder:text-[14px] placeholder:font-light placeholder:text-white/50 focus:border-[var(--s)]'
 
 /** Label + input matching the v67 modal field. */
 export function ModalField({
@@ -399,7 +374,7 @@ export function ModalField({
 }) {
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-[11.5px] font-medium tracking-[0.1em] text-[#FFFDFD]/50 uppercase">
+      <span className="text-[11.5px] font-medium tracking-[0.1em] text-white/50 uppercase">
         {label}
       </span>
       <input
