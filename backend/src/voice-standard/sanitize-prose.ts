@@ -16,5 +16,13 @@ export function sanitizeProse(text: string): string {
     .replace(/\*/g, "") // strip asterisks (markdown bold/italic markers)
     .replace(/_/g, "") // strip underscores (markdown emphasis markers)
     .replace(/[ \t]{2,}/g, " ") // collapse runs of spaces left by removals
+    .replace(DATE_SPAN, "$1 – $2") // year spans read "2016 – 2026"
     .trim();
+}
+
+const DATE_SPAN = /\b(\d{4})\s*[-–—]\s*(\d{4})\b/g;
+
+/** Visible year spans use the spaced en dash ("2016 – 2026"), never a hyphen or em dash. */
+export function normalizeDateSpan(span: string): string {
+  return span.replace(DATE_SPAN, "$1 – $2");
 }
