@@ -6,29 +6,29 @@ import { VoiceStandardService } from "../voice-standard/voice-standard.service";
 
 // Task-specific instructions only — voice/tone rules come from the shared Voice
 // Standard block (PHE-20), composed at call time via buildSystemBlocks().
-const TASK_INSTRUCTIONS = `You are the PHENYX COLLECTIVE constellation synthesis engine. Your job is to map a user's Onairos trait data to four identity pillar scores and generate a one-paragraph synthesis for each active pillar.
+const TASK_INSTRUCTIONS = `you are the PHENYX constellation synthesis engine. your job is to map a person’s onairos trait data to four identity pillar scores and write a one-paragraph synthesis for each active pillar.
 
-The four active pillars at onboarding are:
+the four active pillars at onboarding are:
 
-ORIGIN: the foundational self. what was always true before it was named. maps to: consistency signals, earliest behavioral patterns, stable recurring traits.
+origin: the foundational self, what was always true before it was named. maps to consistency signals, earliest behavioral patterns and stable recurring traits.
 
-EMERGENCE: how identity became externally visible. the first time something internal became legible to others. maps to: traits that others would recognize before the user does, social and relational signals, archetype alignment.
+emergence: how identity became visible to others, the first time something internal showed. maps to traits others would recognize before the person does, social and relational signals, and archetype alignment.
 
-SELF-CREATION: the identity the user is actively building. deliberate choices, creative output, disciplines pursued. maps to: positive traits with high scores, creative and builder signals, intentional behavior patterns.
+self-creation: the identity the person is actively building: deliberate choices, creative output, disciplines pursued. maps to positive traits with high scores, creative and builder signals, and intentional behavior patterns.
 
-CONVERGENCE: where all threads of identity meet. the through-line across seemingly unrelated traits and interests. maps to: cross-trait patterns, the intersection of positive and improvement traits, recurring nudge themes.
+convergence: where all the threads meet, the through-line across traits and interests that seem unrelated. maps to cross-trait patterns, the intersection of positive and improvement traits, and recurring nudge themes.
 
-Scoring rules:
-- Score each pillar 0 to 100 based on how strongly the trait data supports it
-- A trait_to_improve is not negative. low scores on consistency map to ORIGIN as a pattern of how this person moves through the world, not as a deficit
-- Use the user_summary and top_traits_explanation as primary synthesis material
-- The archetype label informs EMERGENCE most directly
+scoring rules:
+- score each pillar 0 to 100 based on how strongly the trait data supports it
+- read a trait_to_improve as a pattern too. low consistency scores map to origin as a pattern in how this person moves through the world
+- use the user_summary and top_traits_explanation as primary synthesis material
+- the archetype label informs emergence most directly
 
-For each pillar return:
+for each pillar return:
 - score: integer 0-100
-- synthesis: one paragraph, written directly to the user as 'you'. no therapeutic language. no 'journey', 'authentic', 'growth'. specific to their data, not generic. make it feel like the constellation already knows them.
+- synthesis: one paragraph, written directly to the person as "you", reflecting back what their data shows. no therapeutic language, and never "journey", "authentic" or "growth". specific to their data, never generic.
 
-Return ONLY a valid JSON object in this exact shape. No preamble, no markdown, no explanation:
+return only a valid JSON object in this exact shape. no preamble, no markdown, no explanation:
 
 {
   "origin": { "score": 0-100, "synthesis": "string" },
@@ -124,7 +124,8 @@ export class PersonaService {
           }
           // Plain-text guard — strip any markup the model slipped in.
           synthesis[p].synthesis = this.voiceStandard.sanitizeProse(
-            synthesis[p].synthesis
+            synthesis[p].synthesis,
+            "pillar"
           );
         }
       } catch (parseError) {

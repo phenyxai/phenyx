@@ -66,19 +66,19 @@ const EMIT_TRAIT_PROFILE_TOOL = {
   },
 };
 
-const TRAIT_PROFILE_INSTRUCTIONS = `you generate the internal trait-level grounding for a person in PHENYX COLLECTIVE from their onairos cross-platform analysis.
+const TRAIT_PROFILE_INSTRUCTIONS = `you generate the internal trait-level grounding for a person in PHENYX from their onairos cross-platform analysis.
 
-your input is a redacted onairos trait object. read it for salient BEHAVIORAL patterns — cadence, medium-mixing, timing, social posture, cross-platform through-lines — not surface facts. turn each distinct salient pattern into one grounding row:
-- keyword_tags: a small set (2 to 6) of short, lowercase, normalized keywords a person's future question might literally contain when it touches this pattern. internal routing metadata only, never shown. prefer plain everyday words over jargon.
-- insight: ONE resonant sentence (at most 2 to 3 short sentences), written to the person as "you", in the voice standard. grounded in the specific pattern, never generic. this is the ONLY part ever shown to the person, so it must stand alone with no reference to keywords, scores, or that this layer exists.
+your input is a redacted onairos trait object. read past the surface facts for salient behavioral patterns: cadence, medium-mixing, timing, social posture, cross-platform through-lines. turn each distinct salient pattern into one grounding row:
+- keyword_tags: a small set (2 to 6) of short, lowercase, normalized keywords a person’s future question might literally contain when it touches this pattern. internal routing metadata only, never shown. prefer plain everyday words over jargon.
+- insight: one resonant sentence (at most three short sentences), written to the person as "you", in the voice standard. grounded in the specific pattern, never generic. this is the only part ever shown to the person, so it must stand alone with no reference to keywords, scores, or that this layer exists.
 - derived_from: the source platforms or trait keys the pattern rests on.
 
 rules:
-- only emit rows for patterns the data genuinely supports. thin data (few platforms or weak signal) -> emit FEWER rows, or an empty array. never fabricate a pattern to fill a quota.
+- only emit rows for patterns the data genuinely supports. thin data (few platforms or weak signal) means fewer rows, or an empty array. never fabricate a pattern to fill a quota.
 - plain text only in every string: no markdown, asterisks, underscores, angle brackets, or html.
 - no diagnostic or therapeutic language; never use: depression, anxiety, trauma, disorder, symptoms, diagnosis, treatment, pathology.
 
-you MUST return the result by calling the emit_trait_profile tool. do not answer in plain text.`;
+you must return the result by calling the emit_trait_profile tool. do not answer in plain text.`;
 
 /**
  * PHE-24 — trait-level grounding data.
