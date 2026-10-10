@@ -12,17 +12,13 @@ import {
   TokenBudgetService,
   type WeeklyAllowance,
 } from "./token-budget.service";
+import { HONEST_LIMITS_OPENER, SPARSE_NUDGE } from "./polaris-copy";
 
 // Sonnet-tier for chat latency (reality check: claude-sonnet-4-6, NOT an older id).
 const POLARIS_MODEL = "claude-sonnet-4-6";
 // 2-3 plain-text sentences in voice; small ceiling keeps first-token latency low.
 const MAX_TOKENS = 400;
 
-// Verbatim honest-limits + sparse copy (ticket §7). The honest-limits line is
-// produced by the model (instructed in the grounding block); the sparse nudge is
-// appended server-side so its wording is guaranteed byte-exact (AC3).
-const SPARSE_NUDGE =
-  "the more you connect, the clearer this gets. ask again as your constellation fills in.";
 
 const CONSTELLATION_SYNTHESIS_COLUMNS: Record<Pillar, string> = {
   origin: "origin_synthesis",
@@ -282,6 +278,12 @@ export class PolarisService {
     // (8) Plain-text guard: strip any markup the model emitted (HTML, **, _, angle
     // brackets). Then append the verbatim sparse nudge when the constellation is thin.
     let answer = this.voiceStandard.sanitizeProse(rawAnswer);
+    // The honest-limits line is fixed copy around an observation that was checked
+    // when it was generated, so only the model's own replies get the voice check.
+    // Re-running sanitizeProse on clean text changes nothing; it only logs.
+    if (!answer.startsWith(HONEST_LIMITS_OPENER)) {
+      this.voiceStandard.sanitizeProse(answer, "polaris");
+    }
     if (sparse) {
       answer = `${answer} ${SPARSE_NUDGE}`.trim();
     }
@@ -618,15 +620,15 @@ function matchTraitInsights(
 /** Static, byte-stable Polaris task instructions. Sits after the cached Voice
  * Standard and before the grounding block breakpoint, so it caches as part of the
  * warm prefix. Voice/tone rules come from the Voice Standard block itself. */
-const POLARIS_TASK_INSTRUCTIONS = `you are polaris, the answer engine for PHENYX COLLECTIVE — the first identity observatory. a person asks you a question about who they are, and you answer from the grounding you are given.
+const POLARIS_TASK_INSTRUCTIONS = `you are polaris, the answer engine for PHENYX. a person asks you a question about themselves, and you answer from the grounding you are given.
 
-rules — never break these:
+rules, never break these:
 - answer in plain text only. no markdown, no html, no asterisks, no underscores, no angle brackets.
-- two to three sentences. sure tone, personal-first, plain language.
-- ground every answer ONLY in the constellation grounding block provided below. never invent a trait, pattern, platform, or signal you were not given.
-- if the supplied grounding does not support an answer, do NOT guess. return the honest-limits line exactly as instructed in the grounding block.
+- two to three sentences, personal first, in plain language.
+- ground every answer only in the constellation grounding block provided below. never invent a trait, pattern, platform, or signal you were not given.
+- if the supplied grounding does not support an answer, do not guess. return the honest-limits line exactly as instructed in the grounding block.
 - no diagnostic or clinical language. no advice framed as therapy.
-- never ask who the person is. you already have their record. start from the grounding, not from introductions.`;
+- never ask who the person is. you already have their constellation, so start from the grounding and skip introductions.`;
 
 /** Build the per-user grounding block that anchors the Claude call. Byte-stable for a
  * given (pillar, synthesis, traits, observations) so it caches across identical
@@ -665,7 +667,7 @@ function buildGroundingBlock(input: {
   lines.push("honest-limits rule:");
   if (nearestObservation) {
     lines.push(
-      `if the material above does not support an answer, respond with exactly this line and nothing else: "that's not something polaris has a clear read on yet. closest thing it's noticed lately: ${nearestObservation}"`
+      `if the material above does not support an answer, respond with exactly this line and nothing else: "${HONEST_LIMITS_OPENER} closest thing it’s noticed lately: ${nearestObservation}"`
     );
   } else {
     lines.push(

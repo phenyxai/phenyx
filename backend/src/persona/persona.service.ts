@@ -36,7 +36,7 @@ scoring rules:
 
 for each pillar return:
 - score: integer 0-100
-- synthesis: one paragraph, written directly to the person as "you". no therapeutic language. no "journey", "authentic", "growth". specific to their data, never generic. make it feel like the constellation already knows them.
+- synthesis: one paragraph, written directly to the person as "you". no therapeutic language. no "journey", "authentic", "growth". specific to their data, never generic, reflecting back what their data shows.
 
 return only a valid json object in this exact shape, with no preamble, markdown or explanation:
 
@@ -242,7 +242,7 @@ export class PersonaService {
         // constellation_state only accepts integers 0..100.
         score: Math.round(Math.min(100, Math.max(0, raw.score))),
         // Plain-text guard — strip any markup the model slipped in.
-        synthesis: this.voiceStandard.sanitizeProse(raw.synthesis),
+        synthesis: this.voiceStandard.sanitizeProse(raw.synthesis, "pillar"),
       };
     }
     return Object.keys(out).length > 0 ? out : null;

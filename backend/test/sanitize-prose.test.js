@@ -13,8 +13,8 @@ test("strips HTML / <b> tags", () => {
 
 test("strips markdown bold asterisks", () => {
   assert.equal(
-    sanitizeProse("that's **a different ending** than you expected."),
-    "that's a different ending than you expected."
+    sanitizeProse("that’s **a different ending** than you expected."),
+    "that’s a different ending than you expected."
   );
 });
 
@@ -31,7 +31,7 @@ test("strips stray angle brackets", () => {
 
 test("leaves clean plain-text prose untouched", () => {
   const clean =
-    "those songs were never comfort. they're a reset button. you reach for them before your best decisions.";
+    "those songs were never comfort. they’re a reset button. you reach for them before your best decisions.";
   assert.equal(sanitizeProse(clean), clean);
 });
 
