@@ -258,8 +258,10 @@ export class TraitProfileService {
   /** Lowercased set of the user's existing insights, for dedup on generation. */
   private async loadExistingInsights(userId: string): Promise<Set<string>> {
     const rows = await this.loadTraitRows(userId);
+    // Rows saved before PHE-105 have older punctuation and casing, so normalize
+    // them the way new insights are before comparing.
     return new Set(
-      rows.map((r) => (r.insight ?? "").toLowerCase()).filter(Boolean)
+      rows.map((r) => this.voiceStandard.sanitizeProse(r.insight ?? "")).filter(Boolean)
     );
   }
 

@@ -15,6 +15,7 @@
 import { parseArgs } from "node:util";
 import { createClient } from "@supabase/supabase-js";
 import { EncryptionService } from "../src/common/encryption.service";
+import { HONEST_LIMITS_OPENER, SPARSE_NUDGE } from "../src/polaris/polaris-copy";
 import {
   sanitizeProse,
   voiceViolations,
@@ -48,11 +49,17 @@ async function main() {
     auth: { persistSession: false },
   });
 
-  // Newest rows first, narrowed by --user / --since.
-  const load = async (table: string, columns: string, timeColumn = "created_at") => {
+  // Newest rows first, narrowed by --user / --since and any exact-match filter.
+  const load = async (
+    table: string,
+    columns: string,
+    timeColumn = "created_at",
+    match: Record<string, string> = {}
+  ) => {
     let q = supabase
       .from(table)
       .select(columns)
+      .match(match)
       .order(timeColumn, { ascending: false })
       .limit(Number(args.limit));
     if (args.user) q = q.eq("user_id", args.user);
@@ -78,8 +85,12 @@ async function main() {
 
   if (ENCRYPTION_KEY) {
     const encryption = new EncryptionService({ get: () => ENCRYPTION_KEY } as any);
-    for (const row of await load("polaris_messages", "body, role")) {
-      if (row.role === "assistant") samples.push(["polaris", encryption.decrypt(row.body)]);
+    for (const row of await load("polaris_messages", "body", "created_at", { role: "assistant" })) {
+      // Same as the answer engine: the honest-limits line and the appended sparse
+      // nudge are fixed copy, so only the model's own words are checked.
+      const body = sanitizeProse(encryption.decrypt(row.body));
+      if (body.startsWith(HONEST_LIMITS_OPENER)) continue;
+      samples.push(["polaris", body.replace(SPARSE_NUDGE, "").trim()]);
     }
   } else {
     console.log("ENCRYPTION_KEY not set, skipping polaris replies");

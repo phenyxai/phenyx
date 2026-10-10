@@ -13,7 +13,8 @@ const logger = new Logger("VoiceStandard");
  *
  * Then applies the voice fixes that are safe to make blind: all lowercase with
  * PHENYX in caps, typographic apostrophes, and em dashes (or spaced hyphens and
- * en dashes) turned into commas. Year spans keep the spaced en dash (PHE-88).
+ * en dashes) turned into commas, or dropped at a line edge. Year spans keep the
+ * spaced en dash (PHE-88).
  * Every other voice rule can't be fixed blind, so `voiceViolations` reports it
  * and `sanitizeProse` logs it for review when the caller names the surface.
  *
@@ -31,16 +32,17 @@ export function sanitizeProse(text: string, surface?: VoiceSurface): string {
     // ponytail: every straight quote becomes ’, so a rare opening single quote does too
     .replace(/'/g, "’")
     .replace(DATE_SPAN, "$1 – $2") // year spans read "2016 – 2026"
-    .replace(/(\d)\s*—\s*(\d)/g, "$1–$2") // other number ranges keep a dash
-    .replace(/\s*—\s*|\s+[-–]\s+(?!\d)/g, ", ") // dashes between clauses become commas
-    .replace(/,\s*([,.;:!?])/g, "$1") // a dash before punctuation leaves no stray comma
-    .replace(/^,\s*/gm, "")
+    // Dash rules match spaces and tabs only, so lines and paragraphs keep their breaks.
+    .replace(/(\d)[ \t]*—[ \t]*(\d)/g, "$1–$2") // other number ranges keep a dash
+    .replace(/^[ \t]*—[ \t]*|[ \t]*—[ \t]*$|[ \t]+[-–][ \t]*$/gm, "") // a dash at a line edge just goes
+    .replace(/[ \t]*—[ \t]*|[ \t]+[-–][ \t]+(?!\d)/g, ", ") // dashes between clauses become commas
+    .replace(/,[ \t]*([,.;:!?])/g, "$1") // a dash before punctuation leaves no stray comma
     .replace(/[ \t]{2,}/g, " ") // collapse runs of spaces left by removals
     .trim();
   if (surface) {
     for (const v of voiceViolations(clean, surface)) {
-      // Rule + a short excerpt only, never the full text or the user id.
-      logger.warn(`[voice] ${surface} ${v.rule}: "${v.excerpt.slice(0, 60)}"`);
+      // Surface and rule only: the prose itself can be personal (polaris is encrypted at rest).
+      logger.warn(`[voice] ${surface} ${v.rule}`);
     }
   }
   return clean;
@@ -63,11 +65,17 @@ export type VoiceSurface =
   | "observation"
   | "polaris";
 
-/** Sentence caps that match each surface's task prompt. Unlisted surfaces cap by lines or paragraphs instead. */
-const SENTENCE_LIMITS: Partial<Record<VoiceSurface, number>> = {
-  trait: 3,
-  observation: 3,
-  polaris: 3,
+type LengthUnit = "sentences" | "lines" | "paragraphs";
+
+/** Length caps that match each surface's task prompt. */
+const LIMITS: Record<VoiceSurface, Partial<Record<LengthUnit, number>>> = {
+  pillar: { paragraphs: 1 },
+  portrait: { paragraphs: 2 },
+  trait: { sentences: 3 },
+  mantra: { lines: 2 },
+  foresight: { lines: 1 },
+  observation: { sentences: 3 },
+  polaris: { sentences: 3 },
 };
 
 /** Rules a regex can spot but not safely rewrite. Text is already lowercased with ’ apostrophes. */
@@ -76,9 +84,15 @@ const RULES: Array<[rule: string, pattern: RegExp]> = [
   ["not-x-but-y", /\b(?:it|this|that)’s\s+not\b[^.!?]*?[,;:]\s*(?:it|this|that)’s\b/],
   ["not-x-but-y", /\bnot\s+(?:a\s+|an\s+|the\s+)?\w+\s+but\s/],
   ["accounts", /\baccounts?\b/],
-  ["record", /\brecord(?:s|ed|ing)?\b/],
-  ["place-abbreviation", /\b(?:la|nyc|ny|sf|dc)\b|\b(?:l\.a|d\.c)\./],
-  ["declares", /\byou(?:\s+are|’re)\s+(?:a|an|someone|somebody|the\s+(?:kind|type|sort)\s+of)\b/],
+  // The noun only: "you record music at night" is fine.
+  ["record", /\b(?:your|the|a|their|this|that|any|no)\s+records?\b/],
+  // "la" and friends only where a place fits, so "ooh la la" passes.
+  ["place-abbreviation", /\bnyc\b|\b(?:in|to|from|near|around|outside|across|at)\s+(?:la|ny|sf|dc|l\.a\.|d\.c\.)(?!\w)/],
+  // "you’re a builder" declares; "you are a few steps from it" does not.
+  [
+    "declares",
+    /\byou(?:\s+are|’re)\s+(?:(?:a|an)\s+(?!(?:few|little|lot|bit|couple|long|short|step|while|way|part|moment|day|week|month|year)\b)\w+|(?:someone|somebody)\b|the\s+(?:kind|type|sort)\s+of\b)/,
+  ],
 ];
 
 /**
@@ -105,9 +119,14 @@ export function voiceViolations(
     }
   }
 
-  const limit = surface && SENTENCE_LIMITS[surface];
-  if (limit && countSentences(text) > limit) {
-    out.push({ rule: "length", excerpt: `${countSentences(text)} sentences, limit ${limit}` });
+  const counts: Record<LengthUnit, number> = {
+    sentences: countSentences(text),
+    lines: text.split("\n").filter((l) => l.trim()).length,
+    paragraphs: text.split(/\n\s*\n/).filter((p) => p.trim()).length,
+  };
+  for (const [unit, max] of Object.entries(surface ? LIMITS[surface] : {})) {
+    const n = counts[unit as LengthUnit];
+    if (n > max) out.push({ rule: "length", excerpt: `${n} ${unit}, limit ${max}` });
   }
   return out;
 }

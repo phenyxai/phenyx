@@ -20,6 +20,18 @@ test("keeps number ranges, year spans and hyphenated words", () => {
   assert.equal(sanitizeProse("a cross-platform pattern"), "a cross-platform pattern");
 });
 
+test("keeps line and paragraph breaks around dashes", () => {
+  assert.equal(
+    sanitizeProse("you keep showing up —\nit keeps showing up for you."),
+    "you keep showing up\nit keeps showing up for you."
+  );
+  assert.equal(
+    sanitizeProse("the first part ends here —\n\n— the second begins here."),
+    "the first part ends here\n\nthe second begins here."
+  );
+  assert.equal(sanitizeProse("- one thing\n- another thing"), "- one thing\n- another thing");
+});
+
 test("still strips markup", () => {
   assert.equal(sanitizeProse("**you** <b>keep</b> _going_"), "you keep going");
 });
@@ -51,10 +63,16 @@ test("flags what it can't fix", () => {
   assert.deepEqual(rules("you’re a natural builder."), ["declares"]);
   assert.deepEqual(rules("you build. you ship. you move on. it shows in your work."), ["choppy"]);
   assert.deepEqual(rules("you build. you ship. you rest. and then you start all over again.", "polaris"), ["choppy", "length"]);
+  assert.deepEqual(rules("you keep returning to it.\n\nand it keeps returning to you.", "pillar"), ["length"]);
+  assert.deepEqual(rules("you keep showing up.\nit shows up for you.\nand it stays.", "mantra"), ["length"]);
+  assert.deepEqual(rules("you keep moving toward it,\nand it seems close now.", "foresight"), ["length"]);
 });
 
 test("leaves ordinary phrasing alone", () => {
   assert.deepEqual(rules("you’re not sure yet, but you keep going back to it."), []);
   assert.deepEqual(rules("if you are in a difficult moment, reach out to someone."), []);
   assert.deepEqual(rules("lately the plan has been to move to los angeles."), []);
+  assert.deepEqual(rules("ooh la la, you love paris."), []);
+  assert.deepEqual(rules("you are a few steps from it."), []);
+  assert.deepEqual(rules("you record music at night."), []);
 });
