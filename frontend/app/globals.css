@@ -475,10 +475,11 @@
    The block between "generated from the export" markers is the export's own
    cascade, flattened: for every landing element, the declaration that wins in
    the export at each of 26 widths from 1600 to 360, re-emitted with the media
-   condition it came from and ordered so the same rule wins here. Edit it by
-   regenerating from the next export rather than by hand. Everything after it
-   (states, motion, reveal) is ported by hand from the export's scripts and its
-   v600–v740 passes. */
+   condition it came from and ordered so the same rule wins here. Everything
+   after it (states, motion, reveal) is ported by hand from the export's scripts
+   and its v600–v740 passes. PHE-109 moved it to the Oct 4 reference
+   (phenyx_landing.html) by hand, since no generator ships with the repo: those
+   edits sit in place of the rules they replace. */
 .landing-vnext {
   --s: #afcbff;
   --s-rgb: 175, 203, 255;
@@ -544,13 +545,16 @@
 
 /* ---- generated from the export: begin ---- */
 .landing-vnext__nav { margin: 0px auto; gap: clamp(20px, 3vw, 48px); padding-top: 10px; padding-bottom: 10px; flex-shrink: 0; position: sticky; top: 0px; left: auto; transform: none; z-index: 100; display: flex; align-items: center; justify-content: space-between; right: auto; }
-.landing-vnext__nav::before { background: rgb(8, 8, 8); content: ""; position: absolute; top: 0px; right: auto; bottom: 0px; left: 50%; transform: translateX(-50%); width: 100vw; z-index: -1; backdrop-filter: blur(22px) saturate(120%); border-bottom: 1px solid rgba(255, 253, 253, 0.055); }
+.landing-vnext__nav::before { background: linear-gradient(180deg, rgba(8, 8, 8, 0.92) 0%, rgba(8, 8, 8, 0.78) 45%, rgba(8, 8, 8, 0.32) 78%, rgba(8, 8, 8, 0) 100%); content: ""; position: absolute; top: 0px; right: auto; left: 50%; transform: translateX(-50%); width: 100vw; height: calc(100% + 26px); z-index: -1; pointer-events: none; transition: background 0.45s ease, height 0.45s ease; }
+.landing-vnext__nav::after { background: linear-gradient(180deg, rgba(8, 8, 9, 0.42) 0%, rgba(8, 8, 9, 0.3) 60%, rgba(8, 8, 9, 0) 100%); content: ""; position: absolute; top: 0px; right: auto; left: 50%; transform: translateX(-50%); width: 100vw; height: calc(100% + 30px); z-index: -1; pointer-events: none; -webkit-backdrop-filter: blur(16px) saturate(1.1); backdrop-filter: blur(16px) saturate(1.1); -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 100%); mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 100%); opacity: 0; transition: opacity 0.6s cubic-bezier(0.22, 0.61, 0.36, 1); }
+.landing-vnext__nav[data-scrolled="true"]::before { background: linear-gradient(180deg, rgba(8, 8, 8, 0.5) 0%, rgba(8, 8, 8, 0.3) 55%, rgba(8, 8, 8, 0) 100%); height: calc(100% + 18px); }
+.landing-vnext__nav[data-scrolled="true"]::after { opacity: 1; }
 .landing-vnext__nav-logo { font: inherit; margin: 0px; padding: 5px 0px; gap: var(--ph-lockup-gap); flex: 0 0 auto; text-decoration: none; font-style: inherit; font-weight: inherit; font-size: inherit; line-height: inherit; display: flex; align-items: center; min-height: 40px; height: 32px; }
 .landing-vnext__nav .landing-vnext__brand-dot { margin: 0px; padding: 0px; border-radius: 0px; border: 0px none currentcolor; overflow: visible; flex: 0 0 24px; animation: none auto; position: relative; width: 24px; height: 24px; transform: none; opacity: 1; display: inline-block; background-image: url("/brand/orbit-mark.png"); background-size: contain; background-repeat: no-repeat; background-attachment: initial; background-origin: initial; background-clip: initial; background-color: initial; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; box-shadow: none; filter: none; isolation: isolate; background-position: center center; }
 .landing-vnext__nav-word { margin: 0px; padding: 0px; white-space: nowrap; font-size: var(--ph-lockup-font); font-weight: 600; letter-spacing: var(--ph-lockup-tracking); color: rgba(255, 253, 253, 0.94); text-transform: uppercase; display: inline-block; line-height: normal; }
 .landing-vnext__nav-links { margin: 0px; padding: 0px; gap: clamp(18px, 2.2vw, 30px); flex: 0 1 auto; display: flex; align-items: center; min-width: 0px; }
 .landing-vnext__nav-links a { font: inherit; margin: 0px; padding: 10px 0px; white-space: nowrap; text-decoration: none; transition: color 0.25s; font-style: inherit; font-weight: 400; font-size: 13.5px; line-height: 1.4; position: relative; color: rgba(255, 253, 253, 0.62); letter-spacing: 0.05em; min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 0px; }
-.landing-vnext__nav-links a::after { transition: opacity 0.3s, transform 0.3s; background: var(--s); content: ""; position: absolute; left: 0px; right: 0px; bottom: 0px; height: 1px; opacity: 0; transform: scaleX(0.4); transform-origin: center center; }
+.landing-vnext__nav-links a::after { transition: opacity 0.3s, transform 0.3s; background: var(--s); content: ""; position: absolute; left: 0px; right: 0px; bottom: 9px; height: 1px; opacity: 0; transform: scaleX(0.4); transform-origin: center center; }
 .landing-vnext__nav-enter { font: inherit; margin: 0px; padding: 8px 18px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.18); flex: 0 0 auto; white-space: nowrap; transition: all 0.25s; background: none; font-style: inherit; font-weight: 400; font-size: 13.5px; line-height: inherit; color: rgba(255, 253, 253, 0.92); border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; letter-spacing: 0.02em; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; box-shadow: none; }
 .landing-vnext__menu-button { font: inherit; margin: 0px; padding: 0px; border-radius: 0px; border: 0px none currentcolor; gap: 5px; flex: 0 0 44px; transition: all 0.25s; background: none; font-style: inherit; font-weight: inherit; font-size: inherit; line-height: inherit; width: 44px; height: 44px; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; display: none; flex-direction: column; align-items: center; justify-content: center; align-self: center; box-shadow: none; }
 .landing-vnext__menu-button span { margin: 0px; padding: 0px; border-radius: 999px; transition: all 0.3s; background: var(--txt); width: 18px; height: 1px; }
