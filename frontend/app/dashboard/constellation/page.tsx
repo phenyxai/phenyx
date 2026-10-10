@@ -2,11 +2,14 @@
 
 // PHE-74 / PHE-93 — Constellation tab.
 //
-// Header (eyebrow + age line), then the sky and the reading panel. From 981px
-// they sit side by side: the sky is sticky, the panel is a plain column that
-// flows with the page. Under 981px the panel sits below the sky and is brought
-// into view when a point opens. The weekly timeline and "what moved" left this
-// tab in v244; their components stay in the repo, unmounted.
+// Header (eyebrow + age line), then the sky and the reading panel. PHE-100:
+// below 1024px the sky takes the top ~65% of the viewport (never full height)
+// with the panel under it; from 1024px the Big Dipper sits in a sticky
+// column beside a 440px panel, so a point and its reading are seen together.
+// Opening a point never scrolls the page: the panel swaps in place (fade out,
+// then float in), and the map stays where it is. The weekly timeline and
+// "what moved" left this tab in v244; their components stay in the repo,
+// unmounted.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConstellationCanvas } from "@/components/phenyx/constellation-canvas";
@@ -19,8 +22,8 @@ import {
   type Pillar,
 } from "@/lib/constellation";
 
-/** Below this the panel sits under the sky instead of beside it. */
-const STACKED_QUERY = "(max-width: 980px)";
+/** Fade-out time for an in-place panel swap, before the new view floats in. */
+const SWAP_OUT_MS = 180;
 
 export default function ConstellationTabPage() {
   const [data, setData] = useState<ConstellationData | null>(null);
@@ -70,20 +73,34 @@ export default function ConstellationTabPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [closePoint, selectedClusterId, selectedPillar]);
 
-  // On a phone the panel sits under the sky, so opening a point brings the
-  // reading into view rather than leaving it below the fold.
+  // In-place swap: the panel fades fully out, swaps to the new view, then
+  // floats back in. The map never moves. Only when the reader had scrolled
+  // into the panel (its top above the viewport, e.g. a row deep in the
+  // overview list) does its top come back into view, and only while it is
+  // hidden, so nothing visible jumps.
+  const [shown, setShown] = useState<{ pillar: Pillar | null; cluster: string | null }>({
+    pillar: null,
+    cluster: null,
+  });
+  const [swapping, setSwapping] = useState(false);
   useEffect(() => {
-    if (!selectedPillar) return;
-    if (!window.matchMedia(STACKED_QUERY).matches) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (shown.pillar === selectedPillar && shown.cluster === selectedClusterId) return;
+    const next = { pillar: selectedPillar, cluster: selectedClusterId };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(next);
+      return;
+    }
+    setSwapping(true);
     const timer = window.setTimeout(() => {
-      panelRef.current?.scrollIntoView({
-        behavior: reduced ? "auto" : "smooth",
-        block: "nearest",
-      });
-    }, 200);
+      const panel = panelRef.current;
+      if (panel && panel.getBoundingClientRect().top < 0) {
+        panel.scrollIntoView({ block: "start" });
+      }
+      setShown(next);
+      setSwapping(false);
+    }, SWAP_OUT_MS);
     return () => window.clearTimeout(timer);
-  }, [selectedPillar]);
+  }, [selectedPillar, selectedClusterId, shown]);
 
   const age = data ? constellationAge(data) : null;
 
@@ -106,8 +123,13 @@ export default function ConstellationTabPage() {
         )}
       </header>
 
-      <div className="grid grid-cols-1 items-start gap-[22px] px-6 pb-10 min-[981px]:grid-cols-[minmax(0,1fr)_400px] min-[981px]:gap-[30px] lg:px-10">
-        <div className="relative h-[clamp(420px,52vh,560px)] min-w-0 min-[981px]:sticky min-[981px]:top-5 min-[981px]:h-[clamp(520px,68vh,760px)]">
+      {/* The 1024px split lives in globals.css (.constellation-split), not in
+          lg: classes, so the onairos SDK's stylesheet cannot override it. */}
+      <div className="constellation-split flex flex-col items-center gap-[22px] px-6 pb-10 lg:px-10">
+        {/* Phones (with the dashboard's top bar and 72px bottom nav): the map
+            leaves room under it for the opened point's name and the start of
+            its story, about 65% of the space between the two bars. */}
+        <div className="constellation-sky relative h-[clamp(320px,65svh,760px)] w-full [@media(max-width:760px)]:h-[clamp(300px,calc(100svh-370px),620px)]">
           {data && (
             <ConstellationCanvas
               data={data}
@@ -118,12 +140,17 @@ export default function ConstellationTabPage() {
           )}
         </div>
 
-        <aside ref={panelRef} className="w-full min-w-0">
+        <aside
+          ref={panelRef}
+          className={`w-full min-w-0 max-w-[640px] transition-[opacity,transform,filter] duration-200 ease-out motion-reduce:transition-none ${
+            swapping ? "translate-y-1 opacity-0 blur-[2px]" : "translate-y-0 opacity-100 blur-0"
+          }`}
+        >
           {data ? (
             <ConstellationPanel
               data={data}
-              selectedPillar={selectedPillar}
-              selectedClusterId={selectedClusterId}
+              selectedPillar={shown.pillar}
+              selectedClusterId={shown.cluster}
               onSelectPillar={openPillar}
               onSelectCluster={setSelectedClusterId}
               onBack={back}
