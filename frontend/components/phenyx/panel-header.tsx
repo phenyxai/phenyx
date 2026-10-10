@@ -14,7 +14,7 @@ export function PanelHeader({
 }) {
   return (
     <div className="mb-[clamp(26px,3vw,40px)] max-w-[640px]">
-      <p className="mb-[14px] text-[11px] font-semibold tracking-[0.18em] text-[rgba(var(--s-rgb),0.9)] uppercase">
+      <p className="mb-[14px] text-[11px] font-semibold tracking-[0.18em] text-[rgba(var(--ph-accent-rgb),0.9)] uppercase">
         {eyebrow}
       </p>
       <h1

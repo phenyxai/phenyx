@@ -94,13 +94,13 @@ function injectStyles() {
       to { opacity: 1; transform: none; }
     }
     .phenyx-ev-chain { list-style: none; margin: 2px 0 0; padding: 0; counter-reset: evstep; }
-    .phenyx-ev-chain > li { position: relative; padding: 0 0 22px 26px; border-left: 1px solid rgba(var(--s-rgb, 85, 153, 255), .22); margin-left: 5px; }
+    .phenyx-ev-chain > li { position: relative; padding: 0 0 22px 26px; border-left: 1px solid rgba(var(--ph-accent-rgb), .22); margin-left: 5px; }
     .phenyx-ev-chain > li:last-child { padding-bottom: 2px; border-left-color: transparent; }
     .phenyx-ev-chain > li::before {
       counter-increment: evstep; content: counter(evstep);
       position: absolute; left: -8px; top: 0; width: 16px; height: 16px; border-radius: 50%;
-      background: #080808; border: 1px solid rgba(var(--s-rgb, 85, 153, 255), .4);
-      color: var(--s, #5599FF); font-size: 9.5px; display: flex; align-items: center; justify-content: center;
+      background: var(--ph-black); border: 1px solid rgba(var(--ph-accent-rgb), .4);
+      color: var(--ph-accent); font-size: 9.5px; display: flex; align-items: center; justify-content: center;
       font-variant-numeric: tabular-nums;
     }
     .phenyx-ev-locked .phenyx-ev-btn {
@@ -256,7 +256,7 @@ export function EvidenceTrace({
                       className="phenyx-ev-rec"
                       style={{
                         ...recRow,
-                        borderTop: i === 0 ? "none" : "1px solid #131313",
+                        borderTop: i === 0 ? "none" : "1px solid rgba(255,253,253,.05)",
                         paddingTop: i === 0 ? 0 : 8,
                       }}
                     >
@@ -298,7 +298,7 @@ export function EvidenceTrace({
 }
 
 function EvidenceChartFigure({ chart }: { chart: EvidenceChart }) {
-  const S = "var(--s, #5599FF)";
+  const S = "var(--ph-accent)";
   const G = "rgba(255,253,253,.13)";
   const F = "rgba(255,253,253,.4)";
   const fmt = (x: number) => (x >= 1000 ? x.toLocaleString() : String(x));
@@ -521,7 +521,7 @@ function EvidenceChartFigure({ chart }: { chart: EvidenceChart }) {
 
 const rowWrap: CSSProperties = {
   marginTop: 11,
-  borderTop: "1px solid #171717",
+  borderTop: "1px solid rgba(255,253,253,.06)",
   paddingTop: 9,
 };
 
@@ -543,7 +543,7 @@ const btnStyle: CSSProperties = {
 };
 
 const kindStyle: CSSProperties = {
-  color: "var(--s, #5599FF)",
+  color: "var(--ph-accent)",
   opacity: 0.75,
   letterSpacing: "0.09em",
 };
@@ -564,7 +564,7 @@ const lockStyle: CSSProperties = {
   marginLeft: "auto",
   fontSize: 9,
   letterSpacing: "0.08em",
-  color: "var(--s, #5599FF)",
+  color: "var(--ph-accent)",
   opacity: 0.75,
   flexShrink: 0,
 };
@@ -574,7 +574,9 @@ const stepStyle: CSSProperties = {
   fontSize: 10,
   letterSpacing: "0.09em",
   textTransform: "uppercase",
-  color: "rgba(255,253,253,.52)",
+  // PHE-98: section labels carry the accent.
+  color: "var(--ph-accent)",
+  opacity: 0.8,
   margin: "1px 0 8px",
 };
 
@@ -600,7 +602,7 @@ const recLbl: CSSProperties = {
 const recLblCount: CSSProperties = {
   fontSize: 9.5,
   letterSpacing: "0.06em",
-  color: "rgba(var(--s-rgb, 85, 153, 255), .55)",
+  color: "rgba(var(--ph-accent-rgb), .55)",
   textTransform: "none",
 };
 
@@ -621,7 +623,7 @@ const recWhen: CSSProperties = {
 };
 
 const recSrc: CSSProperties = {
-  color: "var(--s, #5599FF)",
+  color: "var(--ph-accent)",
   opacity: 0.7,
   fontSize: 10,
   letterSpacing: "0.06em",
@@ -663,7 +665,7 @@ const noteStyle: CSSProperties = {
   margin: "20px 0 0",
   lineHeight: 1.7,
   paddingTop: 18,
-  borderTop: "1px solid #151515",
+  borderTop: "1px solid rgba(255,253,253,.06)",
   maxWidth: "62ch",
 };
 

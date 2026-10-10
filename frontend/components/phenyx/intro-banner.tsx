@@ -47,7 +47,7 @@ export function IntroBanner({ tab, copy, onDismiss, className }: IntroBannerProp
   return (
     <div
       role="note"
-      className={`animate-fade-in flex items-start justify-between gap-4 rounded-xl border border-[#1C1C1C] bg-[#0E0E0E] px-5 py-3.5${
+      className={`animate-fade-in flex items-start justify-between gap-4 rounded-xl border border-[#FFFDFD]/[0.075] bg-[#FFFDFD]/[0.025] px-5 py-3.5${
         className ? ` ${className}` : ""
       }`}
     >
@@ -58,7 +58,7 @@ export function IntroBanner({ tab, copy, onDismiss, className }: IntroBannerProp
         type="button"
         onClick={handleDismiss}
         aria-label="dismiss"
-        className="-mr-1 -mt-0.5 shrink-0 text-[16px] leading-none text-[#FFFDFD]/40 transition-colors hover:text-[#FFFDFD] motion-reduce:transition-none"
+        className="-mr-1 -mt-0.5 shrink-0 text-[16px] leading-none text-[#FFFDFD]/40"
       >
         ×
       </button>

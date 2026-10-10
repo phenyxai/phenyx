@@ -25,7 +25,7 @@ export function ProfileTierCard({
   const isPro = hasFullAccess(tier);
 
   return (
-    <div className="rounded-xl border border-[#1C1C1C] bg-[#0E0E0E] p-5">
+    <div className="rounded-xl border border-[#FFFDFD]/[0.08] bg-[#FFFDFD]/[0.02] p-5">
       <p
         className="text-[11px] font-medium uppercase tracking-[0.12em]"
         style={{ color: stellarColor }}
@@ -41,7 +41,8 @@ export function ProfileTierCard({
         <button
           type="button"
           onClick={onUpgrade}
-          className="mt-4 w-full rounded-full px-4 py-2.5 text-[13px] font-light lowercase tracking-wide text-[#0A0A0A] transition-opacity hover:opacity-90 motion-reduce:transition-none"
+          data-ph-hover="off"
+          className="mt-4 w-full rounded-full px-4 py-2.5 text-[13px] font-light lowercase tracking-wide text-ph-black transition-opacity hover:opacity-90 motion-reduce:transition-none"
           style={{ background: stellarColor }}
         >
           upgrade to pro

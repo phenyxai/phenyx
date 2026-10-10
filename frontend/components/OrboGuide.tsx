@@ -142,7 +142,7 @@ export function OrboGuide({ page, stellarColor, motivation, onComplete }: OrboGu
             position: "fixed",
             top: Math.min(position.top + 50, window.innerHeight - 200),
             left: Math.min(Math.max(position.left - 100, 16), window.innerWidth - 260),
-            background: "#0E0E0E",
+            background: "var(--ph-black)",
             border: `0.5px solid color-mix(in srgb, ${stellarColor} 35%, transparent)`,
             borderRadius: 12,
             padding: "16px 20px",
@@ -154,7 +154,7 @@ export function OrboGuide({ page, stellarColor, motivation, onComplete }: OrboGu
           <p
             style={{
               fontSize: 12,
-              color: "#FFFDFD",
+              color: "var(--ph-white)",
               fontWeight: 300,
               lineHeight: 1.7,
               margin: 0,

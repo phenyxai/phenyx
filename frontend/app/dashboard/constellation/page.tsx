@@ -113,7 +113,7 @@ export default function ConstellationTabPage() {
       />
 
       <header className="px-6 pb-5 pt-8 lg:px-10">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#FFFDFD]/52">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[rgba(var(--ph-accent-rgb),0.9)]">
           your constellation
         </p>
         {age && (

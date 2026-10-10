@@ -72,20 +72,20 @@ export function CloseAccountModal() {
         ].map((item) => (
           <li
             key={item}
-            className="relative py-1.5 pl-4 text-[12.5px] leading-snug text-[#FFFDFD]/70 before:absolute before:top-[13px] before:left-0 before:h-1 before:w-1 before:rounded-full before:bg-[#a06054]"
+            className="relative py-1.5 pl-4 text-[12.5px] leading-snug text-[#FFFDFD]/70 before:absolute before:top-[13px] before:left-0 before:h-1 before:w-1 before:rounded-full before:bg-ph-red/70"
           >
             {item}
           </li>
         ))}
       </ul>
 
-      <p className="mb-4 text-[12.5px] leading-relaxed text-[#888]">
+      <p className="mb-4 text-[12.5px] leading-relaxed text-[#FFFDFD]/55">
         all of it goes, and none of it comes back. if you want to keep any of
         it,{' '}
         <button
           type="button"
           onClick={() => openModal('data-management')}
-          className="cursor-pointer border-0 border-b border-[rgba(var(--s-rgb),0.35)] bg-transparent p-0 font-inherit text-[rgba(var(--s-rgb),0.9)]"
+          className="cursor-pointer border-0 border-b border-[rgba(var(--ph-accent-rgb),0.35)] bg-transparent p-0 font-inherit text-[rgba(var(--ph-accent-rgb),0.9)]"
         >
           export it first
         </button>
@@ -122,14 +122,14 @@ export function CloseAccountModal() {
         type="button"
         onClick={handleDelete}
         disabled={saving}
-        className="mt-1.5 w-full rounded-md border border-[#5a2a2a] bg-transparent px-4 py-3 text-[11px] text-[#c97a6a] disabled:opacity-50"
+        className="mt-1.5 w-full rounded-md border border-ph-red/30 bg-transparent px-4 py-3 text-[11px] text-ph-red/80 disabled:opacity-50"
       >
         {saving ? 'closing…' : 'delete my account'}
       </button>
       <button
         type="button"
         onClick={() => openModal('account')}
-        className="mt-2 w-full rounded-md border border-[#282828] bg-transparent px-4 py-3 text-[11px] text-[#FFFDFD]/60"
+        className="mt-2 w-full rounded-md border border-[#FFFDFD]/[0.12] bg-transparent px-4 py-3 text-[11px] text-[#FFFDFD]/60"
       >
         keep my account
       </button>

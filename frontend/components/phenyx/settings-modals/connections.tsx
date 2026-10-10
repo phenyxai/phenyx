@@ -77,17 +77,17 @@ export function ConnectionsModal() {
       />
 
       <section aria-label="currently connected" className="flex flex-col gap-2">
-        <p className="text-[9px] tracking-[0.14em] text-[#FFFDFD]/55 uppercase">
+        <p className="text-[9px] tracking-[0.14em] text-[rgba(var(--ph-accent-rgb),0.85)] uppercase">
           currently connected
         </p>
         {connected.length === 0 ? (
-          <p className="text-xs text-[#555]">no platforms connected.</p>
+          <p className="text-xs text-[#FFFDFD]/35">no platforms connected.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {connected.map((platform) => (
               <span
                 key={platform}
-                className="rounded-full border border-[#242424] bg-[#0d0d0d] px-3 py-1 text-[11px] lowercase text-[#FFFDFD]/70"
+                className="rounded-full border border-[rgba(var(--ph-accent-rgb),0.3)] bg-transparent px-3 py-1 text-[11px] lowercase text-[rgba(var(--ph-accent-rgb),0.9)]"
               >
                 {platform}
               </span>

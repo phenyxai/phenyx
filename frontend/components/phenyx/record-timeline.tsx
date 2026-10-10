@@ -25,7 +25,7 @@ export function RecordTimelineView({ timeline }: { timeline: RecordTimeline }) {
 
   return (
     <section className="mb-14">
-      <p className="mb-5 text-[11px] font-semibold uppercase tracking-[0.15em] text-[#FFFDFD]/52">
+      <p className="mb-5 text-[11px] font-semibold uppercase tracking-[0.15em] text-[rgba(var(--ph-accent-rgb),0.9)]">
         your timeline
       </p>
       {timeline.note && (
@@ -49,13 +49,13 @@ export function RecordTimelineView({ timeline }: { timeline: RecordTimeline }) {
               >
                 <div className="relative h-[288px] min-w-[720px]">
                   <div
-                    className="absolute top-[128px] h-px bg-[rgba(var(--s-rgb),0.35)]"
+                    className="absolute top-[128px] h-px bg-[rgba(var(--ph-accent-rgb),0.35)]"
                     style={{ left: "2%", right: "2%" }}
                   >
-                    <i className="absolute top-[-3.5px] left-0 h-2 w-2 rounded-full bg-[var(--s)]" />
-                    <i className="absolute top-[-3.5px] left-1/3 h-2 w-2 rounded-full bg-[var(--s)]" />
-                    <i className="absolute top-[-3.5px] left-2/3 h-2 w-2 rounded-full bg-[var(--s)]" />
-                    <i className="absolute top-[-3.5px] right-0 h-2 w-2 rounded-full bg-[var(--s)]" />
+                    <i className="absolute top-[-3.5px] left-0 h-2 w-2 rounded-full bg-[var(--ph-accent)]" />
+                    <i className="absolute top-[-3.5px] left-1/3 h-2 w-2 rounded-full bg-[var(--ph-accent)]" />
+                    <i className="absolute top-[-3.5px] left-2/3 h-2 w-2 rounded-full bg-[var(--ph-accent)]" />
+                    <i className="absolute top-[-3.5px] right-0 h-2 w-2 rounded-full bg-[var(--ph-accent)]" />
                   </div>
                   {timeline.return_line && (
                     <p className="absolute top-3.5 left-[4%] max-w-[26ch] text-[12px] leading-relaxed text-[#FFFDFD]/55">
@@ -65,7 +65,7 @@ export function RecordTimelineView({ timeline }: { timeline: RecordTimeline }) {
                   {timeline.eras.map((era) => (
                     <div
                       key={`${era.name}-${era.start}`}
-                      className="absolute bottom-[60px] h-px bg-[rgba(var(--s-rgb),0.55)]"
+                      className="absolute bottom-[60px] h-px bg-[rgba(var(--ph-accent-rgb),0.55)]"
                       style={{ left: `${era.start}%`, width: `${era.width}%` }}
                     >
                       <em className="absolute top-[-24px] left-0 whitespace-nowrap text-[12px] not-italic text-[#FFFDFD]/62">
@@ -79,7 +79,7 @@ export function RecordTimelineView({ timeline }: { timeline: RecordTimeline }) {
                       className="absolute top-2 bottom-11 border-l border-dashed border-[#FFFDFD]/22"
                       style={{ left: `${brk.at}%` }}
                     >
-                      <b className="absolute top-[-4px] left-2.5 whitespace-nowrap text-[12px] font-normal text-[var(--s)]">
+                      <b className="absolute top-[-4px] left-2.5 whitespace-nowrap text-[12px] font-normal text-[var(--ph-accent)]">
                         {brk.label}
                       </b>
                     </div>
@@ -88,7 +88,7 @@ export function RecordTimelineView({ timeline }: { timeline: RecordTimeline }) {
                   {timeline.span.map((year, i) => (
                     <span
                       key={year}
-                      className="absolute bottom-[18px] -translate-x-1/2 text-[12px] tabular-nums text-[#888]"
+                      className="absolute bottom-[18px] -translate-x-1/2 text-[12px] tabular-nums text-[#FFFDFD]/52"
                       style={{ left: `${YEAR_POS[i] ?? 97}%` }}
                     >
                       {year}
@@ -126,7 +126,7 @@ export function RecordTimelineView({ timeline }: { timeline: RecordTimeline }) {
                   <li
                     key={`${row.kind}-${row.name}`}
                     className={`flex justify-between gap-3 text-[13px] ${
-                      row.kind === "break" ? "text-[var(--s)]" : "text-[#FFFDFD]/70"
+                      row.kind === "break" ? "text-[var(--ph-accent)]" : "text-[#FFFDFD]/70"
                     }`}
                   >
                     <span>{row.name}</span>
@@ -144,8 +144,8 @@ export function RecordTimelineView({ timeline }: { timeline: RecordTimeline }) {
           {timeline.card && (
             <div className="mt-6 rounded-xl border border-[#FFFDFD]/8 bg-[#FFFDFD]/[0.02] px-5 py-5">
               <span
-                className="rounded-full px-3 py-1 text-[12px] lowercase text-[#0A0A0A]"
-                style={{ background: "var(--s, #5599FF)" }}
+                className="rounded-full px-3 py-1 text-[12px] lowercase text-ph-black"
+                style={{ background: "var(--ph-accent)" }}
               >
                 {timeline.card.tag}
               </span>
@@ -159,7 +159,7 @@ export function RecordTimelineView({ timeline }: { timeline: RecordTimeline }) {
                     {timeline.card.evidence.map((ev) => (
                       <li key={`${ev.when}-${ev.source}`} className="text-[13px] leading-relaxed">
                         <time className="text-[#FFFDFD]/45">{ev.when}</time>
-                        <span className="mx-2 text-[11px] lowercase text-[rgba(var(--s-rgb),0.7)]">
+                        <span className="mx-2 text-[11px] lowercase text-[rgba(var(--ph-accent-rgb),0.7)]">
                           {ev.source}
                         </span>
                         <p className="mt-0.5 text-[#FFFDFD]/70">{ev.text}</p>

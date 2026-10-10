@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
+// PHE-98: the accent comes from SessionColorProvider via --ph-accent.
+const ACCENT = "var(--ph-accent)";
+
 export default function UpgradeSuccessPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [stellarColor, setStellarColor] = useState("#5599FF");
 
   useEffect(() => {
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) setStellarColor(stored);
     setMounted(true);
 
     // Redirect to constellation after 5 seconds
@@ -28,18 +28,14 @@ export default function UpgradeSuccessPage() {
   return (
     <main
       className="min-h-screen flex flex-col items-center justify-center px-6"
-      style={{
-        background: "#0A0A0A",
-        color: "#FFFDFD",
-        "--color-stellar": stellarColor,
-      } as React.CSSProperties}
+      style={{ background: "var(--ph-black)", color: "var(--ph-white)" }}
     >
       {/* Success Icon */}
       <div
         className="w-20 h-20 rounded-full flex items-center justify-center mb-8"
         style={{
-          background: `radial-gradient(circle, ${stellarColor}20 0%, transparent 70%)`,
-          boxShadow: `0 0 60px ${stellarColor}30`,
+          background: "radial-gradient(circle, rgba(var(--ph-accent-rgb),0.125) 0%, transparent 70%)",
+          boxShadow: "0 0 60px rgba(var(--ph-accent-rgb),0.19)",
         }}
       >
         <svg
@@ -47,7 +43,7 @@ export default function UpgradeSuccessPage() {
           height="40"
           viewBox="0 0 24 24"
           fill="none"
-          stroke={stellarColor}
+          stroke={ACCENT}
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -59,33 +55,22 @@ export default function UpgradeSuccessPage() {
       <h1 style={{ fontSize: "24px", fontWeight: 300, marginBottom: "8px", textAlign: "center" }}>
         welcome to the expanded universe
       </h1>
-      <p style={{ fontSize: "13px", color: "#666", marginBottom: "32px", textAlign: "center", maxWidth: "400px" }}>
+      <p style={{ fontSize: "13px", color: "rgba(255,253,253,0.4)", marginBottom: "32px", textAlign: "center", maxWidth: "400px" }}>
         your subscription is now active. prepare to explore deeper dimensions of self-discovery.
       </p>
 
       <Link
         href="/dashboard/constellation"
-        className="px-8 py-3 rounded-lg text-sm transition-all"
+        className="px-8 py-3 rounded-lg text-sm transition-all hover:bg-[rgba(var(--ph-accent-rgb),0.08)]"
         style={{
-          background: "transparent",
-          border: `0.5px solid ${stellarColor}`,
-          color: stellarColor,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "#FFFDFD";
-          e.currentTarget.style.borderColor = "#FFFDFD";
-          e.currentTarget.style.color = "#0A0A0A";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.borderColor = stellarColor;
-          e.currentTarget.style.color = stellarColor;
+          border: `0.5px solid ${ACCENT}`,
+          color: ACCENT,
         }}
       >
         enter your constellation
       </Link>
 
-      <p style={{ fontSize: "10px", color: "#444", marginTop: "24px" }}>
+      <p style={{ fontSize: "10px", color: "rgba(255,253,253,0.27)", marginTop: "24px" }}>
         redirecting automatically in 5 seconds...
       </p>
     </main>

@@ -72,14 +72,14 @@ export function DataManagementModal() {
         <GhostButton
           onClick={handleExport}
           disabled={exporting}
-          className="self-start border-[#282828] text-[#ccc]"
+          className="self-start border-[#FFFDFD]/[0.12] text-[#FFFDFD]/80"
         >
           {exporting ? 'preparing…' : 'export everything'}
         </GhostButton>
       </div>
 
-      <div className="mt-2 border-t border-[#1c1414] pt-4">
-        <p className="mb-3 text-[11.5px] font-semibold tracking-[0.12em] text-[#a06054] uppercase">
+      <div className="mt-2 border-t border-ph-red/10 pt-4">
+        <p className="mb-3 text-[11.5px] font-semibold tracking-[0.12em] text-ph-red/70 uppercase">
           danger zone
         </p>
         <DangerConfirm

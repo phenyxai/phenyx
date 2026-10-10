@@ -25,6 +25,10 @@ import {
   type PillarDetail,
 } from "@/lib/constellation";
 
+// PHE-98: the panel paints with the session accent (--ph-accent, which
+// SessionColorProvider resolves from the profile), not the raw stellar_color.
+const ACCENT = "var(--ph-accent)";
+
 export interface ConstellationPanelProps {
   data: ConstellationData;
   selectedPillar: Pillar | null;
@@ -50,7 +54,7 @@ export function ConstellationPanel({
     if (cluster) {
       return (
         <ClusterDetail
-          stellar={data.stellar_color}
+          stellar={ACCENT}
           pillar={detail}
           cluster={cluster}
           onBack={onBack}
@@ -61,7 +65,7 @@ export function ConstellationPanel({
   if (selectedPillar) {
     return (
       <PillarDetailView
-        stellar={data.stellar_color}
+        stellar={ACCENT}
         detail={data.pillars[selectedPillar]}
         isPro={isPro}
         onBack={onBack}
@@ -100,7 +104,7 @@ function Overview({
           <li key={pillar}>
             <StoryRow
               detail={data.pillars[pillar]}
-              stellar={data.stellar_color}
+              stellar={ACCENT}
               onOpen={() => onSelectPillar(pillar)}
             />
           </li>
@@ -127,14 +131,14 @@ function StoryRow({
     <button
       type="button"
       onClick={onOpen}
-      className="w-full rounded-[12px] border border-[rgba(255,253,253,0.045)] px-5 py-[18px] text-left transition-colors hover:border-[rgba(var(--s-rgb),0.35)] hover:bg-[#0e0e0e] motion-reduce:transition-none max-[760px]:px-[18px] max-[760px]:py-4"
+      className="w-full rounded-[12px] border border-[rgba(255,253,253,0.045)] px-5 py-[18px] text-left hover:bg-[#FFFDFD]/[0.02] max-[760px]:px-[18px] max-[760px]:py-4"
     >
       <div className="mb-1.5 flex items-center gap-2.5">
-        <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[rgba(var(--s-rgb),0.9)]">
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[rgba(var(--ph-accent-rgb),0.9)]">
           {pillarLabel(detail.pillar)}
         </span>
         {newCount > 0 && (
-          <span className="ml-auto flex items-center gap-1.5 rounded-full border border-[rgba(var(--s-rgb),0.28)] px-[7px] py-[2px] text-[9.5px] uppercase tracking-[0.08em] text-[rgba(var(--s-rgb),0.75)]">
+          <span className="ml-auto flex items-center gap-1.5 rounded-full border border-[rgba(var(--ph-accent-rgb),0.28)] px-[7px] py-[2px] text-[9.5px] uppercase tracking-[0.08em] text-[rgba(var(--ph-accent-rgb),0.75)]">
             <PulsingDot color={stellar} />
             {newCount} new
           </span>
@@ -166,9 +170,9 @@ function StepButton({
       aria-disabled={!to}
       onClick={() => to && onSelect(to)}
       aria-label={to ? `${direction} point: ${pillarLabel(to)}` : `no ${direction} point`}
-      className={`relative flex h-7 w-7 items-center justify-center rounded-full border border-[#FFFDFD]/12 text-[13px] transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] motion-reduce:transition-none ${
+      className={`relative flex h-7 w-7 items-center justify-center rounded-full border border-[#FFFDFD]/12 text-[13px] before:absolute before:-inset-2 before:content-[''] ${
         to
-          ? "text-[#FFFDFD]/55 hover:border-[rgba(var(--s-rgb),0.6)] hover:text-[rgb(var(--s-rgb))]"
+          ? "text-[#FFFDFD]/55"
           : "cursor-default text-[#FFFDFD]/20"
       }`}
     >
@@ -202,7 +206,7 @@ function PillarDetailView({
       <button
         type="button"
         onClick={onBack}
-        className="self-start text-[12px] font-light lowercase text-[#FFFDFD]/45 transition-colors hover:text-[#FFFDFD]/80 motion-reduce:transition-none"
+        className="self-start text-[12px] font-light lowercase text-[#FFFDFD]/45"
       >
         ← all pillars
       </button>
@@ -213,7 +217,7 @@ function PillarDetailView({
         <div className="flex items-center gap-2">
           <StepButton to={ALL_PILLARS[index - 1]} direction="previous" onSelect={onSelectPillar} />
           <span
-            className="rounded-full px-3 py-1 text-[12px] lowercase text-[#0A0A0A]"
+            className="rounded-full px-3 py-1 text-[12px] lowercase text-ph-black"
             style={{ background: stellar }}
           >
             {pillarLabel(detail.pillar)}
@@ -242,7 +246,7 @@ function PillarDetailView({
             {detail.source_platforms.map((platform) => (
               <span
                 key={platform}
-                className="rounded-full border border-[#FFFDFD]/12 px-2.5 py-0.5 text-[11px] lowercase text-[#FFFDFD]/55"
+                className="rounded-full border border-[rgba(var(--ph-accent-rgb),0.3)] px-2.5 py-0.5 text-[11px] lowercase text-[rgba(var(--ph-accent-rgb),0.85)]"
               >
                 {platform}
               </span>
@@ -258,7 +262,7 @@ function PillarDetailView({
         <p
           className={
             readTogether.locked
-              ? "text-[11.5px] font-light italic tracking-[0.04em] text-[rgba(var(--s-rgb),0.62)]"
+              ? "text-[11.5px] font-light italic tracking-[0.04em] text-[rgba(var(--ph-accent-rgb),0.62)]"
               : "text-[13px] font-light italic leading-[1.75] text-[#FFFDFD]/50"
           }
         >
@@ -300,10 +304,10 @@ function ClusterCard({
     <button
       type="button"
       onClick={onOpen}
-      className={`rounded-[10px] border bg-[#0c0c0c] px-4 py-3.5 text-left transition-colors hover:border-[rgba(var(--s-rgb),0.35)] hover:bg-[#0f0f0f] motion-reduce:transition-none ${
+      className={`rounded-[10px] border bg-[#FFFDFD]/[0.01] px-4 py-3.5 text-left hover:bg-[#FFFDFD]/[0.025] ${
         cluster.has_new
-          ? "border-l-2 border-[#1e1e1e] border-l-[var(--s)]"
-          : "border-[#1e1e1e]"
+          ? "border-l-2 border-[#FFFDFD]/[0.09] border-l-[var(--ph-accent)]"
+          : "border-[#FFFDFD]/[0.09]"
       }`}
     >
       <p className="mb-1 text-[13px] font-medium lowercase tracking-wide text-[#FFFDFD]/80">
@@ -314,7 +318,7 @@ function ClusterCard({
           {cluster.preview}
         </p>
       )}
-      <p className="mt-2 text-[11px] tracking-wide text-[rgba(var(--s-rgb),0.6)]">
+      <p className="mt-2 text-[11px] tracking-wide text-[rgba(var(--ph-accent-rgb),0.6)]">
         {count} {count === 1 ? "signal" : "signals"}
       </p>
     </button>
@@ -340,14 +344,14 @@ function ClusterDetail({
       <button
         type="button"
         onClick={onBack}
-        className="self-start text-[12px] font-light lowercase text-[#FFFDFD]/45 transition-colors hover:text-[#FFFDFD]/80 motion-reduce:transition-none"
+        className="self-start text-[12px] font-light lowercase text-[#FFFDFD]/45"
       >
         ← {pillarLabel(pillar.pillar)}
       </button>
 
       <div className="flex items-center justify-between gap-3">
         <span
-          className="rounded-full px-3 py-1 text-[12px] lowercase text-[#0A0A0A]"
+          className="rounded-full px-3 py-1 text-[12px] lowercase text-ph-black"
           style={{ background: stellar }}
         >
           {pillarLabel(pillar.pillar)}
@@ -368,7 +372,7 @@ function ClusterDetail({
           {cluster.source_platforms.map((platform) => (
             <span
               key={platform}
-              className="rounded-full border border-[#FFFDFD]/12 px-2.5 py-0.5 text-[11px] lowercase text-[#FFFDFD]/55"
+              className="rounded-full border border-[rgba(var(--ph-accent-rgb),0.3)] px-2.5 py-0.5 text-[11px] lowercase text-[rgba(var(--ph-accent-rgb),0.85)]"
             >
               {platform}
             </span>
@@ -446,7 +450,7 @@ function ClusterObservationRow({
           {entry.sources.map((platform) => (
             <span
               key={platform}
-              className="text-[10px] lowercase tracking-wide text-[rgba(var(--s-rgb),0.7)]"
+              className="text-[10px] lowercase tracking-wide text-[rgba(var(--ph-accent-rgb),0.7)]"
             >
               {platform}
             </span>
@@ -469,7 +473,7 @@ function ClusterObservationRow({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-2.5 text-[11px] uppercase tracking-[0.15em] text-[#FFFDFD]/30">
+    <p className="mb-2.5 text-[11px] uppercase tracking-[0.15em] text-[rgba(var(--ph-accent-rgb),0.9)]">
       {children}
     </p>
   );
