@@ -7,7 +7,7 @@ import { DASHBOARD_HOME } from "@/lib/dashboard-nav";
  * through here: sign-in, the end of onboarding's formation, and any bare
  * /dashboard link, so this one redirect makes constellation home everywhere.
  * Old /dashboard/daily and /dashboard/you bookmarks are redirected in
- * next.config.mjs.
+ * next.config.ts.
  */
 export default function DashboardPage() {
   redirect(DASHBOARD_HOME);

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import type { DashboardTabId } from "@/lib/dashboard-nav";
+import { introBannerKeys, isBannerSeen } from "@/lib/first-visit-keys";
 
 // ============================================================================
 // First-visit orientation state (PHE-33)
@@ -10,6 +11,8 @@ import type { DashboardTabId } from "@/lib/dashboard-nav";
 // One-time, per-user localStorage flags that gate the per-tab intro banners.
 // Keys are namespaced by the signed-in user's id so two users sharing a
 // browser keep independent first-visit state: `phenyx:{userId}:intro:{tab}`.
+// Keys live in lib/first-visit-keys; a flag set under a tab's former id (the
+// insights banner was `intro:you`) still counts as seen.
 //
 // SSR/hydration: localStorage is only read inside effects, and visibility
 // starts `false`, so the server render (and the first client render) show
@@ -17,12 +20,6 @@ import type { DashboardTabId } from "@/lib/dashboard-nav";
 // ============================================================================
 
 export type DashboardTab = DashboardTabId;
-
-const NS = "phenyx";
-
-function bannerKey(userId: string, tab: DashboardTab): string {
-  return `${NS}:${userId}:intro:${tab}`;
-}
 
 /** True when the flag has been set (i.e. the surface has already been seen). */
 function isSeen(key: string): boolean {
@@ -67,26 +64,31 @@ function useUserId(): string | null {
 
 /**
  * Shared first-visit gate: returns whether a one-time surface should show for
- * the resolved `key`, and marks it seen on the first render that surfaces it.
+ * the resolved `keys` (its own key first, then any former keys), and marks its
+ * own key seen on the first render that surfaces it. A flag found only under a
+ * former key is copied to the current key, so the former key can later go.
  *
  * A `useRef` guard makes the decision exactly once per mounted instance so that
  * React strict-mode's double-invoked effect (which would otherwise re-read a
  * flag we just wrote and hide the surface) keeps the surface visible. A genuine
  * revisit is a fresh mount with a fresh ref, so the now-set flag hides it.
  */
-function useFirstVisit(key: string | null): boolean {
+function useFirstVisit(keys: readonly string[] | null): boolean {
   const [visible, setVisible] = useState(false);
   const decided = useRef(false);
+  const current = keys?.[0] ?? null;
+  const signature = keys?.join("|") ?? null;
 
   useEffect(() => {
-    if (!key || decided.current) return;
+    if (!keys || !current || decided.current) return;
     decided.current = true;
-    if (!isSeen(key)) {
-      // Visiting the surface marks it seen — it never reappears after this.
-      markSeen(key);
-      setVisible(true);
-    }
-  }, [key]);
+    const seen = isBannerSeen(keys, isSeen);
+    // Visiting the surface marks it seen — it never reappears after this.
+    if (!isSeen(current)) markSeen(current);
+    if (!seen) setVisible(true);
+    // `signature` stands in for `keys`, which is a fresh array each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
 
   return visible;
 }
@@ -101,12 +103,12 @@ export function useIntroBanner(tab: DashboardTab): {
   dismiss: () => void;
 } {
   const userId = useUserId();
-  const key = userId ? bannerKey(userId, tab) : null;
-  const gateVisible = useFirstVisit(key);
+  const keys = userId ? introBannerKeys(userId, tab) : null;
+  const gateVisible = useFirstVisit(keys);
   const [dismissed, setDismissed] = useState(false);
 
   const dismiss = () => {
-    if (key) markSeen(key);
+    if (keys) markSeen(keys[0]);
     setDismissed(true);
   };
 

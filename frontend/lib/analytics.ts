@@ -34,19 +34,10 @@ export type EventType =
   | "polaris_message"
   | "login"
   | "upgrade_to_pro"
-  | "downgrade_to_free"
-  | "observation_feedback";
+  | "downgrade_to_free";
 
 /** Empty-props marker: `{}` with no allowable keys. */
 export type EmptyProps = Record<string, never>;
-
-/**
- * PHE-96 renamed values on tab_visit / tab_duration (`tab` and `previous`), for
- * dashboards keyed on the old names. The event names themselves are unchanged.
- * Daily was removed with no successor; discover is a new value.
- */
-export const TAB_VALUE_RENAMES = { you: "insights" } as const;
-export const RETIRED_TAB_VALUES = ["daily"] as const;
 
 export interface EventPropsMap {
   /** `tab` is the dashboard segment: constellation, discover, polaris, insights, settings. */
@@ -58,16 +49,6 @@ export interface EventPropsMap {
   login: EmptyProps;
   upgrade_to_pro: EmptyProps;
   downgrade_to_free: EmptyProps;
-  /**
-   * Pillar + signal type + verdict/opened only. NEVER the observation body.
-   * `signal_type` is the v66 pattern kind (frequency, timing, …), not prose.
-   */
-  observation_feedback: {
-    pillar: string;
-    signal_type: string | null;
-    verdict?: "new" | "known" | "reading" | null;
-    opened?: boolean;
-  };
 }
 
 /** The wire shape of every queued/persisted event. */
@@ -296,35 +277,6 @@ export function trackPolarisMessage(input: {
   message: string;
 }): void {
   track("polaris_message", makePolarisMessageProps(input));
-}
-
-/**
- * Build `observation_feedback` props. The observation body is not a parameter
- * and cannot leak into the event — only pillar, signal type, and the verdict.
- */
-export function makeObservationFeedbackProps(input: {
-  pillar: string;
-  signal_type: string | null;
-  verdict?: "new" | "known" | "reading" | null;
-  opened?: boolean;
-}): EventPropsMap["observation_feedback"] {
-  const props: EventPropsMap["observation_feedback"] = {
-    pillar: input.pillar,
-    signal_type: input.signal_type,
-  };
-  if (input.verdict !== undefined) props.verdict = input.verdict;
-  if (input.opened !== undefined) props.opened = input.opened;
-  return props;
-}
-
-/** PHE-72 seam. Never pass the observation body into this function. */
-export function trackObservationFeedback(input: {
-  pillar: string;
-  signal_type: string | null;
-  verdict?: "new" | "known" | "reading" | null;
-  opened?: boolean;
-}): void {
-  track("observation_feedback", makeObservationFeedbackProps(input));
 }
 
 /**

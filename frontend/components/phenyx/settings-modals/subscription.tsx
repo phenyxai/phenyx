@@ -16,9 +16,7 @@ import {
 
 /** What full includes (v244 prototype, subscription modal). */
 const FULL_INCLUDED = [
-  'every daily observation',
   'more polaris room each week',
-  'a daily point to stay close to',
   'a weekly look at what shifted',
   'a yearly look across your timeline',
 ]

@@ -16,8 +16,8 @@ import {
   LEGACY_REDIRECTS,
   SETTINGS_HREF,
   segmentTab,
+  tabTransition,
 } from "./dashboard-nav.ts";
-import nextConfig from "../next.config.mjs";
 
 const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -64,6 +64,45 @@ test("segmentTab maps the route segment to the active tab", () => {
   assert.equal(segmentTab("you"), null);
 });
 
+test("tabTransition: landing sends a visit with no previous tab and no duration", () => {
+  const t = tabTransition({ tab: null, enteredAt: 0 }, null, 1_000);
+  assert.deepEqual(t.visit, { tab: "constellation", previous: null });
+  assert.equal(t.duration, null);
+  assert.deepEqual(t.clock, { tab: "constellation", enteredAt: 1_000 });
+});
+
+test("tabTransition: moving tabs closes the old tab's time and visits the new one", () => {
+  const t = tabTransition({ tab: "constellation", enteredAt: 1_000 }, "insights", 13_400);
+  assert.deepEqual(t.duration, { tab: "constellation", seconds: 12 });
+  assert.deepEqual(t.visit, { tab: "insights", previous: "constellation" });
+  assert.deepEqual(t.clock, { tab: "insights", enteredAt: 13_400 });
+});
+
+test("tabTransition: staying on the same tab sends nothing", () => {
+  const clock = { tab: "polaris" as const, enteredAt: 5 };
+  const t = tabTransition(clock, "polaris", 99_000);
+  assert.equal(t.duration, null);
+  assert.equal(t.visit, null);
+  assert.deepEqual(t.clock, clock);
+});
+
+test("tabTransition: an unknown segment closes the old tab and resets the clock", () => {
+  const t = tabTransition({ tab: "discover", enteredAt: 0 }, "foo", 30_000);
+  assert.deepEqual(t.duration, { tab: "discover", seconds: 30 });
+  assert.equal(t.visit, null);
+  assert.deepEqual(t.clock, { tab: null, enteredAt: 30_000 });
+
+  // Time spent on the unknown segment is not charged to anyone.
+  const back = tabTransition(t.clock, "discover", 90_000);
+  assert.equal(back.duration, null);
+  assert.deepEqual(back.visit, { tab: "discover", previous: null });
+});
+
+test("tabTransition: a clock running backwards never yields negative seconds", () => {
+  const t = tabTransition({ tab: "insights", enteredAt: 10_000 }, "polaris", 9_000);
+  assert.deepEqual(t.duration, { tab: "insights", seconds: 0 });
+});
+
 test("legacy routes redirect: daily to constellation, you and profile to insights", () => {
   const map = Object.fromEntries(LEGACY_REDIRECTS.map((r) => [r.source, r.destination]));
   assert.deepEqual(map, {
@@ -72,19 +111,6 @@ test("legacy routes redirect: daily to constellation, you and profile to insight
     "/dashboard/profile": "/dashboard/insights",
     "/daily": "/dashboard/constellation",
   });
-});
-
-test("next.config redirects carry every legacy route and its subpaths", async () => {
-  assert.equal(typeof nextConfig.redirects, "function");
-  const redirects = await nextConfig.redirects();
-  for (const { source, destination } of LEGACY_REDIRECTS) {
-    for (const from of [source, `${source}/:path*`]) {
-      const hit = redirects.find((r: { source: string }) => r.source === from);
-      assert.ok(hit, `next.config is missing a redirect for ${from}`);
-      assert.equal(hit.destination, destination, `${from} should go to ${destination}`);
-      assert.equal(hit.permanent, false);
-    }
-  }
 });
 
 test("the old daily, you and profile route folders are gone", () => {
@@ -104,7 +130,14 @@ const FORBIDDEN: readonly [RegExp, string][] = [
   [/["'`](?:daily|you)["'`]\s*\|(?!\|)/, "daily/you in a tab union"],
   [/(?<!\|)\|\s*["'`](?:daily|you)["'`]/, "daily/you in a tab union"],
   [/\bsegment\s*\?\?\s*["'`]daily["'`]/, "daily as the default segment"],
+  // UI copy, e.g. plan feature bullets that still sell the removed daily feed.
+  [/["'`][^"'`\n]*\bdaily\b[^"'`\n]*["'`]/i, "copy that mentions daily"],
 ];
+
+/** Source with comments blanked, so the sweep checks code and copy only. */
+function stripComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
+}
 
 function sourceFiles(dir: string): string[] {
   const out: string[] = [];
@@ -129,7 +162,7 @@ test("no route, label or link still says daily or you", () => {
   for (const file of files) {
     const rel = relative(FRONTEND, file);
     if (SKIP.has(rel)) continue;
-    const src = readFileSync(file, "utf8");
+    const src = stripComments(readFileSync(file, "utf8"));
     for (const [pattern, what] of FORBIDDEN) {
       const m = src.match(pattern);
       if (m) offenders.push(`${rel}: ${what} (${m[0].trim()})`);

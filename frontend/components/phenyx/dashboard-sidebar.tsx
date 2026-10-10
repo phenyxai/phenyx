@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegment } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { useTier, applyTierUI } from "@/lib/use-tier";
+import { useTier, applyTierUI, type Tier } from "@/lib/use-tier";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { trackTabVisit, trackTabDuration } from "@/lib/analytics";
-import { DASHBOARD_HOME, DASHBOARD_TABS, SETTINGS_HREF, segmentTab } from "@/lib/dashboard-nav";
-import type { DashboardSegment } from "@/lib/dashboard-nav";
+import { DASHBOARD_HOME, DASHBOARD_TABS, SETTINGS_HREF, segmentTab, tabTransition } from "@/lib/dashboard-nav";
+import type { TabClock } from "@/lib/dashboard-nav";
 import { GearIcon, NavIcon } from "@/components/phenyx/nav-icons";
 
 /** The brand orb carries the user's stellar color (`--s`), personalising the mark. */
@@ -33,13 +33,25 @@ async function fetchFirstName(userId: string): Promise<string> {
   return firstName(data?.display_name);
 }
 
+const ShellTierContext = createContext<Tier>("free");
+
+/**
+ * Reads the tier once for the shell chrome. The sidebar and the phone top bar
+ * each show a TierBadge (one of them hidden at any width), and both read this
+ * instead of running their own useTier() query.
+ */
+export function ShellTierProvider({ children }: { children: ReactNode }) {
+  const { tier } = useTier();
+  return <ShellTierContext.Provider value={tier}>{children}</ShellTierContext.Provider>;
+}
+
 /**
  * The plan tier beside the PHENYX wordmark: "free" or "full" (gifted reads
  * full). Text + data-tier are owned by applyTierUI; the static "free" is the
  * pre-load default, and the element is only mutated, never remounted.
  */
 function TierBadge() {
-  const { tier } = useTier();
+  const tier = useContext(ShellTierContext);
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     applyTierUI(tier, { badge: ref.current });
@@ -107,11 +119,10 @@ export function DashboardSidebar() {
   // active route segment, so its segment change is the single source of truth
   // for tab_visit/tab_duration — instrumenting here fires on EVERY navigation
   // (sidebar or bottom-nav click, back/forward, programmatic) exactly once, and
-  // avoids the double-count a per-link onClick would cause. Refs hold the tab
-  // we're on and when we entered it so we can emit the duration for the tab
-  // being left.
-  const activeTabRef = useRef<DashboardSegment | null>(null);
-  const enteredAtRef = useRef<number>(Date.now());
+  // avoids the double-count a per-link onClick would cause. The ref holds the
+  // tab we're on and when we entered it so we can emit the duration for the
+  // tab being left.
+  const clockRef = useRef<TabClock>({ tab: null, enteredAt: Date.now() });
 
   // Authenticated shell: bounce to sign-in if there is no session, otherwise
   // read the display name once for the account row. Runs on mount of the
@@ -153,20 +164,15 @@ export function DashboardSidebar() {
   }, [openId]);
 
   // Tab engagement: on each segment change, emit a tab_duration for the tab
-  // being left, then a tab_visit for the newly-active tab. The first run (mount)
-  // emits the landing tab_visit with previous=null and no duration. Fires on
-  // segment change only — not on mount of individual tab content.
+  // being left, then a tab_visit for the newly-active tab (rules in
+  // tabTransition). The first run (mount) emits the landing tab_visit with
+  // previous=null and no duration. Fires on segment change only — not on mount
+  // of individual tab content.
   useEffect(() => {
-    const tab = segmentTab(segment);
-    const previous = activeTabRef.current;
-    if (tab === null || previous === tab) return;
-    if (previous !== null) {
-      const seconds = Math.max(0, Math.round((Date.now() - enteredAtRef.current) / 1000));
-      trackTabDuration(previous, seconds);
-    }
-    trackTabVisit(tab, previous);
-    activeTabRef.current = tab;
-    enteredAtRef.current = Date.now();
+    const { clock, duration, visit } = tabTransition(clockRef.current, segment, Date.now());
+    if (duration) trackTabDuration(duration.tab, duration.seconds);
+    if (visit) trackTabVisit(visit.tab, visit.previous);
+    clockRef.current = clock;
   }, [segment]);
 
   return (

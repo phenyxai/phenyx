@@ -1,12 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  pickHeldConstants,
-  pickStillTrueForDay,
-  profileHeldForDay,
-  todaysStillTrueIndex,
-  HELD_CONSTANTS,
-} from "./held.ts";
+import { pickHeldConstants, HELD_CONSTANTS } from "./held.ts";
 
 const items = [
   { title: "a", body: "1" },
@@ -16,39 +10,26 @@ const items = [
   { title: "e", body: "5" },
 ];
 
-test("pickHeldConstants pads an empty list from the shared constants, skipping today", () => {
-  const day = 0;
-  const picked = pickHeldConstants([], day);
-  assert.equal(picked.length, 4);
-  assert.deepEqual(picked, profileHeldForDay(day));
-  assert.notEqual(picked[0]?.title, HELD_CONSTANTS[0].title);
+test("pickHeldConstants falls back to the first four shared constants", () => {
+  assert.deepEqual(pickHeldConstants([]), HELD_CONSTANTS.slice(0, 4));
 });
 
 test("pickHeldConstants pads fewer than four from the shared constants", () => {
-  const picked = pickHeldConstants(items.slice(0, 2), 0);
+  const picked = pickHeldConstants(items.slice(0, 2));
   assert.equal(picked.length, 4);
-  assert.equal(picked[0].title, "a");
-  assert.equal(picked[1].title, "b");
+  assert.deepEqual(
+    picked.map((h) => h.title),
+    ["a", "b", HELD_CONSTANTS[0].title, HELD_CONSTANTS[1].title],
+  );
 });
 
-test("pickHeldConstants skips today still-true when the list is longer than four", () => {
-  const day = 0;
-  assert.equal(todaysStillTrueIndex(items.length, day), 0);
-  const picked = pickHeldConstants(items, day);
+test("pickHeldConstants does not repeat a constant the list already holds", () => {
+  const picked = pickHeldConstants([HELD_CONSTANTS[0]]);
   assert.equal(picked.length, 4);
-  assert.ok(!picked.some((h) => h.title === "a"));
+  assert.equal(new Set(picked.map((h) => h.body)).size, 4);
 });
 
-test("Daily excludes Profile's held constants across a day rollover", () => {
-  const beforeRollover = 20_000;
-  const afterRollover = beforeRollover + 1;
-
-  const beforeProfile = pickHeldConstants([], beforeRollover);
-  const afterProfile = pickHeldConstants([], afterRollover);
-  const beforeDaily = pickStillTrueForDay(beforeProfile, beforeRollover);
-  const afterDaily = pickStillTrueForDay(afterProfile, afterRollover);
-
-  assert.ok(!beforeProfile.some((held) => held.body === beforeDaily.body));
-  assert.ok(!afterProfile.some((held) => held.body === afterDaily.body));
-  assert.notEqual(beforeDaily.body, afterDaily.body);
+test("pickHeldConstants keeps the first four when the list is longer, dropping none before that", () => {
+  // PHE-96: no daily surface is left to dedupe against, so nothing is skipped.
+  assert.deepEqual(pickHeldConstants(items), items.slice(0, 4));
 });

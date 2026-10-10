@@ -1,8 +1,7 @@
 /**
- * PHE-75 — Profile (now insights) "what has held" must not repeat the old daily
- * tab's "still true today" (PHE-70). This module owns the shared constants and
- * selection rules for both rotations. The daily tab was removed in PHE-96;
- * insights still skips the day's still-true constant, so its rotation is unchanged.
+ * Insights "what has stayed with you" (PHE-75, then PHE-96). Shows the first
+ * four held items, padded from the shared constants. The old daily tab's
+ * "still true today" dedupe went with daily in PHE-96.
  */
 export interface HeldConstant {
   title: string;
@@ -66,57 +65,13 @@ export const HELD_CONSTANTS: readonly HeldConstant[] = [
   },
 ];
 
-export function localDayNumber(now: Date = new Date()): number {
-  const local = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.floor(local.getTime() / 86_400_000);
-}
-
-function wrapIndex(dayNumber: number, length: number): number {
-  return ((dayNumber % length) + length) % length;
-}
-
-export function todaysStillTrueIndex(length: number, dayNumber: number = localDayNumber()): number {
-  if (length <= 0) return -1;
-  return wrapIndex(dayNumber, length);
-}
-
-/** The day's still-true constant after removing every card currently shown on Profile. */
-export function pickStillTrueForDay(
-  profileHeld: readonly HeldConstant[],
-  dayNumber: number = localDayNumber(),
-): HeldConstant {
-  const profileBodies = new Set(profileHeld.map((held) => held.body));
-  const eligible = HELD_CONSTANTS.filter(
-    (held) => !profileBodies.has(held.body),
-  );
-  const pool = eligible.length > 0 ? eligible : HELD_CONSTANTS;
-  return pool[wrapIndex(dayNumber, pool.length)];
-}
-
-/** Four constants that skip today's still-true line. */
-export function profileHeldForDay(dayNumber: number = localDayNumber(), count = HELD_LIMIT): HeldConstant[] {
-  const skip = wrapIndex(dayNumber, HELD_CONSTANTS.length);
-  const out: HeldConstant[] = [];
-  for (let i = 1; out.length < count && i < HELD_CONSTANTS.length; i++) {
-    out.push(HELD_CONSTANTS[(skip + i) % HELD_CONSTANTS.length]);
+export function pickHeldConstants(items: HeldConstant[]): HeldConstant[] {
+  if (items.length >= HELD_LIMIT) return items.slice(0, HELD_LIMIT);
+  const seen = new Set(items.map((h) => h.body));
+  const out = [...items];
+  for (const c of HELD_CONSTANTS) {
+    if (out.length >= HELD_LIMIT) break;
+    if (!seen.has(c.body)) out.push(c);
   }
   return out;
-}
-
-export function pickHeldConstants(
-  items: HeldConstant[],
-  dayNumber: number = localDayNumber(),
-): HeldConstant[] {
-  if (items.length === 0) return profileHeldForDay(dayNumber);
-  if (items.length <= HELD_LIMIT) {
-    const seen = new Set(items.map((h) => h.body));
-    const out = [...items];
-    for (const c of profileHeldForDay(dayNumber)) {
-      if (out.length >= HELD_LIMIT) break;
-      if (!seen.has(c.body)) out.push(c);
-    }
-    return out;
-  }
-  const skip = wrapIndex(dayNumber, items.length);
-  return items.filter((_, i) => i !== skip).slice(0, HELD_LIMIT);
 }

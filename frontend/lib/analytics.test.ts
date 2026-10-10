@@ -18,11 +18,7 @@ import {
   makeEvent,
   daysSince,
   lastVisitKey,
-  makeObservationFeedbackProps,
-  TAB_VALUE_RENAMES,
-  RETIRED_TAB_VALUES,
 } from "./analytics.ts";
-import { segmentTab } from "./dashboard-nav.ts";
 
 test("polaris_message props carry NO message text (privacy)", () => {
   const secret = "a private user message that must never be persisted anywhere";
@@ -71,19 +67,6 @@ test("makeEvent defaults occurred_at to an ISO timestamp", () => {
   assert.ok(!Number.isNaN(Date.parse(ev.occurred_at)));
 });
 
-test("PHE-96: tab events say insights where they said you, and daily is retired", () => {
-  assert.deepEqual(TAB_VALUE_RENAMES, { you: "insights" });
-  assert.deepEqual(RETIRED_TAB_VALUES, ["daily"]);
-  for (const [from, to] of Object.entries(TAB_VALUE_RENAMES)) {
-    assert.equal(segmentTab(from), null, `${from} must no longer be a tab value`);
-    assert.equal(segmentTab(to), to);
-  }
-  for (const gone of RETIRED_TAB_VALUES) assert.equal(segmentTab(gone), null);
-
-  const visit = makeEvent("u", "tab_visit", { tab: "insights", previous: "discover" });
-  assert.deepEqual(visit.props, { tab: "insights", previous: "discover" });
-});
-
 test("daysSince computes whole days and handles first visit + clock skew", () => {
   const now = 1_700_000_000_000;
   assert.equal(daysSince(null, now), 0); // first-ever visit
@@ -95,36 +78,4 @@ test("daysSince computes whole days and handles first visit + clock skew", () =>
 
 test("lastVisitKey is namespaced per user", () => {
   assert.equal(lastVisitKey("abc"), "phenyx:abc:lastVisitTs");
-});
-
-test("observation_feedback props carry NO observation body (privacy)", () => {
-  const secret = "eight of every ten sessions begin between 1am and 4am";
-  const props = makeObservationFeedbackProps({
-    pillar: "origin",
-    signal_type: "timing",
-    verdict: "known",
-  });
-
-  assert.deepEqual(Object.keys(props).sort(), ["pillar", "signal_type", "verdict"]);
-  assert.equal(props.pillar, "origin");
-  assert.equal(props.signal_type, "timing");
-  assert.equal(props.verdict, "known");
-
-  const asRecord = props as Record<string, unknown>;
-  for (const key of ["message", "text", "body", "content", "transcript"]) {
-    assert.ok(!(key in asRecord), `props must not contain a "${key}" field`);
-  }
-  assert.ok(!JSON.stringify(props).includes(secret), "observation body leaked into props");
-});
-
-test("observation_feedback opened-only event still has no body field", () => {
-  const props = makeObservationFeedbackProps({
-    pillar: "self_creation",
-    signal_type: null,
-    opened: true,
-  });
-  assert.equal(props.opened, true);
-  assert.equal(props.signal_type, null);
-  assert.ok(!("body" in props));
-  assert.ok(!("verdict" in props));
 });
