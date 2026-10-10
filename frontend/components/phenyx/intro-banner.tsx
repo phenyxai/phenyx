@@ -15,12 +15,12 @@ import { useIntroBanner, type DashboardTab } from "@/lib/first-visit";
 
 /** Verbatim, lowercase intro copy per tab (single source of truth, per AC). */
 export const INTRO_COPY: Record<DashboardTab, string> = {
-  daily: "daily shows what surfaced from your data this week, freshest first.",
-  polaris:
-    "polaris answers what you ask, using only what your constellation has already shown.",
   constellation:
     "each point is a pillar of your identity. tap one to see what it is built from.",
-  you: "this is what we know about you so far, and where you can manage your data.",
+  discover: "discover shows single connections PHENYX found across your platforms, one at a time.",
+  polaris:
+    "polaris answers what you ask, using only what your constellation has already shown.",
+  insights: "insights steps back from single moments to what is becoming clearer across your history.",
 };
 
 export interface IntroBannerProps {

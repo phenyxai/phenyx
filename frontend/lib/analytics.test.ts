@@ -13,7 +13,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { makePolarisMessageProps, makeEvent, daysSince, lastVisitKey, makeObservationFeedbackProps } from "./analytics.ts";
+import {
+  makePolarisMessageProps,
+  makeEvent,
+  daysSince,
+  lastVisitKey,
+  makeObservationFeedbackProps,
+  TAB_VALUE_RENAMES,
+  RETIRED_TAB_VALUES,
+} from "./analytics.ts";
+import { segmentTab } from "./dashboard-nav.ts";
 
 test("polaris_message props carry NO message text (privacy)", () => {
   const secret = "a private user message that must never be persisted anywhere";
@@ -57,9 +66,22 @@ test("makeEvent builds the standard envelope", () => {
 });
 
 test("makeEvent defaults occurred_at to an ISO timestamp", () => {
-  const ev = makeEvent("u", "tab_visit", { tab: "daily", previous: null });
+  const ev = makeEvent("u", "tab_visit", { tab: "constellation", previous: null });
   assert.equal(typeof ev.occurred_at, "string");
   assert.ok(!Number.isNaN(Date.parse(ev.occurred_at)));
+});
+
+test("PHE-96: tab events say insights where they said you, and daily is retired", () => {
+  assert.deepEqual(TAB_VALUE_RENAMES, { you: "insights" });
+  assert.deepEqual(RETIRED_TAB_VALUES, ["daily"]);
+  for (const [from, to] of Object.entries(TAB_VALUE_RENAMES)) {
+    assert.equal(segmentTab(from), null, `${from} must no longer be a tab value`);
+    assert.equal(segmentTab(to), to);
+  }
+  for (const gone of RETIRED_TAB_VALUES) assert.equal(segmentTab(gone), null);
+
+  const visit = makeEvent("u", "tab_visit", { tab: "insights", previous: "discover" });
+  assert.deepEqual(visit.props, { tab: "insights", previous: "discover" });
 });
 
 test("daysSince computes whole days and handles first visit + clock skew", () => {

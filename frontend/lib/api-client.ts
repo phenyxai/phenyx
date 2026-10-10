@@ -70,7 +70,7 @@ export interface ProfileOverview {
   connected_platforms: string[]
   /** "what has stayed with you" constants. */
   held: { title: string; body: string }[]
-  /** Behavioral snapshot — kept for older clients; the you tab does not render it. */
+  /** Behavioral snapshot — kept for older clients; the insights tab does not render it. */
   snapshot: ProfileSnapshotItem[]
   /** Forward-looking foresight line; null until the engine has generated one. */
   foresight: string | null

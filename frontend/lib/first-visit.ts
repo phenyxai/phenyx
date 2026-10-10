@@ -2,31 +2,26 @@
 
 import { useEffect, useRef, useState } from "react";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
+import type { DashboardTabId } from "@/lib/dashboard-nav";
 
 // ============================================================================
 // First-visit orientation state (PHE-33)
 // ----------------------------------------------------------------------------
-// One-time, per-user localStorage flags that gate the Daily signpost and the
-// four per-tab intro banners. Keys are namespaced by the signed-in user's id so
-// two users sharing a browser keep independent first-visit state:
-//   - signpost: `phenyx:{userId}:signpost:daily`
-//   - banners:  `phenyx:{userId}:intro:{tab}`
+// One-time, per-user localStorage flags that gate the per-tab intro banners.
+// Keys are namespaced by the signed-in user's id so two users sharing a
+// browser keep independent first-visit state: `phenyx:{userId}:intro:{tab}`.
 //
 // SSR/hydration: localStorage is only read inside effects, and visibility
 // starts `false`, so the server render (and the first client render) show
 // nothing — no hydration mismatch, no flash of a banner that is later hidden.
 // ============================================================================
 
-export type DashboardTab = "daily" | "polaris" | "constellation" | "you";
+export type DashboardTab = DashboardTabId;
 
 const NS = "phenyx";
 
 function bannerKey(userId: string, tab: DashboardTab): string {
   return `${NS}:${userId}:intro:${tab}`;
-}
-
-function signpostKey(userId: string): string {
-  return `${NS}:${userId}:signpost:daily`;
 }
 
 /** True when the flag has been set (i.e. the surface has already been seen). */
@@ -94,15 +89,6 @@ function useFirstVisit(key: string | null): boolean {
   }, [key]);
 
   return visible;
-}
-
-/**
- * Daily first-visit signpost. Shows once, on the user's first Daily render, and
- * is keyed independently of the Daily intro banner.
- */
-export function useDailySignpost(): boolean {
-  const userId = useUserId();
-  return useFirstVisit(userId ? signpostKey(userId) : null);
 }
 
 /**

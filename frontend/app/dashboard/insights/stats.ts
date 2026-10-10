@@ -1,4 +1,4 @@
-// PHE-95 / v244 — the "your constellation" stats on the you tab.
+// PHE-95 / v244 — the "your constellation" stats on the insights tab (the you tab until PHE-96).
 //
 // Pure helpers over the constellation payload (`fetchConstellation`) and the
 // connected-platform count from `/profile/overview`. Type-only import so this
@@ -9,7 +9,7 @@
 
 import type { ConstellationAge, ConstellationData } from "@/lib/constellation";
 
-export interface YouStat {
+export interface InsightsStat {
   key: "age" | "moments" | "turning points" | "accounts";
   label: string;
   value: string;
@@ -39,13 +39,13 @@ function plural(n: number, one: string, many: string): string {
  * Rows for the "your constellation" block, in prototype order: age, moments,
  * turning points, accounts. A row with no value is omitted.
  */
-export function buildYouStats(
+export function buildInsightsStats(
   data: ConstellationData | null,
   accounts: number,
   age: ConstellationAge | null,
   now: Date = new Date(),
-): YouStat[] {
-  const rows: YouStat[] = [];
+): InsightsStat[] {
+  const rows: InsightsStat[] = [];
 
   if (data) {
     if (age) {

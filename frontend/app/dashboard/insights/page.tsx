@@ -8,10 +8,10 @@ import { apiFetch, type ProfileOverview } from "@/lib/api-client";
 import { colorName, resolveAccent } from "@/lib/stellar";
 import { constellationAge, fetchConstellation, type ConstellationData } from "@/lib/constellation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { IntroBanner } from "@/components/phenyx/intro-banner";
+import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 import { PanelHeader } from "@/components/phenyx/panel-header";
 import { pickHeldConstants } from "./held";
-import { buildYouStats, formatJoinedSince } from "./stats";
+import { buildInsightsStats, formatJoinedSince } from "./stats";
 
 /** Section labels are lowercase in source; the uppercase treatment is styling. */
 function SectionLabel({ children }: { children: string }) {
@@ -23,13 +23,14 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 /**
- * You tab (PHE-91 / PHE-95, v244; formerly Profile). One screen under the
- * shared panel header: identity, connected platforms, your color, the
- * "your constellation" stats block, and what has stayed with you. The grouped
- * settings rows and "get in touch" live on /dashboard/settings, reached from
- * the sidebar gear. Gifted is never shown; freeze/pause does not exist.
+ * Insights tab (PHE-96; the you tab in PHE-91 / PHE-95, Profile before that).
+ * One screen under the shared panel header: identity, connected platforms,
+ * your color, the "your constellation" stats block, and what has stayed with
+ * you. The grouped settings rows and "get in touch" live on /dashboard/settings,
+ * reached from the sidebar gear (the top bar gear on phones). Gifted is never
+ * shown; freeze/pause does not exist.
  */
-export default function YouTabPage() {
+export default function InsightsTabPage() {
   const { isPro } = useTier();
   const { openModal, openId, stellarColor } = useSettingsModals();
   const [overview, setOverview] = useState<ProfileOverview | null>(null);
@@ -105,7 +106,7 @@ export default function YouTabPage() {
   const swatch = resolveAccent(overview?.stellar_color || stellarColor);
   const stellarName = colorName(swatch);
   const badge = isPro ? "full" : "free";
-  const stats = buildYouStats(
+  const stats = buildInsightsStats(
     constellation,
     platforms.length,
     constellation ? constellationAge(constellation) : null,
@@ -114,14 +115,14 @@ export default function YouTabPage() {
   return (
     <>
       <IntroBanner
-        tab="you"
-        copy="this is what we know about you so far, and where you can manage your account."
+        tab="insights"
+        copy={INTRO_COPY.insights}
         className="mx-10 mt-10"
       />
 
       <section className="flex flex-col px-10 pt-8 pb-10">
         <div className="w-full max-w-[820px]">
-          <PanelHeader eyebrow="you" title="everything gathered here so far" />
+          <PanelHeader eyebrow="insights" title="everything gathered here so far" />
 
           <div className="mb-[38px] flex flex-wrap items-start gap-x-14 gap-y-8 border-b border-[rgba(255,253,253,0.045)] pb-8">
             <div className="flex min-w-[200px] flex-col gap-1">

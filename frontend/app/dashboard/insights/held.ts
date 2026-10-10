@@ -1,7 +1,8 @@
 /**
- * PHE-75 — Profile "what has held" must not repeat Daily's "still true today"
- * (PHE-70). This module owns the shared constants and selection rules for both
- * surfaces so their day-based rotations stay aligned.
+ * PHE-75 — Profile (now insights) "what has held" must not repeat the old daily
+ * tab's "still true today" (PHE-70). This module owns the shared constants and
+ * selection rules for both rotations. The daily tab was removed in PHE-96;
+ * insights still skips the day's still-true constant, so its rotation is unchanged.
  */
 export interface HeldConstant {
   title: string;
@@ -79,7 +80,7 @@ export function todaysStillTrueIndex(length: number, dayNumber: number = localDa
   return wrapIndex(dayNumber, length);
 }
 
-/** Daily's rotating constant after removing every card currently shown on Profile. */
+/** The day's still-true constant after removing every card currently shown on Profile. */
 export function pickStillTrueForDay(
   profileHeld: readonly HeldConstant[],
   dayNumber: number = localDayNumber(),
@@ -92,7 +93,7 @@ export function pickStillTrueForDay(
   return pool[wrapIndex(dayNumber, pool.length)];
 }
 
-/** Four constants that skip today's Daily still-true line. */
+/** Four constants that skip today's still-true line. */
 export function profileHeldForDay(dayNumber: number = localDayNumber(), count = HELD_LIMIT): HeldConstant[] {
   const skip = wrapIndex(dayNumber, HELD_CONSTANTS.length);
   const out: HeldConstant[] = [];

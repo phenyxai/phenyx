@@ -19,6 +19,8 @@
  *     `typeof window` guard.
  */
 
+import type { DashboardSegment } from "./dashboard-nav";
+
 // ---------------------------------------------------------------------------
 // Typed event names + prop shapes. These are the ONLY events that exist; the
 // prop shape for each is fixed. `polaris_message` deliberately has no field
@@ -38,9 +40,18 @@ export type EventType =
 /** Empty-props marker: `{}` with no allowable keys. */
 export type EmptyProps = Record<string, never>;
 
+/**
+ * PHE-96 renamed values on tab_visit / tab_duration (`tab` and `previous`), for
+ * dashboards keyed on the old names. The event names themselves are unchanged.
+ * Daily was removed with no successor; discover is a new value.
+ */
+export const TAB_VALUE_RENAMES = { you: "insights" } as const;
+export const RETIRED_TAB_VALUES = ["daily"] as const;
+
 export interface EventPropsMap {
-  tab_visit: { tab: string; previous: string | null };
-  tab_duration: { tab: string; seconds: number };
+  /** `tab` is the dashboard segment: constellation, discover, polaris, insights, settings. */
+  tab_visit: { tab: DashboardSegment; previous: DashboardSegment | null };
+  tab_duration: { tab: DashboardSegment; seconds: number };
   days_since_last_visit: { days: number };
   /** count + pillar tag + message LENGTH only — never the message text. */
   polaris_message: { count: number; pillar_tag: string | null; message_length: number };
@@ -255,11 +266,11 @@ async function sendKeepalive(rows: ReturnType<typeof toRows>): Promise<boolean> 
 // literals, so event names/prop shapes live in exactly one place.
 // ---------------------------------------------------------------------------
 
-export function trackTabVisit(tab: string, previous: string | null): void {
+export function trackTabVisit(tab: DashboardSegment, previous: DashboardSegment | null): void {
   track("tab_visit", { tab, previous });
 }
 
-export function trackTabDuration(tab: string, seconds: number): void {
+export function trackTabDuration(tab: DashboardSegment, seconds: number): void {
   track("tab_duration", { tab, seconds });
 }
 
