@@ -178,7 +178,7 @@ export function DashboardSidebar() {
   return (
     <nav
       aria-label="dashboard"
-      className="sticky top-0 h-screen w-[240px] shrink-0 flex-col border-r border-[#1a1a1a] bg-[#0A0A0A] px-5 pt-7 pb-7 [@media(max-width:760px)]:hidden [@media(min-width:761px)]:flex"
+      className="sticky top-0 h-screen w-[240px] shrink-0 flex-col border-r border-[rgba(255,253,253,0.08)] bg-[var(--ph-black,#080808)] px-5 pt-7 pb-7 [@media(max-width:760px)]:hidden [@media(min-width:761px)]:flex"
     >
       <div className="mb-2 flex items-center gap-2 border-b border-[#FFFDFD]/[0.07] pb-[18px]">
         <BrandLink />
@@ -234,7 +234,7 @@ export function DashboardSidebar() {
 export function MobileTopBar() {
   const segment = useSelectedLayoutSegment();
   return (
-    <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-[#FFFDFD]/[0.07] bg-[rgba(8,8,8,0.94)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden">
+    <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-[#FFFDFD]/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden">
       <BrandLink />
       <TierBadge />
       <SettingsLink active={segmentTab(segment) === "settings"} size="h-9 w-9" />

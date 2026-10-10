@@ -34,7 +34,7 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label="sections"
-      className="fixed inset-x-0 bottom-0 z-[120] items-stretch justify-around border-t border-[#FFFDFD]/[0.07] bg-[rgba(8,8,8,0.94)] px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden"
+      className="fixed inset-x-0 bottom-0 z-[120] items-stretch justify-around border-t border-[#FFFDFD]/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden"
     >
       {DASHBOARD_TABS.map((tab) => {
         const isActive = active === tab.id;
