@@ -55,7 +55,7 @@ export class OtpService {
   private resendClient: Resend | null = null;
 
   // In-memory send-rate ledger keyed by `${purpose}:${email}` → send timestamps.
-  // Single-instance MVP store (same constraint documented on LoginThrottleService);
+  // Single-instance MVP store;
   // a multi-instance deploy must back this with a shared store.
   private readonly sendLog = new Map<string, number[]>();
 

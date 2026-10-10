@@ -3,23 +3,13 @@ import { SupabaseAuthGuard } from "./supabase-auth.guard";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { PassphraseService } from "./passphrase.service";
-import { LoginThrottleService } from "./login-throttle.service";
 import { OtpService } from "./otp.service";
-import { PassphraseResetService } from "./passphrase-reset.service";
 
 @Module({
   controllers: [AuthController],
-  providers: [
-    SupabaseAuthGuard,
-    AuthService,
-    PassphraseService,
-    LoginThrottleService,
-    OtpService,
-    PassphraseResetService,
-  ],
-  // PassphraseService/OtpService exported for PHE-9/PHE-11/PHE-12 to reuse.
-  // LoginThrottleService exported so PHE-12's signin/reset routes can share the
-  // same per-account/per-IP brute-force lockout used by verifyCredentials.
-  exports: [SupabaseAuthGuard, PassphraseService, OtpService, LoginThrottleService],
+  providers: [SupabaseAuthGuard, AuthService, PassphraseService, OtpService],
+  // PassphraseService stays exported: the account and profile modules still
+  // verify the stored hash of passphrase-era accounts.
+  exports: [SupabaseAuthGuard, PassphraseService, OtpService],
 })
 export class AuthModule {}

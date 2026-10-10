@@ -4,23 +4,17 @@ import {
   InternalServerErrorException,
   Logger,
 } from "@nestjs/common";
-import { randomBytes } from "crypto";
 import { SupabaseService } from "../supabase/supabase.service";
 import { OtpService, OtpPurpose, OtpVerifyOutcome } from "./otp.service";
-import { PassphraseService, PASSPHRASE_ALGO } from "./passphrase.service";
-import { LoginThrottleService } from "./login-throttle.service";
 import { SignupStartDto } from "./dto/signup-start.dto";
+import { displayNameFromMetadata } from "./oauth-profile";
 import { stellarColorFor } from "../common/stellar.util";
 
 /** Pending signups live ~15 minutes; an expired draft sends the user back to s1. */
 const DRAFT_TTL_MINUTES = 15;
 
-/**
- * Upper bound on candidate accounts loaded for one name. Names are not unique,
- * but a single name resolving to many accounts is pathological; cap the work so
- * verification time (and Argon2 cost) stays bounded regardless of input.
- */
-const MAX_NAME_CANDIDATES = 25;
+/** Postgres unique_violation: a concurrent request already inserted the row. */
+const UNIQUE_VIOLATION = "23505";
 
 export interface SignupStartResult {
   draft_id: string;
@@ -51,11 +45,15 @@ export interface OtpVerifyRequest {
 
 /**
  * Verify result. `status` mirrors OtpVerifyOutcome so the client can render the
- * verbatim wrong/expired copy; `session` is present only on `ok`.
+ * verbatim wrong/expired copy; `session` and `is_new` are present only on `ok`.
+ * `no_account` is returned only AFTER the code verified, so it tells nothing to
+ * anyone who does not already control the inbox (no enumeration).
  */
 export interface OtpVerifyResult {
-  status: OtpVerifyOutcome;
+  status: OtpVerifyOutcome | "no_account";
   session?: OtpSession;
+  /** True when this verify created the profile: the client routes to welcome. */
+  is_new?: boolean;
 }
 
 /** A staged signup row loaded for the verify path. */
@@ -63,54 +61,31 @@ interface SignupDraftRow {
   draft_id: string;
   name: string;
   email: string;
-  passphrase_hash: string;
   expires_at: string;
 }
 
-/** Returned to the (future) signin route on a successful name+passphrase match. */
-export interface VerifiedCredential {
-  userId: string;
-  displayName: string | null;
-}
-
-/** Optional request context for the verify path (per-IP throttling). */
-export interface VerifyContext {
-  ip?: string;
-}
-
-/** Result of a successful name+passphrase sign-in: a real GoTrue session. */
-export interface SigninResult {
+/** A minted session plus the account it belongs to. */
+interface MintedSession {
   session: OtpSession;
+  userId: string;
 }
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  /**
-   * A real Argon2id hash of a throwaway value, verified against on a name miss
-   * so a non-existent account costs the same wall-clock time as an existing one
-   * (resists username enumeration via response timing). Computed lazily once.
-   */
-  private decoyHash: string | null = null;
-
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly passphrase: PassphraseService,
-    private readonly otp: OtpService,
-    private readonly throttle: LoginThrottleService
+    private readonly otp: OtpService
   ) {}
 
   /**
-   * Stage a pending signup. Does NOT create auth.users / user_profiles — those are
-   * written only on successful OTP verify (PHE-9), copying passphrase_hash from the
-   * draft. Returns a generic shape regardless of whether the email already has an
+   * Stage a pending signup (name + email). Does NOT create auth.users /
+   * user_profiles — those are written only on successful OTP verify (PHE-9).
+   * Returns a generic shape regardless of whether the email already has an
    * account (enumeration resistance — resolved at verify time).
    */
   async signupStart(dto: SignupStartDto): Promise<SignupStartResult> {
-    // Hash immediately; the raw passphrase is never persisted, logged, or echoed.
-    const passphraseHash = await this.passphrase.hash(dto.passphrase);
-
     const expiresAt = new Date(
       Date.now() + DRAFT_TTL_MINUTES * 60 * 1000
     ).toISOString();
@@ -121,14 +96,12 @@ export class AuthService {
       .insert({
         name: dto.name,
         email: dto.email,
-        passphrase_hash: passphraseHash,
         expires_at: expiresAt,
       })
       .select("draft_id")
       .single();
 
     if (error || !data) {
-      // Note: never include the passphrase in any log line.
       this.logger.error(`signup draft insert failed: ${error?.message}`);
       throw new InternalServerErrorException("could not start signup");
     }
@@ -154,9 +127,10 @@ export class AuthService {
   /**
    * Verify a submitted OTP. On success: signup → materialize the account from the
    * draft and mint a session; signin → mint a session for the existing account.
-   * Any non-`ok` code outcome (wrong / expired / attempt-cap) is passed straight
-   * through so the client shows the matching verbatim copy. Account resolution
-   * failures map to a generic `invalid` (no enumeration).
+   * Either way the profile is ensured, and `is_new` says whether this verify
+   * created it (new → welcome, returning → constellation). Any non-`ok` code
+   * outcome (wrong / expired / attempt-cap) is passed straight through so the
+   * client shows the matching verbatim copy.
    */
   async otpVerify(req: OtpVerifyRequest): Promise<OtpVerifyResult> {
     const purpose: OtpPurpose = req.purpose ?? (req.draftId ? "signup" : "signin");
@@ -173,8 +147,7 @@ export class AuthService {
       });
       if (outcome !== "ok") return { status: outcome };
 
-      const session = await this.completeSignup(draft);
-      return { status: "ok", session };
+      return { status: "ok", ...(await this.completeSignup(draft)) };
     }
 
     if (purpose === "signin") {
@@ -187,11 +160,15 @@ export class AuthService {
       });
       if (outcome !== "ok") return { status: outcome };
 
-      // Existing-account-only: mintSession returns null for an unknown email,
-      // which we surface as a generic failure (no account-existence leak).
-      const session = await this.mintSession(req.email, { requireExisting: true });
-      if (!session) return { status: "invalid" };
-      return { status: "ok", session };
+      // Existing-account-only: mintSession returns null for an unknown email. The
+      // code already proved the caller owns the inbox, so saying so leaks nothing.
+      const minted = await this.mintSession(req.email, { requireExisting: true });
+      if (!minted) return { status: "no_account" };
+
+      // Every passphrase-era account has a profile; this only fills one for an
+      // account whose first (Google) sign-in never finished completing it.
+      const { created } = await this.ensureProfile(minted.userId, null);
+      return { status: "ok", session: minted.session, is_new: created };
     }
 
     return { status: "invalid" };
@@ -224,7 +201,7 @@ export class AuthService {
     const { data, error } = await this.supabase
       .getClient()
       .from("signup_drafts")
-      .select("draft_id, name, email, passphrase_hash, expires_at")
+      .select("draft_id, name, email, expires_at")
       .eq("draft_id", draftId)
       .maybeSingle();
 
@@ -240,61 +217,131 @@ export class AuthService {
 
   /**
    * Materialize an account from a verified draft: create auth.users (email
-   * pre-confirmed — ownership was just proven), insert user_profiles copying the
-   * draft's passphrase_hash + tagging passphrase_algo, with display_name = the
-   * draft name. The draft is consumed and a session minted. Rolls back the
-   * orphaned auth user if the profile insert fails so a retry is clean.
+   * pre-confirmed — ownership was just proven) and its user_profiles row with
+   * display_name = the draft name. The draft is consumed and a session minted.
+   * Rolls back the orphaned auth user if the profile insert fails so a retry is
+   * clean.
    *
-   * PHE-13: the row's permanent stellar color is computed here from the immutable
-   * pair `id + created_at` and persisted once. We pin `created_at` explicitly
-   * (rather than relying on the DB `now()` default) so the value we hash is
-   * exactly the value stored — the backfill migration's `stellar_color_for(id,
-   * created_at)` then resolves any row to the identical hex (see stellar.util.ts).
-   * The color is never recomputed or overwritten afterward (immutable identity).
+   * An email that already has an account (an earlier signup, or a Google sign-in
+   * with the same address) is signed in instead: its profile and color are kept
+   * and `is_new` is false, so the person lands on their constellation.
    */
-  private async completeSignup(draft: SignupDraftRow): Promise<OtpSession> {
+  private async completeSignup(
+    draft: SignupDraftRow
+  ): Promise<{ session: OtpSession; is_new: boolean }> {
     const admin = this.supabase.getClient();
 
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email: draft.email,
       email_confirm: true,
     });
+
+    if (createErr?.code === "email_exists") {
+      const minted = await this.mintSession(draft.email, { requireExisting: true });
+      if (!minted) {
+        throw new InternalServerErrorException("could not establish a session");
+      }
+      const { created: profileCreated } = await this.ensureProfile(
+        minted.userId,
+        draft.name
+      );
+      await this.consumeDraft(draft.draft_id);
+      return { session: minted.session, is_new: profileCreated };
+    }
+
     if (createErr || !created?.user) {
       this.logger.error(`account creation failed: ${createErr?.message}`);
       throw new InternalServerErrorException("could not complete signup");
     }
     const userId = created.user.id;
 
-    // Pin created_at so it is byte-for-byte the string fed into the color hash.
-    const createdAt = new Date().toISOString();
-    const stellarColor = stellarColorFor(userId, createdAt);
-
-    const { error: profileErr } = await admin.from("user_profiles").insert({
-      id: userId,
-      display_name: draft.name,
-      passphrase_hash: draft.passphrase_hash,
-      passphrase_algo: PASSPHRASE_ALGO,
-      created_at: createdAt,
-      stellar_color: stellarColor,
-    });
-    if (profileErr) {
-      this.logger.error(`profile insert failed: ${profileErr.message}`);
+    try {
+      await this.ensureProfile(userId, draft.name);
+    } catch {
       await admin.auth.admin.deleteUser(userId).catch(() => undefined);
       throw new InternalServerErrorException("could not complete signup");
     }
 
-    // Consume the draft (best-effort; it also TTLs out on its own).
-    const { error: delErr } = await admin
-      .from("signup_drafts")
-      .delete()
-      .eq("draft_id", draft.draft_id);
-    if (delErr) this.logger.warn(`draft cleanup failed: ${delErr.message}`);
+    await this.consumeDraft(draft.draft_id);
 
-    const session = await this.mintSession(draft.email, { requireExisting: false });
-    if (!session) {
+    const minted = await this.mintSession(draft.email, { requireExisting: false });
+    if (!minted) {
       throw new InternalServerErrorException("could not establish a session");
     }
-    return session;
+    return { session: minted.session, is_new: true };
+  }
+
+  /** Consume a draft (best-effort; it also TTLs out on its own). */
+  private async consumeDraft(draftId: string): Promise<void> {
+    const { error } = await this.supabase
+      .getClient()
+      .from("signup_drafts")
+      .delete()
+      .eq("draft_id", draftId);
+    if (error) this.logger.warn(`draft cleanup failed: ${error.message}`);
+  }
+
+  /**
+   * Idempotently give an account its user_profiles row. An existing row is never
+   * touched (its name and color stay exactly as they are); a missing one is
+   * inserted with `displayName` and the account's permanent stellar color.
+   * Returns `created: true` only when this call wrote the row.
+   *
+   * PHE-13: the color is computed from the immutable pair `id + created_at` and
+   * persisted once. We pin `created_at` explicitly (rather than relying on the DB
+   * `now()` default) so the value we hash is exactly the value stored — the
+   * backfill migration's `stellar_color_for(id, created_at)` then resolves any
+   * row to the identical hex (see stellar.util.ts).
+   */
+  async ensureProfile(
+    userId: string,
+    displayName: string | null
+  ): Promise<{ created: boolean }> {
+    const admin = this.supabase.getClient();
+
+    const { data: existing, error: readErr } = await admin
+      .from("user_profiles")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
+    if (readErr) {
+      this.logger.error(`profile lookup failed: ${readErr.message}`);
+      throw new InternalServerErrorException("could not complete your profile");
+    }
+    if (existing) return { created: false };
+
+    // Pin created_at so it is byte-for-byte the string fed into the color hash.
+    const createdAt = new Date().toISOString();
+    const { error: insertErr } = await admin.from("user_profiles").insert({
+      id: userId,
+      display_name: displayName,
+      created_at: createdAt,
+      stellar_color: stellarColorFor(userId, createdAt),
+    });
+    if (insertErr) {
+      // Two first sign-ins racing: the other request wrote the row. Same result.
+      if (insertErr.code === UNIQUE_VIOLATION) return { created: false };
+      this.logger.error(`profile insert failed: ${insertErr.message}`);
+      throw new InternalServerErrorException("could not complete your profile");
+    }
+    return { created: true };
+  }
+
+  /**
+   * PHE-97: complete the profile for an account that signed in through OAuth
+   * (Google). The name comes from the provider's user_metadata as GoTrue stored
+   * it, read server-side by id (never from the request body). Idempotent: every
+   * sign-in calls this, and only the first one creates anything.
+   */
+  async completeOAuthProfile(userId: string): Promise<{ is_new: boolean }> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .auth.admin.getUserById(userId);
+    if (error) this.logger.warn(`oauth profile lookup failed: ${error.message}`);
+
+    const displayName = displayNameFromMetadata(data?.user?.user_metadata);
+    const { created } = await this.ensureProfile(userId, displayName);
+    return { is_new: created };
   }
 
   /**
@@ -310,7 +357,7 @@ export class AuthService {
   private async mintSession(
     email: string,
     opts: { requireExisting: boolean }
-  ): Promise<OtpSession | null> {
+  ): Promise<MintedSession | null> {
     const linkType = opts.requireExisting ? "recovery" : "magiclink";
     const admin = this.supabase.getClient();
 
@@ -337,161 +384,13 @@ export class AuthService {
     }
 
     return {
-      access_token: verifyData.session.access_token,
-      refresh_token: verifyData.session.refresh_token,
+      session: {
+        access_token: verifyData.session.access_token,
+        refresh_token: verifyData.session.refresh_token,
+      },
+      userId: verifyData.session.user.id,
     };
   }
-
-  /**
-   * Resolve an account by case-insensitive display name and verify the supplied
-   * passphrase against the stored Argon2id hash. Used by the signin route
-   * (PHE-12 wires `POST /auth/signin`); this method is route-agnostic.
-   *
-   * Duplicate-name handling (known constraint): display_name is NOT unique. We
-   * verify the passphrase against every candidate sharing the name and succeed
-   * ONLY on a single unique match. Zero matches OR more than one match both fail
-   * closed and return null — an ambiguous match is never authenticated. (PHE-12
-   * may promote email-code sign-in for users who hit this ambiguity.)
-   *
-   * Returns the matched account on success, or null on any failure (unknown
-   * name, wrong passphrase, ambiguous match). The caller maps null to a single
-   * generic error — no hint, no enumeration. Throws 429 only when the
-   * account/IP is locked out by repeated failures.
-   *
-   * The raw passphrase is never logged, echoed, or persisted.
-   */
-  async verifyCredentials(
-    name: string,
-    passphrase: string,
-    ctx: VerifyContext = {}
-  ): Promise<VerifiedCredential | null> {
-    // Brute-force gate first: locked account or IP short-circuits with a 429.
-    this.throttle.assertNotLocked(name, ctx.ip);
-
-    const candidates = await this.loadCandidates(name);
-
-    // No account with this name: burn equivalent Argon2 time, then fail closed.
-    if (candidates.length === 0) {
-      await this.passphrase.verify(await this.getDecoyHash(), passphrase);
-      this.throttle.recordFailure(name, ctx.ip);
-      return null;
-    }
-
-    // Verify against EVERY candidate — no short-circuit. This keeps the work
-    // constant w.r.t. which candidate matches and lets us detect ambiguity.
-    let matched: VerifiedCredential | null = null;
-    let matchCount = 0;
-    for (const row of candidates) {
-      if (!row.passphrase_hash) continue;
-      const ok = await this.passphrase.verify(row.passphrase_hash, passphrase);
-      if (ok) {
-        matchCount += 1;
-        matched = {
-          userId: row.id,
-          displayName: row.display_name ?? null,
-        };
-      }
-    }
-
-    // Exactly one match authenticates; 0 or >1 (ambiguous) fail closed.
-    if (matchCount === 1 && matched) {
-      this.throttle.reset(name, ctx.ip);
-      return matched;
-    }
-
-    this.throttle.recordFailure(name, ctx.ip);
-    return null;
-  }
-
-  /**
-   * Returning-user sign-in (PHE-12 wires `POST /auth/signin`). Verifies the
-   * name+passphrase pair (PHE-11), resolves the matched account's email, and
-   * mints a real GoTrue session. Returns null on ANY credential failure so the
-   * route answers with a single generic error — no distinction between an unknown
-   * name and a wrong passphrase, no enumeration. Propagates the 429 that
-   * verifyCredentials throws when the account/IP is locked out.
-   *
-   * The raw passphrase is never logged, echoed, or persisted.
-   */
-  async signin(
-    name: string,
-    passphrase: string,
-    ctx: VerifyContext = {}
-  ): Promise<SigninResult | null> {
-    // Throws 429 on lockout; returns null on unknown name / wrong / ambiguous.
-    const verified = await this.verifyCredentials(name, passphrase, ctx);
-    if (!verified) return null;
-
-    const email = await this.resolveUserEmail(verified.userId);
-    if (!email) {
-      // A matched profile with no resolvable auth user is anomalous; fail closed.
-      this.logger.error(`signin: no email for user ${verified.userId}`);
-      return null;
-    }
-
-    // requireExisting: the account is known, so a failure to mint is generic.
-    const session = await this.mintSession(email, { requireExisting: true });
-    if (!session) return null;
-    return { session };
-  }
-
-  /** Resolve an account's email from its auth.users id (service role). */
-  private async resolveUserEmail(userId: string): Promise<string | null> {
-    const { data, error } = await this.supabase
-      .getClient()
-      .auth.admin.getUserById(userId);
-    if (error || !data?.user?.email) return null;
-    return data.user.email;
-  }
-
-  /** Case-insensitive exact match on display_name (LIKE metachars escaped). */
-  private async loadCandidates(name: string): Promise<
-    Array<{
-      id: string;
-      display_name: string | null;
-      passphrase_hash: string | null;
-    }>
-  > {
-    const normalized = name.trim();
-    if (!normalized) return [];
-
-    const { data, error } = await this.supabase
-      .getClient()
-      .from("user_profiles")
-      .select("id, display_name, passphrase_hash")
-      .ilike("display_name", escapeLikePattern(normalized))
-      .limit(MAX_NAME_CANDIDATES);
-
-    if (error) {
-      // Never include the passphrase or its hash in a log line.
-      this.logger.error(`name resolution lookup failed: ${error.message}`);
-      return [];
-    }
-    return (data ?? []) as Array<{
-      id: string;
-      display_name: string | null;
-      passphrase_hash: string | null;
-    }>;
-  }
-
-  private async getDecoyHash(): Promise<string> {
-    if (!this.decoyHash) {
-      this.decoyHash = await this.passphrase.hash(
-        randomBytes(32).toString("hex")
-      );
-    }
-    return this.decoyHash;
-  }
-}
-
-/**
- * Escape PostgreSQL LIKE/ILIKE metacharacters so a value matches literally and
- * fully (no implicit wildcards). PostgREST's `.ilike` uses the default backslash
- * escape, so `\`, `%`, and `_` must be backslash-escaped. Without this, a name
- * like "a_b" or "50%" would over-match other accounts.
- */
-function escapeLikePattern(value: string): string {
-  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 }
 
 /** ash***@headline.com — enough to recognize, not enough to leak. */
