@@ -36,11 +36,6 @@ const GROUPS: SettingsGroup[] = [
     label: "access",
     rows: [
       {
-        id: "passphrase",
-        label: "passphrase",
-        sub: "change how you sign in",
-      },
-      {
         id: "my-connections",
         label: "connected accounts",
         sub: "add or disconnect accounts",

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useCallback, useContext, useState, useEffect, ReactNode } from "react";
 import { fetchProfile } from "@/lib/api-client";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { LEGACY_ACCENT_VARS, STELLAR_DEFAULT, accentVars, resolveAccent } from "@/lib/stellar";
@@ -13,27 +13,37 @@ import { LEGACY_ACCENT_VARS, STELLAR_DEFAULT, accentVars, resolveAccent } from "
 
 interface SessionColorContextType {
   sessionColor: string;
+  /**
+   * Publish a color learned after mount (PHE-97: the welcome screen, reached by
+   * client-side navigation right after sign-up, before this provider has seen
+   * the new account).
+   */
+  applySessionColor: (color: string) => void;
 }
 
 const SessionColorContext = createContext<SessionColorContextType>({
   sessionColor: STELLAR_DEFAULT,
+  applySessionColor: () => {},
 });
 
 export function SessionColorProvider({ children }: { children: ReactNode }) {
   const [sessionColor, setSessionColor] = useState<string>(STELLAR_DEFAULT);
 
+  const applySessionColor = useCallback((value: string | null) => {
+    const color = resolveAccent(value);
+    setSessionColor(color);
+    const root = document.documentElement;
+    for (const [name, v] of Object.entries(accentVars(color))) root.style.setProperty(name, v);
+    // Older screens set the aliased names inline; clear them so the aliases win.
+    for (const name of LEGACY_ACCENT_VARS) root.style.removeProperty(name);
+    if (color !== STELLAR_DEFAULT) localStorage.setItem("phenyx_stellar_color", color);
+  }, []);
+
   useEffect(() => {
     let active = true;
 
     const apply = (value: string | null) => {
-      if (!active) return;
-      const color = resolveAccent(value);
-      setSessionColor(color);
-      const root = document.documentElement;
-      for (const [name, v] of Object.entries(accentVars(color))) root.style.setProperty(name, v);
-      // Older screens set the aliased names inline; clear them so the aliases win.
-      for (const name of LEGACY_ACCENT_VARS) root.style.removeProperty(name);
-      if (color !== STELLAR_DEFAULT) localStorage.setItem("phenyx_stellar_color", color);
+      if (active) applySessionColor(value);
     };
 
     // Reconcile against the authoritative server-assigned color. Anonymous
@@ -61,10 +71,10 @@ export function SessionColorProvider({ children }: { children: ReactNode }) {
       active = false;
       data.subscription.unsubscribe();
     };
-  }, []);
+  }, [applySessionColor]);
 
   return (
-    <SessionColorContext.Provider value={{ sessionColor }}>
+    <SessionColorContext.Provider value={{ sessionColor, applySessionColor }}>
       {children}
     </SessionColorContext.Provider>
   );
