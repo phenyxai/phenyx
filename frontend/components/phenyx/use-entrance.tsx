@@ -9,7 +9,8 @@ import { entrancePlan } from "@/lib/landing-motion";
 // its headline is 35% visible, so nothing in it shows before its heading;
 // each block also waits until it is on screen. A heading already cut off at
 // the top of the screen counts as passed: the section starts at once, and a
-// block that arrives after it plays at once. The CSS hides the parts
+// block that arrives after it plays at once. So does a section reached from
+// below with its heading already gone, cards or not. The CSS hides the parts
 // only when motion is allowed, so reduced motion shows the end state.
 //
 // Returns whether the section's text has landed: the gate that stories
@@ -65,6 +66,7 @@ export function useEntrance(sectionRef: React.RefObject<HTMLElement | null>): bo
       if (startedAt !== null) return;
       startedAt = performance.now();
       headlineObserver.disconnect();
+      sectionObserver.disconnect();
       headline.dataset.in = "true";
       if (eyebrow) show(eyebrow, 0);
       ledes.forEach((lede, i) => show(lede, plan.ledes[i]));
@@ -90,12 +92,17 @@ export function useEntrance(sectionRef: React.RefObject<HTMLElement | null>): bo
         else waiting.add(block);
       }
     }, BLOCK_SEEN);
+    const sectionObserver = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && headline.getBoundingClientRect().top < 0) start(true);
+    });
     headlineObserver.observe(headline);
     blocks.forEach((block) => blockObserver.observe(block));
+    sectionObserver.observe(section);
 
     return () => {
       headlineObserver.disconnect();
       blockObserver.disconnect();
+      sectionObserver.disconnect();
       clearTimeout(landTimer);
     };
   }, [sectionRef]);
