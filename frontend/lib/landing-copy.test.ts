@@ -55,16 +55,15 @@ test("there are exactly seven constellation stages, in stage order", () => {
   );
 });
 
-test("every constellation stage shows two sourced moments", () => {
-  // The stage viewer lays the rows out as two columns and keys them by source.
+test("every constellation point reads back a phase with two dated signals", () => {
+  // The point viewer shows the question, a reading, then two signals side by side.
   for (const stage of constellationStages) {
-    assert.equal(stage.rows.length, 2, `${stage.name} should show two moments`);
+    assert.ok(stage.era.trim().length > 0, `${stage.name} has no era`);
     assert.ok(stage.question.trim().length > 0, `${stage.name} has no question`);
-    const sources = stage.rows.map(([source]) => source);
-    assert.equal(new Set(sources).size, sources.length, `${stage.name} repeats a source`);
-    for (const [source, moment] of stage.rows) {
-      assert.ok(source.trim().length > 0, `${stage.name} row has no source`);
-      assert.ok(moment.trim().length > 0, `${stage.name} row has no moment`);
+    assert.ok(stage.reading.trim().length > 0, `${stage.name} has no reading`);
+    assert.equal(stage.signals.length, 2, `${stage.name} should show two signals`);
+    for (const signal of stage.signals) {
+      for (const [field, value] of Object.entries(signal)) assert.ok(value.trim().length > 0, `${stage.name} signal has no ${field}`);
     }
   }
 });

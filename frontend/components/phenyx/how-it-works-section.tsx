@@ -17,10 +17,13 @@ import { EntranceWords, useEntrance } from "./use-entrance";
 // Each part sits at a quarter of the ring; while the orbit is on screen a light
 // trail sweeps from the current part to the next, and when it arrives the next
 // part's slide comes up. The trail is the progress bar, so there is no other.
-// Hovering, keyboard focus, clicking a part, or working inside a slide holds
-// the orbit still.
+// It plays only while it is on screen, the tab is visible, motion is allowed,
+// nobody is hovering the reading card or focused on it from the keyboard, and
+// no hold is running. A hold the reader starts (picking a part, choosing a
+// point, opening the evidence) lasts its full time, wherever the pointer goes.
 
-const DWELL_MS = 7000;
+// Constellation stays up long enough to form and be explored (Oct 4 reference).
+const DWELL_MS = [19800, 7000, 7000, 7000];
 const HOLD_AFTER_PICK_MS = 5000;
 const SWIPE_PX = 40;
 const VIEWBOX = { x: -24, y: 0, width: 448, height: 384 };
@@ -52,7 +55,7 @@ export function HowItWorksSection() {
   const trailRef = useRef<HTMLSpanElement>(null);
   const slidesRef = useRef<HTMLDivElement>(null);
   const touchX = useRef<number | null>(null);
-  useEntrance(sectionRef);
+  const landed = useEntrance(sectionRef);
   const motion = useRef({
     index: 0,
     /** Angle (SVG degrees, -90 is 12 o'clock) the current trail sweeps from. */
@@ -102,7 +105,7 @@ export function HowItWorksSection() {
       last = now;
       const isPlaying = m.isVisible && !m.isHovered && !m.isKeyboardFocused && !m.isHeld && !reduced && !document.hidden;
       if (isPlaying) {
-        m.progress += elapsed / DWELL_MS;
+        m.progress += elapsed / DWELL_MS[m.index];
         if (m.progress >= 1) {
           m.trailStart += quarter;
           m.progress = 0;
@@ -186,13 +189,6 @@ export function HowItWorksSection() {
               motion.current.isKeyboardFocused = false;
             }
           }}
-          onMouseEnter={() => { motion.current.isHovered = true; }}
-          onMouseLeave={() => {
-            const m = motion.current;
-            m.isHovered = false;
-            m.isHeld = false;
-            clearTimeout(m.release);
-          }}
           onTouchStart={(event) => { touchX.current = event.touches[0].clientX; }}
           onTouchEnd={(event) => {
             if (touchX.current === null) return;
@@ -246,7 +242,13 @@ export function HowItWorksSection() {
             </svg>
           </div>
 
-          <div className="landing-vnext__orbit-panel" data-entrance="block">
+          <div
+            className="landing-vnext__orbit-panel"
+            data-entrance="block"
+            onPointerEnter={(event) => { if (event.pointerType !== "touch") motion.current.isHovered = true; }}
+            onPointerLeave={() => { motion.current.isHovered = false; }}
+            onPointerCancel={() => { motion.current.isHovered = false; }}
+          >
             <div ref={slidesRef} className="landing-vnext__orbit-slides">
               {slides.map((slide, i) => {
                 const Example = EXAMPLES[i];
@@ -262,7 +264,7 @@ export function HowItWorksSection() {
                     <p className="landing-vnext__orbit-kicker">{slide.kicker}</p>
                     <h3 className="landing-vnext__orbit-title">{slide.title}</h3>
                     <p className="landing-vnext__orbit-line">{slide.line}</p>
-                    <Example active={i === index} onHold={hold} />
+                    <Example active={i === index} ready={landed} onHold={hold} />
                   </article>
                 );
               })}
