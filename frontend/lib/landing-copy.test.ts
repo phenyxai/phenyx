@@ -120,7 +120,7 @@ test("the polaris example can show its evidence and its plan", () => {
   assert.equal(new Set(polarisExample.plan.steps).size, polarisExample.plan.steps.length);
 });
 
-test("our vision walks five stations, from connecting to leaving", () => {
+test("your space walks five stations, from choosing platforms to changing your mind", () => {
   assert.deepEqual(
     promiseCopy.stations.map((station) => station.visual.kind),
     ["choose", "protect", "show", "decide", "leave"],

@@ -302,49 +302,48 @@ export interface PromiseStation {
   visual: PromiseVisual;
 }
 
-// Privacy claims below are product promises, not decoration. What backs them
-// today: source payloads and Polaris turns are AES-256-GCM at rest
-// (`backend/src/common/encryption.service.ts`), and `/account/export` returns
-// the whole account (settings → data management). "never sold" is policy.
+// The stations are product promises, not decoration. What backs them today:
+// each platform connects on its own in onboarding, settings → connections
+// disconnects any of them, settings → data management exports everything
+// (`/account/export`), and closing the account deletes it.
 export const promiseCopy = {
-  eyebrow: "our vision",
-  headline: "your life should stay yours.",
-  lede: "what happens to your data, from the moment you connect to the moment you decide to go.",
+  eyebrow: "your space",
+  headline: "built around you.",
+  lede: "built around your choices, your perspective, and your pace.",
   stations: [
     {
-      title: "you choose.",
-      body: "only the places you connect, one at a time.",
+      title: "start with what feels right.",
+      body: "choose which platforms to connect.",
       visual: {
         kind: "choose",
         toggles: [
           { name: "spotify", state: "on" },
           { name: "instagram", state: "flip" },
-          { name: "figma", state: "on" },
+          { name: "youtube", state: "on" },
         ],
       },
     },
     {
-      title: "we protect.",
-      body: "encrypted wherever it rests or travels, and never sold.",
+      title: "here for you.",
+      body: "the purpose is personal: to help you understand your life more clearly.",
       visual: { kind: "protect" },
     },
     {
-      title: "we show.",
-      body: "every observation opens onto where it came from.",
-      visual: { kind: "show", observation: "your best work starts early.", sources: ["figma", "notion"] },
+      title: "trace the connections.",
+      body: "see the sources behind every observation.",
+      visual: { kind: "show", observation: "your mornings are where things begin", sources: ["instagram", "youtube"] },
     },
     {
-      title: "you decide.",
-      body: "whether something fits is always yours to say.",
-      visual: { kind: "decide", observation: "type keeps coming back.", yes: "this is me", no: "not quite" },
+      title: "your perspective matters.",
+      body: "say what resonates, and add your own view.",
+      visual: { kind: "decide", observation: "you have always made things to share", yes: "this is me", no: "not quite" },
     },
     {
-      title: "you can leave.",
-      body: "disconnect one account, or take all of it with you.",
-      visual: { kind: "leave", accounts: ["spotify", "instagram", "figma"] },
+      title: "room for change.",
+      body: "change your mind anytime: disconnect platforms, export your data, or delete your account.",
+      visual: { kind: "leave", accounts: ["spotify", "instagram", "youtube"] },
     },
   ] as readonly PromiseStation[],
-  close: "what's yours has always been yours.",
 } as const;
 
 export const ctaCopy = {
