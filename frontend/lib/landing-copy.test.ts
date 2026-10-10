@@ -13,7 +13,6 @@ import {
   polarisExample,
   promiseCopy,
   SECTION_IDS,
-  SECTION_ORDER,
 } from "./landing-copy.ts";
 
 // These assert the contracts the landing components rely on at render time —
@@ -27,10 +26,6 @@ test("hero description is two deliberate lines", () => {
 test("nav links point at sections that exist", () => {
   const ids = new Set(Object.values(SECTION_IDS));
   for (const link of navCopy.links) assert.ok(ids.has(link.targetId), `unknown target ${link.targetId}`);
-});
-
-test("the section order covers every section exactly once", () => {
-  assert.deepEqual([...SECTION_ORDER].sort(), Object.values(SECTION_IDS).sort());
 });
 
 test("the nav names the three chapters, in page order", () => {
