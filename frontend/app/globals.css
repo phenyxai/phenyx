@@ -890,19 +890,20 @@
 .landing-vnext__enter-button:focus-visible,
 .landing-vnext__nav-dropdown button:focus-visible { outline: 2px solid rgba(var(--s-rgb), 0.8); }
 
-/* Reveal: each block fades up 14px as it arrives, headings a beat after their
-   eyebrow, leads after headings, closing lines last. */
-.landing-vnext [data-reveal] { opacity: 0; transform: translateY(14px); transition: opacity 0.8s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1); }
-.landing-vnext [data-reveal="1"] { transition-delay: 0.09s; }
-.landing-vnext [data-reveal="2"] { transition-delay: 0.18s; }
-.landing-vnext [data-reveal="3"] { transition-delay: 0.34s; }
-.landing-vnext [data-reveal][data-visible="true"] { opacity: 1; transform: none; }
-/* the vision's closing line waits for the rail rather than for the reveal */
-.landing-vnext .landing-vnext__promise-close[data-reveal] { opacity: 0; transition: opacity 1s 0.34s, transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) 0.34s; }
-.landing-vnext .landing-vnext__promise-close[data-reveal][data-shown="true"] { opacity: 1; }
-
-/* v610: chapters come into focus as they reach the middle of the screen. */
-.landing-vnext [data-chapter] { transition: opacity 0.35s linear; will-change: opacity; }
+/* Entrance (v1800, PHE-113; timing in use-entrance.tsx): the eyebrow floats
+   in, the headline rises word by word, the ledes follow, then the blocks.
+   Parts are hidden only when motion is allowed, so reduced motion shows the
+   end state. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-vnext :is([data-entrance="eyebrow"], [data-entrance="lede"], [data-entrance="block"]) { opacity: 0; translate: 0 16px; filter: blur(5px); transition: opacity 0.9s ease, filter 1s ease, translate 1.2s cubic-bezier(0.18, 1, 0.3, 1); transition-delay: var(--d, 0s); }
+  .landing-vnext [data-entrance="block"] { translate: 0 24px; }
+  .landing-vnext :is([data-entrance="eyebrow"], [data-entrance="lede"], [data-entrance="block"])[data-in="true"] { opacity: 1; translate: none; filter: none; }
+  .landing-vnext__word { display: inline-block; opacity: 0; transform: translateY(0.55em) rotate(2deg); transform-origin: 0 100%; filter: blur(8px); transition: opacity 0.8s ease, filter 0.9s ease, transform 1.15s cubic-bezier(0.18, 1.25, 0.4, 1); transition-delay: calc(var(--hd, 0.12s) + var(--i) * 0.075s); }
+  .landing-vnext [data-entrance="headline"][data-in="true"] .landing-vnext__word { opacity: 1; transform: none; filter: none; }
+}
+/* the vision's closing line waits for the rail */
+.landing-vnext .landing-vnext__promise-close { opacity: 0; transition: opacity 1s 0.34s; }
+.landing-vnext .landing-vnext__promise-close[data-shown="true"] { opacity: 1; }
 
 .landing-vnext__scroll-cue[data-visible="true"] { opacity: 1; visibility: visible; }
 
@@ -1019,7 +1020,6 @@
   .landing-vnext *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   .landing-vnext::before,
   .landing-vnext::after { opacity: 0.5; animation: none !important; }
-  .landing-vnext [data-reveal] { opacity: 1; transform: none; transition: none; }
   .landing-vnext__pattern,
   .landing-vnext__find,
   .landing-vnext__polaris-ask,

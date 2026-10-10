@@ -18,15 +18,6 @@ export const SECTION_IDS = {
   cta: "s0-cta",
 } as const;
 
-/** The page's chapters, top to bottom. Scroll-spy and chapter focus both walk this. */
-export const SECTION_ORDER = [
-  SECTION_IDS.top,
-  SECTION_IDS.about,
-  SECTION_IDS.how,
-  SECTION_IDS.promise,
-  SECTION_IDS.cta,
-] as const;
-
 export const navCopy = {
   brand: BRAND,
   menuLabel: "menu",

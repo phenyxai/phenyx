@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { promiseCopy, SECTION_IDS, type PromiseVisual } from "@/lib/landing-copy";
 import { railLayout, stationDelays } from "@/lib/landing-motion";
+import { EntranceWords, useEntrance } from "./use-entrance";
 
 // "our vision" (v630 onward in the Sept 23 export): five stations along a rail,
 // from connecting an account to leaving with everything. The first time the
@@ -64,9 +65,11 @@ function StationVisual({ visual }: { visual: PromiseVisual }) {
 }
 
 export function PromiseSection() {
+  const sectionRef = useRef<HTMLElement>(null);
   const storyRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLSpanElement>(null);
   const [phase, setPhase] = useState<Phase>("idle");
+  useEntrance(sectionRef);
   const [lit, setLit] = useState<readonly boolean[]>(() => promiseCopy.stations.map(() => false));
 
   useEffect(() => {
@@ -130,11 +133,11 @@ export function PromiseSection() {
   }, []);
 
   return (
-    <section id={SECTION_IDS.promise} className="landing-vnext__section landing-vnext__promise">
+    <section ref={sectionRef} id={SECTION_IDS.promise} className="landing-vnext__section landing-vnext__promise">
       <div className="landing-vnext__inner">
-        <p className="landing-vnext__eyebrow" data-reveal>{promiseCopy.eyebrow}</p>
-        <h2 data-reveal="1">{promiseCopy.headline}</h2>
-        <p className="landing-vnext__section-lead" data-reveal="2">{promiseCopy.lede}</p>
+        <p className="landing-vnext__eyebrow" data-entrance="eyebrow">{promiseCopy.eyebrow}</p>
+        <h2 data-entrance="headline"><EntranceWords text={promiseCopy.headline} /></h2>
+        <p className="landing-vnext__section-lead" data-entrance="lede">{promiseCopy.lede}</p>
 
         <div
           ref={storyRef}
@@ -159,7 +162,7 @@ export function PromiseSection() {
             ))}
           </ol>
         </div>
-        <p className="landing-vnext__thesis landing-vnext__promise-close" data-reveal="3" data-shown={phase === "done" || phase === "still"}>
+        <p className="landing-vnext__thesis landing-vnext__promise-close" data-shown={phase === "done" || phase === "still"}>
           {promiseCopy.close}
         </p>
       </div>

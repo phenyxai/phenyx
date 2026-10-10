@@ -11,6 +11,7 @@ import {
   type SlideExampleProps,
 } from "./four-parts-slides";
 import { onActivateKey } from "./landing-dom";
+import { EntranceWords, useEntrance } from "./use-entrance";
 
 // The four parts of PHENYX on an orbit (v610 onward in the Sept 23 export).
 // Each part sits at a quarter of the ring; while the orbit is on screen a light
@@ -46,10 +47,12 @@ export function HowItWorksSection() {
   const count = slides.length;
   const quarter = 360 / count;
   const [index, setIndex] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
   const orbitRef = useRef<HTMLDivElement>(null);
   const trailRef = useRef<HTMLSpanElement>(null);
   const slidesRef = useRef<HTMLDivElement>(null);
   const touchX = useRef<number | null>(null);
+  useEntrance(sectionRef);
   const motion = useRef({
     index: 0,
     /** Angle (SVG degrees, -90 is 12 o'clock) the current trail sweeps from. */
@@ -157,11 +160,11 @@ export function HowItWorksSection() {
   }, [index]);
 
   return (
-    <section id={SECTION_IDS.how} className="landing-vnext__section">
+    <section ref={sectionRef} id={SECTION_IDS.how} className="landing-vnext__section">
       <div className="landing-vnext__inner">
-        <p className="landing-vnext__eyebrow" data-reveal>{howItWorksCopy.eyebrow}</p>
-        <h2 data-reveal="1">{howItWorksCopy.headline}</h2>
-        <p className="landing-vnext__section-lead" data-reveal="2">{howItWorksCopy.subline}</p>
+        <p className="landing-vnext__eyebrow" data-entrance="eyebrow">{howItWorksCopy.eyebrow}</p>
+        <h2 data-entrance="headline"><EntranceWords text={howItWorksCopy.headline} /></h2>
+        <p className="landing-vnext__section-lead" data-entrance="lede">{howItWorksCopy.subline}</p>
 
         <div
           ref={orbitRef}
@@ -198,7 +201,7 @@ export function HowItWorksSection() {
             if (Math.abs(dx) > SWIPE_PX) goTo(motion.current.index + (dx < 0 ? 1 : -1), true);
           }}
         >
-          <div className="landing-vnext__orbit-visual">
+          <div className="landing-vnext__orbit-visual" data-entrance="block">
             <span
               ref={trailRef}
               className="landing-vnext__orbit-trail"
@@ -243,7 +246,7 @@ export function HowItWorksSection() {
             </svg>
           </div>
 
-          <div className="landing-vnext__orbit-panel">
+          <div className="landing-vnext__orbit-panel" data-entrance="block">
             <div ref={slidesRef} className="landing-vnext__orbit-slides">
               {slides.map((slide, i) => {
                 const Example = EXAMPLES[i];

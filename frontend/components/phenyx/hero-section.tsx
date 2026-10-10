@@ -19,6 +19,11 @@ export function HeroSection({ onEnterClick }: { onEnterClick: () => void }) {
   );
 }
 
-export function EnterButton({ onClick, label }: { onClick: () => void; label: string }) {
-  return <button type="button" className="landing-vnext__enter-button" onClick={onClick}><span>{label}</span></button>;
+/** `entrance`: float in as a block of the section around it (see use-entrance). */
+export function EnterButton({ onClick, label, entrance }: { onClick: () => void; label: string; entrance?: boolean }) {
+  return (
+    <button type="button" className="landing-vnext__enter-button" onClick={onClick} data-entrance={entrance ? "block" : undefined}>
+      <span>{label}</span>
+    </button>
+  );
 }
