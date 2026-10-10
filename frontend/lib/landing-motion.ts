@@ -1,11 +1,36 @@
 // Motion arithmetic for the landing, kept free of the DOM so it can be tested
-// under `node --test`. Ported from the Sept 23 landing export (internal pass
-// v740): the orbit carousel's light trail (v610/v640), the chapters that come
-// into focus as they reach the middle of the screen (v610), and the "our
-// vision" rail that lights each station as the runner reaches it (v630).
+// under `node --test`. Ported from the landing exports: the orbit carousel's
+// light trail (v610/v640), the rail that lights each station as the runner
+// reaches it (v630), and the entrance every section plays (v1800, Oct 4).
 
-/** Opacity a chapter rests at when it is nowhere near the focus band. */
-export const CHAPTER_MIN_OPACITY = 0.26;
+const round = (seconds: number) => Math.round(seconds * 1000) / 1000;
+
+export interface EntrancePlan {
+  /** When the headline's first word starts; each next word follows 75ms later. */
+  headline: number;
+  ledes: number[];
+  /** When the section's text has landed: the gate for stories that run on their own. */
+  landed: number;
+  blocks: number[];
+}
+
+/**
+ * When each part of a section floats in, in seconds from the moment its
+ * headline comes into view: the eyebrow at once, the headline word by word
+ * 120ms after it, the ledes 0.2s after the words and 0.18s apart, then the
+ * blocks (cards and visuals) 0.16s apart once the text has landed.
+ */
+export function entrancePlan(parts: { hasEyebrow: boolean; words: number; ledes: number; blocks: number }): EntrancePlan {
+  const headline = parts.hasEyebrow ? 0.12 : 0;
+  const firstLede = headline + parts.words * 0.075 + 0.2;
+  const landed = firstLede + (parts.ledes ? (parts.ledes - 1) * 0.18 + 0.4 : 0.3);
+  return {
+    headline,
+    ledes: Array.from({ length: parts.ledes }, (_, i) => round(firstLede + i * 0.18)),
+    landed: round(landed),
+    blocks: Array.from({ length: parts.blocks }, (_, i) => round(landed + i * 0.16)),
+  };
+}
 
 /**
  * The orbit trail as one conic gradient: transparent where the trail began,
@@ -51,32 +76,6 @@ export function ringBox(
     width: percent(ring.r * 2, viewBox.width),
     height: percent(ring.r * 2, viewBox.height),
   };
-}
-
-function easeInOut(t: number): number {
-  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-}
-
-/**
- * How lit a chapter is, from how much of it sits inside the middle band of the
- * scroller (22% to 78% of its height). A chapter that fits on screen whole is
- * treated as nearly centred, so short sections do not stay dim.
- */
-export function chapterOpacity(
-  section: { top: number; bottom: number },
-  viewport: { top: number; height: number },
-): number {
-  const bandTop = viewport.top + viewport.height * 0.22;
-  const bandBottom = viewport.top + viewport.height * 0.78;
-  const band = bandBottom - bandTop;
-  const height = section.bottom - section.top;
-  const overlap = Math.max(0, Math.min(section.bottom, bandBottom) - Math.max(section.top, bandTop));
-  let focus = height > 0 ? overlap / Math.min(height, band) : 0;
-  const onScreen = section.top >= viewport.top - 2 && section.bottom <= viewport.top + viewport.height + 2;
-  if (onScreen) focus = Math.max(focus, 0.92);
-  focus = Math.min(1, focus * 1.25);
-  const opacity = CHAPTER_MIN_OPACITY + (1 - CHAPTER_MIN_OPACITY) * easeInOut(focus);
-  return Math.round(opacity * 1000) / 1000;
 }
 
 /**
