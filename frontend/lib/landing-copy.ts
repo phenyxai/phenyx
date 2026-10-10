@@ -33,7 +33,7 @@ export const navCopy = {
   links: [
     { label: "your life", targetId: SECTION_IDS.about },
     { label: "how it works", targetId: SECTION_IDS.how },
-    { label: "our vision", targetId: SECTION_IDS.promise },
+    { label: "your space", targetId: SECTION_IDS.promise },
   ],
   enter: "enter",
 } as const;
