@@ -78,81 +78,105 @@ export const howItWorksCopy = {
     },
   ],
   stageMapLabel: "seven stages",
-  stageHint: "click any point to open the years inside it.",
+  /** Shown once the constellation has formed; touch screens have no hover. */
+  stageHint: {
+    hover: "hover over any point to see that part of your story.",
+    touch: "tap any point to see that part of your story.",
+  },
 } as const;
 
 export interface ConstellationStage {
   name: string;
-  year: string;
+  era: string;
+  /** Empty for the point that hasn't happened yet. */
+  years: string;
   question: string;
-  /** [source, moment]. Two per stage: the viewer lays them out side by side. */
-  rows: readonly (readonly [string, string])[];
+  /** One sentence reading the phase back to the person. */
+  reading: string;
+  /** Two dated signals, laid out side by side under the reading. */
+  signals: readonly { when: string; platform: string; what: string }[];
 }
 
-// The prototype's dataset carries a third row per stage for the full demo; the
-// landing viewer only ever shows the first two, so only those are kept.
+// One example life read from platforms, newest from the top-down sources
+// (latest linkedin post, recent chatgpt chats) back to the oldest (first
+// likes on youtube, first saves on spotify). From the Oct 4 reference
+// (phenyx_landing.html, v1600); illustrative, not a real person.
 export const constellationStages: readonly ConstellationStage[] = [
   {
     name: "origin",
-    year: "2016–17",
-    question: "what was already there before i had words for it?",
-    rows: [
-      ["youtube", "you watched how title sequences were made, then called it wasting time."],
-      ["spotify", "one album, played through every exam week since."],
+    era: "childhood",
+    years: "2008–15",
+    question: "who was i before anyone told me who to be?",
+    reading: "you were curious and quiet, happiest making something on your own and then showing it to the people you loved.",
+    signals: [
+      { when: "first like, 2012", platform: "youtube", what: "a video on how film title sequences are made, watched long past bedtime." },
+      { when: "first save, 2013", platform: "spotify", what: "the first song you ever saved is still in your library." },
     ],
   },
   {
     name: "emergence",
-    year: "2018–20",
-    question: "what started taking shape before i named it?",
-    rows: [
-      ["instagram", "you started posting the flyers instead of the nights out."],
-      ["figma", "you opened it for a class project and never closed it."],
+    era: "teenage years",
+    years: "2016–19",
+    question: "what did i start caring about on my own?",
+    reading: "music and making became the way you understood yourself, and the way you found your first real friends.",
+    signals: [
+      { when: "2016", platform: "spotify", what: "the playlists you made for friends outnumber the ones you made for yourself." },
+      { when: "2018", platform: "instagram", what: "your first posts are other people’s shows, shot from the front row." },
     ],
   },
   {
     name: "self-creation",
-    year: "2020–22",
-    question: "what did i begin choosing on purpose?",
-    rows: [
-      ["figma", "forty-one posters for campus events, all of them yours."],
-      ["notion", "you started keeping a real project list, and finishing things."],
+    era: "leaving home",
+    years: "2020–22",
+    question: "who did i become once i was on my own?",
+    reading: "away from home, you started choosing your own rhythms, your own people, and the things you would never give up.",
+    signals: [
+      { when: "2020", platform: "pinterest", what: "a board for your first place, mostly warm light and secondhand chairs." },
+      { when: "2021", platform: "reddit", what: "the local threads you joined became where you found your people." },
     ],
   },
   {
     name: "convergence",
-    year: "2023",
-    question: "which parts of my life started moving together?",
-    rows: [
-      ["chatgpt", "cognitive science questions and design questions in the same chats."],
-      ["spotify", "the same three albums under every studio night."],
+    era: "a turning point",
+    years: "2023",
+    question: "when did the separate parts of me start to meet?",
+    reading: "in one season, the work you loved, the people around you, and the way you spent your days all began pointing the same way.",
+    signals: [
+      { when: "spring 2023", platform: "chatgpt", what: "more of your questions turned to what you wanted to make next." },
+      { when: "summer 2023", platform: "spotify", what: "one album played under almost every late night that year." },
     ],
   },
   {
     name: "becoming",
-    year: "2024–25",
-    question: "what is changing in me right now?",
-    rows: [
-      ["figma", "posters give way to screens, and screens to prototypes."],
-      ["chatgpt", '"is product design a real job for someone like me?" keeps returning.'],
+    era: "finding your voice",
+    years: "2024–25",
+    question: "how am i changing right now?",
+    reading: "you are worrying less about how things look to others and trusting more of what feels true to you.",
+    signals: [
+      { when: "2024", platform: "instagram", what: "fewer posts and longer captions, with more of your own words." },
+      { when: "2025", platform: "tiktok", what: "you started talking to the camera instead of filming around yourself." },
     ],
   },
   {
     name: "recognition",
-    year: "2025–now",
+    era: "today",
+    years: "2025–now",
     question: "what has stayed with me the whole time?",
-    rows: [
-      ["pinterest", "you have been saving type since you were fifteen."],
-      ["notion", "what you finish is what you start before noon on a sunday."],
+    reading: "the curious kid who made things to share is still here, only now you are teaching others to do the same.",
+    signals: [
+      { when: "latest post", platform: "linkedin", what: "you wrote about why you make things in public, and people shared it." },
+      { when: "this month", platform: "chatgpt", what: "your questions keep circling back to how to teach what you know." },
     ],
   },
   {
     name: "transcendence",
-    year: "ahead",
-    question: "what larger direction is taking shape?",
-    rows: [
-      ["figma + chatgpt", "you keep making things that explain themselves."],
-      ["instagram", "you explain the work now, and people reply."],
+    era: "what’s next",
+    years: "",
+    question: "where is this all leading?",
+    reading: "everything so far seems to point toward making things that help people feel more understood.",
+    signals: [
+      { when: "lately", platform: "linkedin", what: "people keep reaching out to ask how you see their work." },
+      { when: "recent chats", platform: "chatgpt", what: "you have started asking what it would take to build something of your own." },
     ],
   },
 ];
