@@ -262,6 +262,7 @@ export default function JoinPage() {
               aria-busy={isLoading}
               aria-label="verify my code"
               className="onb-action auth-brand-btn"
+              data-ph-hover="off"
             >
               {isLoading ? "verifying…" : "continue"}
             </button>
@@ -358,7 +359,13 @@ export default function JoinPage() {
             )}
 
             <div className="auth-actions">
-              <button type="submit" className="auth-brand-btn" disabled={isLoading} aria-busy={isLoading}>
+              <button
+                type="submit"
+                className="auth-brand-btn"
+                data-ph-hover="off"
+                disabled={isLoading}
+                aria-busy={isLoading}
+              >
                 {isLoading ? "…" : "continue"}
               </button>
               <p className="auth-or" aria-hidden="true">

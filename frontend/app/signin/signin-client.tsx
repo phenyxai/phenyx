@@ -159,6 +159,7 @@ export default function SignInClient() {
             <button
               type="button"
               className="auth-brand-btn"
+              data-ph-hover="off"
               onClick={handleGoogle}
               disabled={googleBusy}
               aria-busy={googleBusy}
@@ -220,7 +221,13 @@ export default function SignInClient() {
             )}
 
             <div className="auth-actions">
-              <button type="submit" className="auth-brand-btn" disabled={isLoading} aria-busy={isLoading}>
+              <button
+                type="submit"
+                className="auth-brand-btn"
+                data-ph-hover="off"
+                disabled={isLoading}
+                aria-busy={isLoading}
+              >
                 {isLoading ? "sending…" : "send code"}
               </button>
               <button
@@ -306,6 +313,7 @@ export default function SignInClient() {
               aria-busy={isLoading}
               aria-label="verify my code"
               className="onb-action auth-brand-btn"
+              data-ph-hover="off"
             >
               {isLoading ? "verifying…" : "continue"}
             </button>
