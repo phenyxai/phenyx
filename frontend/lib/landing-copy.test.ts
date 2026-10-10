@@ -88,7 +88,7 @@ test("insight patterns are fully populated and cite unique sources", () => {
 });
 
 test("the early-start chart shows what its claim says", () => {
-  // "14 of your last 17 finished projects were started before 9am."
+  // "14 of the last 17 things you made and shared started before 9am."
   const bars = insightPatterns.find((pattern) => pattern.visual.kind === "bars")?.visual;
   assert.ok(bars && bars.kind === "bars");
   assert.match(bars.pattern, /^[01]+$/);
@@ -105,10 +105,10 @@ test("the returning-pattern timeline stays on its axis", () => {
   }
 });
 
-test("discover finds are uniquely named and each says why", () => {
+test("discover finds are uniquely named and each says where it came from", () => {
   assert.equal(discoverFinds.length, 3);
   assert.equal(new Set(discoverFinds.map((find) => find.name)).size, discoverFinds.length);
-  for (const find of discoverFinds) assert.ok(find.why.startsWith("because "), `${find.name} has no reason`);
+  for (const find of discoverFinds) assert.ok(find.why.startsWith("from "), `${find.name} does not say where it came from`);
 });
 
 test("the polaris example can show its evidence and its plan", () => {
@@ -139,7 +139,6 @@ test("copy is lowercase-first except for the brand and proper nouns", () => {
     ...promiseCopy.stations.map((station) => station.title),
     promiseCopy.headline,
     ctaCopy.headline,
-    ctaCopy.subline,
   ];
   for (const sentence of sentences) {
     assert.equal(sentence[0], sentence[0].toLowerCase(), `"${sentence}" should start lowercase`);

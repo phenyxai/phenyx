@@ -11,7 +11,6 @@ export function CtaSection({ onEnterClick }: { onEnterClick: () => void }) {
   return (
     <section ref={ref} id={SECTION_IDS.cta} className="landing-vnext__cta">
       <h2 data-entrance="headline"><EntranceWords text={ctaCopy.headline} /></h2>
-      <p data-entrance="lede">{ctaCopy.subline}</p>
       <EnterButton onClick={onEnterClick} label={ctaCopy.enter} entrance />
     </section>
   );

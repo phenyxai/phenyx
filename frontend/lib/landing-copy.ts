@@ -1,10 +1,7 @@
-// Landing copy, ported from the Sept 23 landing export (internal pass v740).
-//
-// Source of record: `PHENYX main landing new.html` (2026-09-23), the landing-only
-// export that supersedes the Sept 15 drop (ph550). v740 folds the separate
-// constellation and polaris chapters into one orbit under "how it works",
-// adds insights as a fourth part, and replaces the "what stays yours" band
-// with an "our vision" chapter that walks the life of your data.
+// Landing copy. Source of record: the Oct 4 reference `phenyx_landing.html`
+// (spec section 8), which supersedes the Sept 23 export. Its strings are used
+// as they are, including the sample life inside the slides, which is
+// illustrative and not a real person. The hero keeps its earlier copy.
 //
 // Voice note: every string here is stored lowercase. Uppercase is a CSS concern
 // (`text-transform`), matching how the prototype does it.
@@ -40,17 +37,18 @@ export const heroCopy = {
 
 export const manifestoCopy = {
   eyebrow: "your life",
-  headline: "parts of you are out there.",
+  // one line from tablet up (see the CSS)
+  headline: "your story is out there, scattered.",
   paragraphs: [
-    "in the music you replay, the work you make, the things you save and the questions you ask, each place holding one piece of you.",
+    "each platform holds a different side of you: your work on linkedin, the moments you share on instagram, the songs you return to on spotify.",
   ],
-  emphasis: "PHENYX shows you what they make together.",
+  emphasis: "PHENYX brings them together, so you can see your story across all of them.",
 } as const;
 
 export const howItWorksCopy = {
-  eyebrow: "how phenyx works",
-  headline: "see the whole of who you are.",
-  subline: "connect the places you choose. PHENYX uses them to answer four questions about your life.",
+  eyebrow: "how it works",
+  headline: "follow what makes you curious.",
+  subline: "look back, find connections, and explore what could come next.",
   orbitLabel: "the four parts of PHENYX",
   /** Prefix for each orbit point's accessible name: "show constellation". */
   orbitNodeLabel: "show",
@@ -59,22 +57,22 @@ export const howItWorksCopy = {
     {
       kicker: "constellation",
       title: "how did i get here?",
-      line: "your life in seven stages, built from your data, with the source behind every moment.",
+      line: "revisit the moments when something began, changed, or found its way back",
     },
     {
       kicker: "insights",
-      title: "why do i keep coming back to this?",
-      line: "the patterns running across your accounts, and where each one came from.",
+      title: "what is starting to connect?",
+      line: "step back and see what different parts of your life might have in common",
     },
     {
       kicker: "discover",
       title: "what else might i love?",
-      line: "something new from beyond your data, chosen because of it.",
+      line: "something you haven’t come across yet, but might be glad you did",
     },
     {
       kicker: "polaris",
-      title: "what should i do next?",
-      line: "ask about a decision or a plan. you never start from the beginning.",
+      title: "where do i want to go next?",
+      line: "a place to think it through, with some of your story already there",
     },
   ],
   stageMapLabel: "seven stages",
@@ -218,72 +216,72 @@ export interface InsightPattern {
 
 export const insightPatterns: readonly InsightPattern[] = [
   {
-    claim: "your best work happens before anyone else is awake.",
+    claim: "your quiet mornings are where things begin.",
     visual: { kind: "bars", pattern: "11011101111101111" },
-    proof: "14 of your last 17 finished projects were started before 9am. you have never once planned it that way.",
-    sources: ["figma", "notion", "spotify"],
+    proof: "14 of the last 17 things you made and shared started before 9am, most of them on a sunday.",
+    sources: ["instagram", "youtube", "spotify"],
     span: "18 months",
   },
   {
-    claim: "you have been saving the same thing since you were fifteen.",
+    claim: "you have always made things to share.",
     visual: {
       kind: "return",
       points: [
-        { at: 5, label: "2018" },
-        { at: 34, label: "2021" },
+        { at: 5, label: "2014" },
+        { at: 34, label: "2018" },
         { at: 62, label: "2023" },
         { at: 90, label: "now" },
       ],
     },
-    proof: "type and posters, through three phones, two majors, and every app you moved into.",
-    sources: ["pinterest", "instagram", "figma"],
-    span: "7 years",
+    proof: "from your first account at fourteen to the videos you post now, you keep making something and showing it to the people you love.",
+    sources: ["instagram", "tiktok", "youtube"],
+    span: "11 years",
   },
 ];
 
 export const discoverFinds = [
   {
-    kind: "a rabbit hole",
-    name: "kinetic typography",
-    description: "type that moves, and why it reads differently once it does.",
-    why: "because your saves keep drifting from posters to motion",
+    kind: "a connection",
+    name: "music for opening titles",
+    description: "the composers who set the mood in the film openings you watched as a kid",
+    why: "from youtube and your late-night playlists",
   },
   {
-    kind: "an idea",
-    name: "affordances",
-    description: "why a door tells you to push before you touch it.",
-    why: "because your two majors keep meeting in the same chats",
+    kind: "a new direction",
+    name: "sharing your process",
+    description: "short videos of how something comes together, the kind you have watched since you were twelve",
+    why: "from tiktok and your youtube mornings",
   },
   {
-    kind: "a dare",
-    name: "redesign the worst screen you used today",
-    description: "one hour, one screen, before class.",
-    why: "because your best work starts early and small",
+    kind: "something to try",
+    name: "a zine for your city",
+    description: "a few printed pages about the places and people that made somewhere new feel like home",
+    why: "from pinterest and your local reddit threads",
   },
 ] as const;
 
 export const polarisExample = {
-  ask: "should i apply for the product design internship, or keep freelancing?",
+  ask: "should i start sharing my process, or keep making things quietly for now?",
   answer:
-    "apply. the posters already taught you the craft, and the internship gives you the one thing freelancing cannot, which is watching someone senior make the calls you are still guessing at.",
-  sources: ["figma", "linkedin", "notion", "chatgpt"],
-  span: "7 years",
+    "you have been moving toward this for a while. your captions have grown longer, you talk to the camera more, and people keep asking how you see their work. what would feel like a small first step?",
+  sources: ["instagram", "tiktok", "linkedin", "youtube"],
+  span: "11 years",
   evidence: {
     label: "show me the evidence",
     title: "what this is built on",
     rows: [
-      ["figma", "forty-one posters, nine screens, and a prototype you rebuilt three times."],
-      ["chatgpt", "you have asked whether this counts as a real job eleven times since march."],
-      ["notion + spotify", "everything you finished began on a quiet sunday morning."],
+      ["instagram", "fewer posts and longer captions since 2024, with more of your own words."],
+      ["tiktok", "you started talking to the camera in 2025, and those are the videos people save."],
+      ["linkedin", "people keep reaching out to ask how you see their work."],
     ],
   },
   plan: {
     label: "turn it into a plan",
     title: "your next four weeks",
     steps: [
-      "keep sunday mornings for your own work. every project you finished started there.",
-      "three screens from your own week, redesigned and written up, since your posts that explain the thinking are the ones people answer.",
-      "apply by the fourteenth. we will ask again after, with the work in hand.",
+      "week 1: pick one thing you are making and film how it comes together.",
+      "weeks 2–3: share two short process videos and notice which moments people respond to.",
+      "week 4: look back at what felt natural, then decide whether to keep going.",
     ],
   },
   backLabel: "back to the answer",
@@ -347,8 +345,7 @@ export const promiseCopy = {
 } as const;
 
 export const ctaCopy = {
-  headline: "see who you are becoming.",
-  subline: "it is all already yours. come and see it whole.",
+  headline: "meet every version of you.",
   enter: "enter",
 } as const;
 

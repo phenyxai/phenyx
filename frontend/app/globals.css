@@ -676,9 +676,8 @@
 .landing-vnext__station-decide span { margin: 0px; padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.12); font-size: 12px; font-weight: 500; line-height: 1.4; color: rgb(184, 200, 222); white-space: nowrap; transition: opacity 0.5s, border-color 0.5s, color 0.5s, background 0.5s; }
 .landing-vnext__station-leave { margin: 0px; padding: 0px; gap: 10px; display: flex; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 180px; }
 .landing-vnext__station-leave span { margin: 0px; padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.12); font-size: 12px; font-weight: 500; line-height: 1.4; color: rgb(184, 200, 222); white-space: nowrap; transition: opacity 0.5s, border-color 0.5s, color 0.5s, background 0.5s; }
-.landing-vnext__cta { margin: 0px auto; padding-right: var(--page-rail); padding-left: var(--page-rail); flex-shrink: 0; text-align: center; max-width: 1060px; scroll-margin-top: 104px; min-height: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: auto; }
-.landing-vnext__cta h2 { margin: 0px 0px 12px; padding: 0px; flex: 0 0 auto; overflow-wrap: anywhere; font-size: clamp(26px, 2.25vw, 32px); font-weight: 300; line-height: 1.16; color: rgba(255, 253, 253, 0.94); letter-spacing: -0.024em; text-wrap-mode: initial; text-wrap-style: balance; max-width: 100%; width: 100%; text-align: center; }
-.landing-vnext__cta p { margin: 0px 0px 22px; padding: 0px; flex: 0 0 auto; overflow-wrap: anywhere; font-size: var(--t-body); color: rgba(255, 253, 253, 0.62); max-width: 36ch; font-weight: 300; line-height: 1.92; letter-spacing: var(--tr-body); text-align: center; text-wrap-mode: initial; text-wrap-style: balance; }
+.landing-vnext__cta { margin: 0px auto; padding: clamp(120px, 14vh, 180px) var(--page-rail); flex-shrink: 0; text-align: center; max-width: 1060px; scroll-margin-top: 104px; min-height: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: auto; }
+.landing-vnext__cta h2 { margin: 0px 0px 22px; padding: 0px; flex: 0 0 auto; overflow-wrap: anywhere; font-size: clamp(26px, 2.25vw, 32px); font-weight: 300; line-height: 1.16; color: rgba(255, 253, 253, 0.94); letter-spacing: -0.024em; text-wrap-mode: initial; text-wrap-style: balance; max-width: 100%; width: 100%; text-align: center; }
 .landing-vnext__cta .landing-vnext__enter-button { font: inherit; margin: 0px auto; padding: 0px 28px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.18); gap: 0px; flex: 0 0 auto; transition: all 0.3s; background: none; font-style: inherit; font-weight: 400; font-size: 14.5px; line-height: inherit; display: inline-flex; align-items: center; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; color: rgba(255, 253, 253, 0.92); letter-spacing: 0.02em; min-height: 46px; justify-content: center; box-shadow: none; min-width: 112px; }
 .landing-vnext__footer { margin: 0px auto; padding: 30px clamp(28px, 5vw, 72px); gap: 24px; flex-shrink: 0; display: flex; flex-direction: row; align-items: center; justify-content: space-between; font-size: 12.5px; color: rgba(255, 253, 253, 0.58); letter-spacing: 0.01em; font-weight: 300; line-height: 1.4; border-top: 1px solid rgba(255, 253, 253, 0.05); }
 .landing-vnext__footer-brand { margin: 0px; padding: 0px; gap: 8px; display: flex; align-items: center; }
@@ -712,7 +711,6 @@
 }
 
 @media (min-width: 1101px) {
-  .landing-vnext__cta { padding-top: 88px; padding-bottom: 96px; }
 }
 
 @media (max-width: 1100px) {
@@ -766,7 +764,6 @@
   .landing-vnext__station-visual { margin: 0px 0px 4px; padding: 18px 14px; min-height: 128px; }
   .landing-vnext__station > h3 { margin: 22px 0px 2px; align-self: end; }
   .landing-vnext__station > p { align-self: start; }
-  .landing-vnext__cta { padding-top: 84px; padding-bottom: 84px; }
 }
 
 @media (max-width: 760px) {
@@ -779,7 +776,6 @@
 }
 
 @media (max-width: 1100px) and (min-width: 781px) {
-  .landing-vnext__cta { padding-top: 82px; padding-bottom: 90px; }
 }
 
 @media (max-width: 780px) {
@@ -814,23 +810,18 @@
   #s0-promise .landing-vnext__eyebrow { margin-bottom: 12px; font-size: 11.5px; }
   #s0-promise h2 { font-size: 28.08px; }
   #s0-promise .landing-vnext__section-lead { margin-top: 16px; }
-  .landing-vnext__cta h2 { margin-bottom: 10px; font-size: clamp(25px, 7vw, 29px); }
-  .landing-vnext__cta p { white-space: nowrap; margin-bottom: 20px; font-size: clamp(10.8px, 3.05vw, 12.6px); max-width: 31ch; line-height: 1.4; width: max-content; }
+  .landing-vnext__cta h2 { font-size: clamp(25px, 7vw, 29px); }
   .landing-vnext__cta .landing-vnext__enter-button { min-height: 44px; align-self: center; }
-  .landing-vnext__footer { padding-top: 24px; padding-right: 0px; padding-left: 0px; max-width: none; flex-direction: column; align-items: flex-start; justify-content: flex-start; width: calc(100% - (2 * var(--page-rail,24px))); text-align: left; }
+  .landing-vnext__footer { padding-top: 24px; padding-right: 0px; padding-left: 0px; max-width: none; width: calc(100% - (2 * var(--page-rail,24px))); }
   .landing-vnext__footer-dot { height: 20px; width: 20px; flex-basis: 20px; opacity: 0.72; grid-column-start: 1; grid-column-end: auto; grid-row-start: 1; grid-row-end: auto; justify-self: start; align-self: center; }
   .landing-vnext__footer-word { font-size: 11px; color: rgba(255, 253, 253, 0.76); grid-column-start: 2; grid-column-end: auto; grid-row-start: 1; grid-row-end: auto; justify-self: start; align-self: center; line-height: 1.2; }
-  .landing-vnext__footer-links { gap: 18px; align-items: flex-start; flex-direction: column; flex-basis: 100%; justify-content: flex-start; grid-column-start: 1; grid-column-end: -1; grid-row-start: 2; grid-row-end: auto; width: 100%; min-width: 0px; }
   .landing-vnext__footer-links a { padding-top: 0px; padding-bottom: 0px; line-height: 1.35; color: rgba(255, 253, 253, 0.78); min-height: 0px; overflow-wrap: anywhere; word-break: normal; }
   .landing-vnext__footer-meta { text-wrap-mode: wrap; overflow-wrap: anywhere; word-break: normal; }
-  .landing-vnext__footer-left { gap: 22px; align-items: flex-start; flex-direction: column; width: 100%; grid-template-columns: 14px auto; grid-template-rows: auto auto; justify-items: start; justify-content: start; flex-wrap: wrap; }
 }
 
 @media (max-width: 640px) {
   .landing-vnext__nav { min-height: 68px; }
   .landing-vnext__nav-dropdown { top: 72px; }
-  .landing-vnext__cta { padding-top: 76px; padding-bottom: 76px; }
-  .landing-vnext__footer-meta { text-align: left; }
 }
 
 @media (max-width: 520px) {
@@ -847,8 +838,6 @@
   .landing-vnext__hero { padding-top: calc(70px + env(safe-area-inset-top)); }
   .landing-vnext__hero-content { transform: translateY(-38px); }
   .landing-vnext__scroll-cue { bottom: calc(58px + env(safe-area-inset-bottom)); }
-  .landing-vnext__cta { padding-top: 72px; padding-bottom: 72px; }
-  .landing-vnext__cta p { font-size: 10.7px; }
   .landing-vnext__footer { gap: 22px; padding-top: 22px; padding-bottom: 28px; width: calc(100% - (2 * var(--page-rail,20px))); }
   .landing-vnext__footer-links { gap: 17px; }
   .landing-vnext__footer-left { gap: 20px; }
@@ -882,6 +871,18 @@
 .landing-vnext__nav-enter:focus-visible,
 .landing-vnext__enter-button:focus-visible,
 .landing-vnext__nav-dropdown button:focus-visible { outline: 2px solid rgba(var(--s-rgb), 0.8); }
+
+/* your life: the headline stays on one line on tablets and desktops */
+@media (min-width: 700px) {
+  #s0-about h2 { white-space: nowrap; max-width: none; }
+}
+/* footer: one row (logo, contact, copyright) everywhere but phones, where it
+   becomes a centred stack */
+@media (max-width: 700px) {
+  .landing-vnext__footer { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding-top: 40px; padding-bottom: 44px; }
+  .landing-vnext__footer > * { margin: 0; justify-content: center; align-items: center; }
+  .landing-vnext__footer-meta { opacity: 0.55; }
+}
 
 /* Entrance (v1800, PHE-113; timing in use-entrance.tsx): the eyebrow floats
    in, the headline rises word by word, the ledes follow, then the blocks.
