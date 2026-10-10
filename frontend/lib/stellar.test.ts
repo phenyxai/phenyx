@@ -2,7 +2,15 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { STELLAR, STELLAR_DEFAULT, STELLAR_NAMES, colorName, hexToRgb } from "./stellar.ts";
+import {
+  STELLAR,
+  STELLAR_DEFAULT,
+  STELLAR_NAMES,
+  accentVars,
+  colorName,
+  hexToRgb,
+  resolveAccent,
+} from "./stellar.ts";
 
 // PHE-98: the palette lives in three places (this module, the backend util and
 // the SQL stellar_color_for). These tests read the other two from disk so a
@@ -126,4 +134,19 @@ test("hexToRgb splits channels and falls back to the default accent", () => {
   assert.equal(hexToRgb("e9a65b"), "233, 166, 91");
   assert.equal(hexToRgb(" #DE9AAE "), "222, 154, 174");
   assert.equal(hexToRgb("not a color"), "255, 253, 253");
+});
+
+test("resolveAccent keeps palette colors and neutralizes anything else", () => {
+  assert.equal(resolveAccent("#E9A65B"), "#E9A65B");
+  assert.equal(resolveAccent("#e9a65b"), "#E9A65B");
+  // a stale value from the old palette (or brand blue) never paints as the accent
+  assert.equal(resolveAccent("#5599FF"), STELLAR_DEFAULT);
+  assert.equal(resolveAccent("#B9D5FF"), STELLAR_DEFAULT);
+  assert.equal(resolveAccent(null), STELLAR_DEFAULT);
+  assert.equal(resolveAccent(""), STELLAR_DEFAULT);
+});
+
+test("accentVars publishes --ph-accent and its rgb companion", () => {
+  assert.deepEqual(accentVars("#D88475"), { "--ph-accent": "#D88475", "--ph-accent-rgb": "216, 132, 117" });
+  assert.deepEqual(accentVars("#5599FF"), { "--ph-accent": "#FFFDFD", "--ph-accent-rgb": "255, 253, 253" });
 });

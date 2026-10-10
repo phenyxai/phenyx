@@ -102,3 +102,28 @@ export function hexToRgb(hex: string): string {
   const n = parseInt(value, 16);
   return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
 }
+
+/**
+ * PHE-98: the accent a surface may paint with. A palette color passes through
+ * (normalized to upper case); anything else (null, a stale value from the old
+ * palette left in localStorage, brand blue) falls back to the neutral default,
+ * so no one ever renders in a color the palette can't assign.
+ */
+export function resolveAccent(hex: string | null | undefined): string {
+  const upper = (hex ?? "").trim().toUpperCase();
+  return (STELLAR as readonly string[]).includes(upper) ? upper : STELLAR_DEFAULT;
+}
+
+/**
+ * The CSS custom properties that carry the accent. `--ph-accent` is the single
+ * source; globals.css aliases the legacy names (`--s`, `--s-rgb`,
+ * `--color-stellar`, `--stellar`, `--stellar-rgb`) to it.
+ */
+export function accentVars(hex: string | null | undefined): Record<"--ph-accent" | "--ph-accent-rgb", string> {
+  const accent = resolveAccent(hex);
+  return { "--ph-accent": accent, "--ph-accent-rgb": hexToRgb(accent) };
+}
+
+// Inline overrides of the aliased names that older screens set on <html>; the
+// session color provider clears them so the aliases follow --ph-accent again.
+export const LEGACY_ACCENT_VARS = ["--s", "--s-rgb", "--color-stellar", "--stellar", "--stellar-rgb"] as const;
