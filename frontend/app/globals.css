@@ -1045,7 +1045,7 @@
 @media (prefers-reduced-motion: reduce) {
   .landing-vnext *,
   .landing-vnext *::before,
-  .landing-vnext *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .landing-vnext *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; }
   .landing-vnext::before,
   .landing-vnext::after { opacity: 0.5; animation: none !important; }
   .landing-vnext__pattern,
