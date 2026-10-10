@@ -65,6 +65,7 @@ export function ConstellationPanel({
         detail={data.pillars[selectedPillar]}
         isPro={isPro}
         onBack={onBack}
+        onSelectPillar={onSelectPillar}
         onSelectCluster={onSelectCluster}
       />
     );
@@ -129,13 +130,7 @@ function StoryRow({
       className="w-full rounded-[12px] border border-[rgba(255,253,253,0.045)] px-5 py-[18px] text-left transition-colors hover:border-[rgba(var(--s-rgb),0.35)] hover:bg-[#0e0e0e] motion-reduce:transition-none max-[760px]:px-[18px] max-[760px]:py-4"
     >
       <div className="mb-1.5 flex items-center gap-2.5">
-        <span
-          className={`text-[10.5px] font-semibold uppercase tracking-[0.14em] ${
-            detail.active
-              ? "text-[rgba(var(--s-rgb),0.9)]"
-              : "text-[rgba(var(--s-rgb),0.5)]"
-          }`}
-        >
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[rgba(var(--s-rgb),0.9)]">
           {pillarLabel(detail.pillar)}
         </span>
         {newCount > 0 && (
@@ -145,13 +140,39 @@ function StoryRow({
           </span>
         )}
       </div>
-      <p
-        className={`text-[13px] font-light leading-[1.55] ${
-          detail.active ? "text-[#FFFDFD]/72" : "text-[#FFFDFD]/45"
-        }`}
-      >
+      <p className="text-[13px] font-light leading-[1.55] text-[#FFFDFD]/72">
         {storyLine(detail)}
       </p>
+    </button>
+  );
+}
+
+// A small outlined arrow with a 44px tap area. At either end of the story the
+// button stays rendered but disabled (aria-disabled, so it keeps focus): a
+// keyboard user who steps onto transcendence keeps their place instead of
+// focus falling back to the page.
+function StepButton({
+  to,
+  direction,
+  onSelect,
+}: {
+  to: Pillar | undefined;
+  direction: "previous" | "next";
+  onSelect: (pillar: Pillar) => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-disabled={!to}
+      onClick={() => to && onSelect(to)}
+      aria-label={to ? `${direction} point: ${pillarLabel(to)}` : `no ${direction} point`}
+      className={`relative flex h-7 w-7 items-center justify-center rounded-full border border-[#FFFDFD]/12 text-[13px] transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] motion-reduce:transition-none ${
+        to
+          ? "text-[#FFFDFD]/55 hover:border-[rgba(var(--s-rgb),0.6)] hover:text-[rgb(var(--s-rgb))]"
+          : "cursor-default text-[#FFFDFD]/20"
+      }`}
+    >
+      <span aria-hidden="true">{direction === "previous" ? "‹" : "›"}</span>
     </button>
   );
 }
@@ -161,15 +182,18 @@ function PillarDetailView({
   detail,
   isPro,
   onBack,
+  onSelectPillar,
   onSelectCluster,
 }: {
   stellar: string;
   detail: PillarDetail;
   isPro: boolean;
   onBack: () => void;
+  onSelectPillar: (pillar: Pillar) => void;
   onSelectCluster: (clusterId: string) => void;
 }) {
   const areaCount = detail.clusters.length;
+  const index = ALL_PILLARS.indexOf(detail.pillar);
   const hasSources = detail.source_platforms.length > 0;
   const readTogether = synthesisLine(detail, isPro);
 
@@ -184,12 +208,18 @@ function PillarDetailView({
       </button>
 
       <div className="flex items-center justify-between gap-3">
-        <span
-          className="rounded-full px-3 py-1 text-[12px] lowercase text-[#0A0A0A]"
-          style={{ background: stellar }}
-        >
-          {pillarLabel(detail.pillar)}
-        </span>
+        {/* Step through the points in story order without going back to the
+            map, which on a phone sits above the fold once you read on. */}
+        <div className="flex items-center gap-2">
+          <StepButton to={ALL_PILLARS[index - 1]} direction="previous" onSelect={onSelectPillar} />
+          <span
+            className="rounded-full px-3 py-1 text-[12px] lowercase text-[#0A0A0A]"
+            style={{ background: stellar }}
+          >
+            {pillarLabel(detail.pillar)}
+          </span>
+          <StepButton to={ALL_PILLARS[index + 1]} direction="next" onSelect={onSelectPillar} />
+        </div>
         <span className="text-[12px] font-light tabular-nums text-[#FFFDFD]/40">
           {areaCount} {areaCount === 1 ? "area" : "areas"}
         </span>
