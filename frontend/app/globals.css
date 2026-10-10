@@ -475,10 +475,11 @@
    The block between "generated from the export" markers is the export's own
    cascade, flattened: for every landing element, the declaration that wins in
    the export at each of 26 widths from 1600 to 360, re-emitted with the media
-   condition it came from and ordered so the same rule wins here. Edit it by
-   regenerating from the next export rather than by hand. Everything after it
-   (states, motion, reveal) is ported by hand from the export's scripts and its
-   v600–v740 passes. */
+   condition it came from and ordered so the same rule wins here. Everything
+   after it (states, motion, reveal) is ported by hand from the export's scripts
+   and its v600–v740 passes. PHE-109 moved it to the Oct 4 reference
+   (phenyx_landing.html) by hand, since no generator ships with the repo: those
+   edits sit in place of the rules they replace. */
 .landing-vnext {
   --s: #afcbff;
   --s-rgb: 175, 203, 255;
@@ -544,13 +545,16 @@
 
 /* ---- generated from the export: begin ---- */
 .landing-vnext__nav { margin: 0px auto; gap: clamp(20px, 3vw, 48px); padding-top: 10px; padding-bottom: 10px; flex-shrink: 0; position: sticky; top: 0px; left: auto; transform: none; z-index: 100; display: flex; align-items: center; justify-content: space-between; right: auto; }
-.landing-vnext__nav::before { background: rgb(8, 8, 8); content: ""; position: absolute; top: 0px; right: auto; bottom: 0px; left: 50%; transform: translateX(-50%); width: 100vw; z-index: -1; backdrop-filter: blur(22px) saturate(120%); border-bottom: 1px solid rgba(255, 253, 253, 0.055); }
+.landing-vnext__nav::before { background: linear-gradient(180deg, rgba(8, 8, 8, 0.92) 0%, rgba(8, 8, 8, 0.78) 45%, rgba(8, 8, 8, 0.32) 78%, rgba(8, 8, 8, 0) 100%); content: ""; position: absolute; top: 0px; right: auto; left: 50%; transform: translateX(-50%); width: 100vw; height: calc(100% + 26px); z-index: -1; pointer-events: none; transition: background 0.45s ease, height 0.45s ease; }
+.landing-vnext__nav::after { background: linear-gradient(180deg, rgba(8, 8, 9, 0.42) 0%, rgba(8, 8, 9, 0.3) 60%, rgba(8, 8, 9, 0) 100%); content: ""; position: absolute; top: 0px; right: auto; left: 50%; transform: translateX(-50%); width: 100vw; height: calc(100% + 30px); z-index: -1; pointer-events: none; -webkit-backdrop-filter: blur(16px) saturate(1.1); backdrop-filter: blur(16px) saturate(1.1); -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 100%); mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 100%); opacity: 0; transition: opacity 0.6s cubic-bezier(0.22, 0.61, 0.36, 1); }
+.landing-vnext__nav[data-scrolled="true"]::before { background: linear-gradient(180deg, rgba(8, 8, 8, 0.5) 0%, rgba(8, 8, 8, 0.3) 55%, rgba(8, 8, 8, 0) 100%); height: calc(100% + 18px); }
+.landing-vnext__nav[data-scrolled="true"]::after { opacity: 1; }
 .landing-vnext__nav-logo { font: inherit; margin: 0px; padding: 5px 0px; gap: var(--ph-lockup-gap); flex: 0 0 auto; text-decoration: none; font-style: inherit; font-weight: inherit; font-size: inherit; line-height: inherit; display: flex; align-items: center; min-height: 40px; height: 32px; }
 .landing-vnext__nav .landing-vnext__brand-dot { margin: 0px; padding: 0px; border-radius: 0px; border: 0px none currentcolor; overflow: visible; flex: 0 0 24px; animation: none auto; position: relative; width: 24px; height: 24px; transform: none; opacity: 1; display: inline-block; background-image: url("/brand/orbit-mark.png"); background-size: contain; background-repeat: no-repeat; background-attachment: initial; background-origin: initial; background-clip: initial; background-color: initial; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; box-shadow: none; filter: none; isolation: isolate; background-position: center center; }
 .landing-vnext__nav-word { margin: 0px; padding: 0px; white-space: nowrap; font-size: var(--ph-lockup-font); font-weight: 600; letter-spacing: var(--ph-lockup-tracking); color: rgba(255, 253, 253, 0.94); text-transform: uppercase; display: inline-block; line-height: normal; }
 .landing-vnext__nav-links { margin: 0px; padding: 0px; gap: clamp(18px, 2.2vw, 30px); flex: 0 1 auto; display: flex; align-items: center; min-width: 0px; }
 .landing-vnext__nav-links a { font: inherit; margin: 0px; padding: 10px 0px; white-space: nowrap; text-decoration: none; transition: color 0.25s; font-style: inherit; font-weight: 400; font-size: 13.5px; line-height: 1.4; position: relative; color: rgba(255, 253, 253, 0.62); letter-spacing: 0.05em; min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 0px; }
-.landing-vnext__nav-links a::after { transition: opacity 0.3s, transform 0.3s; background: var(--s); content: ""; position: absolute; left: 0px; right: 0px; bottom: 0px; height: 1px; opacity: 0; transform: scaleX(0.4); transform-origin: center center; }
+.landing-vnext__nav-links a::after { transition: opacity 0.3s, transform 0.3s; background: var(--s); content: ""; position: absolute; left: 0px; right: 0px; bottom: 9px; height: 1px; opacity: 0; transform: scaleX(0.4); transform-origin: center center; }
 .landing-vnext__nav-enter { font: inherit; margin: 0px; padding: 8px 18px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.18); flex: 0 0 auto; white-space: nowrap; transition: all 0.25s; background: none; font-style: inherit; font-weight: 400; font-size: 13.5px; line-height: inherit; color: rgba(255, 253, 253, 0.92); border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; letter-spacing: 0.02em; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; box-shadow: none; }
 .landing-vnext__menu-button { font: inherit; margin: 0px; padding: 0px; border-radius: 0px; border: 0px none currentcolor; gap: 5px; flex: 0 0 44px; transition: all 0.25s; background: none; font-style: inherit; font-weight: inherit; font-size: inherit; line-height: inherit; width: 44px; height: 44px; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; display: none; flex-direction: column; align-items: center; justify-content: center; align-self: center; box-shadow: none; }
 .landing-vnext__menu-button span { margin: 0px; padding: 0px; border-radius: 999px; transition: all 0.3s; background: var(--txt); width: 18px; height: 1px; }
@@ -600,51 +604,44 @@
 .landing-vnext__orbit-panel { margin: 0px; padding: clamp(22px, 2.4vw, 32px); border-radius: 26px; border: 1px solid rgba(255, 253, 253, 0.07); background: radial-gradient(120% 90% at 20% 0%,rgba(var(--s-rgb),.05),rgba(255,253,253,.008) 60%); display: flex; flex-direction: column; justify-content: center; min-height: 100%; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; }
 .landing-vnext__orbit-slides { margin: 0px; padding: 0px; overflow: hidden; transition: height 0.6s cubic-bezier(0.22, 0.61, 0.36, 1); min-height: 0px; display: grid; align-items: start; }
 .landing-vnext__orbit-slide { margin: 0px; padding: 0px; transition: opacity 0.55s, transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1); grid-row-start: 1; grid-column-start: 1; grid-row-end: auto; grid-column-end: auto; opacity: 0; transform: translateY(12px); pointer-events: none; visibility: hidden; }
-.landing-vnext__orbit-kicker { margin: 0px 0px 10px; padding: 0px; overflow-wrap: anywhere; font-size: 11.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(var(--s-rgb),.9); }
+.landing-vnext__orbit-kicker { margin: 0px 0px 10px; padding: 0px; overflow-wrap: anywhere; font-size: 13px; font-weight: 500; letter-spacing: 0.04em; color: rgba(var(--s-rgb),.9); }
 .landing-vnext__orbit-title { margin: 0px 0px 10px; padding: 0px; overflow-wrap: anywhere; max-width: 24ch; font-size: clamp(22px, 2vw, 28px); font-weight: 400; letter-spacing: -0.028em; line-height: 1.12; color: rgba(255, 253, 253, 0.96); text-wrap-mode: initial; text-wrap-style: balance; }
 .landing-vnext__orbit-line { margin: 0px; padding: 0px; overflow-wrap: anywhere; max-width: 46ch; font-size: 14.5px; line-height: 1.6; color: rgba(255, 253, 253, 0.62); }
 .landing-vnext__constellation { margin: 20px 0px 0px; padding: 0px; gap: 18px; display: block; grid-template-columns: minmax(0px, 0.9fr) minmax(0px, 1.1fr); align-items: start; }
-.landing-vnext__stage-name { margin: 0px; padding: 0px; gap: 10px; overflow-wrap: anywhere; display: flex; align-items: baseline; font-size: 12px; letter-spacing: 0.04em; color: rgba(255, 253, 253, 0.5); }
-.landing-vnext__stage-name b { margin: 0px; padding: 0px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-size: 11px; color: rgba(var(--s-rgb),.95); }
-.landing-vnext__stage-name span { margin: 0px; padding: 0px; }
 .landing-vnext__stage-map { margin: 4px auto 10px; padding: 0px; overflow: visible; max-width: 430px; height: auto; width: 100%; display: block; }
-.landing-vnext__stage-lines line { margin: 0px; padding: 0px; stroke: rgba(185, 213, 255, 0.24); stroke-width: 1; stroke-dasharray: 120; stroke-dashoffset: 120; }
+.landing-vnext__stage-lines line { margin: 0px; padding: 0px; stroke: rgba(185, 213, 255, 0.3); stroke-width: 1; stroke-dasharray: 1; }
 .landing-vnext__stage-star { margin: 0px; padding: 0px; }
 .landing-vnext__stage-star-hit { margin: 0px; padding: 0px; fill: transparent; }
-.landing-vnext__stage-star-dot { margin: 0px; padding: 0px; transition: fill 0.4s, r 0.4s; fill: rgba(255, 253, 253, 0.5); r: 3; }
-.landing-vnext__stage { margin: 0px; padding: 0px; transition: opacity 0.35s; }
-.landing-vnext__stage-question { margin: 2px 0px 12px; padding: 0px; overflow-wrap: anywhere; font-size: 15.5px; line-height: 1.45; color: rgba(255, 253, 253, 0.94); }
-.landing-vnext__stage-rows { margin: 0px; padding: 0px; gap: 14px; display: grid; grid-template-columns: 1fr 1fr; }
-.landing-vnext__stage-rows > div { margin: 0px; padding: 0px; gap: 10px; display: grid; grid-template-columns: 62px minmax(0px, 1fr); font-size: 12.5px; line-height: 1.5; color: rgba(255, 253, 253, 0.66); }
-.landing-vnext__stage-rows span { margin: 0px; padding: 0px; color: rgba(var(--s-rgb),.85); }
-.landing-vnext__stage-rows p { margin: 0px; padding: 0px; }
-.landing-vnext__stage-hint { margin: 12px 0px 0px; padding: 0px; overflow-wrap: anywhere; font-size: 11.5px; letter-spacing: 0.02em; color: rgba(255, 253, 253, 0.4); }
-.landing-vnext__insights { margin: 20px 0px 0px; padding: 0px; gap: 10px; display: grid; grid-template-columns: 1fr; }
-.landing-vnext__pattern { margin: 0px; padding: 12px 16px 12px 34px; border-radius: 14px; border: 1px solid rgba(255, 253, 253, 0.07); background: rgba(255, 253, 253, 0.01); position: relative; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; opacity: 0; grid-column-start: 1; grid-column-end: -1; }
-.landing-vnext__pattern::before { border-radius: 50%; background: rgb(223, 233, 255); content: ""; position: absolute; left: 15px; top: 19px; width: 6px; height: 6px; box-shadow: rgba(185, 213, 255, 0.8) 0px 0px 8px; }
+.landing-vnext__stage-star-dot { margin: 0px; padding: 0px; transition: fill 0.35s ease, r 0.35s ease; fill: #e4e7ee; r: 3; }
+.landing-vnext__stage { margin: 0px; padding: 0px; display: grid; transition: opacity 0.7s ease, filter 0.7s ease, translate 0.9s cubic-bezier(0.18, 1, 0.3, 1); }
+.landing-vnext__stage-question { margin: 0px 0px 10px; padding: 0px; overflow-wrap: anywhere; font-size: 15.5px; line-height: 1.45; color: rgba(255, 253, 253, 0.94); }
+.landing-vnext__stage-hint { margin: 0px 0px 14px; padding: 0px; overflow-wrap: anywhere; font-size: 12.5px; line-height: 1.5; letter-spacing: 0.01em; color: rgba(175, 198, 242, 0.62); }
+.landing-vnext__insights { margin: 20px 0px 0px; padding: 0px; gap: 30px; display: grid; grid-template-columns: 1fr; }
+.landing-vnext__pattern { margin: 0px; padding: 0px 0px 0px 20px; position: relative; opacity: 0; grid-column-start: 1; grid-column-end: -1; }
+.landing-vnext__pattern::before { border-radius: 50%; background: rgb(223, 233, 255); content: ""; position: absolute; left: 0px; top: 9px; width: 6px; height: 6px; box-shadow: rgba(185, 213, 255, 0.8) 0px 0px 8px; }
 .landing-vnext__pattern > p:first-child { margin: 0px 0px 7px; padding: 0px; overflow-wrap: anywhere; font-size: 17px; line-height: 1.4; color: rgba(255, 253, 253, 0.92); }
 .landing-vnext__bars { margin: 14px 0px 6px; padding: 0px; gap: 5px; display: flex; align-items: flex-end; height: 30px; }
 .landing-vnext__bars i { margin: 0px; padding: 0px; border-radius: 3px; border: 0px none currentcolor; flex: 0 0 6px; background: rgba(255, 253, 253, 0.12); font-style: normal; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; height: 34%; transform-origin: center bottom; transform: scaleY(0.2); opacity: 0; }
 .landing-vnext__proof { margin: 8px 0px 10px; padding: 0px; overflow-wrap: anywhere; font-size: 14.5px; line-height: 1.4; color: rgba(255, 253, 253, 0.92); }
 .landing-vnext__pattern .landing-vnext__chips { margin: 0px; padding: 0px; gap: 5px; display: flex; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: rgba(255, 253, 253, 0.5); }
-.landing-vnext__pattern .landing-vnext__chips i { margin: 0px; padding: 2px 9px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.09); font-style: normal; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; }
-.landing-vnext__pattern .landing-vnext__chips em { margin: 0px 0px 0px 5px; padding: 0px; font-style: normal; }
+.landing-vnext__pattern .landing-vnext__chips i { margin: 0px 14px 0px 0px; padding: 0px; font-style: normal; color: rgba(var(--s-rgb), 0.85); }
+.landing-vnext__pattern .landing-vnext__chips em { margin: 0px; padding: 0px; font-style: normal; color: rgba(255, 253, 253, 0.4); }
 .landing-vnext__return { margin: 14px 0px 10px; padding: 0px; position: relative; height: 42px; }
 .landing-vnext__return span { margin: 0px; padding: 0px; gap: 5px; display: flex; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: rgba(255, 253, 253, 0.5); position: absolute; left: 0px; right: 6%; top: 20px; height: 0px; border-top: 1px dashed rgba(255, 253, 253, 0.16); }
 .landing-vnext__return b { margin: 0px 0px 0px -4.5px; padding: 0px; border-radius: 50%; background: rgb(223, 233, 255); position: absolute; top: 15.5px; left: calc(var(--x)*1%); width: 9px; height: 9px; box-shadow: rgba(185, 213, 255, 0.9) 0px 0px 10px; opacity: 0; transform: scale(0.2); }
 .landing-vnext__return u { margin: 0px; padding: 0px; text-decoration: none; position: absolute; top: 32px; left: calc(var(--x)*1%); transform: translateX(-50%); font-size: 10.5px; color: rgba(255, 253, 253, 0.42); opacity: 0; }
-.landing-vnext__finds { margin: 20px 0px 0px; padding: 0px; gap: 10px; display: grid; grid-template-columns: repeat(3, minmax(0px, 1fr)); }
-.landing-vnext__find { margin: 0px; padding: 14px 14px 13px; border-radius: 14px; border: 1px solid rgba(255, 253, 253, 0.07); background: rgba(255, 253, 253, 0.01); display: flex; flex-direction: column; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; opacity: 0; }
-.landing-vnext__find-kind { margin: 0px; padding: 0px; overflow-wrap: anywhere; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255, 253, 253, 0.48); }
-.landing-vnext__find-name { margin: 8px 0px 14px; padding: 0px; overflow-wrap: anywhere; font-size: 15px; line-height: 1.35; color: rgba(255, 253, 253, 0.94); }
-.landing-vnext__find-description { margin: -2px 0px 12px; padding: 0px; overflow-wrap: anywhere; font-size: 12.5px; line-height: 1.5; color: rgba(255, 253, 253, 0.62); }
-.landing-vnext__find-why { margin: auto 0px 0px; padding: 0px; overflow-wrap: anywhere; font-size: 12px; line-height: 1.45; color: rgba(var(--s-rgb),.85); }
+.landing-vnext__finds { margin: 20px 0px 0px; padding: 0px; gap: 34px; display: grid; grid-template-columns: repeat(3, minmax(0px, 1fr)); }
+.landing-vnext__find { margin: 0px; padding: 0px; display: flex; flex-direction: column; opacity: 0; }
+.landing-vnext__find-kind { margin: 0px 0px 12px; padding: 0px; overflow-wrap: anywhere; font-size: 10.5px; font-weight: 600; line-height: 1.4; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(var(--s-rgb), 0.9); }
+.landing-vnext__find-name { margin: 0px 0px 10px; padding: 0px; overflow-wrap: anywhere; font-size: 18px; font-weight: 500; line-height: 1.3; letter-spacing: -0.005em; color: rgba(255, 253, 253, 0.96); }
+.landing-vnext__find-description { margin: 0px 0px 18px; padding: 0px; overflow-wrap: anywhere; font-size: 13px; line-height: 1.6; color: rgba(255, 253, 253, 0.6); }
+.landing-vnext__find-why { margin: auto 0px 0px; padding: 12px 0px 0px; border-top: 1px solid rgba(255, 253, 253, 0.07); overflow-wrap: anywhere; font-size: 11.5px; line-height: 1.5; letter-spacing: 0.02em; color: rgba(255, 253, 253, 0.42); }
 .landing-vnext__polaris { margin: 20px 0px 0px; padding: 0px; gap: 12px; display: grid; }
 .landing-vnext__polaris-ask { margin: 0px; padding: 10px 15px; border-radius: 16px 16px 4px 16px; border: 1px solid rgba(var(--s-rgb),.2); background: rgba(var(--s-rgb),.10); overflow-wrap: anywhere; justify-self: end; max-width: 86%; font-size: 14.5px; line-height: 1.45; color: rgba(255, 253, 253, 0.92); opacity: 0; }
 .landing-vnext__polaris-answer { margin: 0px; padding: 0px; overflow-wrap: anywhere; min-height: 5.2em; font-size: 14.5px; line-height: 1.65; color: rgba(255, 253, 253, 0.78); }
 .landing-vnext__polaris .landing-vnext__chips { margin: 0px; padding: 0px; gap: 5px; transition: opacity 0.5s; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: rgba(255, 253, 253, 0.5); opacity: 0; }
-.landing-vnext__polaris .landing-vnext__chips i { margin: 0px; padding: 2px 9px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.09); font-style: normal; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; }
-.landing-vnext__polaris .landing-vnext__chips em { margin: 0px 0px 0px 5px; padding: 0px; font-style: normal; }
+.landing-vnext__polaris .landing-vnext__chips i { margin: 0px 14px 0px 0px; padding: 0px; font-style: normal; color: rgba(var(--s-rgb), 0.85); }
+.landing-vnext__polaris .landing-vnext__chips em { margin: 0px; padding: 0px; font-style: normal; color: rgba(255, 253, 253, 0.4); }
 .landing-vnext__polaris-next { margin: 14px 0px 0px; padding: 0px; gap: 8px; transition: opacity 0.6s 0.2s; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; opacity: 0; }
 .landing-vnext__polaris-next button { font: inherit; margin: 0px; padding: 6px 13px; border-radius: 999px; border: 1px solid rgba(var(--s-rgb),.32); transition: border-color 0.25s, background 0.25s, color 0.25s; background: none; font-style: inherit; font-weight: inherit; font-size: 12.5px; line-height: inherit; appearance: none; color: rgba(255, 253, 253, 0.8); }
 #s0-promise { margin: 0px; padding: 88px 56px; flex-shrink: 0; scroll-margin-top: 104px; }
@@ -652,37 +649,35 @@
 #s0-promise .landing-vnext__eyebrow { margin: 0px 0px 14px; padding: 0px; overflow-wrap: anywhere; font-size: 12px; letter-spacing: 0.18em; color: rgba(255, 253, 253, 0.66); text-transform: uppercase; font-weight: 500; line-height: var(--lh-label); display: block; width: 100%; max-width: 100%; }
 #s0-promise h2 { margin: 0 0 0px; padding: 0px; overflow-wrap: break-word; font-size: 35.28px; font-weight: 400; line-height: 1.14; letter-spacing: -0.025em; max-width: none; color: rgba(255, 253, 253, 0.94); text-wrap-mode: initial; text-wrap-style: balance; white-space-collapse: collapse; width: auto; }
 #s0-promise .landing-vnext__section-lead { margin: 18px 0px 0px; padding: 0px; overflow-wrap: anywhere; width: 100%; max-width: 46ch; font-size: 16px; line-height: 1.68; letter-spacing: normal; color: rgba(255, 253, 253, 0.72); font-weight: 400; }
-.landing-vnext__promise-story { margin: 44px 0px 0px; padding: 0px; position: relative; }
+.landing-vnext__promise-story { margin: 64px 0px 0px; padding: 0px; position: relative; }
 .landing-vnext__promise-rail { margin: 0px; padding: 0px; background: rgba(255, 253, 253, 0.08); position: absolute; left: 10%; right: 10%; top: 6px; height: 1px; }
 .landing-vnext__promise-rail i { margin: 0px; padding: 0px; background: linear-gradient(90deg, rgba(185, 213, 255, 0.15), rgba(185, 213, 255, 0.7)); position: absolute; left: 0px; top: 0px; height: 1px; width: 0px; }
 .landing-vnext__promise-rail b { margin: 0px 0px 0px -3.5px; padding: 0px; border-radius: 50%; background: rgb(244, 248, 255); position: absolute; top: -3px; left: 0px; width: 7px; height: 7px; box-shadow: rgba(185, 213, 255, 0.95) 0px 0px 12px, rgba(185, 213, 255, 0.45) 0px 0px 26px; opacity: 0; }
-.landing-vnext__stations { margin: 0px; padding: 0px; gap: 14px; list-style-position: initial; list-style-image: initial; list-style-type: none; display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)); position: relative; }
+.landing-vnext__stations { margin: 0px; padding: 0px; gap: 44px; list-style-position: initial; list-style-image: initial; list-style-type: none; display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)); position: relative; }
 .landing-vnext__station { margin: 0px; padding: 0px; overflow-wrap: anywhere; position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .landing-vnext__station-node { margin: 0px; padding: 0px; border-radius: 50%; border: 1px solid rgba(255, 253, 253, 0.18); transition: border-color 0.5s, box-shadow 0.5s, background 0.5s; background: rgb(8, 8, 8); width: 13px; height: 13px; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; position: relative; z-index: 3; box-shadow: rgb(8, 8, 8) 0px 0px 0px 7px; }
-.landing-vnext__station-visual { margin: 20px 0px 18px; padding: 0px; border-radius: 18px; border: 1px solid rgba(255, 253, 253, 0.06); transition: opacity 0.7s, border-color 0.7s; background: radial-gradient(90% 90% at 50% 40%,rgba(var(--s-rgb),.05),rgba(255,253,253,.008)); width: 100%; height: 84px; display: flex; align-items: center; justify-content: center; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; opacity: 0.35; }
-.landing-vnext__station > h3 { margin: 0px 0px 10px; padding: 0px; transition: color 0.7s; overflow-wrap: anywhere; font-size: 17px; font-weight: 500; line-height: 1.3; color: rgba(255, 253, 253, 0.55); letter-spacing: -0.01em; }
-.landing-vnext__station > p { margin: 0px; padding: 0px; transition: color 0.7s; overflow-wrap: anywhere; max-width: 21ch; font-size: 13px; line-height: 1.55; color: rgba(255, 253, 253, 0.4); }
-.landing-vnext__station-toggles { margin: 0px; padding: 0px; gap: 6px; display: grid; }
-.landing-vnext__station-toggles span { margin: 0px; padding: 0px; gap: 8px; display: flex; align-items: center; font-size: 11.5px; color: rgba(255, 253, 253, 0.6); }
+.landing-vnext__station-visual { margin: 30px 0px 16px; padding: 16px 12px; box-sizing: border-box; text-align: center; border-radius: 18px; border: 1px solid rgba(255, 253, 253, 0.06); transition: opacity 0.7s, border-color 0.7s; background: radial-gradient(90% 90% at 50% 40%,rgba(var(--s-rgb),.05),rgba(255,253,253,.008)); width: 100%; min-height: 152px; display: flex; align-items: center; justify-content: center; opacity: 0.35; }
+.landing-vnext__station > h3 { margin: 26px 0px 12px; padding: 0px; align-self: stretch; text-align: left; transition: color 0.7s; overflow-wrap: anywhere; font-size: 18px; font-weight: 500; line-height: 1.4; color: rgba(255, 253, 253, 0.55); letter-spacing: -0.015em; }
+.landing-vnext__station > p { margin: 0px; padding: 0px; align-self: stretch; text-align: left; transition: color 0.7s; overflow-wrap: anywhere; font-size: 15px; font-weight: 400; line-height: 1.7; color: rgba(255, 253, 253, 0.4); }
+.landing-vnext__station-toggles { margin: 0px; padding: 0px; gap: 12px; display: grid; width: 100%; max-width: 144px; }
+.landing-vnext__station-toggles span { margin: 0px; padding: 0px; gap: 8px; display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 500; line-height: 1.4; color: rgb(184, 200, 222); }
 .landing-vnext__station-toggles i { margin: 0px; padding: 0px; border-radius: 9px; transition: background 0.45s; background: rgba(255, 253, 253, 0.1); position: relative; width: 24px; height: 13px; }
 .landing-vnext__station-toggles i::after { border-radius: 50%; transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1), background 0.45s; background: rgba(255, 253, 253, 0.55); content: ""; position: absolute; left: 2px; top: 2px; width: 9px; height: 9px; }
 .landing-vnext__station-shield { margin: 0px; padding: 0px; overflow: visible; max-width: 100%; height: 72px; width: 120px; }
-.landing-vnext__station-why { margin: 0px; padding: 0px; width: 86%; }
-.landing-vnext__station-why p { margin: 0px; padding: 0px; transition: color 0.7s; overflow-wrap: anywhere; max-width: 21ch; font-size: 13px; line-height: 1.55; color: rgba(255, 253, 253, 0.85); }
+.landing-vnext__station-why { margin: 0px; padding: 0px; width: 100%; max-width: 200px; }
+.landing-vnext__station-why p { margin: 0px; padding: 0px; overflow-wrap: anywhere; font-size: 13px; line-height: 1.5; color: rgba(255, 253, 253, 0.68); }
 .landing-vnext__station-why svg { margin: 3px 0px; padding: 0px; max-width: 100%; height: 18px; display: block; width: 100%; }
 .landing-vnext__station-why path { margin: 0px; padding: 0px; transition: stroke-dashoffset 0.9s 0.3s; fill: none; stroke: rgba(185, 213, 255, 0.5); stroke-width: 1; stroke-dasharray: 60; stroke-dashoffset: 60; }
-.landing-vnext__station-why div { margin: 0px; padding: 0px; display: flex; justify-content: space-around; }
-.landing-vnext__station-why span { margin: 0px; padding: 2px 9px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.12); transition: opacity 0.5s 1s, border-color 0.5s 1s, color 0.5s 1s, background 0.5s 1s; font-size: 10.5px; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; color: rgba(255, 253, 253, 0.62); opacity: 0; }
-.landing-vnext__station-decide { margin: 0px; padding: 0px; }
-.landing-vnext__station-decide p { margin: 0px 0px 9px; padding: 0px; transition: color 0.7s; overflow-wrap: anywhere; max-width: 21ch; font-size: 13px; line-height: 1.55; color: rgba(255, 253, 253, 0.85); }
-.landing-vnext__station-decide div { margin: 0px; padding: 0px; gap: 6px; display: flex; justify-content: center; }
-.landing-vnext__station-decide span { margin: 0px; padding: 2px 9px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.12); transition: opacity 0.5s, border-color 0.5s, color 0.5s, background 0.5s; font-size: 10.5px; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; color: rgba(255, 253, 253, 0.62); }
-.landing-vnext__station-leave { margin: 0px; padding: 0px; gap: 6px; display: flex; flex-wrap: wrap; justify-content: center; width: 88%; }
-.landing-vnext__station-leave span { margin: 0px; padding: 2px 9px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.12); transition: opacity 0.5s, border-color 0.5s, color 0.5s, background 0.5s; font-size: 10.5px; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; color: rgba(255, 253, 253, 0.62); }
-.landing-vnext__promise-close { margin: 26px 0px 0px; padding: 0px; transition: opacity 1s; overflow-wrap: anywhere; max-width: none; font-size: 15px; line-height: 1.58; font-weight: 400; letter-spacing: normal; color: rgba(255, 253, 253, 0.86); text-wrap-mode: initial; text-wrap-style: balance; text-align: center; opacity: 0; font-style: italic; }
-.landing-vnext__cta { margin: 0px auto; padding-right: var(--page-rail); padding-left: var(--page-rail); flex-shrink: 0; text-align: center; max-width: 1060px; scroll-margin-top: 104px; min-height: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: auto; }
-.landing-vnext__cta h2 { margin: 0px 0px 12px; padding: 0px; flex: 0 0 auto; overflow-wrap: anywhere; font-size: clamp(26px, 2.25vw, 32px); font-weight: 300; line-height: 1.16; color: rgba(255, 253, 253, 0.94); letter-spacing: -0.024em; text-wrap-mode: initial; text-wrap-style: balance; max-width: 100%; width: 100%; text-align: center; }
-.landing-vnext__cta p { margin: 0px 0px 22px; padding: 0px; flex: 0 0 auto; overflow-wrap: anywhere; font-size: var(--t-body); color: rgba(255, 253, 253, 0.62); max-width: 36ch; font-weight: 300; line-height: 1.92; letter-spacing: var(--tr-body); text-align: center; text-wrap-mode: initial; text-wrap-style: balance; }
+.landing-vnext__station-why div { margin: 0px; padding: 0px; gap: 6px; display: flex; flex-wrap: wrap; justify-content: space-around; }
+.landing-vnext__station-why span { margin: 0px; padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.12); font-size: 12px; font-weight: 500; line-height: 1.4; color: rgb(184, 200, 222); white-space: nowrap; transition: opacity 0.5s 1s, border-color 0.5s 1s, color 0.5s 1s, background 0.5s 1s; opacity: 0; }
+.landing-vnext__station-decide { margin: 0px; padding: 0px; width: 100%; max-width: 200px; }
+.landing-vnext__station-decide p { margin: 0px 0px 18px; padding: 0px; overflow-wrap: anywhere; font-size: 13px; line-height: 1.5; color: rgba(255, 253, 253, 0.68); }
+.landing-vnext__station-decide div { margin: 0px; padding: 0px; gap: 6px; display: flex; flex-wrap: wrap; justify-content: center; }
+.landing-vnext__station-decide span { margin: 0px; padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.12); font-size: 12px; font-weight: 500; line-height: 1.4; color: rgb(184, 200, 222); white-space: nowrap; transition: opacity 0.5s, border-color 0.5s, color 0.5s, background 0.5s; }
+.landing-vnext__station-leave { margin: 0px; padding: 0px; gap: 10px; display: flex; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 180px; }
+.landing-vnext__station-leave span { margin: 0px; padding: 5px 9px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.12); font-size: 12px; font-weight: 500; line-height: 1.4; color: rgb(184, 200, 222); white-space: nowrap; transition: opacity 0.5s, border-color 0.5s, color 0.5s, background 0.5s; }
+.landing-vnext__cta { margin: 0px auto; padding: clamp(120px, 14vh, 180px) var(--page-rail); flex-shrink: 0; text-align: center; max-width: 1060px; scroll-margin-top: 104px; min-height: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: auto; }
+.landing-vnext__cta h2 { margin: 0px 0px 22px; padding: 0px; flex: 0 0 auto; overflow-wrap: anywhere; font-size: clamp(26px, 2.25vw, 32px); font-weight: 300; line-height: 1.16; color: rgba(255, 253, 253, 0.94); letter-spacing: -0.024em; text-wrap-mode: initial; text-wrap-style: balance; max-width: 100%; width: 100%; text-align: center; }
 .landing-vnext__cta .landing-vnext__enter-button { font: inherit; margin: 0px auto; padding: 0px 28px; border-radius: 999px; border: 1px solid rgba(255, 253, 253, 0.18); gap: 0px; flex: 0 0 auto; transition: all 0.3s; background: none; font-style: inherit; font-weight: 400; font-size: 14.5px; line-height: inherit; display: inline-flex; align-items: center; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; color: rgba(255, 253, 253, 0.92); letter-spacing: 0.02em; min-height: 46px; justify-content: center; box-shadow: none; min-width: 112px; }
 .landing-vnext__footer { margin: 0px auto; padding: 30px clamp(28px, 5vw, 72px); gap: 24px; flex-shrink: 0; display: flex; flex-direction: row; align-items: center; justify-content: space-between; font-size: 12.5px; color: rgba(255, 253, 253, 0.58); letter-spacing: 0.01em; font-weight: 300; line-height: 1.4; border-top: 1px solid rgba(255, 253, 253, 0.05); }
 .landing-vnext__footer-brand { margin: 0px; padding: 0px; gap: 8px; display: flex; align-items: center; }
@@ -716,7 +711,6 @@
 }
 
 @media (min-width: 1101px) {
-  .landing-vnext__cta { padding-top: 88px; padding-bottom: 96px; }
 }
 
 @media (max-width: 1100px) {
@@ -757,19 +751,19 @@
   .landing-vnext__orbit-visual { margin-bottom: 4px; max-width: 300px; }
   .landing-vnext__orbit-panel { padding: 20px 18px; }
   .landing-vnext__stage-map { max-width: 300px; }
-  .landing-vnext__stage-rows { grid-template-columns: 1fr; }
   .landing-vnext__bars i { flex-basis: 5px; }
   .landing-vnext__promise-rail { left: 6px; right: auto; top: 8px; height: auto; bottom: 40px; width: 1px; }
   .landing-vnext__promise-rail i { height: 0px; width: 1px; }
   .landing-vnext__promise-rail b { margin-left: -3px; top: 0px; }
   .landing-vnext__stations { grid-template-columns: 1fr; }
-  .landing-vnext__station { display: grid; align-items: start; text-align: left; grid-template-columns: 13px 1fr; column-gap: 22px; }
-  .landing-vnext__station-node { margin-top: 4px; grid-row-start: 1; grid-row-end: 4; }
-  .landing-vnext__station > p { max-width: none; }
-  .landing-vnext__station-why p { max-width: none; }
-  .landing-vnext__station-decide p { max-width: none; }
-  .landing-vnext__promise-close { text-align: left; }
-  .landing-vnext__cta { padding-top: 84px; padding-bottom: 84px; }
+  .landing-vnext__promise-story { margin-top: 48px; }
+  .landing-vnext__stations { gap: 48px; }
+  .landing-vnext__station { display: grid; align-items: center; text-align: left; grid-template-columns: 14px 1fr; gap: 10px 20px; }
+  .landing-vnext__station-node { grid-row: 1; align-self: center; }
+  .landing-vnext__station > :not(.landing-vnext__station-node) { grid-column: 2; }
+  .landing-vnext__station-visual { margin: 0px 0px 4px; padding: 18px 14px; min-height: 128px; }
+  .landing-vnext__station > h3 { margin: 22px 0px 2px; align-self: end; }
+  .landing-vnext__station > p { align-self: start; }
 }
 
 @media (max-width: 760px) {
@@ -782,7 +776,6 @@
 }
 
 @media (max-width: 1100px) and (min-width: 781px) {
-  .landing-vnext__cta { padding-top: 82px; padding-bottom: 90px; }
 }
 
 @media (max-width: 780px) {
@@ -817,23 +810,18 @@
   #s0-promise .landing-vnext__eyebrow { margin-bottom: 12px; font-size: 11.5px; }
   #s0-promise h2 { font-size: 28.08px; }
   #s0-promise .landing-vnext__section-lead { margin-top: 16px; }
-  .landing-vnext__cta h2 { margin-bottom: 10px; font-size: clamp(25px, 7vw, 29px); }
-  .landing-vnext__cta p { white-space: nowrap; margin-bottom: 20px; font-size: clamp(10.8px, 3.05vw, 12.6px); max-width: 31ch; line-height: 1.4; width: max-content; }
+  .landing-vnext__cta h2 { font-size: clamp(25px, 7vw, 29px); }
   .landing-vnext__cta .landing-vnext__enter-button { min-height: 44px; align-self: center; }
-  .landing-vnext__footer { padding-top: 24px; padding-right: 0px; padding-left: 0px; max-width: none; flex-direction: column; align-items: flex-start; justify-content: flex-start; width: calc(100% - (2 * var(--page-rail,24px))); text-align: left; }
+  .landing-vnext__footer { padding-top: 24px; padding-right: 0px; padding-left: 0px; max-width: none; width: calc(100% - (2 * var(--page-rail,24px))); }
   .landing-vnext__footer-dot { height: 20px; width: 20px; flex-basis: 20px; opacity: 0.72; grid-column-start: 1; grid-column-end: auto; grid-row-start: 1; grid-row-end: auto; justify-self: start; align-self: center; }
   .landing-vnext__footer-word { font-size: 11px; color: rgba(255, 253, 253, 0.76); grid-column-start: 2; grid-column-end: auto; grid-row-start: 1; grid-row-end: auto; justify-self: start; align-self: center; line-height: 1.2; }
-  .landing-vnext__footer-links { gap: 18px; align-items: flex-start; flex-direction: column; flex-basis: 100%; justify-content: flex-start; grid-column-start: 1; grid-column-end: -1; grid-row-start: 2; grid-row-end: auto; width: 100%; min-width: 0px; }
   .landing-vnext__footer-links a { padding-top: 0px; padding-bottom: 0px; line-height: 1.35; color: rgba(255, 253, 253, 0.78); min-height: 0px; overflow-wrap: anywhere; word-break: normal; }
   .landing-vnext__footer-meta { text-wrap-mode: wrap; overflow-wrap: anywhere; word-break: normal; }
-  .landing-vnext__footer-left { gap: 22px; align-items: flex-start; flex-direction: column; width: 100%; grid-template-columns: 14px auto; grid-template-rows: auto auto; justify-items: start; justify-content: start; flex-wrap: wrap; }
 }
 
 @media (max-width: 640px) {
   .landing-vnext__nav { min-height: 68px; }
   .landing-vnext__nav-dropdown { top: 72px; }
-  .landing-vnext__cta { padding-top: 76px; padding-bottom: 76px; }
-  .landing-vnext__footer-meta { text-align: left; }
 }
 
 @media (max-width: 520px) {
@@ -850,8 +838,6 @@
   .landing-vnext__hero { padding-top: calc(70px + env(safe-area-inset-top)); }
   .landing-vnext__hero-content { transform: translateY(-38px); }
   .landing-vnext__scroll-cue { bottom: calc(58px + env(safe-area-inset-bottom)); }
-  .landing-vnext__cta { padding-top: 72px; padding-bottom: 72px; }
-  .landing-vnext__cta p { font-size: 10.7px; }
   .landing-vnext__footer { gap: 22px; padding-top: 22px; padding-bottom: 28px; width: calc(100% - (2 * var(--page-rail,20px))); }
   .landing-vnext__footer-links { gap: 17px; }
   .landing-vnext__footer-left { gap: 20px; }
@@ -886,19 +872,29 @@
 .landing-vnext__enter-button:focus-visible,
 .landing-vnext__nav-dropdown button:focus-visible { outline: 2px solid rgba(var(--s-rgb), 0.8); }
 
-/* Reveal: each block fades up 14px as it arrives, headings a beat after their
-   eyebrow, leads after headings, closing lines last. */
-.landing-vnext [data-reveal] { opacity: 0; transform: translateY(14px); transition: opacity 0.8s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1); }
-.landing-vnext [data-reveal="1"] { transition-delay: 0.09s; }
-.landing-vnext [data-reveal="2"] { transition-delay: 0.18s; }
-.landing-vnext [data-reveal="3"] { transition-delay: 0.34s; }
-.landing-vnext [data-reveal][data-visible="true"] { opacity: 1; transform: none; }
-/* the vision's closing line waits for the rail rather than for the reveal */
-.landing-vnext .landing-vnext__promise-close[data-reveal] { opacity: 0; transition: opacity 1s 0.34s, transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) 0.34s; }
-.landing-vnext .landing-vnext__promise-close[data-reveal][data-shown="true"] { opacity: 1; }
+/* your life: the headline stays on one line on tablets and desktops */
+@media (min-width: 700px) {
+  #s0-about h2 { white-space: nowrap; max-width: none; }
+}
+/* footer: one row (logo, contact, copyright) everywhere but phones, where it
+   becomes a centred stack */
+@media (max-width: 700px) {
+  .landing-vnext__footer { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding-top: 40px; padding-bottom: 44px; }
+  .landing-vnext__footer > * { margin: 0; justify-content: center; align-items: center; }
+  .landing-vnext__footer-meta { opacity: 0.55; }
+}
 
-/* v610: chapters come into focus as they reach the middle of the screen. */
-.landing-vnext [data-chapter] { transition: opacity 0.35s linear; will-change: opacity; }
+/* Entrance (v1800, PHE-113; timing in use-entrance.tsx): the eyebrow floats
+   in, the headline rises word by word, the ledes follow, then the blocks.
+   Parts are hidden only when motion is allowed, so reduced motion shows the
+   end state. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-vnext :is([data-entrance="eyebrow"], [data-entrance="lede"], [data-entrance="block"]) { opacity: 0; translate: 0 16px; filter: blur(5px); transition: opacity 0.9s ease, filter 1s ease, translate 1.2s cubic-bezier(0.18, 1, 0.3, 1); transition-delay: var(--d, 0s); }
+  .landing-vnext [data-entrance="block"] { translate: 0 24px; }
+  .landing-vnext :is([data-entrance="eyebrow"], [data-entrance="lede"], [data-entrance="block"])[data-in="true"] { opacity: 1; translate: none; filter: none; }
+  .landing-vnext__word { display: inline-block; opacity: 0; transform: translateY(0.55em) rotate(2deg); transform-origin: 0 100%; filter: blur(8px); transition: opacity 0.8s ease, filter 0.9s ease, transform 1.15s cubic-bezier(0.18, 1.25, 0.4, 1); transition-delay: calc(var(--hd, 0.12s) + var(--i) * 0.075s); }
+  .landing-vnext [data-entrance="headline"][data-in="true"] .landing-vnext__word { opacity: 1; transform: none; filter: none; }
+}
 
 .landing-vnext__scroll-cue[data-visible="true"] { opacity: 1; visibility: visible; }
 
@@ -909,32 +905,62 @@
 .landing-vnext__orbit-node[data-active="true"] .landing-vnext__orbit-node-dot { fill: #fff; r: 5.6; }
 .landing-vnext__orbit-node[data-active="true"] .landing-vnext__orbit-node-halo { fill: rgba(var(--s-rgb), 0.1); animation: v610halo 2.6s ease-in-out infinite; }
 .landing-vnext__orbit-node[data-active="true"] text { fill: rgba(255, 253, 253, 0.95); }
-.landing-vnext__orbit-slide[data-active="true"] { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition-delay: 0.25s, 0.25s; }
+.landing-vnext__orbit-slide[data-active="true"] { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition-delay: 0.08s, 0.08s; }
+/* every slide's label, title and line float in when it comes up; outgoing text fades out over 0.3s */
+.landing-vnext__orbit-slide > :is(.landing-vnext__orbit-kicker, .landing-vnext__orbit-title, .landing-vnext__orbit-line) { transition: opacity 0.8s ease, filter 0.9s ease, translate 1s cubic-bezier(0.18, 1, 0.3, 1); }
+.landing-vnext__orbit-slide[data-active="true"] > .landing-vnext__orbit-title { transition-delay: 0.1s; }
+.landing-vnext__orbit-slide[data-active="true"] > .landing-vnext__orbit-line { transition-delay: 0.2s; }
+.landing-vnext__orbit-slide:not([data-active="true"]) > :is(.landing-vnext__orbit-kicker, .landing-vnext__orbit-title, .landing-vnext__orbit-line) { opacity: 0; filter: blur(5px); translate: 0 10px; transition-duration: 0.3s; transition-delay: 0s; }
 
-/* constellation */
-.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__stage-lines line { animation: v620draw 1.6s cubic-bezier(0.45, 0.05, 0.25, 1) 0.35s forwards; }
-.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__stage-lines line:nth-child(n + 4) { animation-delay: 0.75s; }
-.landing-vnext__stage-star { cursor: pointer; outline: none; }
+/* constellation: once its card has landed, the stars form one by one, the
+   seven lines connect and a soft glow follows; the hint and the point's
+   content wait for the last line (FORMED_MS in four-parts-slides.tsx). */
+.landing-vnext__stage-star { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; }
 .landing-vnext__stage-star:focus-visible .landing-vnext__stage-star-hit { stroke: rgba(var(--s-rgb), 0.6); stroke-width: 1; }
-.landing-vnext__stage-star[data-ahead="true"] .landing-vnext__stage-star-dot { fill: transparent; stroke: rgba(255, 253, 253, 0.55); stroke-dasharray: 1.5 1.5; }
-.landing-vnext__stage-star:hover .landing-vnext__stage-star-dot,
-.landing-vnext__stage-star:focus-visible .landing-vnext__stage-star-dot { fill: rgba(255, 253, 253, 0.85); }
-.landing-vnext__stage-star[data-active="true"] .landing-vnext__stage-star-dot { fill: #fff; r: 4.6; filter: drop-shadow(0 0 5px rgba(185, 213, 255, 0.95)); }
-.landing-vnext__stage-star[data-ahead="true"][data-active="true"] .landing-vnext__stage-star-dot { fill: rgba(255, 255, 255, 0.2); stroke: #fff; }
-.landing-vnext__stage[data-swapping="true"] { opacity: 0; }
+.landing-vnext__stage-star:is(:hover, :focus-visible) .landing-vnext__stage-star-dot { fill: #fff; r: 3.8; }
+.landing-vnext__stage-star[data-active="true"] .landing-vnext__stage-star-dot { fill: #fff; r: 3.9; }
+.landing-vnext__stage-star-glow { opacity: 0; pointer-events: none; transition: opacity 0.45s ease; }
+.landing-vnext__constellation[data-formation="formed"] .landing-vnext__stage-star-glow { opacity: 0.6; }
+.landing-vnext__constellation:not([data-formation="waiting"]) .landing-vnext__stage-star[data-active="true"] .landing-vnext__stage-star-glow { animation: none; opacity: 1; }
+.landing-vnext__stage-point { grid-area: 1 / 1; }
+.landing-vnext__stage-point[data-shown="false"] { visibility: hidden; }
+.landing-vnext__stage[data-swapping="true"] { opacity: 0; filter: blur(4px); translate: 0 6px; transition-duration: 0.34s; }
+.landing-vnext__stage-label { margin: 0 0 8px; display: flex; gap: 10px; align-items: baseline; font-size: 11px; font-weight: 600; line-height: 1.4; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(185, 213, 255, 0.9); }
+.landing-vnext__stage-label b { font-weight: inherit; }
+.landing-vnext__stage-label span { font-weight: 400; letter-spacing: 0.04em; color: rgba(255, 253, 253, 0.42); }
+.landing-vnext__stage-reading { margin: 0 0 18px; max-width: 58ch; font-size: 14px; line-height: 1.7; letter-spacing: 0.01em; color: rgba(255, 253, 253, 0.7); }
+.landing-vnext__stage-signals { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.landing-vnext__stage-signals li { margin: 0; padding: 0; }
+.landing-vnext__stage-signals li > p { margin: 0; font-size: 13px; line-height: 1.6; letter-spacing: 0.01em; color: rgba(255, 253, 253, 0.64); }
+.landing-vnext__stage-signals .landing-vnext__signal-meta { margin: 0 0 4px; display: flex; gap: 8px; align-items: baseline; font-size: 12px; line-height: 1.4; letter-spacing: 0.03em; color: rgba(255, 253, 253, 0.38); }
+.landing-vnext__signal-meta span:first-child { color: rgba(185, 213, 255, 0.85); }
+@media (max-width: 600px) {
+  .landing-vnext__stage-signals { grid-template-columns: 1fr; gap: 14px; }
+  .landing-vnext__stage-reading { font-size: 13.5px; }
+  .landing-vnext__finds { gap: 26px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .landing-vnext__constellation[data-formation="waiting"] .landing-vnext__stage-star { opacity: 0; pointer-events: none; }
+  .landing-vnext__constellation[data-formation="forming"] .landing-vnext__stage-star { animation: phxStarForm 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) calc(0.25s + var(--k) * 0.17s) both; }
+  .landing-vnext__constellation[data-formation="waiting"] .landing-vnext__stage-lines line { stroke-dashoffset: 1; }
+  .landing-vnext__constellation[data-formation="forming"] .landing-vnext__stage-lines line { transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1) calc(1.6s + var(--i) * 0.15s); }
+  .landing-vnext__constellation[data-formation="forming"] .landing-vnext__stage-star-glow { animation: phxStarGlow 1.4s ease calc(2.85s + var(--k) * 0.05s) both; }
+  .landing-vnext__stage-reveal { transition: opacity 0.8s ease 0.25s, filter 0.9s ease 0.25s, translate 1s cubic-bezier(0.18, 1, 0.3, 1) 0.25s; }
+  .landing-vnext__constellation:not([data-formation="formed"]) .landing-vnext__stage-reveal { opacity: 0; filter: blur(4px); translate: 0 10px; pointer-events: none; transition-duration: 0.3s; transition-delay: 0s; }
+}
 
 /* insights */
 .landing-vnext__orbit-slide[data-active="true"] .landing-vnext__pattern { animation: v620in 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) 0.5s forwards; }
 .landing-vnext__orbit-slide[data-active="true"] .landing-vnext__pattern:nth-child(2) { animation-delay: 0.9s; }
 .landing-vnext__bars i[data-lit="true"] { height: 100%; background: linear-gradient(rgba(185, 213, 255, 0.95), rgba(185, 213, 255, 0.35)); }
 .landing-vnext__orbit-slide[data-active="true"] .landing-vnext__bars i { animation: v650bar 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) calc(0.55s + var(--i) * 45ms) forwards; }
-.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__return b { animation: v680pop 0.5s cubic-bezier(0.34, 1.5, 0.64, 1) calc(0.5s + var(--i) * 0.25s) forwards; }
-.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__return u { animation: v680fade 0.5s ease calc(0.5s + var(--i) * 0.25s) forwards; }
+.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__return b { animation: v680pop 0.4s cubic-bezier(0.34, 1.5, 0.64, 1) calc(0.3s + var(--i) * 0.32s) forwards; }
+.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__return u { animation: v680fade 0.4s ease calc(0.3s + var(--i) * 0.32s) forwards; }
 
 /* discover */
-.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__find { animation: v620in 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) 0.45s forwards, v620drift 9s ease-in-out 1.6s infinite; }
-.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__find:nth-child(2) { animation-delay: 0.65s, -1.4s; }
-.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__find:nth-child(3) { animation-delay: 0.85s, -4.2s; }
+.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__find { animation: v620in 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) 0.45s forwards; }
+.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__find:nth-child(2) { animation-delay: 0.65s; }
+.landing-vnext__orbit-slide[data-active="true"] .landing-vnext__find:nth-child(3) { animation-delay: 0.85s; }
 
 /* polaris */
 .landing-vnext__orbit-slide[data-active="true"] .landing-vnext__polaris-ask { animation: v620in 0.55s ease 0.4s forwards; }
@@ -952,16 +978,23 @@
 .landing-vnext__polaris-step[aria-pressed="true"] i::after { position: absolute; top: 1px; left: 3.5px; width: 4px; height: 8px; border: solid #0a0a0a; border-width: 0 1.6px 1.6px 0; content: ""; transform: rotate(42deg); }
 .landing-vnext__polaris-step[aria-pressed="true"] span { color: rgba(255, 253, 253, 0.5); text-decoration: line-through rgba(255, 253, 253, 0.25); }
 
-/* Our vision: the rail runs once; each station lights as the runner reaches it. */
-.landing-vnext__promise-story:is([data-phase="play"], [data-phase="done"]) .landing-vnext__promise-rail i { width: 100%; transition: width var(--run) linear; }
-.landing-vnext__promise-story:is([data-phase="play"], [data-phase="done"]) .landing-vnext__promise-rail b { left: 100%; opacity: 1; transition: left var(--run) linear, opacity 0.4s; }
+/* Your space: the rail runs once; each station's visual, title and line float
+   in as the runner reaches it. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-vnext__station > :is(.landing-vnext__station-visual, h3, p) { opacity: 0; filter: blur(5px); translate: 0 12px; transition: opacity 0.9s ease, filter 1s ease, translate 1.1s cubic-bezier(0.18, 1, 0.3, 1), color 0.7s, border-color 0.7s; }
+  .landing-vnext__station > :is(h3, p) { filter: blur(4px); translate: 0 8px; transition-delay: 0.14s; }
+  .landing-vnext__station > p { transition-delay: 0.24s; }
+  .landing-vnext__station[data-lit="true"] > :is(.landing-vnext__station-visual, h3, p) { opacity: 1; filter: none; translate: none; }
+}
+.landing-vnext__promise-story:is([data-phase="play"], [data-phase="still"]) .landing-vnext__promise-rail i { width: 100%; transition: width var(--run) linear; }
+.landing-vnext__promise-story:is([data-phase="play"], [data-phase="still"]) .landing-vnext__promise-rail b { left: 100%; opacity: 1; transition: left var(--run) linear, opacity 0.4s; }
 .landing-vnext__promise-story[data-direction="down"] .landing-vnext__promise-rail i { width: 1px; height: 0; }
-.landing-vnext__promise-story[data-direction="down"]:is([data-phase="play"], [data-phase="done"]) .landing-vnext__promise-rail i { height: 100%; transition: height var(--run) linear; }
-.landing-vnext__promise-story[data-direction="down"]:is([data-phase="play"], [data-phase="done"]) .landing-vnext__promise-rail b { top: 100%; left: 0; transition: top var(--run) linear, opacity 0.4s; }
+.landing-vnext__promise-story[data-direction="down"]:is([data-phase="play"], [data-phase="still"]) .landing-vnext__promise-rail i { height: 100%; transition: height var(--run) linear; }
+.landing-vnext__promise-story[data-direction="down"]:is([data-phase="play"], [data-phase="still"]) .landing-vnext__promise-rail b { top: 100%; left: 0; transition: top var(--run) linear, opacity 0.4s; }
 .landing-vnext__station[data-lit="true"] .landing-vnext__station-node { border-color: rgba(185, 213, 255, 0.9); background: #39404d; box-shadow: 0 0 16px 3px rgba(185, 213, 255, 0.5), 0 0 0 7px #080808; }
 .landing-vnext__station[data-lit="true"] .landing-vnext__station-visual { border-color: rgba(185, 213, 255, 0.14); opacity: 1; }
 .landing-vnext__station[data-lit="true"] h3 { color: rgba(255, 253, 253, 0.95); }
-.landing-vnext__station[data-lit="true"] p { color: rgba(255, 253, 253, 0.68); }
+.landing-vnext__station[data-lit="true"] > p { color: rgb(189, 197, 209); }
 .landing-vnext__station-toggles [data-state="on"] i,
 .landing-vnext__station[data-lit="true"] .landing-vnext__station-toggles [data-state="flip"] i { background: rgba(var(--s-rgb), 0.45); }
 .landing-vnext__station-toggles [data-state="on"] i::after,
@@ -978,7 +1011,7 @@
 .landing-vnext__station[data-lit="true"] .landing-vnext__station-why path { stroke-dashoffset: 0; }
 .landing-vnext__station[data-lit="true"] .landing-vnext__station-why span { opacity: 1; }
 .landing-vnext__station[data-lit="true"] .landing-vnext__station-decide [data-yes="true"] { border-color: rgba(185, 213, 255, 0.6); background: rgba(var(--s-rgb), 0.14); color: #fff; transition-delay: 0.9s; }
-.landing-vnext__station[data-lit="true"] .landing-vnext__station-leave span { border-color: rgba(255, 253, 253, 0.1); border-style: dashed; color: rgba(255, 253, 253, 0.18); transition-delay: 0.6s; }
+.landing-vnext__station[data-lit="true"] .landing-vnext__station-leave span { border-color: rgba(255, 253, 253, 0.1); border-style: dashed; opacity: 0.24; transition-delay: 0.6s; }
 .landing-vnext__station[data-lit="true"] .landing-vnext__station-leave span:nth-child(2) { transition-delay: 1s; }
 .landing-vnext__station[data-lit="true"] .landing-vnext__station-leave span:nth-child(3) { transition-delay: 1.4s; }
 
@@ -991,13 +1024,13 @@
 @keyframes v610spin { to { transform: rotate(360deg); } }
 @keyframes v610halo { 0%, 100% { fill: rgba(var(--s-rgb), 0.08); } 50% { fill: rgba(var(--s-rgb), 0.2); } }
 @keyframes v620in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@keyframes v620draw { to { stroke-dashoffset: 0; } }
-@keyframes v620drift { 0%, 100% { translate: 0; } 50% { translate: 0 -5px; } }
 @keyframes v620caret { 50% { opacity: 0.25; } }
 @keyframes v650bar { to { opacity: 1; transform: none; } }
 @keyframes v680pop { to { opacity: 1; transform: none; } }
 @keyframes v680fade { to { opacity: 1; } }
 @keyframes v630pulse { 50% { filter: drop-shadow(0 0 10px #b9d5ff); } }
+@keyframes phxStarForm { 0% { opacity: 0; transform: scale(0.3); } 60% { opacity: 1; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes phxStarGlow { 0% { opacity: 0; } 45% { opacity: 1; } 100% { opacity: 0.6; } }
 
 .landing-vnext__modal-layer { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .landing-vnext__modal-overlay { position: absolute; inset: 0; background: rgba(4, 5, 8, 0.78); backdrop-filter: blur(6px); }
@@ -1012,17 +1045,15 @@
 @media (prefers-reduced-motion: reduce) {
   .landing-vnext *,
   .landing-vnext *::before,
-  .landing-vnext *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .landing-vnext *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; }
   .landing-vnext::before,
   .landing-vnext::after { opacity: 0.5; animation: none !important; }
-  .landing-vnext [data-reveal] { opacity: 1; transform: none; transition: none; }
   .landing-vnext__pattern,
   .landing-vnext__find,
   .landing-vnext__polaris-ask,
   .landing-vnext__bars i,
   .landing-vnext__return b { opacity: 1; transform: none; animation: none !important; }
   .landing-vnext__return u { opacity: 1; animation: none !important; }
-  .landing-vnext__stage-lines line { stroke-dashoffset: 0; animation: none !important; }
   .landing-vnext__orbit-ring-inner,
   .landing-vnext__orbit-node-halo,
   .landing-vnext__scroll-cue::after { animation: none !important; }
