@@ -15,6 +15,7 @@ import { PersonaModule } from "./persona/persona.module";
 import { PolarisModule } from "./polaris/polaris.module";
 import { EventsModule } from "./events/events.module";
 import { ObservationsModule } from "./observations/observations.module";
+import { DiscoverModule } from "./discover/discover.module";
 import { OnairosModule } from "./onairos/onairos.module";
 import { AccountModule } from "./account/account.module";
 import { ConstellationModule } from "./constellation/constellation.module";
@@ -40,6 +41,7 @@ import { ProfileModule } from "./profile/profile.module";
     PolarisModule,
     EventsModule,
     ObservationsModule,
+    DiscoverModule,
     OnairosModule,
     AccountModule,
     ConstellationModule,
