@@ -50,8 +50,7 @@ export default function DailyPage() {
   const [targetPillar, setTargetPillar] = useState<Pillar | null>(null);
   const [isWindowOpen, setIsWindowOpen] = useState(false);
   const [nextOpenTime, setNextOpenTime] = useState<string | null>(null);
-  const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
-  const [isLoadingPrompt, setIsLoadingPrompt] = useState(false);
+  const [generatedPrompt] = useState<string | null>(null);
   const [reflectionText, setReflectionText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completionState, setCompletionState] = useState<{ nodeCount: number } | null>(null);
@@ -97,11 +96,6 @@ export default function DailyPage() {
     const windowStatus = checkWindowStatus(target, times as Record<Pillar, string>);
     setIsWindowOpen(windowStatus.isOpen);
     setNextOpenTime(windowStatus.nextTime);
-
-    // If window is open, generate prompt
-    if (windowStatus.isOpen && target) {
-      generatePrompt(user.id, target, stateData);
-    }
   };
 
   const determineTargetPillar = (state: ConstellationState | null): Pillar => {
@@ -153,41 +147,6 @@ export default function DailyPage() {
       : null;
 
     return { isOpen: false, nextTime: nextTimeStr };
-  };
-
-  const generatePrompt = async (uid: string, pillar: Pillar, state: ConstellationState | null) => {
-    setIsLoadingPrompt(true);
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      setIsLoadingPrompt(false);
-      return;
-    }
-
-    // Get synthesis for target pillar
-    const synthesisKey = `${pillar}_synthesis` as keyof ConstellationState;
-    const constellationContext = state?.[synthesisKey] as string | null;
-
-    try {
-      const res = await apiFetch("/generate-prompts", {
-        method: "POST",
-        body: JSON.stringify({
-          userId: uid,
-          onairosData: null,
-          targetPillar: pillar,
-          constellationContext: constellationContext || ""
-        })
-      });
-
-      const data = await res.json();
-      if (data.prompt) {
-        setGeneratedPrompt(data.prompt);
-      }
-    } catch (err) {
-      console.error("Failed to generate prompt:", err);
-    } finally {
-      setIsLoadingPrompt(false);
-    }
   };
 
   const handleContinue = async () => {
@@ -407,11 +366,7 @@ export default function DailyPage() {
             </p>
 
             {/* Prompt question */}
-            {isLoadingPrompt ? (
-              <p style={{ fontSize: 22, fontWeight: 300, color: "rgba(255,253,253,0.3)" }}>
-                generating your prompt...
-              </p>
-            ) : generatedPrompt ? (
+            {generatedPrompt ? (
               <p style={{ 
                 fontSize: 22, 
                 fontWeight: 300, 
