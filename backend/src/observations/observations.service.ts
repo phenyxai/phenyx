@@ -34,6 +34,7 @@ import {
 } from "./feedback";
 import {
   buildNewSignalRow,
+  markNewFromSignal,
   shouldCreateSignal,
   type EmittedSignal,
   type InsertedMoment,
@@ -112,7 +113,7 @@ export class ObservationsService {
     const supabase = this.supabaseService.getClient();
     const capabilities = this.billing.capabilitiesFor(await this.getUserTier(userId));
 
-    const [{ data: rows }, { data: state }, { data: feedbackRows }] = await Promise.all([
+    const [{ data: rows }, { data: state }, { data: feedbackRows }, signalMoments] = await Promise.all([
       supabase
         .from("observations")
         .select(
@@ -129,11 +130,12 @@ export class ObservationsService {
         .from("observation_feedback")
         .select("observation_id,verdict,opened")
         .eq("user_id", userId),
+      this.unseenSignalMomentIds(userId),
     ]);
 
     const withEvidence = await this.attachEvidenceHierarchy(
       userId,
-      (rows ?? []) as ObservationRow[],
+      markNewFromSignal((rows ?? []) as ObservationRow[], signalMoments),
       capabilities.evidenceTracesPerDay
     );
 
@@ -155,15 +157,41 @@ export class ObservationsService {
     const supabase = this.supabaseService.getClient();
     const capabilities = this.billing.capabilitiesFor(await this.getUserTier(userId));
 
-    const { data: rows } = await supabase
-      .from("observations")
-      .select(
-        "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at"
-      )
-      .eq("user_id", userId)
-      .order("surfaced_at", { ascending: false });
+    const [{ data: rows }, signalMoments] = await Promise.all([
+      supabase
+        .from("observations")
+        .select(
+          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at"
+        )
+        .eq("user_id", userId)
+        .order("surfaced_at", { ascending: false }),
+      this.unseenSignalMomentIds(userId),
+    ]);
 
-    return { pillars: groupTimelineByPillar((rows ?? []) as ObservationRow[], capabilities) };
+    return {
+      pillars: groupTimelineByPillar(
+        markNewFromSignal((rows ?? []) as ObservationRow[], signalMoments),
+        capabilities
+      ),
+    };
+  }
+
+  /**
+   * PHE-102 — the moments of the user's newest unseen signal, the same one
+   * `/constellation` serves. Empty when there is none (or the table is missing),
+   * so nothing reads as new.
+   */
+  private async unseenSignalMomentIds(userId: string): Promise<Set<string>> {
+    const { data } = await this.supabaseService
+      .getClient()
+      .from("new_signals")
+      .select("observation_ids")
+      .eq("user_id", userId)
+      .is("seen_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return new Set((data?.observation_ids as string[] | null) ?? []);
   }
 
   /**

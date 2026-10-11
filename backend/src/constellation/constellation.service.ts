@@ -9,6 +9,7 @@ import {
   type SourceRecordPreview,
 } from "../observations/evidence";
 import { normalizePillar } from "../observations/signal-hash";
+import { markNewFromSignal } from "../observations/new-signal";
 import {
   buildClustersForPillar,
   type AreaRow,
@@ -182,12 +183,10 @@ export class ConstellationService {
     // PHE-102: "new" means part of the unseen signal. Observations are
     // append-only, so their stored is_new never clears; the signal's seen_at does.
     const signal = (signalRes.data ?? null) as NewSignal | null;
-    const signalMoments = new Set(signal?.observation_ids ?? []);
-    const rows = ((obsRes.data ?? []) as ClusterObservationInput[]).map((row) => ({
-      ...row,
-      pillar: normalizePillar(row.pillar),
-      is_new: signalMoments.has(row.id),
-    }));
+    const rows = markNewFromSignal(
+      (obsRes.data ?? []) as ClusterObservationInput[],
+      new Set(signal?.observation_ids ?? [])
+    ).map((row) => ({ ...row, pillar: normalizePillar(row.pillar) }));
 
     const withEvidence = await this.attachClusterEvidence(
       userId,

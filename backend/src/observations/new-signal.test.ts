@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildNewSignalRow, shouldCreateSignal, type InsertedMoment } from "./new-signal";
+import { buildNewSignalRow, markNewFromSignal, shouldCreateSignal, type InsertedMoment } from "./new-signal";
 
 const moments: InsertedMoment[] = [
   {
@@ -43,4 +43,19 @@ test("without claude the signal still traces to its moments", () => {
   assert.equal(row.pillar, "becoming");
   assert.equal(row.summary, moments[0].body);
   assert.deepEqual(row.ideas, []);
+});
+
+test("only the unseen signal's moments read as new", () => {
+  const rows = [
+    { id: "o1", is_new: true },
+    { id: "o2", is_new: true },
+  ];
+  assert.deepEqual(
+    markNewFromSignal(rows, new Set(["o2"])).map((r) => r.is_new),
+    [false, true]
+  );
+  assert.deepEqual(
+    markNewFromSignal(rows, new Set()).map((r) => r.is_new),
+    [false, false]
+  );
 });

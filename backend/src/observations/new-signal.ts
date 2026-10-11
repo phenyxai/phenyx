@@ -79,3 +79,14 @@ export function buildNewSignalRow(
     ),
   };
 }
+
+/**
+ * Observations are append-only, so their stored `is_new` never clears. "New"
+ * on every read is therefore membership in the unseen signal (PHE-102).
+ */
+export function markNewFromSignal<T extends { id: string; is_new: boolean }>(
+  rows: T[],
+  signalMoments: Set<string>
+): T[] {
+  return rows.map((row) => ({ ...row, is_new: signalMoments.has(row.id) }));
+}
