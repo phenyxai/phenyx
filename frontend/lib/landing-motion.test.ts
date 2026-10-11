@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  CHAPTER_MIN_OPACITY,
-  chapterOpacity,
+  entrancePlan,
   railLayout,
   ringBox,
   stationDelays,
@@ -49,20 +48,28 @@ test("the trail box is the ring's box as a share of the drawing", () => {
   assert.deepEqual(box, { left: 22.768, top: 17.708, width: 54.464, height: 63.542 });
 });
 
-test("a chapter fully inside the viewport is fully lit", () => {
-  const opacity = chapterOpacity({ top: 200, bottom: 600 }, { top: 0, height: 1000 });
-  assert.equal(opacity, 1);
+test("a section's text lands in order: eyebrow, words, ledes, then blocks", () => {
+  // your life: eyebrow, six words, two ledes, one block
+  assert.deepEqual(entrancePlan({ hasEyebrow: true, words: 6, ledes: 2, blocks: 1 }), {
+    headline: 0.12,
+    ledes: [0.77, 0.95],
+    landed: 1.35,
+    blocks: [1.35],
+  });
 });
 
-test("a chapter entirely outside the focus band sits at the floor", () => {
-  const opacity = chapterOpacity({ top: 1400, bottom: 2200 }, { top: 0, height: 1000 });
-  assert.equal(opacity, CHAPTER_MIN_OPACITY);
+test("without an eyebrow the headline starts at once, and no lede shortens the wait", () => {
+  // the closing: five words, no lede, the enter button
+  assert.deepEqual(entrancePlan({ hasEyebrow: false, words: 5, ledes: 0, blocks: 1 }), {
+    headline: 0,
+    ledes: [],
+    landed: 0.875,
+    blocks: [0.875],
+  });
 });
 
-test("a chapter half into the focus band is partly lit", () => {
-  // band is 220..780 (560px). A 2000px section starting at 640 overlaps 140px.
-  const opacity = chapterOpacity({ top: 640, bottom: 2640 }, { top: 0, height: 1000 });
-  assert.ok(opacity > CHAPTER_MIN_OPACITY && opacity < 1, `got ${opacity}`);
+test("blocks follow each other 0.16s apart", () => {
+  assert.deepEqual(entrancePlan({ hasEyebrow: true, words: 5, ledes: 1, blocks: 2 }).blocks, [1.095, 1.255]);
 });
 
 test("stations light in rail order, timed by where each dot sits", () => {

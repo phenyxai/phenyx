@@ -2,17 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { promiseCopy, SECTION_IDS, type PromiseVisual } from "@/lib/landing-copy";
-import { railLayout, stationDelays } from "@/lib/landing-motion";
+import { railLayout, stationDelays, type RailLayout } from "@/lib/landing-motion";
+import { EntranceWords, useEntrance } from "./use-entrance";
 
-// "our vision" (v630 onward in the Sept 23 export): five stations along a rail,
-// from connecting an account to leaving with everything. The first time the
-// rail comes into view a light runs along it once and each station lights as
-// the runner reaches it; the closing line appears when the run is over.
+// "your space" (v630, reworked in the Oct 4 export): five stations along a
+// rail, from choosing platforms to changing your mind. Once the heading and
+// lede have landed (the entrance gate) and the rail is on screen, a light runs
+// along it once and each station's visual, title and line float in as the
+// light reaches it.
 
-const RUN_MS = 11000;
+const RUN_MS = 3200;
 
 // "still" is the reduced-motion end state: every station lit, no run along the rail.
-type Phase = "idle" | "play" | "done" | "still";
+type Phase = "idle" | "play" | "still";
 
 function StationVisual({ visual }: { visual: PromiseVisual }) {
   switch (visual.kind) {
@@ -64,8 +66,13 @@ function StationVisual({ visual }: { visual: PromiseVisual }) {
 }
 
 export function PromiseSection() {
+  const sectionRef = useRef<HTMLElement>(null);
   const storyRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLSpanElement>(null);
+  const layoutRef = useRef<RailLayout | null>(null);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const landed = useEntrance(sectionRef);
+  const [isOnScreen, setIsOnScreen] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [lit, setLit] = useState<readonly boolean[]>(() => promiseCopy.stations.map(() => false));
 
@@ -83,58 +90,55 @@ export function PromiseSection() {
           return { x: rect.left + rect.width / 2 - box.left, y: rect.top + rect.height / 2 - box.top };
         }),
       );
-      if (!layout) return null;
+      layoutRef.current = layout;
+      if (!layout) return;
       story.dataset.direction = layout.isVertical ? "down" : "across";
       rail.style.left = `${layout.origin.x}px`;
       rail.style.top = `${layout.origin.y}px`;
       rail.style.width = `${layout.size.width}px`;
       rail.style.height = `${layout.size.height}px`;
-      return layout;
     };
-
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const run = () => {
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        setLit(promiseCopy.stations.map(() => true));
-        setPhase("still");
-        return;
-      }
-      const layout = placeRail();
-      if (!layout) return;
-      setPhase("play");
-      stationDelays(layout.positions, layout.rail, RUN_MS).forEach((delay, index) => {
-        timers.push(setTimeout(() => setLit((current) => current.map((on, i) => on || i === index)), delay));
-      });
-      timers.push(setTimeout(() => setPhase("done"), RUN_MS + 400));
-    };
-
-    const resize = new ResizeObserver(() => placeRail());
+    placeRail();
+    const resize = new ResizeObserver(placeRail);
     resize.observe(story);
 
-    let reveal: IntersectionObserver | null = null;
-    if (!("IntersectionObserver" in window)) run();
-    else {
-      reveal = new IntersectionObserver((entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        reveal?.disconnect();
-        run();
-      }, { threshold: 0.35 });
-      reveal.observe(story);
-    }
+    let seen: IntersectionObserver | undefined;
+    if ("IntersectionObserver" in window) {
+      seen = new IntersectionObserver(([entry]) => setIsOnScreen(entry.isIntersecting), { rootMargin: "0px 0px -12% 0px" });
+      seen.observe(story);
+    } else setIsOnScreen(true);
 
+    const timers = timersRef.current;
     return () => {
-      timers.forEach(clearTimeout);
       resize.disconnect();
-      reveal?.disconnect();
+      seen?.disconnect();
+      timers.forEach(clearTimeout);
     };
   }, []);
 
+  // The light runs once, after the heading and lede have landed and only while
+  // the rail is on screen.
+  useEffect(() => {
+    if (phase !== "idle" || !landed || !isOnScreen) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setLit(promiseCopy.stations.map(() => true));
+      setPhase("still");
+      return;
+    }
+    const layout = layoutRef.current;
+    if (!layout) return;
+    setPhase("play");
+    stationDelays(layout.positions, layout.rail, RUN_MS).forEach((delay, index) => {
+      timersRef.current.push(setTimeout(() => setLit((current) => current.map((on, i) => on || i === index)), delay));
+    });
+  }, [phase, landed, isOnScreen]);
+
   return (
-    <section id={SECTION_IDS.promise} className="landing-vnext__section landing-vnext__promise">
+    <section ref={sectionRef} id={SECTION_IDS.promise} className="landing-vnext__section landing-vnext__promise">
       <div className="landing-vnext__inner">
-        <p className="landing-vnext__eyebrow" data-reveal>{promiseCopy.eyebrow}</p>
-        <h2 data-reveal="1">{promiseCopy.headline}</h2>
-        <p className="landing-vnext__section-lead" data-reveal="2">{promiseCopy.lede}</p>
+        <p className="landing-vnext__eyebrow" data-entrance="eyebrow">{promiseCopy.eyebrow}</p>
+        <h2 data-entrance="headline"><EntranceWords text={promiseCopy.headline} /></h2>
+        <p className="landing-vnext__section-lead" data-entrance="lede">{promiseCopy.lede}</p>
 
         <div
           ref={storyRef}
@@ -159,9 +163,6 @@ export function PromiseSection() {
             ))}
           </ol>
         </div>
-        <p className="landing-vnext__thesis landing-vnext__promise-close" data-reveal="3" data-shown={phase === "done" || phase === "still"}>
-          {promiseCopy.close}
-        </p>
       </div>
     </section>
   );

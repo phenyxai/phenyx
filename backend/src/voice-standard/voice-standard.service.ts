@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { SupabaseService } from "../supabase/supabase.service";
-import { sanitizeProse } from "./sanitize-prose";
+import { sanitizeProse, type VoiceSurface } from "./sanitize-prose";
 
 export interface VoiceStandard {
   id: string;
@@ -99,8 +99,8 @@ export class VoiceStandardService {
     ];
   }
 
-  /** Plain-text guard — strips any markup the model emits. See sanitize-prose.ts. */
-  sanitizeProse(text: string): string {
-    return sanitizeProse(text);
+  /** Plain-text guard + voice fixes; logs other voice violations for `surface`. See sanitize-prose.ts. */
+  sanitizeProse(text: string, surface?: VoiceSurface): string {
+    return sanitizeProse(text, surface);
   }
 }

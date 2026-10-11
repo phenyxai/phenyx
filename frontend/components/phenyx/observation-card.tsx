@@ -45,7 +45,7 @@ export interface Observation {
   points?: string[] | null;
   /** Platform badges, e.g. ["instagram","spotify"]. Omitted when the trace is locked. */
   sources?: string[] | null;
-  /** Date span, e.g. "2016 - 2026". Served on every tier: how far back the observation reaches. */
+  /** Date span, e.g. "2016 – 2026". Served on every tier: how far back the observation reaches. */
   span?: string | null;
   /** Muted meta line, used as a span fallback. */
   meta_line?: string | null;

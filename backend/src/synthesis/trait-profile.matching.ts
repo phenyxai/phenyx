@@ -7,7 +7,7 @@
  *      `inferTraitInsight` accessor used by the Polaris grounding cascade.
  */
 
-import { sanitizeProse } from "../voice-standard/sanitize-prose";
+import { countSentences, sanitizeProse } from "../voice-standard/sanitize-prose";
 
 /** A stored `user_traits` row reduced to the fields matching/ranking needs. */
 export interface TraitRow {
@@ -37,21 +37,10 @@ const MAX_SENTENCES = 3;
  * than 3 sentences. Returns the clean insight, or null when it must NOT be stored.
  */
 export function guardInsight(raw: string): string | null {
-  const clean = sanitizeProse(raw ?? "").trim();
+  const clean = sanitizeProse(raw ?? "", "trait").trim();
   if (!clean) return null;
   if (countSentences(clean) > MAX_SENTENCES) return null;
   return clean;
-}
-
-/**
- * Count sentence terminators (., !, ?), collapsing runs like "..." or "?!" into
- * one. Text with terminators but a trailing fragment still counts each terminator;
- * non-empty text with no terminator counts as a single sentence.
- */
-export function countSentences(text: string): number {
-  const matches = text.match(/[.!?]+/g);
-  if (matches) return matches.length;
-  return text.trim() ? 1 : 0;
 }
 
 /**

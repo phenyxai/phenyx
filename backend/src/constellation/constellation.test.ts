@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { BillingService } from "../stripe/billing.service";
+import { buildEvidence } from "../observations/evidence";
+import { sanitizeProse } from "../voice-standard/sanitize-prose";
 import { buildClustersForPillar, type ClusterObservationInput } from "./clusters";
 import { tenureYears } from "./layout";
 import { buildMoved, buildRecordTimeline, buildYearlyRecap } from "./record";
@@ -169,4 +171,18 @@ test("yearly recap is null when not eligible, empty when eligible without engine
     yearly: [["july", "self-creation brightened the most."]],
   });
   assert.equal(entries?.[0].when, "july");
+});
+
+test("source spans use the spaced en dash, including legacy hyphenated spans", () => {
+  const rows = [
+    obs("legacy", "area-a", { evidence_span: "2016 - 2026" }),
+    obs("derived", "area-a", { span_start: "2019-03-01T00:00:00Z", span_end: "2024-05-01T00:00:00Z" }),
+  ];
+  const [cluster] = buildClustersForPillar("origin", rows, areas, new Map(), PRO, true);
+  assert.deepEqual(cluster.observations.map((o) => o.span), ["2016 – 2026", "2019 – 2024"]);
+
+  const evidence = buildEvidence({ sig: "timing", recs: 4, n: 4, sources: ["spotify"], span: "2018-2025", entries: [] });
+  assert.equal(evidence.span, "2018 – 2025");
+
+  assert.equal(sanitizeProse("you kept returning to it 2016—2026."), "you kept returning to it 2016 – 2026.");
 });

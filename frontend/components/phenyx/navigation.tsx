@@ -9,6 +9,7 @@ interface NavigationProps { onEnterClick: () => void }
 export function Navigation({ onEnterClick }: NavigationProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -28,7 +29,8 @@ export function Navigation({ onEnterClick }: NavigationProps) {
   // (the nav's height plus 18% of the screen, held between 72px and 150px), and
   // the current chapter is the last one whose top has crossed it. Above the
   // first chapter and once the closing call to action reaches the line,
-  // nothing is current.
+  // nothing is current. The same pass tells the nav when the page has moved
+  // under it, which brings up its frosted backing.
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
@@ -47,13 +49,14 @@ export function Navigation({ onEnterClick }: NavigationProps) {
         for (const chapter of chapters) if (chapter.getBoundingClientRect().top <= readingY) current = chapter.id;
       }
       setActiveId(current);
+      setIsScrolled(scroller.scrollTop > 8);
     });
   }, []);
 
   const enter = () => { setIsOpen(false); onEnterClick(); };
 
   return (
-    <nav ref={navRef} className="landing-vnext__nav" aria-label="Primary navigation">
+    <nav ref={navRef} className="landing-vnext__nav" data-scrolled={isScrolled} aria-label="Primary navigation">
       <a className="landing-vnext__nav-logo" href={`#${SECTION_IDS.top}`}>
         <span className="landing-vnext__brand-dot" aria-hidden="true" /><span className="landing-vnext__nav-word">{navCopy.brand}</span>
       </a>

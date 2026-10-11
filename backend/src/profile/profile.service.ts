@@ -4,6 +4,7 @@ import { SupabaseService } from "../supabase/supabase.service";
 import { PassphraseService } from "../auth/passphrase.service";
 import { StripeService } from "../stripe/stripe.service";
 import { pickHeldConstants, type HeldConstant } from "./held";
+import { PILLARS } from "../constellation/layout";
 
 /**
  * PHE-30 / PHE-38 / PHE-75 / PHE-95 — read model behind `GET /profile/overview`.
@@ -66,12 +67,6 @@ export interface ProfileOverviewResponse {
 
 const SNAPSHOT_LIMIT = 3;
 const HELD_CANDIDATE_LIMIT = 16;
-const ACTIVE_PILLARS = [
-  "origin",
-  "emergence",
-  "self_creation",
-  "convergence",
-] as const;
 
 const MONTHS = [
   "january",
@@ -292,7 +287,7 @@ export class ProfileService {
 
   /**
    * Held constants prefer grounded traits (keyword + insight). When a person
-   * has fewer than four traits, active-pillar syntheses fill the remaining
+   * has fewer than four traits, pillar syntheses (all seven, PHE-100) fill the remaining
    * slots so the 2x2 still reads. Empty only when neither source has content.
    */
   private buildHeld(
@@ -309,7 +304,7 @@ export class ProfileService {
     if (fromTraits.length >= 4) return fromTraits;
 
     const fromState: HeldConstant[] = [];
-    for (const pillar of ACTIVE_PILLARS) {
+    for (const pillar of PILLARS) {
       const synthesis = state?.[`${pillar}_synthesis`];
       if (typeof synthesis !== "string" || !synthesis.trim()) continue;
       fromState.push({
@@ -335,7 +330,7 @@ export class ProfileService {
     if (fromTraits.length > 0) return fromTraits;
 
     const fromState: ProfileSnapshotItem[] = [];
-    for (const pillar of ACTIVE_PILLARS) {
+    for (const pillar of PILLARS) {
       const synthesis = state?.[`${pillar}_synthesis`];
       if (typeof synthesis !== "string" || !synthesis.trim()) continue;
       fromState.push({

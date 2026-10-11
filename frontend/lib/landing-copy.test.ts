@@ -13,7 +13,6 @@ import {
   polarisExample,
   promiseCopy,
   SECTION_IDS,
-  SECTION_ORDER,
 } from "./landing-copy.ts";
 
 // These assert the contracts the landing components rely on at render time —
@@ -27,10 +26,6 @@ test("hero description is two deliberate lines", () => {
 test("nav links point at sections that exist", () => {
   const ids = new Set(Object.values(SECTION_IDS));
   for (const link of navCopy.links) assert.ok(ids.has(link.targetId), `unknown target ${link.targetId}`);
-});
-
-test("the section order covers every section exactly once", () => {
-  assert.deepEqual([...SECTION_ORDER].sort(), Object.values(SECTION_IDS).sort());
 });
 
 test("the nav names the three chapters, in page order", () => {
@@ -60,16 +55,15 @@ test("there are exactly seven constellation stages, in stage order", () => {
   );
 });
 
-test("every constellation stage shows two sourced moments", () => {
-  // The stage viewer lays the rows out as two columns and keys them by source.
+test("every constellation point reads back a phase with two dated signals", () => {
+  // The point viewer shows the question, a reading, then two signals side by side.
   for (const stage of constellationStages) {
-    assert.equal(stage.rows.length, 2, `${stage.name} should show two moments`);
+    assert.ok(stage.era.trim().length > 0, `${stage.name} has no era`);
     assert.ok(stage.question.trim().length > 0, `${stage.name} has no question`);
-    const sources = stage.rows.map(([source]) => source);
-    assert.equal(new Set(sources).size, sources.length, `${stage.name} repeats a source`);
-    for (const [source, moment] of stage.rows) {
-      assert.ok(source.trim().length > 0, `${stage.name} row has no source`);
-      assert.ok(moment.trim().length > 0, `${stage.name} row has no moment`);
+    assert.ok(stage.reading.trim().length > 0, `${stage.name} has no reading`);
+    assert.equal(stage.signals.length, 2, `${stage.name} should show two signals`);
+    for (const signal of stage.signals) {
+      for (const [field, value] of Object.entries(signal)) assert.ok(value.trim().length > 0, `${stage.name} signal has no ${field}`);
     }
   }
 });
@@ -94,7 +88,7 @@ test("insight patterns are fully populated and cite unique sources", () => {
 });
 
 test("the early-start chart shows what its claim says", () => {
-  // "14 of your last 17 finished projects were started before 9am."
+  // "14 of the last 17 things you made and shared started before 9am."
   const bars = insightPatterns.find((pattern) => pattern.visual.kind === "bars")?.visual;
   assert.ok(bars && bars.kind === "bars");
   assert.match(bars.pattern, /^[01]+$/);
@@ -111,10 +105,10 @@ test("the returning-pattern timeline stays on its axis", () => {
   }
 });
 
-test("discover finds are uniquely named and each says why", () => {
+test("discover finds are uniquely named and each says where it came from", () => {
   assert.equal(discoverFinds.length, 3);
   assert.equal(new Set(discoverFinds.map((find) => find.name)).size, discoverFinds.length);
-  for (const find of discoverFinds) assert.ok(find.why.startsWith("because "), `${find.name} has no reason`);
+  for (const find of discoverFinds) assert.ok(find.why.startsWith("from "), `${find.name} does not say where it came from`);
 });
 
 test("the polaris example can show its evidence and its plan", () => {
@@ -126,7 +120,7 @@ test("the polaris example can show its evidence and its plan", () => {
   assert.equal(new Set(polarisExample.plan.steps).size, polarisExample.plan.steps.length);
 });
 
-test("our vision walks five stations, from connecting to leaving", () => {
+test("your space walks five stations, from choosing platforms to changing your mind", () => {
   assert.deepEqual(
     promiseCopy.stations.map((station) => station.visual.kind),
     ["choose", "protect", "show", "decide", "leave"],
@@ -145,7 +139,6 @@ test("copy is lowercase-first except for the brand and proper nouns", () => {
     ...promiseCopy.stations.map((station) => station.title),
     promiseCopy.headline,
     ctaCopy.headline,
-    ctaCopy.subline,
   ];
   for (const sentence of sentences) {
     assert.equal(sentence[0], sentence[0].toLowerCase(), `"${sentence}" should start lowercase`);

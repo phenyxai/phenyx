@@ -5,7 +5,8 @@ import { ConstellationService } from "./constellation.service";
 
 /**
  * PHE-74 — constellation surface. Owner-guarded via SupabaseAuthGuard.
- * Payload: points, portrait, pillars (with clusters), timeline, moved, tenure.
+ * Payload: portrait, pillars (with clusters), timeline, moved, tenure. No
+ * positions: the client lays the points out itself.
  */
 @Controller("constellation")
 export class ConstellationController {

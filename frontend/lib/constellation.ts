@@ -15,29 +15,16 @@ import { apiFetch } from "@/lib/api-client";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { STELLAR_DEFAULT } from "@/lib/stellar";
 import type { Evidence } from "@/components/phenyx/evidence-trace";
+import { ALL_PILLARS, NODE_LAYOUT, type Pillar, type Vec3 } from "./constellation-shape";
 
 // ---------------------------------------------------------------------------
-// Pillar model
+// Pillar model and shape. The seven points, their layout and the seven lines
+// live in `./constellation-shape` (shared with the onboarding formation); every
+// point is always drawn lit, whatever generation returned for it.
 // ---------------------------------------------------------------------------
 
-export const ACTIVE_PILLARS = [
-  "origin",
-  "emergence",
-  "self_creation",
-  "convergence",
-] as const;
-
-export const LOCKED_PILLARS = ["becoming", "recognition", "transcendence"] as const;
-
-export const ALL_PILLARS = [...ACTIVE_PILLARS, ...LOCKED_PILLARS] as const;
-
-export type ActivePillar = (typeof ACTIVE_PILLARS)[number];
-export type LockedPillar = (typeof LOCKED_PILLARS)[number];
-export type Pillar = (typeof ALL_PILLARS)[number];
-
-export function isLockedPillar(pillar: Pillar): pillar is LockedPillar {
-  return (LOCKED_PILLARS as readonly string[]).includes(pillar);
-}
+export { ALL_PILLARS, EDGES, NODE_LAYOUT } from "./constellation-shape";
+export type { Pillar, Vec3 } from "./constellation-shape";
 
 // Pure text helpers (the pillar label, the age line, the synthesis line, the
 // overview story rows) live in `./constellation-text` so they run under plain
@@ -52,43 +39,6 @@ export {
   synthesisLine,
 } from "./constellation-text";
 export type { ConstellationAge, SynthesisLine } from "./constellation-text";
-
-// ---------------------------------------------------------------------------
-// Deterministic layout. Positions are normalized [0,1] within the canvas box so
-// the constellation is visually stable across sessions and DPI. `z` is reserved
-// for a future 3D layer — it is written and read (round-trips through the node
-// model) but never consulted by the 2D draw, matching the persisted {x,y,z}
-// contract in the spec.
-// ---------------------------------------------------------------------------
-
-export interface Vec3 {
-  x: number;
-  y: number;
-  z: number;
-}
-
-export const NODE_LAYOUT: Record<Pillar, Vec3> = {
-  origin: { x: 0.5, y: 0.85, z: 0.0 },
-  emergence: { x: 0.22, y: 0.68, z: 0.1 },
-  self_creation: { x: 0.16, y: 0.42, z: 0.2 },
-  convergence: { x: 0.5, y: 0.48, z: 0.3 },
-  becoming: { x: 0.82, y: 0.5, z: 0.4 },
-  recognition: { x: 0.74, y: 0.24, z: 0.5 },
-  transcendence: { x: 0.5, y: 0.12, z: 0.6 },
-};
-
-/** Faint, non-interactive edges between a precomputed pair set. */
-export const EDGES: [Pillar, Pillar][] = [
-  ["origin", "emergence"],
-  ["origin", "convergence"],
-  ["emergence", "self_creation"],
-  ["emergence", "convergence"],
-  ["self_creation", "convergence"],
-  ["convergence", "becoming"],
-  ["becoming", "recognition"],
-  ["recognition", "transcendence"],
-  ["convergence", "transcendence"],
-];
 
 // ---------------------------------------------------------------------------
 // Normalized shapes consumed by the canvas + panel
@@ -119,7 +69,6 @@ export interface Cluster {
 
 export interface PillarDetail {
   pillar: Pillar;
-  active: boolean;
   position: Vec3;
   score: number | null;
   synthesis: string | null;
@@ -128,15 +77,6 @@ export interface PillarDetail {
   source_platforms: string[];
   source_insight: string | null;
   clusters: Cluster[];
-}
-
-export interface CanvasPoint {
-  pillar: Pillar;
-  x: number;
-  y: number;
-  z: number;
-  active: boolean;
-  has_new: boolean;
 }
 
 export interface RecordTimelineEra {
@@ -189,7 +129,6 @@ export interface ConstellationData {
   generated_at: string | null;
   /** Portrait prose for "your story, right now". */
   portrait: string | null;
-  points: CanvasPoint[];
   pillars: Record<Pillar, PillarDetail>;
   timeline: RecordTimeline;
   moved: MovedPair[];
@@ -214,7 +153,6 @@ export const EMPTY_TIMELINE: RecordTimeline = {
 function emptyPillar(pillar: Pillar): PillarDetail {
   return {
     pillar,
-    active: !isLockedPillar(pillar),
     position: NODE_LAYOUT[pillar],
     score: null,
     synthesis: null,
@@ -226,21 +164,6 @@ function emptyPillar(pillar: Pillar): PillarDetail {
   };
 }
 
-function pointsFromPillars(pillars: Record<Pillar, PillarDetail>): CanvasPoint[] {
-  return ALL_PILLARS.map((pillar) => {
-    const layout = NODE_LAYOUT[pillar];
-    const detail = pillars[pillar];
-    return {
-      pillar,
-      x: layout.x,
-      y: layout.y,
-      z: layout.z,
-      active: detail.active,
-      has_new: detail.has_new,
-    };
-  });
-}
-
 function emptyState(stellarColor: string): ConstellationData {
   const pillars = {} as Record<Pillar, PillarDetail>;
   for (const pillar of ALL_PILLARS) pillars[pillar] = emptyPillar(pillar);
@@ -250,7 +173,6 @@ function emptyState(stellarColor: string): ConstellationData {
     version: null,
     generated_at: null,
     portrait: null,
-    points: pointsFromPillars(pillars),
     pillars,
     timeline: { ...EMPTY_TIMELINE },
     moved: [],
@@ -398,24 +320,8 @@ function normalizeEndpoint(raw: any, fallbackColor: string): ConstellationData {
     }
   }
 
-  if (Array.isArray(raw?.points) && raw.points.length) {
-    base.points = ALL_PILLARS.map((pillar) => {
-      const found = raw.points.find((pt: any) => pt?.pillar === pillar);
-      const layout = NODE_LAYOUT[pillar];
-      const detail = base.pillars[pillar];
-      return {
-        pillar,
-        x: typeof found?.x === "number" ? found.x : layout.x,
-        y: typeof found?.y === "number" ? found.y : layout.y,
-        z: typeof found?.z === "number" ? found.z : layout.z,
-        active: found?.active ?? detail.active,
-        has_new: found?.has_new ?? detail.has_new,
-      };
-    });
-  } else {
-    base.points = pointsFromPillars(base.pillars);
-  }
-
+  // The payload's `points` are ignored: the shape is fixed client-side, so a
+  // partial or stale payload can never move, drop or dim a point.
   base.timeline = normalizeTimeline(raw?.timeline);
   base.moved = Array.isArray(raw?.moved)
     ? raw.moved
@@ -575,7 +481,6 @@ async function readFromSupabase(fallbackColor: string): Promise<ConstellationDat
     if (clusters[0]?.preview) detail.source_insight = clusters[0].preview;
   }
 
-  data.points = pointsFromPillars(data.pillars);
   return data;
 }
 

@@ -40,7 +40,6 @@ function cluster(label: string, observations: ClusterObservation[], over: Partia
 function detail(pillar: Pillar, clusters: Cluster[]): PillarDetail {
   return {
     pillar,
-    active: true,
     position: { x: 0, y: 0, z: 0 },
     score: null,
     synthesis: null,
