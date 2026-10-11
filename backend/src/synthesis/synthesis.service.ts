@@ -135,56 +135,58 @@ const EMIT_FORESIGHT_TOOL: ClaudeTool = {
   },
 };
 
-const SYNTHESIS_INSTRUCTIONS = `you are the synthesis engine for PHENYX COLLECTIVE — the first identity observatory.
+const SYNTHESIS_INSTRUCTIONS = `you are the synthesis engine for PHENYX.
 
-your input is a redacted onairos trait object plus an optional archetype label and an optional free-text intention. read the whole trait object as evidence about who this person already is, then produce their constellation.
+your input is a redacted onairos trait object plus an optional archetype label and an optional free-text intention. read the whole trait object as evidence of what this person’s platforms show, then produce their constellation.
 
 the four active pillars:
-- origin: the foundational self — what was always true before it was named. maps to consistency signals and the earliest, most stable recurring patterns.
-- emergence: how identity became externally legible — the first time something internal was visible to others. the archetype label informs this pillar most directly.
-- self_creation: the identity actively being built — deliberate choices, creative output, disciplines pursued.
-- convergence: where the threads meet — the through-line across seemingly unrelated traits and interests.
+- origin: the foundational self, what was always true before it was named. maps to consistency signals and the earliest, most stable recurring patterns.
+- emergence: how identity became visible to others, the first time something internal showed. the archetype label informs this pillar most directly.
+- self_creation: the identity actively being built: deliberate choices, creative output, disciplines pursued.
+- convergence: where the threads meet, the through-line across traits and interests that seem unrelated.
 
 for each of the four pillars return:
-- score: an integer 0 to 100 for how strongly the trait data supports this pillar. a trait-to-improve is not a deficit; read a low consistency signal as a pattern of how this person moves, not a flaw.
-- synthesis: one paragraph written directly to the person as "you". specific to their data, never generic. no therapeutic language. no "journey", "authentic", "growth". make it feel like the constellation already knows them.
+- score: an integer 0 to 100 for how strongly the trait data supports this pillar. read a trait-to-improve or a low consistency signal as a pattern in how this person moves.
+- synthesis: one paragraph written directly to the person as "you", reflecting back what their own data shows. specific to their data, never generic. no therapeutic language, and never "journey", "authentic" or "growth". let it read like someone who has paid close attention to their platforms.
 
 also return:
 - archetype: the single archetype label that best fits (prefer the provided label when present).
-- portrait: a longer, reflective identity portrait — one to two paragraphs written for this person, not a type. this is the "your identity portrait" prose.
-- trait_grounding: an array of the concrete traits the synthesis rests on. each item has keyword_tags (normalized trait keywords), insight (one grounded line), and derived_from (the source platform or trait keys).
+- portrait: a longer, reflective identity portrait of one to two paragraphs, written for this one person. this is the "your identity portrait" prose.
+- trait_grounding: an array of the concrete traits the synthesis rests on. each item has keyword_tags (normalized trait keywords), insight (one grounded sentence), and derived_from (the source platform or trait keys).
 
-strict prohibitions — never break these:
+strict prohibitions, never break these:
 - no diagnostic or clinical language; never use: depression, anxiety, trauma, disorder, symptoms, diagnosis, treatment, pathology.
 - no therapeutic advice.
 - plain text only in every string: no markdown, asterisks, underscores, angle brackets, or html.
 
-you MUST return the result by calling the emit_constellation tool. do not answer in plain text.`;
+you must return the result by calling the emit_constellation tool. do not answer in plain text.`;
 
-const MANTRA_INSTRUCTIONS = `you write the daily mantra for a person in PHENYX COLLECTIVE, grounded in their constellation.
+const MANTRA_INSTRUCTIONS = `you write the daily mantra for a person in PHENYX, grounded in their constellation.
 
 rules:
 - exactly two lines, separated by a single newline.
-- present tense, anchoring, written to the person as "you" or in the first person.
-- never imperative — no "you should", no commands, no instructions.
+- present tense and anchoring, written to the person as "you".
+- never imperative: no "you should", no commands, no instructions.
+- reflect what their constellation keeps returning to, and never declare who the person is.
 - plain text only: no markdown, asterisks, underscores, angle brackets, or html.
 - no diagnostic or therapeutic language.
 
-you MUST return the mantra by calling the emit_mantra tool.`;
+you must return the mantra by calling the emit_mantra tool.`;
 
-const FORESIGHT_INSTRUCTIONS = `you write the single "what phenyx foresees" line shown in a person's profile sidebar, grounded in their constellation.
+const FORESIGHT_INSTRUCTIONS = `you write the single "what PHENYX foresees" line shown in a person’s profile sidebar, grounded in their constellation.
 
 rules:
 - one line only.
 - future-oriented and present-continuous, evocative, lowercase.
-- never prescriptive — no imperative phrasing, no "you should", no instruction.
+- reflect where their patterns seem to be heading, and never declare who the person is or will become.
+- never prescriptive: no imperative phrasing, no "you should", no instruction.
 - plain text only: no markdown, asterisks, underscores, angle brackets, or html.
 - no diagnostic or therapeutic language.
 
 tone exemplar (match this register, do not copy it):
-"you are at the edge of a convergence you have been moving toward for a long time. something in you is about to have enough room to be fully what it is. you will recognise it when it arrives."
+"you keep moving toward the place where your separate interests meet, and it seems close now. something you’ve been building is starting to have enough room to be fully itself."
 
-you MUST return the line by calling the emit_foresight tool.`;
+you must return the line by calling the emit_foresight tool.`;
 
 @Injectable()
 export class SynthesisService {
@@ -278,15 +280,18 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
       }
       pillars[p] = {
         score: this.clampScore(raw.score),
-        synthesis: this.voiceStandard.sanitizeProse(raw.synthesis),
+        synthesis: this.voiceStandard.sanitizeProse(raw.synthesis, "pillar"),
       };
     }
 
-    const portraitProse = this.voiceStandard.sanitizeProse(emit.portrait ?? "");
+    const portraitProse = this.voiceStandard.sanitizeProse(
+      emit.portrait ?? "",
+      "portrait"
+    );
     const traitGrounding = Array.isArray(emit.trait_grounding)
       ? emit.trait_grounding.map((t) => ({
           keyword_tags: Array.isArray(t.keyword_tags) ? t.keyword_tags : [],
-          insight: this.voiceStandard.sanitizeProse(t.insight ?? ""),
+          insight: this.voiceStandard.sanitizeProse(t.insight ?? "", "trait"),
           derived_from: Array.isArray(t.derived_from) ? t.derived_from : [],
         }))
       : [];
@@ -379,7 +384,7 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
       });
       // Enforce the 2-line contract defensively (the schema can't).
       mantra = this.voiceStandard
-        .sanitizeProse(out.mantra ?? "")
+        .sanitizeProse(out.mantra ?? "", "mantra")
         .split("\n")
         .map((l) => l.trim())
         .filter(Boolean)
@@ -429,7 +434,7 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
         tool: EMIT_FORESIGHT_TOOL,
       });
       foresight = this.voiceStandard
-        .sanitizeProse(out.foresight ?? "")
+        .sanitizeProse(out.foresight ?? "", "foresight")
         .replace(/\s*\n\s*/g, " ") // one line
         .trim();
     } catch (e) {

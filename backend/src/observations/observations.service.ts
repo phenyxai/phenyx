@@ -606,7 +606,7 @@ export class ObservationsService {
         if (!o || typeof o.pillar !== "string" || typeof o.body !== "string") return null;
         return {
           pillar: o.pillar,
-          body: this.voiceStandard.sanitizeProse(o.body),
+          body: this.voiceStandard.sanitizeProse(o.body, "observation"),
           source_platforms: Array.isArray(o.source_platforms)
             ? o.source_platforms.filter((p: unknown) => typeof p === "string")
             : [],
@@ -719,22 +719,24 @@ export class ObservationsService {
 
   private taskInstructions(): string {
     // Task-only instructions; voice/tone come from the cached Voice Standard block.
-    return `you are the observation engine for PHENYX COLLECTIVE — the identity observatory.
+    return `you are the observation engine for PHENYX.
 
-your task: read the user's synthesized constellation, grounded trait keywords, and redacted per-platform behavioral snapshots, then surface OBSERVATIONS — short statements of "what your data revealed". each observation is tied to one pillar, cites its source_platforms, and carries a meta_label describing the pattern (e.g. "cross-platform pattern / 6 months").
+your task: read the person’s synthesized constellation, grounded trait keywords, and redacted per-platform behavioral snapshots, then surface observations: short statements of what their data revealed. each observation is tied to one pillar, cites its source_platforms, and carries a meta_label describing the pattern (e.g. "cross-platform pattern / 6 months").
 
-new-signal diffing is the core rule: ONLY surface genuinely novel patterns. you will be shown the observations already surfaced to this user — do not restate them, rephrase them, or emit near-duplicates. if a pattern only confirms something already surfaced, omit it. if nothing genuinely new surfaced, emit an empty observations array.
+each body is two to three sentences written to the person as "you", reflecting what the pattern suggests. the person decides who they are, so never declare it.
 
-for each observation choose a stable signal_key that identifies the underlying pattern (not the prose), so the same pattern always produces the same key. prefer cross-platform reads (source_platforms with 2+ platforms) — they are the strongest signals.
+new-signal diffing is the core rule: only surface genuinely novel patterns. you will be shown the observations already surfaced to this person, so do not restate them, rephrase them, or emit near-duplicates. if a pattern only confirms something already surfaced, omit it. if nothing genuinely new surfaced, emit an empty observations array.
+
+for each observation choose a stable signal_key that identifies the underlying pattern (not the prose), so the same pattern always produces the same key. prefer cross-platform reads (source_platforms with 2+ platforms), since they are the strongest signals.
 
 also return the concrete supporting_points, exact source_record_keys copied from the grounding, and the inclusive ISO-8601 window_start/window_end. a bare platform name is not a source record key. do not emit two angles on the same pillar that share a source record or overlap the same time window; keep the one with more supporting points.
 
-you MUST return your result by calling the emit_observations tool. do not answer in plain text.
+you must return your result by calling the emit_observations tool. do not answer in plain text.
 
-strict prohibitions — never break these:
+strict prohibitions, never break these:
 - no diagnostic or clinical language
 - never use: depression, anxiety, trauma, disorder, symptoms, diagnosis, treatment, pathology
-- no therapeutic advice; these are recognitions of identity, not guidance`;
+- no therapeutic advice; these are reflections the person can check against their constellation`;
   }
 
   private buildUserMessage(context: GenerationContext): string {

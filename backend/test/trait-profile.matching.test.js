@@ -4,9 +4,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   guardInsight,
-  countSentences,
   rankTraitMatches,
 } = require("../dist/synthesis/trait-profile.matching");
+const { countSentences } = require("../dist/voice-standard/sanitize-prose");
 
 // ---------------------------------------------------------------------------
 // guardInsight — plain-text + 2-3-sentence guard
