@@ -11,15 +11,13 @@ import { DRAWER_ID, useDashboardDrawer } from "@/components/phenyx/dashboard-dra
 
 /**
  * Nav items in fixed product order. Rendered in array order — never sorted.
- * (Constellation, Discover, Polaris, You; PHE-103 put discover second and took
- * daily out of the nav, its route stays until it is removed.) Settings is not a
- * tab: it is reached from the gear in the account row and lives at
- * /dashboard/settings.
+ * (Daily, Polaris, Constellation, You.) Settings is not a tab: it is reached
+ * from the gear in the account row and lives at /dashboard/settings.
  */
 const TABS = [
-  { id: "constellation", label: "constellation" },
-  { id: "discover", label: "discover" },
+  { id: "daily", label: "daily" },
   { id: "polaris", label: "polaris" },
+  { id: "constellation", label: "constellation" },
   { id: "you", label: "you" },
 ] as const;
 
@@ -159,7 +157,7 @@ export function DashboardSidebar() {
   // emits the landing tab_visit with previous=null and no duration. Fires on
   // segment change only — not on mount of individual tab content.
   useEffect(() => {
-    const tab = segment ?? "constellation";
+    const tab = segment ?? "daily";
     const previous = activeTabRef.current;
     if (previous === tab) return;
     if (previous !== null) {
