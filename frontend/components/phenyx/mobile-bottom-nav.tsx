@@ -9,7 +9,7 @@ import { DRAWER_ID, useDashboardDrawer } from "@/components/phenyx/dashboard-dra
 // Mobile bottom nav (PHE-91 / v244)
 // ----------------------------------------------------------------------------
 // At or below 760px the sidebar becomes a drawer and this fixed bar drives
-// navigation: daily, polaris, stars (constellation), you, and a menu item that
+// navigation: stars (constellation), discover, polaris, you, and a menu item that
 // toggles the sidebar drawer (every destination plus the account row and
 // settings). The active item mirrors the route segment, the same way the
 // sidebar does. Rendered once from the dashboard layout; hidden on desktop.
@@ -17,21 +17,21 @@ import { DRAWER_ID, useDashboardDrawer } from "@/components/phenyx/dashboard-dra
 // dashboard-drawer.tsx.
 // ============================================================================
 
-type TabId = "daily" | "polaris" | "constellation" | "you";
+type TabId = "constellation" | "discover" | "polaris" | "you";
 
 const BAR_ITEMS: readonly { id: TabId; label: string }[] = [
-  { id: "daily", label: "daily" },
-  { id: "polaris", label: "polaris" },
   { id: "constellation", label: "stars" },
+  { id: "discover", label: "discover" },
+  { id: "polaris", label: "polaris" },
   { id: "you", label: "you" },
 ];
 
 /** 20px stroke icons, paths from the v244 prototype. */
 const ICONS: Record<TabId, ReactNode> = {
-  daily: (
+  discover: (
     <>
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M15.2 8.8l-1.9 4.5-4.5 1.9 1.9-4.5z" />
     </>
   ),
   polaris: <path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6z" />,
@@ -77,7 +77,7 @@ const ITEM_OFF = "text-[#FFFDFD]/50";
 
 export function MobileBottomNav() {
   const segment = useSelectedLayoutSegment();
-  const active = segment ?? "daily";
+  const active = segment ?? "constellation";
   const { open, toggle } = useDashboardDrawer();
 
   return (
