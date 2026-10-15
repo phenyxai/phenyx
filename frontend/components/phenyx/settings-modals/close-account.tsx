@@ -12,22 +12,24 @@ import {
   SettingsDialogContent,
   useSettingsModals,
 } from './modal-host'
+import { ConfirmCodeField } from './confirm-code-field'
 import { closeAccountClientError } from './validation'
 
 /**
- * close your account — own screen with two gates: passphrase, then type
- * `delete my account`. Checks run in fill order. Never alert.
+ * close your account — own screen with two gates: a code emailed to the
+ * account (PHE-97: no passphrase), then type `delete my account`. Checks run in
+ * fill order. Never alert.
  */
 export function CloseAccountModal() {
   const router = useRouter()
   const { openModal } = useSettingsModals()
-  const [passphrase, setPassphrase] = React.useState('')
+  const [code, setCode] = React.useState('')
   const [phrase, setPhrase] = React.useState('')
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState('')
 
   const handleDelete = async () => {
-    const clientError = closeAccountClientError(passphrase, phrase)
+    const clientError = closeAccountClientError(code, phrase)
     if (clientError) {
       setError(clientError)
       return
@@ -38,7 +40,7 @@ export function CloseAccountModal() {
       const res = await apiFetch('/account/close', {
         method: 'POST',
         body: JSON.stringify({
-          passphrase,
+          code,
           confirmation: phrase,
         }),
       })
@@ -93,14 +95,7 @@ export function CloseAccountModal() {
       </p>
 
       <div className="flex flex-col gap-4">
-        <ModalField
-          label="your passphrase"
-          type="password"
-          autoComplete="current-password"
-          placeholder="confirm it is you"
-          value={passphrase}
-          onChange={setPassphrase}
-        />
+        <ConfirmCodeField value={code} onChange={setCode} />
         <ModalField
           label={
             <>

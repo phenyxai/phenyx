@@ -12,16 +12,18 @@ import {
   SettingsDialogContent,
   useSettingsModals,
 } from './modal-host'
+import { ConfirmCodeField } from './confirm-code-field'
 import { profileEditClientError } from './validation'
 
 /**
- * edit profile — name and email, confirmed with the current passphrase.
+ * edit profile — name and email, confirmed with a code emailed to the account
+ * (PHE-97: no passphrase).
  */
 export function EditProfileModal() {
   const { closeModal } = useSettingsModals()
   const [name, setName] = React.useState('')
   const [email, setEmail] = React.useState('')
-  const [passphrase, setPassphrase] = React.useState('')
+  const [code, setCode] = React.useState('')
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState('')
 
@@ -50,7 +52,7 @@ export function EditProfileModal() {
   }, [])
 
   const handleSave = async () => {
-    const clientError = profileEditClientError(passphrase)
+    const clientError = profileEditClientError(code)
     if (clientError) {
       setError(clientError)
       return
@@ -63,7 +65,7 @@ export function EditProfileModal() {
         body: JSON.stringify({
           display_name: name,
           email,
-          passphrase,
+          code,
         }),
       })
       const body = (await res.json().catch(() => ({}))) as { error?: string }
@@ -102,14 +104,7 @@ export function EditProfileModal() {
           value={email}
           onChange={setEmail}
         />
-        <ModalField
-          label="your passphrase"
-          type="password"
-          autoComplete="current-password"
-          placeholder="confirm it is you"
-          value={passphrase}
-          onChange={setPassphrase}
-        />
+        <ConfirmCodeField value={code} onChange={setCode} />
       </div>
       <ModalErr message={error} />
       <GhostButton onClick={handleSave} disabled={saving} className="self-start">
