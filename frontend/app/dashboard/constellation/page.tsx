@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ConstellationCanvas } from "@/components/phenyx/constellation-canvas";
 import { ConstellationPanel } from "@/components/phenyx/constellation-panel";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
+import { NewSignalBanner } from "@/components/phenyx/new-signal-banner";
 import {
   constellationAge,
   fetchConstellation,
@@ -122,6 +123,13 @@ export default function ConstellationTabPage() {
           </p>
         )}
       </header>
+
+      {/* PHE-102: only while an unseen signal exists; collapsed until opened. */}
+      {data?.signal && (
+        <div className="px-6 pb-5 lg:px-10">
+          <NewSignalBanner data={data} />
+        </div>
+      )}
 
       {/* The 1024px split lives in globals.css (.constellation-split), not in
           lg: classes, so the onairos SDK's stylesheet cannot override it. */}

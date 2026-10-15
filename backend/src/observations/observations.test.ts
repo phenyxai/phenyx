@@ -654,7 +654,9 @@ function makeFeedSupabase(tables: Record<string, Record<string, unknown>[]>) {
             select: () => chain,
             eq: () => chain,
             in: () => chain,
+            is: () => chain,
             order: () => chain,
+            limit: () => chain,
             maybeSingle: () => Promise.resolve({ data: data[0] ?? null, error: null }),
             then: (onF: any, onR: any) =>
               Promise.resolve({ data, error: null }).then(onF, onR),
@@ -700,6 +702,8 @@ function makeFeedService(tier: string) {
         },
       ],
       observation_feedback: [],
+      // PHE-102: "one" is the unseen signal's moment, so it alone reads as new.
+      new_signals: [{ observation_ids: ["one"] }],
       underneath_readings: [],
       observation_signals: [],
     }) as any,

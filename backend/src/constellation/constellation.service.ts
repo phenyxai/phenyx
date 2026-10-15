@@ -9,6 +9,7 @@ import {
   type SourceRecordPreview,
 } from "../observations/evidence";
 import { normalizePillar } from "../observations/signal-hash";
+import { markNewFromSignal } from "../observations/new-signal";
 import {
   buildClustersForPillar,
   type AreaRow,
@@ -49,6 +50,18 @@ export interface ConstellationPillar {
   clusters: Cluster[];
 }
 
+/** PHE-102 — the newest unseen new signal, served until opened. */
+export interface NewSignal {
+  id: string;
+  pillar: Pillar;
+  points: Pillar[];
+  summary: string;
+  ideas: string[];
+  observation_ids: string[];
+  sources: Array<{ observation_id: string; platform: string; span: string | null }>;
+  created_at: string;
+}
+
 export interface ConstellationTenure {
   years: number;
   since: string | null;
@@ -67,6 +80,7 @@ export interface ConstellationResponse {
   moved: MovedPair[];
   tenure: ConstellationTenure;
   yearly_recap: YearlyRecapEntry[] | null;
+  signal: NewSignal | null;
 }
 
 interface LinkedSignal {
@@ -103,6 +117,7 @@ export class ConstellationService {
       artifactsRes,
       spanRes,
       latestRes,
+      signalRes,
     ] = await Promise.all([
       supabase
         .from("user_profiles")
@@ -147,6 +162,14 @@ export class ConstellationService {
         .order("occurred_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from("new_signals")
+        .select("id,pillar,points,summary,ideas,observation_ids,sources,created_at")
+        .eq("user_id", userId)
+        .is("seen_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
 
     const tier = (profileRes.data?.tier as string | null) ?? "free";
@@ -157,10 +180,13 @@ export class ConstellationService {
     const years = tenureYears(createdAt);
     const yearlyEligible = capabilities.yearlyRecap && years >= 1;
 
-    const rows = ((obsRes.data ?? []) as ClusterObservationInput[]).map((row) => ({
-      ...row,
-      pillar: normalizePillar(row.pillar),
-    }));
+    // PHE-102: "new" means part of the unseen signal. Observations are
+    // append-only, so their stored is_new never clears; the signal's seen_at does.
+    const signal = (signalRes.data ?? null) as NewSignal | null;
+    const rows = markNewFromSignal(
+      (obsRes.data ?? []) as ClusterObservationInput[],
+      new Set(signal?.observation_ids ?? [])
+    ).map((row) => ({ ...row, pillar: normalizePillar(row.pillar) }));
 
     const withEvidence = await this.attachClusterEvidence(
       userId,
@@ -213,7 +239,24 @@ export class ConstellationService {
       moved: buildMoved(engineRecord),
       tenure: { years, since: createdAt },
       yearly_recap: buildYearlyRecap(yearlyEligible, engineRecord),
+      signal,
     };
+  }
+
+  /**
+   * PHE-102 — the reader opened the banner. Every unseen signal is stamped,
+   * not just the served one: the newest supersedes any older unseen, so none
+   * of them can come back as new.
+   */
+  async markSignalSeen(userId: string): Promise<{ ok: true }> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from("new_signals")
+      .update({ seen_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .is("seen_at", null);
+    if (error) throw error;
+    return { ok: true };
   }
 
   private buildPillars(
