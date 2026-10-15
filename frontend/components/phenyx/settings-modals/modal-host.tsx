@@ -181,7 +181,7 @@ export function SettingsDialogContent({
         {children}
         <DialogPrimitive.Close
           aria-label="close"
-          className="absolute top-4 right-4 rounded-sm text-[#FFFDFD]/55 opacity-80 hover:opacity-100 focus:ring-2 focus:ring-[var(--stellar)] focus:outline-hidden [&_svg]:size-4"
+          className="absolute top-4 right-4 rounded-sm text-ph-white/55 opacity-80 hover:opacity-100 focus:ring-2 focus:ring-[var(--stellar)] focus:outline-hidden [&_svg]:size-4"
         >
           <XIcon />
           <span className="sr-only">close</span>
@@ -201,7 +201,7 @@ export function ModalHeading({
 }) {
   return (
     <div className="flex flex-col gap-2 pr-6">
-      <DialogTitle className="text-base leading-none font-medium lowercase text-[#FFFDFD]">
+      <DialogTitle className="text-base leading-none font-medium lowercase text-ph-white">
         {title}
       </DialogTitle>
       {subtitle && (
@@ -243,7 +243,7 @@ export function PrimaryButton({
     <button
       type="button"
       className={cn(
-        'w-full rounded-[10px] border border-[rgba(var(--stellar-rgb),0.38)] bg-[rgba(var(--stellar-rgb),0.10)] px-6 py-3 text-xs font-medium text-[#FFFDFD] hover:bg-[rgba(var(--stellar-rgb),0.18)] disabled:cursor-not-allowed disabled:opacity-50',
+        'w-full rounded-[10px] border border-[rgba(var(--stellar-rgb),0.38)] bg-[rgba(var(--stellar-rgb),0.10)] px-6 py-3 text-xs font-medium text-ph-white hover:bg-[rgba(var(--stellar-rgb),0.18)] disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -299,20 +299,20 @@ export function DangerConfirm({
         }}
       >
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-base font-medium lowercase text-[#FFFDFD]">
+          <AlertDialogTitle className="text-base font-medium lowercase text-ph-white">
             {title}
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-xs leading-relaxed text-[#FFFDFD]/55">
+          <AlertDialogDescription className="text-xs leading-relaxed text-ph-white/55">
             {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="border-[#FFFDFD]/20 bg-transparent text-xs text-[#FFFDFD]/55 hover:bg-[#FFFDFD]/[0.04]">
+          <AlertDialogCancel className="border-ph-white/20 bg-transparent text-xs text-ph-white/55 hover:bg-ph-white/[0.04]">
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={() => onConfirm()}
-            className="border-none bg-ph-red/20 text-xs text-[#FFFDFD] hover:bg-ph-red/30"
+            className="border-none bg-ph-red/20 text-xs text-ph-white hover:bg-ph-red/30"
           >
             {confirmLabel}
           </AlertDialogAction>
@@ -354,7 +354,7 @@ export function ModalErr({ message }: { message: string }) {
 }
 
 const fieldInputClassName =
-  'w-full border-0 border-b border-[#1a1a1a] bg-transparent px-0 py-2 text-base text-[#FFFDFD] outline-none placeholder:text-[14px] placeholder:font-light placeholder:text-[#FFFDFD]/50 focus:border-[var(--stellar)]'
+  'w-full border-0 border-b border-ph-white/7 bg-transparent px-0 py-2 text-base text-ph-white outline-none placeholder:text-[14px] placeholder:font-light placeholder:text-ph-white/50 focus:border-ph-accent'
 
 /** Label + input matching the v67 modal field. */
 export function ModalField({
@@ -376,7 +376,7 @@ export function ModalField({
 }) {
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-[11.5px] font-medium tracking-[0.1em] text-[#FFFDFD]/50 uppercase">
+      <span className="text-[11.5px] font-medium tracking-[0.1em] text-ph-white/50 uppercase">
         {label}
       </span>
       <input

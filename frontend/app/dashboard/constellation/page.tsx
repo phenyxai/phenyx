@@ -117,7 +117,7 @@ export default function ConstellationTabPage() {
           your constellation
         </p>
         {age && (
-          <p className="mt-2 text-[13px] font-light lowercase text-[#FFFDFD]/45">
+          <p className="mt-2 text-[13px] font-light lowercase text-ph-white/45">
             {age.label} of your life, from {age.from} to now.
           </p>
         )}
@@ -156,7 +156,7 @@ export default function ConstellationTabPage() {
               onBack={back}
             />
           ) : (
-            <p className="text-[13px] font-light lowercase text-[#FFFDFD]/30">
+            <p className="text-[13px] font-light lowercase text-ph-white/30">
               aligning your constellation…
             </p>
           )}

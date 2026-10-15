@@ -387,7 +387,7 @@ export function ConstellationCanvas({
                 setKbIndex(i);
                 onSelectPillar(node.pillar);
               }}
-              className="pointer-events-auto absolute h-11 w-11 -translate-x-1/2 -translate-y-1/2 rounded-full border-0 bg-transparent p-0 focus-visible:bg-[#FFFDFD]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ph-accent)] motion-reduce:transition-none"
+              className="pointer-events-auto absolute h-11 w-11 -translate-x-1/2 -translate-y-1/2 rounded-full border-0 bg-transparent p-0 focus-visible:bg-ph-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ph-accent)] motion-reduce:transition-none"
               style={{ left: node.x, top: node.y }}
             />
           );

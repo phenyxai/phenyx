@@ -11,7 +11,7 @@ import {
 } from './modal-host'
 
 const rowButtonClassName =
-  'w-full rounded-lg border border-[#FFFDFD]/[0.12] bg-transparent px-4 py-3 text-left text-[11px] text-[#FFFDFD]/80'
+  'w-full rounded-lg border border-ph-white/[0.12] bg-transparent px-4 py-3 text-left text-[11px] text-ph-white/80'
 
 const dangerRowClassName =
   'w-full rounded-lg border border-ph-red/30 bg-transparent px-4 py-3 text-left text-[11px] text-ph-red/80 hover:bg-ph-red/10'
@@ -44,7 +44,7 @@ export function AccountModal() {
         <p className="mb-2 text-[11.5px] font-semibold tracking-[0.12em] text-ph-red/70 uppercase">
           closing your account
         </p>
-        <p className="mb-3 text-[11.5px] leading-relaxed text-[#FFFDFD]/55">
+        <p className="mb-3 text-[11.5px] leading-relaxed text-ph-white/55">
           this removes your constellation, every observation, and your polaris
           history. it cannot be undone, so export first if you want to keep any
           of it.

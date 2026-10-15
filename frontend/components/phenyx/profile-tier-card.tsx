@@ -25,14 +25,14 @@ export function ProfileTierCard({
   const isPro = hasFullAccess(tier);
 
   return (
-    <div className="rounded-xl border border-[#FFFDFD]/[0.08] bg-[#FFFDFD]/[0.02] p-5">
+    <div className="rounded-xl border border-ph-white/[0.08] bg-ph-white/[0.02] p-5">
       <p
         className="text-[11px] font-medium uppercase tracking-[0.12em]"
         style={{ color: stellarColor }}
       >
         {isPro ? "PRO PLAN" : "FREE PLAN"}
       </p>
-      <p className="mt-3 text-[13px] font-light leading-relaxed text-[#FFFDFD]/70">
+      <p className="mt-3 text-[13px] font-light leading-relaxed text-ph-white/70">
         {isPro
           ? "you are seeing everything your record reveals."
           : "you are seeing one observation. upgrade to see everything your record reveals."}

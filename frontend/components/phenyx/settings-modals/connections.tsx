@@ -81,7 +81,7 @@ export function ConnectionsModal() {
           currently connected
         </p>
         {connected.length === 0 ? (
-          <p className="text-xs text-[#FFFDFD]/35">no platforms connected.</p>
+          <p className="text-xs text-ph-white/35">no platforms connected.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {connected.map((platform) => (
@@ -105,7 +105,7 @@ export function ConnectionsModal() {
         />
       </div>
 
-      <p className="text-[11.5px] leading-relaxed text-[#FFFDFD]/50">
+      <p className="text-[11.5px] leading-relaxed text-ph-white/50">
         add, remove, or manage any platform directly through onairos. your
         constellation retains the patterns already observed.
       </p>

@@ -156,29 +156,29 @@ export default function SettingsPage() {
           <div className="flex flex-wrap items-center gap-2.5">
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-[#FFFDFD]/62 no-underline transition-colors"
+              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-ph-white/62 no-underline transition-colors"
             >
               {CONTACT_EMAIL}
             </a>
-            <span className="text-[11.5px] text-[#FFFDFD]/50">·</span>
+            <span className="text-[11.5px] text-ph-white/50">·</span>
             <button
               type="button"
               onClick={() => openModal("feedback")}
-              className="inline-block border-0 bg-transparent py-1.5 text-[11px] tracking-[0.02em] text-[#FFFDFD]/62 transition-colors"
+              className="inline-block border-0 bg-transparent py-1.5 text-[11px] tracking-[0.02em] text-ph-white/62 transition-colors"
             >
               share feedback
             </button>
-            <span className="text-[11.5px] text-[#FFFDFD]/50">·</span>
+            <span className="text-[11.5px] text-ph-white/50">·</span>
             <a
               href="/privacy-policy"
-              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-[#FFFDFD]/62 no-underline transition-colors"
+              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-ph-white/62 no-underline transition-colors"
             >
               privacy policy
             </a>
-            <span className="text-[11.5px] text-[#FFFDFD]/50">·</span>
+            <span className="text-[11.5px] text-ph-white/50">·</span>
             <a
               href="/terms"
-              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-[#FFFDFD]/62 no-underline transition-colors"
+              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-ph-white/62 no-underline transition-colors"
             >
               terms
             </a>
@@ -208,18 +208,18 @@ function SettingsRowButton({
     <button
       type="button"
       onClick={onClick}
-      className="ps-row group relative flex w-full cursor-pointer items-center border-0 border-b border-[rgba(255,253,253,0.045)] bg-transparent py-[15px] text-left font-[inherit] text-[14px] text-[#FFFDFD]/85 transition-colors duration-200 after:pointer-events-none after:absolute after:right-0 after:-bottom-px after:left-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(var(--ph-accent-rgb),0.55)_18%,rgba(var(--ph-accent-rgb),0.55)_82%,transparent)] after:opacity-0 after:transition-opacity after:duration-[450ms] before:pointer-events-none before:absolute before:right-0 before:-bottom-[7px] before:left-0 before:h-[13px] before:bg-[radial-gradient(ellipse_at_center,rgba(var(--ph-accent-rgb),0.20),transparent_72%)] before:opacity-0 before:blur-[3px] before:transition-opacity before:duration-500 last:border-b-0 hover:after:opacity-100 hover:before:opacity-100 [@media(pointer:coarse)]:py-[22px]"
+      className="ps-row group relative flex w-full cursor-pointer items-center border-0 border-b border-[rgba(255,253,253,0.045)] bg-transparent py-[15px] text-left font-[inherit] text-[14px] text-ph-white/85 transition-colors duration-200 after:pointer-events-none after:absolute after:right-0 after:-bottom-px after:left-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(var(--ph-accent-rgb),0.55)_18%,rgba(var(--ph-accent-rgb),0.55)_82%,transparent)] after:opacity-0 after:transition-opacity after:duration-[450ms] before:pointer-events-none before:absolute before:right-0 before:-bottom-[7px] before:left-0 before:h-[13px] before:bg-[radial-gradient(ellipse_at_center,rgba(var(--ph-accent-rgb),0.20),transparent_72%)] before:opacity-0 before:blur-[3px] before:transition-opacity before:duration-500 last:border-b-0 hover:after:opacity-100 hover:before:opacity-100 [@media(pointer:coarse)]:py-[22px]"
     >
       <span className="ps-label flex min-w-0 flex-col gap-[3px] text-left">
         <span>{label}</span>
-        <span className="ps-sub text-[11.5px] font-light tracking-normal text-[#FFFDFD]/45">
+        <span className="ps-sub text-[11.5px] font-light tracking-normal text-ph-white/45">
           {sub}
         </span>
       </span>
       {trailing ?? (
         <span
           aria-hidden="true"
-          className="ps-arrow ml-6 shrink-0 text-[11px] text-[#FFFDFD]/50 transition-[color,transform] duration-[350ms] ease-[cubic-bezier(.22,.61,.36,1)] group-hover:translate-x-[3px] group-hover:text-[var(--ph-accent)]"
+          className="ps-arrow ml-6 shrink-0 text-[11px] text-ph-white/50 transition-[color,transform] duration-[350ms] ease-[cubic-bezier(.22,.61,.36,1)] group-hover:translate-x-[3px] group-hover:text-[var(--ph-accent)]"
         >
           →
         </span>

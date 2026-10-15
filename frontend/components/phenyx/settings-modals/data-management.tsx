@@ -65,14 +65,14 @@ export function DataManagementModal() {
       />
 
       <div>
-        <p className="mb-2 text-[11px] text-[#FFFDFD]/85">take it with you</p>
-        <p className="mb-3.5 text-[11.5px] leading-relaxed text-[#FFFDFD]/60">
+        <p className="mb-2 text-[11px] text-ph-white/85">take it with you</p>
+        <p className="mb-3.5 text-[11.5px] leading-relaxed text-ph-white/60">
           your constellation, observations and polaris history, in a portable format.
         </p>
         <GhostButton
           onClick={handleExport}
           disabled={exporting}
-          className="self-start border-[#FFFDFD]/[0.12] text-[#FFFDFD]/80"
+          className="self-start border-ph-white/[0.12] text-ph-white/80"
         >
           {exporting ? 'preparing…' : 'export everything'}
         </GhostButton>

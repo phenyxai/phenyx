@@ -281,7 +281,7 @@ export default function OnboardingPage() {
         radius: 0.8 + Math.random() * 1.4,
         // PHE-98: ambient dust is white (--ph-white); the accent is kept for
         // the constellation itself.
-        color: "#FFFDFD",
+        color: "var(--ph-white)",
         opacity: 0.10 + Math.random() * 0.08
       });
     }

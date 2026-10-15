@@ -72,14 +72,14 @@ export function CloseAccountModal() {
         ].map((item) => (
           <li
             key={item}
-            className="relative py-1.5 pl-4 text-[12.5px] leading-snug text-[#FFFDFD]/70 before:absolute before:top-[13px] before:left-0 before:h-1 before:w-1 before:rounded-full before:bg-ph-red/70"
+            className="relative py-1.5 pl-4 text-[12.5px] leading-snug text-ph-white/70 before:absolute before:top-[13px] before:left-0 before:h-1 before:w-1 before:rounded-full before:bg-ph-red/70"
           >
             {item}
           </li>
         ))}
       </ul>
 
-      <p className="mb-4 text-[12.5px] leading-relaxed text-[#FFFDFD]/55">
+      <p className="mb-4 text-[12.5px] leading-relaxed text-ph-white/55">
         all of it goes, and none of it comes back. if you want to keep any of
         it,{' '}
         <button
@@ -129,7 +129,7 @@ export function CloseAccountModal() {
       <button
         type="button"
         onClick={() => openModal('account')}
-        className="mt-2 w-full rounded-md border border-[#FFFDFD]/[0.12] bg-transparent px-4 py-3 text-[11px] text-[#FFFDFD]/60"
+        className="mt-2 w-full rounded-md border border-ph-white/[0.12] bg-transparent px-4 py-3 text-[11px] text-ph-white/60"
       >
         keep my account
       </button>

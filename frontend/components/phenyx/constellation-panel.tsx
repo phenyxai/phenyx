@@ -89,17 +89,17 @@ function Overview({
       <section>
         <SectionLabel>what you are made of</SectionLabel>
         {data.portrait ? (
-          <p className="text-[14px] font-light leading-relaxed text-[#FFFDFD]/80">
+          <p className="text-[14px] font-light leading-relaxed text-ph-white/80">
             {data.portrait}
           </p>
         ) : (
-          <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
+          <p className="text-[13px] font-light italic text-ph-white/30">
             forming.
           </p>
         )}
       </section>
 
-      <ul className="flex flex-col gap-1.5 border-t border-[#FFFDFD]/6 pt-5">
+      <ul className="flex flex-col gap-1.5 border-t border-ph-white/6 pt-5">
         {ALL_PILLARS.map((pillar) => (
           <li key={pillar}>
             <StoryRow
@@ -131,7 +131,7 @@ function StoryRow({
     <button
       type="button"
       onClick={onOpen}
-      className="w-full rounded-[12px] border border-[rgba(255,253,253,0.045)] px-5 py-[18px] text-left hover:bg-[#FFFDFD]/[0.02] max-[760px]:px-[18px] max-[760px]:py-4"
+      className="w-full rounded-[12px] border border-[rgba(255,253,253,0.045)] px-5 py-[18px] text-left hover:bg-ph-white/[0.02] max-[760px]:px-[18px] max-[760px]:py-4"
     >
       <div className="mb-1.5 flex items-center gap-2.5">
         <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[rgba(var(--ph-accent-rgb),0.9)]">
@@ -144,7 +144,7 @@ function StoryRow({
           </span>
         )}
       </div>
-      <p className="text-[13px] font-light leading-[1.55] text-[#FFFDFD]/72">
+      <p className="text-[13px] font-light leading-[1.55] text-ph-white/72">
         {storyLine(detail)}
       </p>
     </button>
@@ -170,10 +170,10 @@ function StepButton({
       aria-disabled={!to}
       onClick={() => to && onSelect(to)}
       aria-label={to ? `${direction} point: ${pillarLabel(to)}` : `no ${direction} point`}
-      className={`relative flex h-7 w-7 items-center justify-center rounded-full border border-[#FFFDFD]/12 text-[13px] before:absolute before:-inset-2 before:content-[''] ${
+      className={`relative flex h-7 w-7 items-center justify-center rounded-full border border-ph-white/12 text-[13px] before:absolute before:-inset-2 before:content-[''] ${
         to
-          ? "text-[#FFFDFD]/55"
-          : "cursor-default text-[#FFFDFD]/20"
+          ? "text-ph-white/55"
+          : "cursor-default text-ph-white/20"
       }`}
     >
       <span aria-hidden="true">{direction === "previous" ? "‹" : "›"}</span>
@@ -206,7 +206,7 @@ function PillarDetailView({
       <button
         type="button"
         onClick={onBack}
-        className="self-start text-[12px] font-light lowercase text-[#FFFDFD]/45"
+        className="self-start text-[12px] font-light lowercase text-ph-white/45"
       >
         ← all pillars
       </button>
@@ -224,17 +224,17 @@ function PillarDetailView({
           </span>
           <StepButton to={ALL_PILLARS[index + 1]} direction="next" onSelect={onSelectPillar} />
         </div>
-        <span className="text-[12px] font-light tabular-nums text-[#FFFDFD]/40">
+        <span className="text-[12px] font-light tabular-nums text-ph-white/40">
           {areaCount} {areaCount === 1 ? "area" : "areas"}
         </span>
       </div>
 
       {detail.synthesis ? (
-        <p className="text-[14px] font-light leading-relaxed text-[#FFFDFD]/80">
+        <p className="text-[14px] font-light leading-relaxed text-ph-white/80">
           {detail.synthesis}
         </p>
       ) : (
-        <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
+        <p className="text-[13px] font-light italic text-ph-white/30">
           forming.
         </p>
       )}
@@ -263,7 +263,7 @@ function PillarDetailView({
           className={
             readTogether.locked
               ? "text-[11.5px] font-light italic tracking-[0.04em] text-[rgba(var(--ph-accent-rgb),0.62)]"
-              : "text-[13px] font-light italic leading-[1.75] text-[#FFFDFD]/50"
+              : "text-[13px] font-light italic leading-[1.75] text-ph-white/50"
           }
         >
           {readTogether.text}
@@ -273,7 +273,7 @@ function PillarDetailView({
       <section>
         <SectionLabel>areas</SectionLabel>
         {detail.clusters.length === 0 ? (
-          <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
+          <p className="text-[13px] font-light italic text-ph-white/30">
             no observations yet.
           </p>
         ) : (
@@ -304,17 +304,17 @@ function ClusterCard({
     <button
       type="button"
       onClick={onOpen}
-      className={`rounded-[10px] border bg-[#FFFDFD]/[0.01] px-4 py-3.5 text-left hover:bg-[#FFFDFD]/[0.025] ${
+      className={`rounded-[10px] border bg-ph-white/[0.01] px-4 py-3.5 text-left hover:bg-ph-white/[0.025] ${
         cluster.has_new
-          ? "border-l-2 border-[#FFFDFD]/[0.09] border-l-[var(--ph-accent)]"
-          : "border-[#FFFDFD]/[0.09]"
+          ? "border-l-2 border-ph-white/[0.09] border-l-[var(--ph-accent)]"
+          : "border-ph-white/[0.09]"
       }`}
     >
-      <p className="mb-1 text-[13px] font-medium lowercase tracking-wide text-[#FFFDFD]/80">
+      <p className="mb-1 text-[13px] font-medium lowercase tracking-wide text-ph-white/80">
         {cluster.label}
       </p>
       {cluster.preview && (
-        <p className="mt-1 max-w-[62ch] text-[13px] font-light leading-relaxed text-[#FFFDFD]/50">
+        <p className="mt-1 max-w-[62ch] text-[13px] font-light leading-relaxed text-ph-white/50">
           {cluster.preview}
         </p>
       )}
@@ -344,7 +344,7 @@ function ClusterDetail({
       <button
         type="button"
         onClick={onBack}
-        className="self-start text-[12px] font-light lowercase text-[#FFFDFD]/45"
+        className="self-start text-[12px] font-light lowercase text-ph-white/45"
       >
         ← {pillarLabel(pillar.pillar)}
       </button>
@@ -356,13 +356,13 @@ function ClusterDetail({
         >
           {pillarLabel(pillar.pillar)}
         </span>
-        <span className="text-[12px] font-light lowercase text-[#FFFDFD]/40">
+        <span className="text-[12px] font-light lowercase text-ph-white/40">
           {cluster.label}
         </span>
       </div>
 
       {cluster.preview ? (
-        <p className="text-[14px] font-light leading-relaxed text-[#FFFDFD]/80">
+        <p className="text-[14px] font-light leading-relaxed text-ph-white/80">
           {cluster.preview}
         </p>
       ) : null}
@@ -382,7 +382,7 @@ function ClusterDetail({
 
       <section>
         {cluster.observations.length === 0 ? (
-          <p className="text-[13px] font-light italic text-[#FFFDFD]/30">
+          <p className="text-[13px] font-light italic text-ph-white/30">
             no observations yet.
           </p>
         ) : (
@@ -418,7 +418,7 @@ function ClusterObservationRow({
     <li className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
         {entry.surfaced_at && (
-          <span className="text-[11px] font-light lowercase text-[#FFFDFD]/35">
+          <span className="text-[11px] font-light lowercase text-ph-white/35">
             {relativeTime(entry.surfaced_at)}
           </span>
         )}
@@ -432,14 +432,14 @@ function ClusterObservationRow({
         )}
       </div>
       {entry.body && (
-        <p className="text-[13px] font-light leading-relaxed text-[#FFFDFD]/75">
+        <p className="text-[13px] font-light leading-relaxed text-ph-white/75">
           {entry.body}
         </p>
       )}
       {entry.points && entry.points.length > 0 && (
         <ul className="mt-1 flex flex-col gap-1 pl-0">
           {entry.points.map((point) => (
-            <li key={point} className="text-[12px] font-light text-[#FFFDFD]/50">
+            <li key={point} className="text-[12px] font-light text-ph-white/50">
               {point}
             </li>
           ))}
@@ -456,7 +456,7 @@ function ClusterObservationRow({
             </span>
           ))}
           {entry.span && (
-            <span className="text-[10px] text-[#FFFDFD]/35">{entry.span}</span>
+            <span className="text-[10px] text-ph-white/35">{entry.span}</span>
           )}
         </div>
       )}

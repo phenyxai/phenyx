@@ -18,7 +18,7 @@ export function WhatMoved({
           what moved
         </p>
         {moved.length === 0 ? (
-          <p className="text-[13px] font-light italic leading-relaxed text-[#FFFDFD]/35">
+          <p className="text-[13px] font-light italic leading-relaxed text-ph-white/35">
             distance will show here as the record lengthens.
           </p>
         ) : (
@@ -26,21 +26,21 @@ export function WhatMoved({
             {moved.map((pair) => (
               <div
                 key={pair.label}
-                className="flex flex-col items-baseline justify-between gap-1.5 border-b border-[#FFFDFD]/7 py-[17px] last:border-b-0 min-[700px]:flex-row min-[700px]:gap-6"
+                className="flex flex-col items-baseline justify-between gap-1.5 border-b border-ph-white/7 py-[17px] last:border-b-0 min-[700px]:flex-row min-[700px]:gap-6"
               >
-                <p className="flex-1 text-[13px] leading-relaxed text-[#FFFDFD]/52">{pair.label}</p>
+                <p className="flex-1 text-[13px] leading-relaxed text-ph-white/52">{pair.label}</p>
                 <div className="flex flex-[1.35] flex-wrap items-baseline gap-2.5">
-                  <span className="text-[13px] text-[#FFFDFD]/52">{pair.then}</span>
-                  <span className="text-[12px] text-[#FFFDFD]/52" aria-hidden="true">
+                  <span className="text-[13px] text-ph-white/52">{pair.then}</span>
+                  <span className="text-[12px] text-ph-white/52" aria-hidden="true">
                     →
                   </span>
-                  <span className="text-[13px] text-[#FFFDFD]">{pair.now}</span>
+                  <span className="text-[13px] text-ph-white">{pair.now}</span>
                 </div>
               </div>
             ))}
           </div>
         )}
-        <p className="mt-3.5 text-[12.5px] leading-relaxed text-[#FFFDFD]/52">{WHAT_MOVED_CLOSING}</p>
+        <p className="mt-3.5 text-[12.5px] leading-relaxed text-ph-white/52">{WHAT_MOVED_CLOSING}</p>
       </section>
 
       {yearlyRecap && yearlyRecap.length > 0 ? (
@@ -56,8 +56,8 @@ export function WhatMoved({
                   style={{ background: i === 0 ? "var(--ph-accent)" : "rgba(255,253,253,.25)" }}
                 />
                 <div>
-                  <p className="text-[12px] lowercase text-[#FFFDFD]/40">{entry.when}</p>
-                  <p className="text-[13px] font-light leading-relaxed text-[#FFFDFD]/75">
+                  <p className="text-[12px] lowercase text-ph-white/40">{entry.when}</p>
+                  <p className="text-[13px] font-light leading-relaxed text-ph-white/75">
                     {entry.text}
                   </p>
                 </div>

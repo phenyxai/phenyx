@@ -76,7 +76,7 @@ export function FeedbackModal() {
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         placeholder="what would you like to tell us?"
-        className="min-h-24 border-[#FFFDFD]/10 bg-[#FFFDFD]/[0.03] text-[13px] text-[#FFFDFD] placeholder:text-[#FFFDFD]/35 focus-visible:border-[var(--ph-accent)] focus-visible:ring-0"
+        className="min-h-24 border-ph-white/10 bg-ph-white/[0.03] text-[13px] text-ph-white placeholder:text-ph-white/35 focus-visible:border-[var(--ph-accent)] focus-visible:ring-0"
       />
 
       <div className="flex flex-col gap-3">
