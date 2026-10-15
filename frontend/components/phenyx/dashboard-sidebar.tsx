@@ -72,7 +72,7 @@ function BrandLink() {
   return (
     <Link href={DASHBOARD_HOME} className="flex items-center gap-2.5 no-underline">
       <span aria-hidden="true" className="h-[16px] w-[16px] shrink-0 rounded-full" style={ORB_STYLE} />
-      <span className="text-[12px] font-semibold tracking-[0.14em] text-[#FFFDFD]">PHENYX</span>
+      <span className="text-[12px] font-semibold tracking-[0.14em] text-ph-white">PHENYX</span>
     </Link>
   );
 }
@@ -87,8 +87,8 @@ function SettingsLink({ active, size }: { active: boolean; size: string }) {
       data-active={active ? "true" : undefined}
       className={`ml-auto flex ${size} shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none ${
         active
-          ? "border-[rgba(var(--s-rgb),0.35)] bg-[rgba(var(--s-rgb),0.10)] text-[#FFFDFD]"
-          : "border-[#FFFDFD]/10 text-[#FFFDFD]/70 hover:border-[#FFFDFD]/20 hover:bg-[#FFFDFD]/[0.05] hover:text-[#FFFDFD]"
+          ? "border-[rgba(var(--s-rgb),0.35)] bg-[rgba(var(--s-rgb),0.10)] text-ph-white"
+          : "border-ph-white/10 text-ph-white/70 hover:border-ph-white/20 hover:bg-ph-white/[0.05] hover:text-ph-white"
       }`}
     >
       <GearIcon />
@@ -180,7 +180,7 @@ export function DashboardSidebar() {
       aria-label="dashboard"
       className="sticky top-0 h-screen w-[240px] shrink-0 flex-col border-r border-[rgba(255,253,253,0.08)] bg-[var(--ph-black,#080808)] px-5 pt-7 pb-7 [@media(max-width:760px)]:hidden [@media(min-width:761px)]:flex"
     >
-      <div className="mb-2 flex items-center gap-2 border-b border-[#FFFDFD]/[0.07] pb-[18px]">
+      <div className="mb-2 flex items-center gap-2 border-b border-ph-white/[0.07] pb-[18px]">
         <BrandLink />
         <TierBadge />
       </div>
@@ -198,13 +198,13 @@ export function DashboardSidebar() {
                 data-active={isActive ? "true" : undefined}
                 className={`flex items-center gap-3 rounded-xl px-3 py-[11px] text-[14px] lowercase transition-colors motion-reduce:transition-none ${
                   isActive
-                    ? "bg-[#FFFDFD]/[0.05] font-medium text-[#FFFDFD]/90"
-                    : "text-[#FFFDFD]/50 hover:bg-[#FFFDFD]/[0.04] hover:text-[#FFFDFD]/70"
+                    ? "bg-ph-white/[0.05] font-medium text-ph-white/90"
+                    : "text-ph-white/50 hover:bg-ph-white/[0.04] hover:text-ph-white/70"
                 }`}
               >
                 {/* Accent read as --ph-accent (PHE-98) with the stellar var as fallback. */}
                 <span
-                  className={`flex shrink-0 ${isActive ? "text-[var(--ph-accent,var(--s))]" : "text-[#FFFDFD]/40"}`}
+                  className={`flex shrink-0 ${isActive ? "text-[var(--ph-accent,var(--s))]" : "text-ph-white/40"}`}
                 >
                   <NavIcon tab={tab.id} size={17} />
                 </span>
@@ -217,8 +217,8 @@ export function DashboardSidebar() {
 
       {/* Account row: first name + settings gear. The gear lights up in the
           accent while the settings segment is active. */}
-      <div className="mt-auto flex items-center gap-[11px] border-t border-[#FFFDFD]/[0.07] pt-3.5">
-        <span className="min-w-0 truncate text-[13.5px] font-medium text-[#FFFDFD]">{name}</span>
+      <div className="mt-auto flex items-center gap-[11px] border-t border-ph-white/[0.07] pt-3.5">
+        <span className="min-w-0 truncate text-[13.5px] font-medium text-ph-white">{name}</span>
         <SettingsLink active={active === "settings"} size="h-8 w-8" />
       </div>
     </nav>
@@ -234,7 +234,7 @@ export function DashboardSidebar() {
 export function MobileTopBar() {
   const segment = useSelectedLayoutSegment();
   return (
-    <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-[#FFFDFD]/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden">
+    <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-ph-white/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden">
       <BrandLink />
       <TierBadge />
       <SettingsLink active={segmentTab(segment) === "settings"} size="h-9 w-9" />

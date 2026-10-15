@@ -128,7 +128,7 @@ export default function InsightsTabPage() {
             <div className="flex min-w-[200px] flex-col gap-1">
               <div className="flex items-center gap-2.5">
                 {displayName && (
-                  <p className="text-[15px] font-medium tracking-[-0.01em] text-[#FFFDFD]">
+                  <p className="text-[15px] font-medium tracking-[-0.01em] text-ph-white">
                     {displayName}
                   </p>
                 )}
@@ -136,7 +136,7 @@ export default function InsightsTabPage() {
                   className={`inline-flex shrink-0 items-center rounded-full border px-[7px] py-0.5 text-[9px] tracking-[0.14em] uppercase ${
                     isPro
                       ? "border-[rgba(var(--ph-accent-rgb),0.4)] text-[var(--ph-accent)]"
-                      : "border-[#FFFDFD]/18 text-[#FFFDFD]/50"
+                      : "border-ph-white/18 text-ph-white/50"
                   }`}
                 >
                   {badge}
@@ -146,7 +146,7 @@ export default function InsightsTabPage() {
                   title="edit name and email"
                   aria-label="edit name and email"
                   onClick={() => openModal("edit-profile")}
-                  className="flex min-h-[26px] min-w-[26px] items-center justify-center p-1.5 text-[#FFFDFD]/60 transition-colors"
+                  className="flex min-h-[26px] min-w-[26px] items-center justify-center p-1.5 text-ph-white/60 transition-colors"
                 >
                   <svg
                     width="13"
@@ -164,12 +164,12 @@ export default function InsightsTabPage() {
                 </button>
               </div>
               {email && (
-                <p className="text-[13px] tracking-[0.02em] text-[#FFFDFD]/62">
+                <p className="text-[13px] tracking-[0.02em] text-ph-white/62">
                   {email}
                 </p>
               )}
               {joined && (
-                <p className="mt-1 text-[11px] tracking-[0.02em] text-[#FFFDFD]/50">
+                <p className="mt-1 text-[11px] tracking-[0.02em] text-ph-white/50">
                   {joined}
                 </p>
               )}
@@ -179,7 +179,7 @@ export default function InsightsTabPage() {
               <SectionLabel>connected platforms</SectionLabel>
               <div className="flex flex-wrap gap-1.5">
                 {platforms.length === 0 ? (
-                  <p className="text-[11px] text-[#FFFDFD]/50">no platforms connected.</p>
+                  <p className="text-[11px] text-ph-white/50">no platforms connected.</p>
                 ) : (
                   platforms.map((platform) => (
                     <span
@@ -204,7 +204,7 @@ export default function InsightsTabPage() {
                   }}
                   aria-hidden="true"
                 />
-                <p className="text-[13.5px] font-light leading-relaxed text-[#FFFDFD]/72">
+                <p className="text-[13.5px] font-light leading-relaxed text-ph-white/72">
                   {stellarName}
                 </p>
               </div>
@@ -243,12 +243,12 @@ export default function InsightsTabPage() {
               {held.map((item) => (
                 <div
                   key={item.title}
-                  className="rounded-xl border border-[rgba(255,253,253,0.045)] bg-[#FFFDFD]/[0.008] px-[22px] py-5"
+                  className="rounded-xl border border-[rgba(255,253,253,0.045)] bg-ph-white/[0.008] px-[22px] py-5"
                 >
                   <p className="mb-1.5 text-[13px] tracking-[0.01em] text-[var(--ph-accent)]">
                     {item.title}
                   </p>
-                  <p className="text-[13px] leading-relaxed text-[#FFFDFD]/78">
+                  <p className="text-[13px] leading-relaxed text-ph-white/78">
                     {item.body}
                   </p>
                 </div>

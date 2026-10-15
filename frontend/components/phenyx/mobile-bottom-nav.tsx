@@ -26,7 +26,7 @@ const ITEM_BASE =
   "flex min-w-0 flex-1 flex-col items-center gap-[3px] px-0.5 py-1.5 transition-colors motion-reduce:transition-none";
 // Accent read as --ph-accent (PHE-98) with the stellar var as fallback.
 const ITEM_ON = "text-[var(--ph-accent,var(--s))]";
-const ITEM_OFF = "text-[#FFFDFD]/50";
+const ITEM_OFF = "text-ph-white/50";
 
 export function MobileBottomNav() {
   const active = segmentTab(useSelectedLayoutSegment());
@@ -34,7 +34,7 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label="sections"
-      className="fixed inset-x-0 bottom-0 z-[120] items-stretch justify-around border-t border-[#FFFDFD]/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden"
+      className="fixed inset-x-0 bottom-0 z-[120] items-stretch justify-around border-t border-ph-white/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden"
     >
       {DASHBOARD_TABS.map((tab) => {
         const isActive = active === tab.id;
