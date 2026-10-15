@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Post, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Req, UseGuards } from "@nestjs/common";
 import type { Request } from "express";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { ConstellationService } from "./constellation.service";
@@ -17,14 +17,5 @@ export class ConstellationController {
   async get(@Req() req: Request) {
     const user = (req as any).user as { id: string };
     return this.constellation.getConstellation(user.id);
-  }
-
-  /** PHE-102 — the new-signal banner was opened; it never shows as new again. */
-  @Post("signal/seen")
-  @HttpCode(200)
-  @UseGuards(SupabaseAuthGuard)
-  async signalSeen(@Req() req: Request) {
-    const user = (req as any).user as { id: string };
-    return this.constellation.markSignalSeen(user.id);
   }
 }
