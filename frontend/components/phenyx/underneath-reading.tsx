@@ -134,7 +134,7 @@ export function UnderneathReading({
           style={{
             ...dotStyle,
             opacity: open ? 1 : 0.5,
-            boxShadow: open ? "0 0 6px var(--s, #5599FF)" : "none",
+            boxShadow: open ? "0 0 6px var(--ph-accent)" : "none",
           }}
         />
         <span>what sits under this</span>
@@ -192,7 +192,7 @@ const dotStyle: CSSProperties = {
   width: 5,
   height: 5,
   borderRadius: "50%",
-  background: "var(--s, #5599FF)",
+  background: "var(--ph-accent)",
   opacity: 0.5,
   flexShrink: 0,
 };
@@ -201,7 +201,7 @@ const lockStyle: CSSProperties = {
   marginLeft: "auto",
   fontSize: 9,
   letterSpacing: "0.08em",
-  color: "var(--s, #5599FF)",
+  color: "var(--ph-accent)",
   opacity: 0.75,
   flexShrink: 0,
 };
@@ -213,7 +213,7 @@ const headStyle: CSSProperties = {
   margin: "0 0 11px",
   letterSpacing: "-0.01em",
   paddingLeft: 13,
-  borderLeft: "2px solid rgba(var(--s-rgb, 85, 153, 255), .4)",
+  borderLeft: "2px solid rgba(var(--ph-accent-rgb), .4)",
 };
 
 const saidStyle: CSSProperties = {
@@ -236,7 +236,7 @@ const saidMeta: CSSProperties = {
 const vsStyle: CSSProperties = {
   fontSize: 12.5,
   lineHeight: 1.6,
-  color: "var(--s, #5599FF)",
+  color: "var(--ph-accent)",
   opacity: 0.9,
   margin: "0 0 9px",
 };
@@ -272,7 +272,7 @@ const basisStyle: CSSProperties = {
   color: "rgba(255,253,253,.52)",
   margin: "0 0 11px",
   paddingTop: 8,
-  borderTop: "1px solid #151515",
+  borderTop: "1px solid rgba(255,253,253,.06)",
 };
 
 export default UnderneathReading;

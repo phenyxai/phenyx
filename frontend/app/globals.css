@@ -4,51 +4,57 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #0D0D0C;
-  --foreground: #FFFDFD;
-  --card: #0D0D0C;
-  --card-foreground: #FFFDFD;
-  --popover: #0D0D0C;
-  --popover-foreground: #FFFDFD;
-  --primary: #FFFDFD;
-  --primary-foreground: #0D0D0C;
-  --secondary: #1a1a1a;
-  --secondary-foreground: #FFFDFD;
-  --muted: #1a1a1a;
-  --muted-foreground: #888888;
-  --accent: #E8451E;
-  --accent-foreground: #FFFDFD;
-  --destructive: #E8451E;
-  --destructive-foreground: #FFFDFD;
-  --border: #2a2a2a;
-  --input: #1a1a1a;
-  --ring: #E8451E;
+  --background: var(--ph-black);
+  --foreground: var(--ph-white);
+  --card: var(--ph-black);
+  --card-foreground: var(--ph-white);
+  --popover: var(--ph-black);
+  --popover-foreground: var(--ph-white);
+  --primary: var(--ph-white);
+  --primary-foreground: var(--ph-black);
+  --secondary: rgba(255, 253, 253, 0.06);
+  --secondary-foreground: var(--ph-white);
+  --muted: rgba(255, 253, 253, 0.06);
+  --muted-foreground: rgba(255, 253, 253, 0.52);
+  --accent: rgba(var(--ph-accent-rgb), 0.08);
+  --accent-foreground: var(--ph-accent);
+  --destructive: var(--ph-red);
+  --destructive-foreground: var(--ph-white);
+  --border: rgba(255, 253, 253, 0.1);
+  --input: rgba(255, 253, 253, 0.06);
+  --ring: var(--ph-accent);
   --radius: 0.625rem;
 
   /* PHENYX design system */
-  --color-bg: #0A0A0A;
-  --color-surface: #0E0E0E;
-  --color-border: #1C1C1C;
-  --color-text: #FFFDFD;
-  --color-subtle: #555555;
-  --color-stellar: #5599FF;
-  --s-rgb: 85, 153, 255;
+  --color-bg: var(--ph-black);
+  --color-border: var(--border);
+  --color-text: var(--ph-white);
+}
 
-  /* Stellar palette */
-  --stellar-1: #CC3300;
-  --stellar-2: #E84422;
-  --stellar-3: #E87722;
-  --stellar-4: #E8B822;
-  --stellar-5: #D4C87A;
-  --stellar-6: #C8C8C8;
-  --stellar-7: #88AAEE;
-  --stellar-8: #77BBFF;
-  --stellar-9: #5599FF;
-  --stellar-10: #4488EE;
-  --stellar-11: #3366DD;
-  --stellar-12: #2255CC;
-  --stellar-13: #1144BB;
-  --stellar-14: #0033AA;
+/* PHE-98: color tokens (doc 7). Each person sees black, white and their accent.
+   --ph-accent is the person's stellar_color; SessionColorProvider writes it (and
+   its rgb companion, for rgba()) on <html>. The default is neutral white, the
+   same as STELLAR_DEFAULT in lib/stellar.ts. Brand blue is PHENYX's own: sign-in
+   buttons and the brand, never a person's color. Red, yellow and green are for
+   errors, warnings and success only. */
+:root {
+  --ph-black: #080808;
+  --ph-white: #FFFDFD;
+  --ph-accent: #FFFDFD;
+  --ph-accent-rgb: 255, 253, 253;
+  --ph-brand: #B9D5FF;
+  --ph-brand-rgb: 185, 213, 255;
+  --ph-red: #E5484D;
+  --ph-yellow: #E9C46A;
+  --ph-green: #4CC38A;
+  --ph-hover-duration: 0.2s;
+
+  /* Legacy accent names, aliased so existing consumers follow --ph-accent. */
+  --s: var(--ph-accent);
+  --s-rgb: var(--ph-accent-rgb);
+  --color-stellar: var(--ph-accent);
+  --stellar: var(--ph-accent);
+  --stellar-rgb: var(--ph-accent-rgb);
 }
 
 @theme inline {
@@ -77,6 +83,14 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* PHE-98: text-ph-accent, bg-ph-black, border-ph-red, ... */
+  --color-ph-black: var(--ph-black);
+  --color-ph-white: var(--ph-white);
+  --color-ph-accent: var(--ph-accent);
+  --color-ph-brand: var(--ph-brand);
+  --color-ph-red: var(--ph-red);
+  --color-ph-yellow: var(--ph-yellow);
+  --color-ph-green: var(--ph-green);
 }
 
 @layer base {
@@ -126,6 +140,41 @@
   input:not(.auth-input):not(.onb-otp-input):focus-visible, textarea:focus-visible {
     outline: none !important;
   }
+}
+
+/* PHE-98: one hover rule (doc 7). Anything clickable shifts its text and border
+   to the accent over about 0.2s; components don't define their own hover
+   color. The base-layer transition yields to a component's own transition
+   utilities; the hover itself is unlayered and !important so it also wins over
+   inline colors. Opt out with data-ph-hover="off" (a control filled with the
+   accent, where accent text would vanish). The landing pages and the legal
+   pages are byte-exact ports with their own states, so they're left alone. */
+@layer base {
+  :where(a[href], button, summary, [role="button"], [role="tab"], [role="link"], [role="menuitem"], [role="option"], .cursor-pointer) {
+    transition: color var(--ph-hover-duration) ease, border-color var(--ph-hover-duration) ease;
+  }
+}
+
+@media (hover: hover) {
+  :is(a[href], button, summary, [role="button"], [role="tab"], [role="link"], [role="menuitem"], [role="option"], .cursor-pointer):not(:disabled, [aria-disabled="true"], [data-ph-hover="off"]):not(:where(.landing-vnext, .landing-v66, .landing-entry, .legal-doc) *):hover {
+    color: var(--ph-accent) !important;
+    border-color: var(--ph-accent) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(a[href], button, summary, [role="button"], [role="tab"], [role="link"], [role="menuitem"], [role="option"], .cursor-pointer):not(:where(.landing-vnext, .landing-v66, .landing-entry, .legal-doc) *) {
+    transition-duration: 0s !important;
+  }
+}
+
+/* PHE-98: the active nav item carries the accent (sidebar, drawer, bottom nav).
+   Keyed on aria-current so it holds however the nav markup is arranged. */
+nav [aria-current="page"] {
+  color: var(--ph-accent) !important;
+}
+nav li > [aria-current="page"] {
+  background-color: rgba(var(--ph-accent-rgb), 0.07);
 }
 
 /* Fade in animations */

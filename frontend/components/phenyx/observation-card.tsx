@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 
-import { STELLAR_DEFAULT } from "@/lib/stellar";
 import {
   EvidenceTrace,
   type Evidence,
@@ -35,7 +34,7 @@ export interface Observation {
   id: string;
   /** Pillar label, e.g. "origin" | "self_creation". */
   pillar_tag: string;
-  /** Stellar-family hex for the pillar tag; falls back to a per-pillar color. */
+  /** Legacy per-pillar hex. Ignored since PHE-98: the tag wears the accent. */
   pillar_color?: string | null;
   /** Full observation body. Always present on the v67 feed. */
   body?: string | null;
@@ -68,16 +67,6 @@ export interface Observation {
   feedback?: { verdict: "new" | "known" | "reading" | null; opened: boolean } | null;
 }
 
-const PILLAR_COLORS: Record<string, string> = {
-  origin: "#E87722",
-  emergence: "#E8B822",
-  self_creation: "#77BBFF",
-  convergence: "#5599FF",
-  becoming: "#88AAEE",
-  recognition: "#CCDDFF",
-  transcendence: "#4488EE",
-};
-
 /** Normalize a pillar tag to its lookup key: "SELF CREATION" → "self_creation". */
 export function pillarKey(tag: string): string {
   return tag.trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -106,13 +95,8 @@ export function observationExplorePrompt(o: Observation): string {
   return observationSentence(o);
 }
 
-function resolvePillarColor(o: Observation): string {
-  if (o.pillar_color) return o.pillar_color;
-  const key = pillarKey(o.pillar_tag);
-  return PILLAR_COLORS[key] ?? STELLAR_DEFAULT;
-}
-
-const NEW_GREEN = "#4ADE80";
+// PHE-98: each person sees black, white and their accent, so the pillar tag,
+// the focused border and the "new" badge all wear the accent.
 let cardStylesInjected = false;
 
 function injectCardStyles() {
@@ -122,8 +106,8 @@ function injectCardStyles() {
   style.setAttribute("data-phenyx-obs-card", "");
   style.textContent = `
     @keyframes phenyx-obs-new-glow {
-      0%, 100% { box-shadow: 0 0 4px ${NEW_GREEN}66, 0 0 0 ${NEW_GREEN}00; }
-      50%      { box-shadow: 0 0 10px ${NEW_GREEN}99, 0 0 2px ${NEW_GREEN}66; }
+      0%, 100% { box-shadow: 0 0 4px rgba(var(--ph-accent-rgb), 0.4), 0 0 0 rgba(var(--ph-accent-rgb), 0); }
+      50%      { box-shadow: 0 0 10px rgba(var(--ph-accent-rgb), 0.6), 0 0 2px rgba(var(--ph-accent-rgb), 0.4); }
     }
     .phenyx-obs-head {
       display: flex;
@@ -161,7 +145,7 @@ function injectCardStyles() {
     @media (prefers-reduced-motion: reduce) {
       .phenyx-obs-new-badge {
         animation: none !important;
-        box-shadow: 0 0 6px ${NEW_GREEN}66 !important;
+        box-shadow: 0 0 6px rgba(var(--ph-accent-rgb), 0.4) !important;
       }
       .phenyx-obs-chevron {
         transition: none !important;
@@ -194,7 +178,7 @@ export function ObservationCard({
   expanded,
   onToggle,
   onExplore,
-  accent = "var(--s, #5599FF)",
+  accent = "var(--ph-accent)",
   focused = false,
   onUpgrade,
   onExport,
@@ -204,7 +188,6 @@ export function ObservationCard({
     injectCardStyles();
   }, []);
 
-  const color = resolvePillarColor(observation);
   const label = pillarLabel(observation.pillar_tag);
   const sentence = observationSentence(observation);
   const points = (observation.points ?? []).filter((p) => p && p.trim());
@@ -218,13 +201,13 @@ export function ObservationCard({
       aria-label={`${label} observation`}
       aria-expanded={expanded}
       style={{
-        background: expanded ? "#090909" : focused ? "#0d0d0d" : "#0b0b0b",
+        background: expanded ? "rgba(255,253,253,0.004)" : focused ? "rgba(255,253,253,0.02)" : "rgba(255,253,253,0.012)",
         border: `1px solid ${
           focused
-            ? `${color}73`
+            ? "rgba(var(--ph-accent-rgb), 0.45)"
             : expanded
               ? "rgba(255,253,253,0.12)"
-              : "#1c1c1c"
+              : "rgba(255,253,253,0.075)"
         }`,
         borderRadius: 12,
         padding: expanded ? "30px 32px 32px" : "22px 20px 20px",
@@ -246,6 +229,7 @@ export function ObservationCard({
           cursor: "pointer",
           textAlign: "left",
           fontFamily: "inherit",
+          color: "rgba(255,253,253,0.52)",
         }}
       >
         <p
@@ -267,9 +251,9 @@ export function ObservationCard({
             letterSpacing: "0.09em",
             textTransform: "lowercase",
             lineHeight: 1.4,
-            color,
-            background: `${color}14`,
-            border: `1px solid ${color}4D`,
+            color: "var(--ph-accent)",
+            background: "rgba(var(--ph-accent-rgb), 0.08)",
+            border: "1px solid rgba(var(--ph-accent-rgb), 0.3)",
             borderRadius: 20,
             padding: "3px 12px",
             display: "inline-flex",
@@ -286,7 +270,7 @@ export function ObservationCard({
                 fontWeight: 600,
                 letterSpacing: "0.14em",
                 textTransform: "uppercase",
-                color: NEW_GREEN,
+                color: "var(--ph-accent)",
                 lineHeight: 1,
                 animation: "phenyx-obs-new-glow 2.4s ease-in-out infinite",
               }}
@@ -301,7 +285,8 @@ export function ObservationCard({
           style={{
             fontSize: 20,
             lineHeight: 1.2,
-            color: expanded ? accent : "rgba(255,253,253,0.52)",
+            // Collapsed, the chevron inherits the head color so it warms on hover.
+            color: expanded ? accent : "inherit",
             transform: expanded ? "rotate(90deg)" : "none",
             transition: "transform 0.28s ease, color 0.2s",
             marginTop: -1,
@@ -361,10 +346,10 @@ export function ObservationCard({
                     letterSpacing: "0.08em",
                     textTransform: "lowercase",
                     padding: "3px 8px",
-                    border: "1px solid #242424",
+                    border: "1px solid rgba(var(--ph-accent-rgb), 0.3)",
                     borderRadius: 20,
-                    color: "rgba(255,253,253,0.62)",
-                    background: "#0d0d0d",
+                    color: "var(--ph-accent)",
+                    background: "rgba(var(--ph-accent-rgb), 0.06)",
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -440,6 +425,7 @@ export function ObservationCard({
                 cursor: "pointer",
                 padding: "8px 6px",
                 fontFamily: "inherit",
+                color: "rgba(255,253,253,0.6)",
               }}
             >
               <span style={{ fontSize: 13, color: accent }}>✦</span>
@@ -447,7 +433,6 @@ export function ObservationCard({
                 style={{
                   fontSize: 12,
                   letterSpacing: "0.03em",
-                  color: "rgba(255,253,253,0.6)",
                 }}
               >
                 explore

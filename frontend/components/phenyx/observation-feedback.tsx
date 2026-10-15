@@ -50,15 +50,8 @@ function injectFeedbackStyles() {
   const style = document.createElement("style");
   style.setAttribute("data-phenyx-obs-feedback", "");
   style.textContent = `
-    .phenyx-fb-b:hover {
-      border-color: color-mix(in srgb, var(--phenyx-fb-accent, #5599FF) 50%, #202020);
-      color: #fffdfd;
-    }
     @media (max-width: 700px) {
       .phenyx-fb-row { flex-direction: column; align-items: flex-start; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .phenyx-fb-b { transition: none !important; }
     }
   `;
   document.head.appendChild(style);
@@ -91,7 +84,7 @@ export function ObservationFeedback({
   pillar,
   signalType = null,
   initial = null,
-  accent = "var(--s, #5599FF)",
+  accent = "var(--ph-accent)",
 }: ObservationFeedbackProps) {
   useEffect(() => {
     injectFeedbackStyles();
@@ -140,8 +133,7 @@ export function ObservationFeedback({
       style={{
         marginTop: 26,
         paddingTop: 20,
-        borderTop: "1px solid #151515",
-        ["--phenyx-fb-accent" as string]: accent,
+        borderTop: "1px solid rgba(255,253,253,0.05)",
       }}
     >
       {verdict ? (
@@ -201,14 +193,13 @@ export function ObservationFeedback({
                   fontSize: 11,
                   padding: "7px 12px",
                   minHeight: 26,
-                  border: "1px solid #202020",
+                  border: "1px solid rgba(255,253,253,0.1)",
                   borderRadius: 20,
                   background: "transparent",
                   color: b.negative
                     ? "rgba(255,253,253,0.52)"
                     : "rgba(255,253,253,0.6)",
                   cursor: pending ? "wait" : "pointer",
-                  transition: "border-color 0.2s, color 0.2s",
                   textAlign: "left",
                 }}
               >

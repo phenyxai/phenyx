@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTier } from "@/lib/use-tier";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { apiFetch, type ProfileOverview } from "@/lib/api-client";
-import { colorName } from "@/lib/stellar";
+import { colorName, resolveAccent } from "@/lib/stellar";
 import { constellationAge, fetchConstellation, type ConstellationData } from "@/lib/constellation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { IntroBanner } from "@/components/phenyx/intro-banner";
@@ -16,7 +16,7 @@ import { buildYouStats, formatJoinedSince } from "./stats";
 /** Section labels are lowercase in source; the uppercase treatment is styling. */
 function SectionLabel({ children }: { children: string }) {
   return (
-    <h2 className="mb-5 text-[11px] font-semibold tracking-[0.15em] text-[#FFFDFD]/52 uppercase">
+    <h2 className="mb-5 text-[11px] font-semibold tracking-[0.15em] text-[rgba(var(--ph-accent-rgb),0.85)] uppercase">
       {children}
     </h2>
   );
@@ -102,7 +102,7 @@ export default function YouTabPage() {
   const joined = overview?.joined?.trim() ?? "";
   const platforms = overview?.connected_platforms ?? [];
   const held = overview?.held ?? [];
-  const swatch = overview?.stellar_color || stellarColor;
+  const swatch = resolveAccent(overview?.stellar_color || stellarColor);
   const stellarName = colorName(swatch);
   const badge = isPro ? "full" : "free";
   const stats = buildYouStats(
@@ -134,7 +134,7 @@ export default function YouTabPage() {
                 <span
                   className={`inline-flex shrink-0 items-center rounded-full border px-[7px] py-0.5 text-[9px] tracking-[0.14em] uppercase ${
                     isPro
-                      ? "border-[rgba(var(--s-rgb),0.4)] text-[var(--s)]"
+                      ? "border-[rgba(var(--ph-accent-rgb),0.4)] text-[var(--ph-accent)]"
                       : "border-[#FFFDFD]/18 text-[#FFFDFD]/50"
                   }`}
                 >
@@ -145,7 +145,7 @@ export default function YouTabPage() {
                   title="edit name and email"
                   aria-label="edit name and email"
                   onClick={() => openModal("edit-profile")}
-                  className="flex min-h-[26px] min-w-[26px] items-center justify-center p-1.5 text-[#FFFDFD]/60 transition-colors hover:text-[var(--s)]"
+                  className="flex min-h-[26px] min-w-[26px] items-center justify-center p-1.5 text-[#FFFDFD]/60 transition-colors"
                 >
                   <svg
                     width="13"
@@ -178,12 +178,12 @@ export default function YouTabPage() {
               <SectionLabel>connected platforms</SectionLabel>
               <div className="flex flex-wrap gap-1.5">
                 {platforms.length === 0 ? (
-                  <p className="text-[11px] text-[#888]">no platforms connected.</p>
+                  <p className="text-[11px] text-[#FFFDFD]/50">no platforms connected.</p>
                 ) : (
                   platforms.map((platform) => (
                     <span
                       key={platform}
-                      className="rounded-lg border border-[rgba(185,213,255,0.16)] px-[9px] py-0.5 text-[11px] tracking-[0.03em] lowercase text-[#888]"
+                      className="rounded-lg border border-[rgba(var(--ph-accent-rgb),0.3)] px-[9px] py-0.5 text-[11px] tracking-[0.03em] lowercase text-[rgba(var(--ph-accent-rgb),0.9)]"
                     >
                       {platform}
                     </span>
@@ -244,7 +244,7 @@ export default function YouTabPage() {
                   key={item.title}
                   className="rounded-xl border border-[rgba(255,253,253,0.045)] bg-[#FFFDFD]/[0.008] px-[22px] py-5"
                 >
-                  <p className="mb-1.5 text-[13px] tracking-[0.01em] text-[var(--s)]">
+                  <p className="mb-1.5 text-[13px] tracking-[0.01em] text-[var(--ph-accent)]">
                     {item.title}
                   </p>
                   <p className="text-[13px] leading-relaxed text-[#FFFDFD]/78">

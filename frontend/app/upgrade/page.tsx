@@ -9,18 +9,18 @@ import { apiFetch } from "@/lib/api-client";
 
 type BillingPeriod = "monthly" | "yearly";
 
+// PHE-98: the accent comes from SessionColorProvider via --ph-accent.
+const ACCENT = "var(--ph-accent)";
+
 export default function UpgradePage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [stellarColor, setStellarColor] = useState("#5599FF");
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("yearly");
   const [currentTier, setCurrentTier] = useState("free");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) setStellarColor(stored);
     setMounted(true);
 
     const fetchTier = async () => {
@@ -89,13 +89,7 @@ export default function UpgradePage() {
   return (
     <main
       className="min-h-screen flex flex-col"
-      style={
-        {
-          background: "#0A0A0A",
-          color: "#FFFDFD",
-          "--color-stellar": stellarColor,
-        } as React.CSSProperties
-      }
+      style={{ background: "var(--ph-black)", color: "var(--ph-white)" }}
     >
       <header className="flex items-center justify-between px-6 py-4">
         <Link
@@ -106,7 +100,7 @@ export default function UpgradePage() {
           <span
             style={{
               fontSize: "11px",
-              color: "#666",
+              color: "rgba(255,253,253,0.4)",
               letterSpacing: "0.08em",
               fontWeight: 300,
             }}
@@ -116,8 +110,8 @@ export default function UpgradePage() {
         </Link>
         <Link
           href="/dashboard/constellation"
-          style={{ fontSize: "11px", color: "#555" }}
-          className="hover:text-white transition-colors"
+          style={{ fontSize: "11px", color: "rgba(255,253,253,0.33)" }}
+          className="transition-colors"
         >
           back to constellation
         </Link>
@@ -137,7 +131,7 @@ export default function UpgradePage() {
         <p
           style={{
             fontSize: "13px",
-            color: "#666",
+            color: "rgba(255,253,253,0.4)",
             marginBottom: "32px",
             textAlign: "center",
             maxWidth: 420,
@@ -149,15 +143,16 @@ export default function UpgradePage() {
 
         <div
           className="flex items-center gap-2 p-1 rounded-full mb-8"
-          style={{ background: "#111", border: "0.5px solid #1e1e1e" }}
+          style={{ background: "rgba(255,253,253,0.04)", border: "0.5px solid rgba(255,253,253,0.1)" }}
         >
           <button
             type="button"
             onClick={() => setBillingPeriod("monthly")}
             className="px-4 py-2 rounded-full text-xs transition-all"
             style={{
-              background: billingPeriod === "monthly" ? "#1a1a1a" : "transparent",
-              color: billingPeriod === "monthly" ? "#FFFDFD" : "#666",
+              background: billingPeriod === "monthly" ? "rgba(var(--ph-accent-rgb),0.08)" : "transparent",
+              border: `0.5px solid ${billingPeriod === "monthly" ? ACCENT : "transparent"}`,
+              color: billingPeriod === "monthly" ? ACCENT : "rgba(255,253,253,0.4)",
             }}
           >
             monthly
@@ -167,14 +162,15 @@ export default function UpgradePage() {
             onClick={() => setBillingPeriod("yearly")}
             className="px-4 py-2 rounded-full text-xs transition-all flex items-center gap-2"
             style={{
-              background: billingPeriod === "yearly" ? "#1a1a1a" : "transparent",
-              color: billingPeriod === "yearly" ? "#FFFDFD" : "#666",
+              background: billingPeriod === "yearly" ? "rgba(var(--ph-accent-rgb),0.08)" : "transparent",
+              border: `0.5px solid ${billingPeriod === "yearly" ? ACCENT : "transparent"}`,
+              color: billingPeriod === "yearly" ? ACCENT : "rgba(255,253,253,0.4)",
             }}
           >
             yearly
             <span
               className="px-2 py-0.5 rounded-full text-xs"
-              style={{ background: stellarColor, color: "#0A0A0A", fontSize: "9px" }}
+              style={{ background: ACCENT, color: "var(--ph-black)", fontSize: "9px" }}
             >
               save vs month-by-month
             </span>
@@ -186,14 +182,14 @@ export default function UpgradePage() {
           <div
             className="flex-1 p-6 rounded-2xl"
             style={{
-              background: "#0E0E0E",
-              border: currentTier === "free" ? `1px solid ${stellarColor}` : "0.5px solid #1e1e1e",
+              background: "rgba(255,253,253,0.02)",
+              border: currentTier === "free" ? `1px solid ${ACCENT}` : "0.5px solid rgba(255,253,253,0.1)",
             }}
           >
             <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>free</h3>
-            <p style={{ fontSize: "11px", color: "#555", marginBottom: "16px" }}>free forever</p>
+            <p style={{ fontSize: "11px", color: "rgba(255,253,253,0.33)", marginBottom: "16px" }}>free forever</p>
             <div style={{ fontSize: "32px", fontWeight: 300, marginBottom: "24px" }}>
-              $0<span style={{ fontSize: "12px", color: "#555" }}>/month</span>
+              $0<span style={{ fontSize: "12px", color: "rgba(255,253,253,0.33)" }}>/month</span>
             </div>
             <ul className="space-y-3 mb-6">
               {[
@@ -202,8 +198,8 @@ export default function UpgradePage() {
                 "three polaris questions each week",
                 "the span of time behind each observation",
               ].map((feature, i) => (
-                <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "#888" }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2">
+                <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "rgba(255,253,253,0.53)" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,253,253,0.33)" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                   {feature}
@@ -213,7 +209,7 @@ export default function UpgradePage() {
             {currentTier === "free" && (
               <div
                 className="w-full py-3 rounded-lg text-center text-xs"
-                style={{ background: "#1a1a1a", color: "#666" }}
+                style={{ background: "rgba(255,253,253,0.07)", color: "rgba(255,253,253,0.4)" }}
               >
                 current plan
               </div>
@@ -224,31 +220,31 @@ export default function UpgradePage() {
           <div
             className="flex-1 p-6 rounded-2xl relative"
             style={{
-              background: "#0E0E0E",
-              border: currentTier === "pro" ? `1px solid ${stellarColor}` : "0.5px solid #1e1e1e",
+              background: "rgba(255,253,253,0.02)",
+              border: currentTier === "pro" ? `1px solid ${ACCENT}` : "0.5px solid rgba(255,253,253,0.1)",
             }}
           >
             <div
               className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs"
-              style={{ background: stellarColor, color: "#0A0A0A" }}
+              style={{ background: ACCENT, color: "var(--ph-black)" }}
             >
               full
             </div>
             <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>full</h3>
-            <p style={{ fontSize: "11px", color: "#555", marginBottom: "16px" }}>
+            <p style={{ fontSize: "11px", color: "rgba(255,253,253,0.33)", marginBottom: "16px" }}>
               full access
             </p>
             <div style={{ fontSize: "32px", fontWeight: 300, marginBottom: "24px" }}>
               {billingPeriod === "yearly" ? (
                 <>
                   $99
-                  <span style={{ fontSize: "12px", color: "#555" }}>/year</span>
+                  <span style={{ fontSize: "12px", color: "rgba(255,253,253,0.33)" }}>/year</span>
                 </>
               ) : (
                 <>
                   $12.99
-                  <span style={{ fontSize: "12px", color: "#555" }}>/month</span>
-                  <span style={{ fontSize: "11px", color: "#555", display: "block", marginTop: "4px" }}>
+                  <span style={{ fontSize: "12px", color: "rgba(255,253,253,0.33)" }}>/month</span>
+                  <span style={{ fontSize: "11px", color: "rgba(255,253,253,0.33)", display: "block", marginTop: "4px" }}>
                     or $99/year
                   </span>
                 </>
@@ -262,8 +258,8 @@ export default function UpgradePage() {
                 "a weekly look at what shifted",
                 "a yearly look across your timeline",
               ].map((feature, i) => (
-                <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "#FFFDFD" }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={stellarColor} strokeWidth="2">
+                <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "var(--ph-white)" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                   {feature}
@@ -273,14 +269,14 @@ export default function UpgradePage() {
             {currentTier === "pro" ? (
               <div
                 className="w-full py-3 rounded-lg text-center text-xs"
-                style={{ background: "#1a1a1a", color: "#666" }}
+                style={{ background: "rgba(255,253,253,0.07)", color: "rgba(255,253,253,0.4)" }}
               >
                 current plan
               </div>
             ) : currentTier === "gifted" ? (
               <div
                 className="w-full py-3 rounded-lg text-center text-xs"
-                style={{ background: "#1a1a1a", color: "#666" }}
+                style={{ background: "rgba(255,253,253,0.07)", color: "rgba(255,253,253,0.4)" }}
               >
                 your gifted constellation already includes full access
               </div>
@@ -289,19 +285,12 @@ export default function UpgradePage() {
                 type="button"
                 onClick={() => checkout("pro")}
                 disabled={isLoading}
-                className="w-full py-3 rounded-lg text-xs transition-all"
+                data-ph-hover="off"
+                className="w-full py-3 rounded-lg text-xs transition-all hover:opacity-90"
                 style={{
-                  background: stellarColor,
-                  border: `0.5px solid ${stellarColor}`,
-                  color: "#0A0A0A",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = stellarColor;
-                  e.currentTarget.style.borderColor = stellarColor;
+                  background: ACCENT,
+                  border: `0.5px solid ${ACCENT}`,
+                  color: "var(--ph-black)",
                 }}
               >
                 {isLoading
@@ -318,17 +307,17 @@ export default function UpgradePage() {
           <div
             className="flex-1 p-6 rounded-2xl"
             style={{
-              background: "#0E0E0E",
-              border: `1px solid ${stellarColor}`,
+              background: "rgba(255,253,253,0.02)",
+              border: `1px solid ${ACCENT}`,
             }}
           >
             <h3 style={{ fontSize: "14px", fontWeight: 400, marginBottom: "4px" }}>full</h3>
-            <p style={{ fontSize: "11px", color: "#555", marginBottom: "16px" }}>
+            <p style={{ fontSize: "11px", color: "rgba(255,253,253,0.33)", marginBottom: "16px" }}>
               your account already has full access
             </p>
             <div
               className="w-full py-3 rounded-lg text-center text-xs"
-              style={{ background: "#1a1a1a", color: "#666" }}
+              style={{ background: "rgba(255,253,253,0.07)", color: "rgba(255,253,253,0.4)" }}
             >
               current plan
             </div>
@@ -337,14 +326,14 @@ export default function UpgradePage() {
         </div>
 
         {error && (
-          <p style={{ fontSize: "11px", color: "#E84422", marginTop: "16px", textAlign: "center" }}>
+          <p style={{ fontSize: "11px", color: "var(--ph-red)", marginTop: "16px", textAlign: "center" }}>
             {error}
           </p>
         )}
 
-        <p style={{ fontSize: "11px", color: "#444", marginTop: "40px", textAlign: "center" }}>
+        <p style={{ fontSize: "11px", color: "rgba(255,253,253,0.27)", marginTop: "40px", textAlign: "center" }}>
           questions? read our{" "}
-          <Link href="/faq" style={{ color: stellarColor }} className="hover:underline">
+          <Link href="/faq" style={{ color: ACCENT }} className="hover:underline">
             frequently asked questions
           </Link>
         </p>
