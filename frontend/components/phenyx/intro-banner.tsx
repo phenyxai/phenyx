@@ -16,8 +16,6 @@ import { useIntroBanner, type DashboardTab } from "@/lib/first-visit";
 /** Verbatim, lowercase intro copy per tab (single source of truth, per AC). */
 export const INTRO_COPY: Record<DashboardTab, string> = {
   daily: "daily shows what surfaced from your data this week, freshest first.",
-  discover:
-    "each card is one connection found across your platforms, with the dated sources behind it.",
   polaris:
     "polaris answers what you ask, using only what your constellation has already shown.",
   constellation:

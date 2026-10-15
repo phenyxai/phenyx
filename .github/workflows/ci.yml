@@ -35,11 +35,15 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+      # pnpm version comes from packageManager; same lockfile Vercel installs from.
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
       - name: Install deps
-        run: npm install --no-audit --no-fund
+        run: pnpm install --frozen-lockfile
       - name: Typecheck
         run: npx tsc --noEmit
       - name: Lint (advisory)

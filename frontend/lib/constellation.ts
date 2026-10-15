@@ -117,21 +117,6 @@ export interface YearlyRecapEntry {
   text: string;
 }
 
-/**
- * PHE-102 — a pattern a data refresh found that wasn't there before, attached
- * to one point. Served only while unseen; opening the banner marks it seen.
- */
-export interface NewSignal {
-  id: string;
-  pillar: Pillar;
-  points: Pillar[];
-  summary: string;
-  ideas: string[];
-  /** The moments (observation ids) behind it. */
-  observation_ids: string[];
-  sources: Array<{ observation_id: string; platform: string; span: string | null }>;
-}
-
 export interface ConstellationTenure {
   years: number;
   since: string | null;
@@ -149,7 +134,6 @@ export interface ConstellationData {
   moved: MovedPair[];
   tenure: ConstellationTenure;
   yearly_recap: YearlyRecapEntry[] | null;
-  signal: NewSignal | null;
 }
 
 export const EMPTY_TIMELINE: RecordTimeline = {
@@ -194,7 +178,6 @@ function emptyState(stellarColor: string): ConstellationData {
     moved: [],
     tenure: { years: 0, since: null },
     yearly_recap: null,
-    signal: null,
   };
 }
 
@@ -358,36 +341,8 @@ function normalizeEndpoint(raw: any, fallbackColor: string): ConstellationData {
         .filter((e: any) => e && e.when && e.text)
         .map((e: any) => ({ when: String(e.when), text: String(e.text) }))
     : null;
-  base.signal = normalizeSignal(raw?.signal);
 
   return base;
-}
-
-function normalizeSignal(raw: any): NewSignal | null {
-  if (!raw || typeof raw.id !== "string" || typeof raw.summary !== "string") return null;
-  if (!ALL_PILLARS.includes(raw.pillar)) return null;
-  const strings = (v: unknown): string[] =>
-    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
-  return {
-    id: raw.id,
-    pillar: raw.pillar,
-    points: strings(raw.points).filter((p): p is Pillar => ALL_PILLARS.includes(p as Pillar)),
-    summary: raw.summary,
-    ideas: strings(raw.ideas),
-    observation_ids: strings(raw.observation_ids),
-    sources: Array.isArray(raw.sources)
-      ? raw.sources.filter((s: any) => s && typeof s.platform === "string")
-      : [],
-  };
-}
-
-/** PHE-102 — the banner was opened; the signal never shows as new again. */
-export async function markSignalSeen(): Promise<void> {
-  try {
-    await apiFetch("/constellation/signal/seen", { method: "POST" });
-  } catch {
-    // Best effort: the next open tries again.
-  }
 }
 
 interface StateRow {
@@ -485,8 +440,7 @@ async function readFromSupabase(fallbackColor: string): Promise<ConstellationDat
         body: obs.body,
         sources: obs.source_platforms ?? undefined,
         surfaced_at: obs.surfaced_at,
-        // No signal on this path, and stored is_new never clears (PHE-102).
-        is_new: false,
+        is_new: obs.is_new,
         locked: true,
         evidence: null,
       }));
@@ -500,7 +454,7 @@ async function readFromSupabase(fallbackColor: string): Promise<ConstellationDat
         label: area.label || "core signals",
         preview: served[0]?.body ?? null,
         observation_count: served.length,
-        has_new: false,
+        has_new: rows.some((r) => r.is_new),
         source_platforms: [...new Set(rows.flatMap((r) => r.source_platforms ?? []))],
         observations: served,
       });
@@ -514,7 +468,7 @@ async function readFromSupabase(fallbackColor: string): Promise<ConstellationDat
         label: "core signals",
         preview: served[0]?.body ?? null,
         observation_count: served.length,
-        has_new: false,
+        has_new: core.some((r) => r.is_new),
         source_platforms: [...new Set(core.flatMap((r) => r.source_platforms ?? []))],
         observations: served,
       });
