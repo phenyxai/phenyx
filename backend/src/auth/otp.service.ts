@@ -5,7 +5,12 @@ import * as argon2 from "argon2";
 import { Resend } from "resend";
 import { SupabaseService } from "../supabase/supabase.service";
 
-export type OtpPurpose = "signup" | "signin" | "reset";
+/**
+ * `confirm` (PHE-97) re-confirms a signed-in person for sensitive settings
+ * actions; it is only ever sent to the account's own email (ConfirmCodeService)
+ * and the public /auth/otp routes do not accept it.
+ */
+export type OtpPurpose = "signup" | "signin" | "confirm";
 
 export interface SendCodeParams {
   email: string;
@@ -55,11 +60,11 @@ export class OtpService {
   private resendClient: Resend | null = null;
 
   // In-memory send-rate ledger keyed by `${purpose}:${email}` → send timestamps.
-  // Single-instance MVP store (same constraint documented on LoginThrottleService);
+  // Single-instance MVP store;
   // a multi-instance deploy must back this with a shared store.
   private readonly sendLog = new Map<string, number[]>();
 
-  // OWASP-aligned Argon2id params, matching PassphraseService.
+  // OWASP-aligned Argon2id params.
   private readonly hashOptions: argon2.Options = {
     type: argon2.argon2id,
     memoryCost: 19456, // 19 MiB

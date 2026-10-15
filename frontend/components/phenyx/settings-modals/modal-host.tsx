@@ -25,7 +25,6 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 
-import { PassphraseModal } from './passphrase'
 import { NotificationsModal } from './notifications'
 import { ConnectionsModal } from './connections'
 import { DataManagementModal } from './data-management'
@@ -47,7 +46,6 @@ import { SubscriptionModal } from './subscription'
 // ---------------------------------------------------------------------------
 
 export type SettingsModalId =
-  | 'passphrase'
   | 'notifications'
   | 'my-connections'
   | 'data-management'
@@ -104,7 +102,6 @@ export function SettingsModalsProvider({
           if (!next) closeModal()
         }}
       >
-        {openId === 'passphrase' && <PassphraseModal />}
         {openId === 'notifications' && <NotificationsModal />}
         {openId === 'my-connections' && <ConnectionsModal />}
         {openId === 'data-management' && <DataManagementModal />}

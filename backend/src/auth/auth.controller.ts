@@ -1,26 +1,23 @@
-import { Body, Controller, HttpCode, Post, Req } from "@nestjs/common";
-import { Throttle } from "@nestjs/throttler";
+import { Body, Controller, HttpCode, Post, Req, UseGuards } from "@nestjs/common";
 import type { Request } from "express";
 import { AuthService } from "./auth.service";
-import { PassphraseResetService } from "./passphrase-reset.service";
+import { SupabaseAuthGuard } from "./supabase-auth.guard";
 import { SignupStartDto } from "./dto/signup-start.dto";
 import { OtpSendDto } from "./dto/otp-send.dto";
 import { OtpVerifyDto } from "./dto/otp-verify.dto";
-import { SigninDto } from "./dto/signin.dto";
-import { PassphraseResetRequestDto } from "./dto/passphrase-reset-request.dto";
-import { PassphraseResetConfirmDto } from "./dto/passphrase-reset-confirm.dto";
 
 /**
- * Pre-auth account flow. Routes are unprefixed (no global `/api` prefix in this
- * backend), so this maps to POST /auth/signup/start, /auth/otp/send,
- * /auth/otp/verify, /auth/signin, and /auth/passphrase/reset/{request,confirm}.
+ * Account flow. Routes are unprefixed (no global `/api` prefix in this backend),
+ * so this maps to POST /auth/signup/start, /auth/otp/send, /auth/otp/verify and
+ * /auth/profile/complete.
+ *
+ * PHE-97: sign-in is Google (Supabase OAuth, handled by the frontend) or an email
+ * code. The name + passphrase sign-in and the passphrase reset routes are gone;
+ * passphrase-era accounts sign in with the email code.
  */
 @Controller("auth")
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly passphraseReset: PassphraseResetService
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post("signup/start")
   @HttpCode(200)
@@ -43,9 +40,9 @@ export class AuthController {
   }
 
   /**
-   * Verify a submitted OTP. Returns 200 with `{ status, session? }`; the status
-   * discriminator (`ok` / `invalid` / `expired`) drives the verbatim client copy
-   * and avoids leaking outcome via HTTP status codes.
+   * Verify a submitted OTP. Returns 200 with `{ status, session?, is_new? }`; the
+   * status discriminator (`ok` / `invalid` / `expired` / `no_account`) drives the
+   * verbatim client copy and avoids leaking outcome via HTTP status codes.
    */
   @Post("otp/verify")
   @HttpCode(200)
@@ -59,52 +56,15 @@ export class AuthController {
   }
 
   /**
-   * Returning-user sign-in (name + passphrase). Returns 200 with `{ ok, session? }`:
-   * `ok: true` carries the session, `ok: false` is the single generic failure for
-   * an unknown name OR a wrong passphrase (no enumeration via body or status).
-   * A tighter per-IP throttle than the global guard guards this brute-force-
-   * sensitive route; LoginThrottleService adds per-account/per-IP failure lockout
-   * (it throws 429 when locked).
+   * Complete the caller's profile after an OAuth (Google) sign-in. Bearer-authed:
+   * the account is whoever the token belongs to. Idempotent, so the callback runs
+   * it on every sign-in; `is_new` is true only the first time (route to welcome).
    */
-  @Post("signin")
+  @Post("profile/complete")
   @HttpCode(200)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  async signin(@Body() dto: SigninDto, @Req() req: Request) {
-    const result = await this.authService.signin(dto.name, dto.passphrase, {
-      ip: req.ip,
-    });
-    if (!result) return { ok: false };
-    return { ok: true, session: result.session };
-  }
-
-  /**
-   * Request a passphrase reset link. ALWAYS 200 with `{ ok: true }` regardless of
-   * whether the email maps to an account (enumeration resistance); a link is sent
-   * only when it does. Per-email/IP rate limiting lives in the service.
-   */
-  @Post("passphrase/reset/request")
-  @HttpCode(200)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  async passphraseResetRequest(
-    @Body() dto: PassphraseResetRequestDto,
-    @Req() req: Request
-  ) {
-    await this.passphraseReset.requestReset(dto.email, { ip: req.ip });
-    return { ok: true };
-  }
-
-  /**
-   * Confirm a passphrase reset: set the new passphrase using a single-use token.
-   * Returns 200 with `{ ok }` — `false` covers an invalid, expired, or already-used
-   * token with one generic outcome.
-   */
-  @Post("passphrase/reset/confirm")
-  @HttpCode(200)
-  async passphraseResetConfirm(@Body() dto: PassphraseResetConfirmDto) {
-    const ok = await this.passphraseReset.confirmReset(
-      dto.token,
-      dto.newPassphrase
-    );
-    return { ok };
+  @UseGuards(SupabaseAuthGuard)
+  async completeProfile(@Req() req: Request) {
+    const user = (req as any).user as { id: string };
+    return this.authService.completeOAuthProfile(user.id);
   }
 }
