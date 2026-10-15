@@ -114,14 +114,14 @@ export default function AdminPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-ph-black flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
-          <h1 className="text-xl font-semibold mb-8 text-white uppercase tracking-wider">
+          <h1 className="text-xl font-semibold mb-8 text-ph-white uppercase tracking-wider">
             PHENYX ADMIN
           </h1>
           
           {authError && (
-            <p className="text-white/70 lowercase mb-4">access denied.</p>
+            <p className="text-ph-white/70 lowercase mb-4">access denied.</p>
           )}
           
           <form onSubmit={handleLogin} className="space-y-6">
@@ -133,13 +133,13 @@ export default function AdminPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="password"
-                className="w-full bg-transparent border-b border-white/30 py-2 text-white placeholder:lowercase focus:border-white focus:outline-none transition-colors"
+                className="w-full bg-transparent border-b border-ph-white/30 py-2 text-ph-white placeholder:lowercase focus:border-ph-white focus:outline-none transition-colors"
               />
             </div>
             
             <button
               type="submit"
-              className="px-6 py-2 border border-white/40 rounded-full text-sm lowercase hover:bg-white hover:text-[#0a0a0a] transition-all"
+              className="px-6 py-2 border border-ph-white/40 rounded-full text-sm lowercase hover:bg-ph-white hover:text-ph-black transition-all"
             >
               enter
             </button>
@@ -150,7 +150,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-6 md:p-12">
+    <div className="min-h-screen bg-ph-black text-ph-white p-6 md:p-12">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
@@ -158,7 +158,7 @@ export default function AdminPage() {
             <h1 className="text-xl font-semibold uppercase tracking-wider mb-2">
               PHENYX ADMIN
             </h1>
-            <p className="text-sm lowercase" style={{ color: "rgba(255,255,255,0.6)" }}>
+            <p className="text-sm lowercase" style={{ color: "rgba(255,253,253,0.6)" }}>
               {filteredEntries.length} members waiting
             </p>
           </div>
@@ -166,13 +166,13 @@ export default function AdminPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={exportCSV}
-              className="px-4 py-2 border border-white/40 rounded-full text-xs lowercase hover:bg-white hover:text-[#0a0a0a] transition-all"
+              className="px-4 py-2 border border-ph-white/40 rounded-full text-xs lowercase hover:bg-ph-white hover:text-ph-black transition-all"
             >
               export
             </button>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 border border-white/40 rounded-full text-xs lowercase hover:bg-white hover:text-[#0a0a0a] transition-all"
+              className="px-4 py-2 border border-ph-white/40 rounded-full text-xs lowercase hover:bg-ph-white hover:text-ph-black transition-all"
             >
               logout
             </button>
@@ -186,47 +186,47 @@ export default function AdminPage() {
             placeholder="search by name or email"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full max-w-md bg-transparent border-b border-white/30 py-2 text-white placeholder:lowercase placeholder:text-white/40 focus:border-white focus:outline-none transition-colors"
+            className="w-full max-w-md bg-transparent border-b border-ph-white/30 py-2 text-ph-white placeholder:lowercase placeholder:text-ph-white/40 focus:border-ph-white focus:outline-none transition-colors"
           />
         </div>
 
         {/* Table */}
         {loading ? (
-          <p className="text-white/60 lowercase">loading...</p>
+          <p className="text-ph-white/60 lowercase">loading...</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-white/20">
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,255,255,0.5)" }}>#</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,255,255,0.5)" }}>name</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,255,255,0.5)" }}>email</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,255,255,0.5)" }}>role</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,255,255,0.5)" }}>platforms</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,255,255,0.5)" }}>why</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,255,255,0.5)" }}>date</th>
+                <tr className="border-b border-ph-white/20">
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>#</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>name</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>email</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>role</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>platforms</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>why</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>date</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredEntries.map((entry, index) => (
                   <tr 
                     key={entry.id} 
-                    className="border-b border-white/10 hover:bg-white/5 transition-colors"
+                    className="border-b border-ph-white/10 hover:bg-ph-white/5 transition-colors"
                   >
-                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{index + 1}</td>
+                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(255,253,253,0.5)" }}>{index + 1}</td>
                     <td className="py-3 px-2 text-sm">{entry.name}</td>
-                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(255,255,255,0.8)" }}>{entry.email}</td>
-                    <td className="py-3 px-2 text-sm lowercase" style={{ color: "rgba(255,255,255,0.6)" }}>{entry.role || "-"}</td>
-                    <td className="py-3 px-2 text-sm lowercase" style={{ color: "rgba(255,255,255,0.6)" }}>{formatPlatforms(entry.platforms)}</td>
-                    <td className="py-3 px-2 text-sm lowercase max-w-xs truncate" style={{ color: "rgba(255,255,255,0.6)" }}>{entry.why || "-"}</td>
-                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{formatDate(entry.created_at)}</td>
+                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(255,253,253,0.8)" }}>{entry.email}</td>
+                    <td className="py-3 px-2 text-sm lowercase" style={{ color: "rgba(255,253,253,0.6)" }}>{entry.role || "-"}</td>
+                    <td className="py-3 px-2 text-sm lowercase" style={{ color: "rgba(255,253,253,0.6)" }}>{formatPlatforms(entry.platforms)}</td>
+                    <td className="py-3 px-2 text-sm lowercase max-w-xs truncate" style={{ color: "rgba(255,253,253,0.6)" }}>{entry.why || "-"}</td>
+                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(255,253,253,0.5)" }}>{formatDate(entry.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             
             {filteredEntries.length === 0 && (
-              <p className="text-center py-8 lowercase" style={{ color: "rgba(255,255,255,0.5)" }}>
+              <p className="text-center py-8 lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>
                 {searchQuery ? "no results found" : "no entries yet"}
               </p>
             )}

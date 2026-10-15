@@ -27,10 +27,8 @@
 
   /* PHENYX design system */
   --color-bg: var(--ph-black);
-  --color-surface: #0E0E0E;
-  --color-border: #1C1C1C;
+  --color-border: var(--border);
   --color-text: var(--ph-white);
-  --color-subtle: #555555;
 }
 
 /* PHE-98: color tokens (doc 7). Each person sees black, white and their accent.
