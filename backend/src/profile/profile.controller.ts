@@ -22,7 +22,7 @@ export class ProfileController {
     return this.profile.getOverview(user.id);
   }
 
-  /** Name/email edits require the current passphrase. */
+  /** Name/email edits require a confirm code emailed to the account (PHE-97). */
   @Post("identity")
   @UseGuards(SupabaseAuthGuard)
   async identity(@Req() req: Request, @Body() body: Record<string, unknown>) {

@@ -4,9 +4,9 @@ import { AccountController } from "./account.controller";
 import { AccountService } from "./account.service";
 
 /**
- * PHE-42 / PHE-75 — Account Lifecycle module (export / close / passphrase).
+ * PHE-42 / PHE-75 — Account Lifecycle module (export / close).
  * Freeze is gone: disconnecting through Onairos is the only stop. Imports
- * AuthModule for the SupabaseAuthGuard and PassphraseService; SupabaseService
+ * AuthModule for the SupabaseAuthGuard and ConfirmCodeService; SupabaseService
  * and EncryptionService are provided by the globally-registered modules.
  */
 @Module({

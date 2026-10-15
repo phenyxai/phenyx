@@ -88,8 +88,8 @@ function makeSupabase(profile: Record<string, unknown>) {
   } as any;
 }
 
-const fakePassphrase = {
-  verify: async () => true,
+const fakeConfirmCode = {
+  assertValid: async () => undefined,
 } as any;
 
 function makeStripe(retrieve: (id: string) => Promise<unknown>) {
@@ -123,7 +123,7 @@ test("getOverview on a monthly subscription reads renews_at from Stripe", async 
       stripe_subscription_id: "sub_123",
       subscription_status: "active",
     }),
-    fakePassphrase,
+    fakeConfirmCode,
     stripe
   );
   const overview = await service.getOverview("user-1");
@@ -146,7 +146,7 @@ test("getOverview on yearly_paid is yearly with no renewal and no Stripe call", 
       stripe_subscription_id: null,
       subscription_status: "yearly_paid",
     }),
-    fakePassphrase,
+    fakeConfirmCode,
     stripe
   );
   const overview = await service.getOverview("user-1");
@@ -163,7 +163,7 @@ test("getOverview on a gift has no billing period and no renewal", async () => {
       stripe_subscription_id: null,
       subscription_status: "gift",
     }),
-    fakePassphrase,
+    fakeConfirmCode,
     stripe
   );
   const overview = await service.getOverview("user-1");
@@ -181,7 +181,7 @@ test("getOverview on free never consults Stripe, even with a stale subscription 
       stripe_subscription_id: "sub_old",
       subscription_status: "canceled",
     }),
-    fakePassphrase,
+    fakeConfirmCode,
     stripe
   );
   const overview = await service.getOverview("user-1");
@@ -201,7 +201,7 @@ test("getOverview still returns when Stripe fails: renews_at null, billing_perio
       stripe_subscription_id: "sub_123",
       subscription_status: "active",
     }),
-    fakePassphrase,
+    fakeConfirmCode,
     stripe
   );
   const overview = await service.getOverview("user-1");
@@ -221,7 +221,7 @@ test("getOverview still returns when the Stripe key is missing", async () => {
       stripe_subscription_id: "sub_123",
       subscription_status: "active",
     }),
-    fakePassphrase,
+    fakeConfirmCode,
     stripe
   );
   const overview = await service.getOverview("user-1");
