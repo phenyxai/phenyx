@@ -17,7 +17,7 @@
 --          and re-enables it straight after, inside the migration transaction.
 -- Idempotency: CREATE OR REPLACE for the function; the UPDATE recomputes from
 --          immutable inputs, so a re-run assigns the same colors again.
--- See down migration: supabase/migrations/down/20261009120000_phe98_stellar_palette_remap_down.sql
+-- See down migration: supabase/migrations/down/20261009130000_phe98_stellar_palette_remap_down.sql
 
 create extension if not exists pgcrypto with schema extensions;
 

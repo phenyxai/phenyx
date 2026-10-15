@@ -6,7 +6,7 @@ import { createHash } from "crypto";
  * This array is the SERVER source of truth and MUST stay byte-identical to the
  * frontend `STELLAR` constant (`frontend/lib/stellar.ts`) and to the SQL array in
  * `stellar_color_for` (redefined by the PHE-98 remap migration,
- * 20261009120000_phe98_stellar_palette_remap.sql). A divergence would make a
+ * 20261009130000_phe98_stellar_palette_remap.sql). A divergence would make a
  * freshly created account's displayed color differ from a backfilled one for the
  * same inputs. Order is significant — the hash maps onto these indices.
  * frontend/lib/stellar.test.ts fails if the three drift apart.

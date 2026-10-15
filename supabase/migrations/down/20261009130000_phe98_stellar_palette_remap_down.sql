@@ -1,4 +1,4 @@
--- PHE-98 DOWN: revert 20261009120000_phe98_stellar_palette_remap.sql
+-- PHE-98 DOWN: revert 20261009130000_phe98_stellar_palette_remap.sql
 -- Restores the 14-color stellar_color_for from
 -- 20260604160000_user_profiles_stellar_color_backfill.sql and recomputes every
 -- row with it. Inputs are immutable, so each account gets back exactly the color
