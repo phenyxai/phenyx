@@ -252,9 +252,7 @@ export default function UpgradePage() {
             </div>
             <ul className="space-y-3 mb-6">
               {[
-                "every daily observation",
                 "more polaris room each week",
-                "a daily point to stay close to",
                 "a weekly look at what shifted",
                 "a yearly look across your timeline",
               ].map((feature, i) => (

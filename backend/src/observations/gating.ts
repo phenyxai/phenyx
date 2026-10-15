@@ -265,10 +265,11 @@ export interface ObservationRow {
 }
 
 /**
- * The shape the frontend consumes (`frontend/components/phenyx/observation-card.tsx`
- * → `Observation`). Bodies always ship. `locked` means the *evidence trace*
- * is withheld (citations/provenance omitted), never the sentence itself and,
- * since v244, never the time span.
+ * The served observation shape (`Observation` in the frontend api-client). Its
+ * only consumer, the daily feed card, was removed in PHE-96, so the daily feed
+ * and `/observations/:id/feedback` have no frontend consumer. Bodies always
+ * ship. `locked` means the *evidence trace* is withheld (citations/provenance
+ * omitted), never the sentence itself and, since v244, never the time span.
  */
 export interface ServedObservation {
   id: string;

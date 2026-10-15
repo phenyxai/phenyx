@@ -336,8 +336,8 @@ export function PolarisTab() {
     void sendQuestion(q);
   }, [input, sendQuestion, remaining, openAllowance, view]);
 
-  // Daily ✦ explore (PHE-70) routes here with ?q=&pillar=. Read the query on
-  // the client so a client-side `router.push` from Daily is picked up even if
+  // Deep links (PHE-70) route here with ?q=&pillar=. Read the query on
+  // the client so a client-side `router.push` from another tab is picked up even if
   // this tab was already in the tree. Strip the query with
   // history.replaceState (not router.replace) so Next does not remount the
   // tab and drop the chat that just started.

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Daily",
+  title: "Insights",
 };
 
-export default function DailyLayout({ children }: { children: ReactNode }) {
+export default function InsightsLayout({ children }: { children: ReactNode }) {
   return children;
 }

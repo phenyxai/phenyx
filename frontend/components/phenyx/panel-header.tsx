@@ -1,5 +1,5 @@
 /**
- * Shared header for the you and settings panels (PHE-95 / v244, prototype
+ * Shared header for the insights, discover and settings panels (PHE-95 / v244, prototype
  * `.you-intro`): an accent eyebrow, a light display title, and an optional
  * sub. Sits in a 640px column so it reads with the 820px content below it.
  */

@@ -16,9 +16,7 @@ import {
 
 /** What full includes (v244 prototype, subscription modal). */
 const FULL_INCLUDED = [
-  'every daily observation',
   'more polaris room each week',
-  'a daily point to stay close to',
   'a weekly look at what shifted',
   'a yearly look across your timeline',
 ]
@@ -202,7 +200,7 @@ export function SubscriptionModal() {
       ) : (
         <div>
           <div className="mb-1 flex items-baseline gap-3">
-            <span className="text-[22px] font-normal text-[#FFFDFD]">
+            <span className="text-[22px] font-normal text-ph-white">
               {planName}
             </span>
             <span className="text-[13px] text-[rgba(var(--ph-accent-rgb),0.9)]">

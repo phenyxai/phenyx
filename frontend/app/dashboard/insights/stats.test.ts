@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildYouStats,
+  buildInsightsStats,
   formatJoinedSince,
 } from "./stats.ts";
 
-// Run with: node --experimental-strip-types --test app/dashboard/you/stats.test.ts
+// Run with: node --experimental-strip-types --test app/dashboard/insights/stats.test.ts
 
 const NOW = new Date(2026, 8, 7); // 7 september 2026
 
@@ -37,8 +37,8 @@ function data(overrides: Record<string, unknown> = {}) {
 
 const AGE = { from: 2014, label: "12 years, 9 months" };
 
-test("buildYouStats lays out age, moments, turning points, accounts", () => {
-  const rows = buildYouStats(data(), 7, AGE, NOW);
+test("buildInsightsStats lays out age, moments, turning points, accounts", () => {
+  const rows = buildInsightsStats(data(), 7, AGE, NOW);
   assert.deepEqual(rows, [
     { key: "age", label: "age", value: "12 years, 9 months", note: "from 2014 to now" },
     { key: "moments", label: "moments", value: "26", note: "across 12 years" },
@@ -47,8 +47,8 @@ test("buildYouStats lays out age, moments, turning points, accounts", () => {
   ]);
 });
 
-test("buildYouStats omits rows with no value", () => {
-  const rows = buildYouStats(
+test("buildInsightsStats omits rows with no value", () => {
+  const rows = buildInsightsStats(
     data({ timeline: { span: [], breaks: [] }, tenure: { years: 0, since: null }, pillars: pillars([]) }),
     0,
     null,
@@ -56,16 +56,16 @@ test("buildYouStats omits rows with no value", () => {
   );
   assert.deepEqual(rows, []);
 
-  const onlyAccounts = buildYouStats(null, 3, null, NOW);
+  const onlyAccounts = buildInsightsStats(null, 3, null, NOW);
   assert.deepEqual(onlyAccounts, [
     { key: "accounts", label: "accounts", value: "3", note: "connected and contributing" },
   ]);
 });
 
-test("buildYouStats drops the moments note inside the first year and says 'across 1 year' after it", () => {
-  const first = buildYouStats(data({ timeline: { span: ["2026"], breaks: [] } }), 0, { from: 2026, label: "9 months" }, NOW);
+test("buildInsightsStats drops the moments note inside the first year and says 'across 1 year' after it", () => {
+  const first = buildInsightsStats(data({ timeline: { span: ["2026"], breaks: [] } }), 0, { from: 2026, label: "9 months" }, NOW);
   assert.equal(first[1].note, null);
-  const second = buildYouStats(data({ timeline: { span: ["2025"], breaks: [] } }), 0, { from: 2025, label: "1 year, 9 months" }, NOW);
+  const second = buildInsightsStats(data({ timeline: { span: ["2025"], breaks: [] } }), 0, { from: 2025, label: "1 year, 9 months" }, NOW);
   assert.equal(second[1].note, "across 1 year");
 });
 
