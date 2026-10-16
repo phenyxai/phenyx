@@ -108,7 +108,11 @@ export class ObservationsService {
   // Reads
   // -------------------------------------------------------------------------
 
-  /** Daily feed — the envelope `frontend/app/dashboard/daily/page.tsx` consumes. */
+  /**
+   * Daily feed envelope. No frontend consumer since PHE-96 removed the daily
+   * tab (and with it the `/observations/:id/feedback` caller); kept until the
+   * endpoint removal follow-up.
+   */
   async getDailyFeed(userId: string): Promise<DailyFeedResponse> {
     const supabase = this.supabaseService.getClient();
     const capabilities = this.billing.capabilitiesFor(await this.getUserTier(userId));

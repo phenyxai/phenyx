@@ -70,7 +70,7 @@ export interface ProfileOverview {
   connected_platforms: string[]
   /** "what has stayed with you" constants. */
   held: { title: string; body: string }[]
-  /** Behavioral snapshot — kept for older clients; the you tab does not render it. */
+  /** Behavioral snapshot — kept for older clients; the insights tab does not render it. */
   snapshot: ProfileSnapshotItem[]
   /** Forward-looking foresight line; null until the engine has generated one. */
   foresight: string | null
@@ -260,14 +260,13 @@ export interface SignupStartResult {
 }
 
 /**
- * Stage a pending signup (name + email + passphrase). Pre-auth — no bearer is
- * attached. On success the backend sends an email OTP and returns the draft id +
- * masked email; the raw passphrase is hashed server-side and never returned.
+ * Stage a pending signup (name + email; PHE-97: there is no passphrase).
+ * Pre-auth — no bearer is attached. On success the backend sends an email OTP
+ * and returns the draft id + masked email.
  */
 export async function signupStart(input: {
   name: string
   email: string
-  passphrase: string
 }): Promise<SignupStartResult> {
   const res = await fetch(`${API_BASE}/auth/signup/start`, {
     method: "POST",
@@ -290,7 +289,7 @@ export async function signupStart(input: {
 }
 
 // ---------------------------------------------------------------------------
-// Email OTP (PHE-9). Shared by the /join signup s2 step and (PHE-12) email
+// Email OTP (PHE-9). Shared by the /join signup s2 step and the email-code
 // sign-in. Both endpoints are pre-auth (no bearer); on a successful verify the
 // backend returns a session the caller adopts via supabase-browser.
 // ---------------------------------------------------------------------------
@@ -303,10 +302,16 @@ export interface OtpSession {
   refresh_token: string
 }
 
-/** `status` mirrors the backend outcome so callers can render the exact copy. */
+/**
+ * `status` mirrors the backend outcome so callers can render the exact copy.
+ * `no_account` comes only after a correct sign-in code for an email with no
+ * account. On `ok`, `is_new` says whether this verify created the profile
+ * (route to welcome) or found an existing one (route to the constellation).
+ */
 export interface OtpVerifyResult {
-  status: "ok" | "invalid" | "expired"
+  status: "ok" | "invalid" | "expired" | "no_account"
   session?: OtpSession
+  is_new?: boolean
 }
 
 /**
@@ -359,126 +364,5 @@ export async function otpVerify(input: {
     return (await res.json()) as OtpVerifyResult
   } catch {
     return { status: "invalid" }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Sign in + passphrase reset (PHE-12). All pre-auth (no bearer). Each endpoint
-// answers 200 with an `{ ok }`-shaped body so the outcome never leaks via HTTP
-// status, and the caller maps a failure to the single generic copy.
-// ---------------------------------------------------------------------------
-
-/** `ok: true` carries the session to adopt via supabase-browser. */
-export interface SigninResult {
-  ok: boolean
-  session?: OtpSession
-}
-
-/**
- * Returning-user sign-in with name + passphrase. Resolves to `{ ok: false }` for
- * any failure — an unknown name, a wrong passphrase, a lockout (429), or a
- * transport error — so the UI shows one generic message (no enumeration).
- */
-export async function signin(input: {
-  name: string
-  passphrase: string
-}): Promise<SigninResult> {
-  try {
-    const res = await fetch(`${API_BASE}/auth/signin`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    })
-    if (!res.ok) return { ok: false }
-    return (await res.json()) as SigninResult
-  } catch {
-    return { ok: false }
-  }
-}
-
-/**
- * Request a passphrase reset link. Enumeration-resistant: the backend always
- * answers 200 whether or not the email maps to an account, and the UI shows the
- * same success copy regardless. Errors are swallowed for the same reason — the
- * caller only validates email shape client-side before calling.
- */
-export async function passphraseResetRequest(input: {
-  email: string
-}): Promise<void> {
-  try {
-    await fetch(`${API_BASE}/auth/passphrase/reset/request`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    })
-  } catch {
-    // Best-effort: never reveal delivery/account state to the caller.
-  }
-}
-
-/** `ok: false` covers an invalid, expired, or already-used token (one outcome). */
-export interface ResetConfirmResult {
-  ok: boolean
-}
-
-/**
- * Confirm a passphrase reset with the single-use token from the emailed link and
- * a new passphrase. Resolves to `{ ok: false }` for a rejected token or a
- * transport error so the UI shows one generic "invalid or expired" message.
- */
-export async function passphraseResetConfirm(input: {
-  token: string
-  newPassphrase: string
-}): Promise<ResetConfirmResult> {
-  try {
-    const res = await fetch(`${API_BASE}/auth/passphrase/reset/confirm`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    })
-    if (!res.ok) return { ok: false }
-    return (await res.json()) as ResetConfirmResult
-  } catch {
-    return { ok: false }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Observation feedback (PHE-72). Persist `does this land?` verdicts and the
-// passive evidence-opened flag. Never sends the observation body.
-// ---------------------------------------------------------------------------
-
-export type ObservationVerdict = "new" | "known" | "reading"
-
-export interface ObservationFeedbackPayload {
-  verdict?: ObservationVerdict | null
-  opened?: boolean
-}
-
-export interface ObservationFeedbackResult {
-  verdict: ObservationVerdict | null
-  opened: boolean
-}
-
-/**
- * POST /observations/:id/feedback. Returns the persisted state, or `undefined`
- * on transport / 4xx so the card can fail open (buttons stay / restore).
- */
-export async function postObservationFeedback(
-  observationId: string,
-  body: ObservationFeedbackPayload,
-): Promise<ObservationFeedbackResult | undefined> {
-  try {
-    const res = await apiFetch(
-      `/observations/${encodeURIComponent(observationId)}/feedback`,
-      {
-        method: "POST",
-        body: JSON.stringify(body),
-      },
-    )
-    if (!res.ok) return undefined
-    return (await res.json()) as ObservationFeedbackResult
-  } catch {
-    return undefined
   }
 }

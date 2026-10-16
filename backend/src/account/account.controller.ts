@@ -11,10 +11,8 @@ import {
 import type { Request } from "express";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { AccountService } from "./account.service";
-import type {
-  AccountCloseDto,
-  AccountPassphraseChangeDto,
-} from "./account.dto";
+import { ConfirmCodeService } from "../auth/confirm-code.service";
+import type { AccountCloseDto } from "./account.dto";
 
 /**
  * PHE-42 / PHE-75 — owner-authed account lifecycle. The guard resolves
@@ -26,7 +24,10 @@ import type {
 @Controller("account")
 @UseGuards(SupabaseAuthGuard)
 export class AccountController {
-  constructor(private readonly accountService: AccountService) {}
+  constructor(
+    private readonly accountService: AccountService,
+    private readonly confirmCode: ConfirmCodeService
+  ) {}
 
   /** Portable JSON dump of everything observed about the owner. Never any token. */
   @Get("export")
@@ -47,23 +48,23 @@ export class AccountController {
   }
 
   /**
-   * Two-gate close: current passphrase + typed `delete my account`.
-   * Body: `{ passphrase, confirmation }`.
+   * PHE-97: email a one-time code to the account's own address. Close account
+   * and the name/email edit take it in place of the old passphrase.
+   */
+  @Post("confirm-code")
+  async sendConfirmCode(@Req() req: Request) {
+    const user = (req as any).user as { id: string };
+    return this.confirmCode.send(user.id);
+  }
+
+  /**
+   * Two-gate close: the emailed confirm code + typed `delete my account`.
+   * Body: `{ code, confirmation }`.
    */
   @Post("close")
   async close(@Req() req: Request, @Body() body: AccountCloseDto) {
     const user = (req as any).user as { id: string };
     return this.accountService.closeAccount(user.id, body);
-  }
-
-  /** Rotate the returning passphrase. Body: `{ currentPassphrase, newPassphrase }`. */
-  @Post("passphrase")
-  async changePassphrase(
-    @Req() req: Request,
-    @Body() body: AccountPassphraseChangeDto
-  ) {
-    const user = (req as any).user as { id: string };
-    return this.accountService.changePassphrase(user.id, body);
   }
 
   /** Same two-gate close as POST /account/close, kept for older clients. */

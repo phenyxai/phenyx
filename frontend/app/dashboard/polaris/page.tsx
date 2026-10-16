@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 /** Polaris tab (PHE-73). Idle + chat live in the client `PolarisTab`.
- * Deep-link `?q=&pillar=` is consumed inside that client tab (Daily explore).
+ * Deep-link `?q=&pillar=` is consumed inside that client tab.
  * The panel is a definite-height flex column (never display:block) so the
  * composer stays pinned to the foot in chat. */
 export default function PolarisTabPage() {

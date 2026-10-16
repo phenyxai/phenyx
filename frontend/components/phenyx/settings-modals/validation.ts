@@ -2,38 +2,21 @@
 
 export const DELETE_PHRASE = 'delete my account'
 
+/** PHE-97: the emailed confirm code replaced the passphrase. */
+export const CODE_MISSING = 'enter the code we sent to your email.'
+
 export function closeAccountClientError(
-  passphrase: string,
+  code: string,
   confirmation: string,
 ): string | null {
-  if (!passphrase.trim()) {
-    return 'enter your passphrase to confirm it is you.'
-  }
+  if (!code.trim()) return CODE_MISSING
   if (confirmation.trim().toLowerCase() !== DELETE_PHRASE) {
     return `type ${DELETE_PHRASE} exactly, to confirm.`
   }
   return null
 }
 
-export function passphraseChangeClientError(
-  current: string,
-  next: string,
-  again: string,
-): string | null {
-  if (!current.trim()) {
-    return 'enter your current passphrase to confirm it is you.'
-  }
-  if (!next.trim()) return 'enter a new passphrase.'
-  if (next !== again) return 'the two new passphrases do not match.'
-  if (next === current) {
-    return 'that is your current passphrase. choose a different one.'
-  }
-  return null
-}
-
-export function profileEditClientError(passphrase: string): string | null {
-  if (!passphrase.trim()) {
-    return 'enter your passphrase to confirm the change.'
-  }
+export function profileEditClientError(code: string): string | null {
+  if (!code.trim()) return CODE_MISSING
   return null
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
+import { useSessionColor } from "@/contexts/session-color-context";
 
 // Pillars in display order
 const ACTIVE_PILLARS = ["origin", "emergence", "self_creation", "convergence"] as const;
@@ -138,14 +139,9 @@ export default function ConstellationPage() {
     fetchData();
   }, [mounted, router]);
 
-  // Get session color from localStorage or profile
-  const sessionColor = useMemo(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("phenyx_stellar_color");
-      if (stored) return stored;
-    }
-    return userProfile?.stellar_color || "#5599FF";
-  }, [userProfile]);
+  // PHE-98: the person's accent, from SessionColorProvider (which resolves it
+  // from the profile and keeps stale or off-palette values from painting).
+  const { sessionColor } = useSessionColor();
 
   // Helper to get score for a pillar
   const getScore = (pillar: Pillar): number | null => {
@@ -235,7 +231,7 @@ export default function ConstellationPage() {
     return (
       <main style={{ 
         minHeight: "100vh", 
-        background: "#0A0A0A",
+        background: "var(--ph-black)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -275,7 +271,7 @@ export default function ConstellationPage() {
   return (
     <main style={{ 
       minHeight: "100vh", 
-      background: "#0A0A0A",
+      background: "var(--ph-black)",
       opacity: fadeIn ? 1 : 0,
       transition: "opacity 400ms ease",
       padding: "40px 20px",

@@ -47,7 +47,7 @@ import { useTier } from "@/lib/use-tier";
 // starts chat with that as the first user turn.
 // ============================================================================
 
-const ACCENT = "var(--s, #5599FF)";
+const ACCENT = "var(--ph-accent)";
 
 /** Explains the allowance inside the top-up sheet (the old token popover is gone). */
 const ALLOWANCE_NOTE =
@@ -336,8 +336,8 @@ export function PolarisTab() {
     void sendQuestion(q);
   }, [input, sendQuestion, remaining, openAllowance, view]);
 
-  // Daily ✦ explore (PHE-70) routes here with ?q=&pillar=. Read the query on
-  // the client so a client-side `router.push` from Daily is picked up even if
+  // Deep links (PHE-70) route here with ?q=&pillar=. Read the query on
+  // the client so a client-side `router.push` from another tab is picked up even if
   // this tab was already in the tree. Strip the query with
   // history.replaceState (not router.replace) so Next does not remount the
   // tab and drop the chat that just started.
@@ -377,31 +377,17 @@ export function PolarisTab() {
             padding: 2px 0 !important;
           }
         }
+        /* PHE-98: text and border warm to the accent through the shared
+           hover rule in globals.css; only fills and inner marks live here. */
         @media (hover: hover) {
           [data-polaris-question-card]:hover {
-            border-color: rgba(var(--s-rgb, 85,153,255),0.4) !important;
-            background: #0c0c0c !important;
-          }
-          [data-polaris-chip]:hover {
-            border-color: rgba(var(--s-rgb, 85,153,255),0.4) !important;
-            color: rgba(255,253,253,0.78) !important;
-          }
-          [data-polaris-thread]:hover {
-            border-color: #242424 !important;
-          }
-          [data-polaris-explore-tab][data-active="false"]:hover {
-            color: rgba(255,253,253,0.72) !important;
-          }
-          [data-polaris-allowance-badge]:hover {
-            border-color: rgba(var(--s-rgb, 85,153,255),0.4) !important;
-            color: rgba(255,253,253,0.8) !important;
+            background: rgba(255,253,253,0.02) !important;
           }
           [data-polaris-allowance-badge]:hover [data-polaris-allowance-plus] {
-            color: var(--s, #5599FF) !important;
+            color: var(--ph-accent) !important;
           }
           [data-polaris-topup-cta]:hover {
-            border-color: rgba(var(--s-rgb, 85,153,255),0.6) !important;
-            background: rgba(var(--s-rgb, 85,153,255),0.16) !important;
+            background: rgba(var(--ph-accent-rgb),0.16) !important;
           }
         }
       `}</style>
@@ -520,7 +506,7 @@ function IdleView({
               letterSpacing: "0.24em",
               textTransform: "uppercase",
               fontWeight: 600,
-              color: "rgba(var(--s-rgb, 85,153,255),0.85)",
+              color: "rgba(var(--ph-accent-rgb),0.85)",
             }}
           >
             polaris
@@ -548,7 +534,7 @@ function IdleView({
         <div
           style={{
             background: "rgba(255,253,253,0.018)",
-            border: "1px solid #232323",
+            border: "1px solid rgba(255,253,253,0.1)",
             borderRadius: 18,
             padding: "18px 20px 12px",
             marginBottom: 26,
@@ -643,7 +629,7 @@ function IdleView({
                   <p
                     style={{
                       fontSize: 13.5,
-                      color: "rgba(255,253,253,0.8)",
+                      color: "inherit",
                       lineHeight: 1.5,
                       fontWeight: 300,
                       margin: 0,
@@ -704,7 +690,7 @@ function IdleView({
                   <p
                     style={{
                       fontSize: 13,
-                      color: "rgba(255,253,253,0.5)",
+                      color: "inherit",
                       fontWeight: 300,
                       margin: 0,
                       overflow: "hidden",
@@ -970,7 +956,7 @@ function ChatView({
                 alignSelf: "flex-start",
                 fontSize: 13,
                 fontWeight: 300,
-                color: "rgba(255,120,120,0.8)",
+                color: "var(--ph-red)",
                 margin: 0,
               }}
             >
@@ -984,7 +970,7 @@ function ChatView({
 
       <div
         style={{
-          borderTop: "1px solid #141414",
+          borderTop: "1px solid rgba(255,253,253,0.05)",
           paddingTop: 16,
           paddingBottom: 20,
           flexShrink: 0,
@@ -995,8 +981,8 @@ function ChatView({
             display: "flex",
             alignItems: "center",
             gap: 10,
-            background: "#0c0c0c",
-            border: "1px solid #1e1e1e",
+            background: "rgba(255,253,253,0.02)",
+            border: "1px solid rgba(255,253,253,0.08)",
             borderRadius: 14,
             padding: "10px 14px",
           }}
@@ -1046,10 +1032,10 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         lineHeight: 1.7,
         fontWeight: 300,
         color: isUser ? "rgba(255,253,253,0.9)" : "rgba(255,253,253,0.72)",
-        background: isUser ? "rgba(85,153,255,0.08)" : "#0c0c0c",
+        background: isUser ? "rgba(var(--ph-accent-rgb),0.08)" : "rgba(255,253,253,0.02)",
         border: isUser
-          ? "1px solid rgba(85,153,255,0.18)"
-          : "1px solid #1e1e1e",
+          ? "1px solid rgba(var(--ph-accent-rgb),0.18)"
+          : "1px solid rgba(255,253,253,0.08)",
         borderRadius: isUser ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
         textAlign: isUser ? "right" : "left",
         whiteSpace: "pre-wrap",
@@ -1115,7 +1101,7 @@ function AllowanceBadge({
         letterSpacing: "0.02em",
         color: "rgba(255,253,253,0.5)",
         padding: "4px 5px 4px 11px",
-        border: "1px solid #242424",
+        border: "1px solid rgba(255,253,253,0.12)",
         borderRadius: 20,
         whiteSpace: "nowrap",
         background: "transparent",
@@ -1148,8 +1134,9 @@ function AllowanceBadge({
 
 /**
  * Top-up sheet (full only). Same chrome as the settings modals (v240): dimmed,
- * blurred overlay; blue-black gradient box with an accent-tinted border; tinted
- * primary button. The CTA has no backend yet — it only closes the sheet.
+ * blurred overlay; flat black box with an accent-tinted border (PHE-98: no
+ * gradient); tinted primary button. The CTA has no backend yet — it only
+ * closes the sheet.
  */
 function TopupSheet({
   allowanceLabel,
@@ -1168,7 +1155,7 @@ function TopupSheet({
         position: "fixed",
         inset: 0,
         zIndex: 50,
-        background: "rgba(4,5,8,0.78)",
+        background: "rgba(8,8,8,0.78)",
         backdropFilter: "blur(6px)",
         WebkitBackdropFilter: "blur(6px)",
         display: "flex",
@@ -1181,14 +1168,13 @@ function TopupSheet({
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "min(440px, calc(100vw - 40px))",
-          background:
-            "radial-gradient(120% 88% at 50% -18%, rgba(var(--s-rgb, 85,153,255),0.10), transparent 66%), linear-gradient(180deg, #0c0f16 0%, #090b10 100%)",
-          border: "1px solid rgba(var(--s-rgb, 85,153,255),0.20)",
+          background: "var(--ph-black)",
+          border: "1px solid rgba(var(--ph-accent-rgb),0.20)",
           borderRadius: 16,
           boxShadow:
             "0 0 0 1px rgba(255,253,253,0.03), 0 30px 80px -20px rgba(0,0,0,0.75)",
           padding: 28,
-          color: "#FFFDFD",
+          color: "var(--ph-white)",
         }}
       >
         <p
@@ -1196,7 +1182,7 @@ function TopupSheet({
           style={{
             fontSize: 16,
             fontWeight: 500,
-            color: "#FFFDFD",
+            color: "var(--ph-white)",
             margin: "0 0 10px",
           }}
         >
@@ -1238,11 +1224,11 @@ function TopupSheet({
           data-polaris-topup-cta
           style={{
             width: "100%",
-            border: "1px solid rgba(var(--s-rgb, 85,153,255),0.38)",
+            border: "1px solid rgba(var(--ph-accent-rgb),0.38)",
             borderRadius: 10,
             padding: "12px 16px",
-            background: "rgba(var(--s-rgb, 85,153,255),0.10)",
-            color: "#FFFDFD",
+            background: "rgba(var(--ph-accent-rgb),0.10)",
+            color: "var(--ph-white)",
             fontSize: 13,
             fontWeight: 500,
             fontFamily: "inherit",
@@ -1284,13 +1270,15 @@ function SendButton({
       disabled={disabled}
       data-testid={testId}
       aria-label="send"
+      // Filled with the accent: accent text on hover would vanish.
+      data-ph-hover="off"
       style={{
         background: ACCENT,
         border: "none",
         borderRadius: "50%",
         width: 30,
         height: 30,
-        color: "#06060a",
+        color: "var(--ph-black)",
         fontSize: 14,
         cursor: disabled ? "default" : "pointer",
         flexShrink: 0,
@@ -1325,9 +1313,10 @@ const textareaStyle: CSSProperties = {
 
 const questionCardStyle: CSSProperties = {
   padding: "14px 16px",
-  border: "1px solid #171717",
+  border: "1px solid rgba(255,253,253,0.07)",
   borderRadius: 10,
   background: "transparent",
+  color: "rgba(255,253,253,0.8)",
   cursor: "pointer",
   marginBottom: 6,
   textAlign: "left",
@@ -1340,7 +1329,7 @@ const chipStyle: CSSProperties = {
   fontFamily: "inherit",
   fontSize: 13,
   padding: "7px 15px",
-  border: "1px solid #1e1e1e",
+  border: "1px solid rgba(255,253,253,0.08)",
   borderRadius: 20,
   background: "transparent",
   color: "rgba(255,253,253,0.5)",
@@ -1350,9 +1339,10 @@ const chipStyle: CSSProperties = {
 
 const threadRowStyle: CSSProperties = {
   padding: "12px 16px",
-  border: "1px solid #1a1a1a",
+  border: "1px solid rgba(255,253,253,0.07)",
   borderRadius: 9,
-  background: "#090909",
+  background: "rgba(255,253,253,0.01)",
+  color: "rgba(255,253,253,0.5)",
   cursor: "pointer",
   marginBottom: 6,
   width: "100%",
