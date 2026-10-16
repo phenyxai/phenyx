@@ -1,15 +1,8 @@
 import { HttpException, Injectable, Logger } from "@nestjs/common";
-import { randomBytes } from "crypto";
 import { SupabaseService } from "../supabase/supabase.service";
 import { EncryptionService } from "../common/encryption.service";
-import { PassphraseService, PASSPHRASE_ALGO } from "../auth/passphrase.service";
-import {
-  AccountCloseDto,
-  AccountPassphraseChangeDto,
-  closeAccountError,
-  passphraseChangeError,
-  readPassphrase,
-} from "./account.dto";
+import { ConfirmCodeService, readCode } from "../auth/confirm-code.service";
+import { AccountCloseDto, closeAccountError } from "./account.dto";
 import { scrubCredentials } from "./account.redaction";
 
 /**
@@ -20,8 +13,7 @@ import { scrubCredentials } from "./account.redaction";
  *   • export   — a single portable JSON dump of everything observed about the
  *                owner, with Polaris turns decrypted owner-side and a hard "no
  *                token/JWT ever leaves" guarantee (see {@link scrubCredentials}).
- *   • close    — two-gate destroy: current passphrase + typed confirmation.
- *   • passphrase — rotate the returning passphrase after proving the current one.
+ *   • close    — two-gate destroy: an emailed confirm code + typed confirmation.
  *
  * Freeze/pause is gone: disconnecting through Onairos is the only stop.
  */
@@ -32,7 +24,7 @@ export class AccountService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly encryption: EncryptionService,
-    private readonly passphrase: PassphraseService
+    private readonly confirmCode: ConfirmCodeService
   ) {}
 
   // --------------------------------------------------------------------------
@@ -175,8 +167,8 @@ export class AccountService {
   // --------------------------------------------------------------------------
 
   /**
-   * Permanently close the account. Checks run in fill order: passphrase first,
-   * then the typed confirmation phrase. Rejected (400) before anything is
+   * Permanently close the account. Checks run in fill order: the emailed
+   * confirm code first, then the typed confirmation phrase. Rejected (400) before anything is
    * touched. Deletes the auth user via the service role, which cascades to every
    * per-user table. Irreversible. Logs only `{ user_id, timestamp }` — never any
    * content.
@@ -185,19 +177,13 @@ export class AccountService {
     userId: string,
     body: AccountCloseDto | undefined
   ): Promise<{ deleted: true }> {
-    const passphrase = readPassphrase(body?.passphrase);
-    const fieldError = closeAccountError(passphrase, body?.confirmation);
+    const code = readCode(body?.code);
+    const fieldError = closeAccountError(code, body?.confirmation);
     if (fieldError) {
       throw new HttpException({ error: fieldError }, 400);
     }
 
-    const verified = await this.verifyCurrentPassphrase(userId, passphrase);
-    if (!verified) {
-      throw new HttpException(
-        { error: "enter your passphrase to confirm it is you." },
-        400
-      );
-    }
+    await this.confirmCode.assertValid(userId, code);
 
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase.auth.admin.deleteUser(userId);
@@ -210,64 +196,6 @@ export class AccountService {
       JSON.stringify({ event: "account_deleted", user_id: userId, ts: new Date().toISOString() })
     );
     return { deleted: true };
-  }
-
-  // --------------------------------------------------------------------------
-  // Passphrase change
-  // --------------------------------------------------------------------------
-
-  async changePassphrase(
-    userId: string,
-    body: AccountPassphraseChangeDto | undefined
-  ): Promise<{ updated: true }> {
-    const current = readPassphrase(body?.currentPassphrase);
-    const next = readPassphrase(body?.newPassphrase);
-    const fieldError = passphraseChangeError(current, next);
-    if (fieldError) {
-      throw new HttpException({ error: fieldError }, 400);
-    }
-
-    const verified = await this.verifyCurrentPassphrase(userId, current);
-    if (!verified) {
-      throw new HttpException(
-        { error: "enter your current passphrase to confirm it is you." },
-        400
-      );
-    }
-
-    const newHash = await this.passphrase.hash(next);
-    const supabase = this.supabaseService.getClient();
-    const { error: updateErr } = await supabase
-      .from("user_profiles")
-      .update({ passphrase_hash: newHash, passphrase_algo: PASSPHRASE_ALGO })
-      .eq("id", userId);
-    if (updateErr) {
-      this.logger.error(`passphrase change failed for ${userId}: ${updateErr.message}`);
-      throw new HttpException({ error: "could not update your passphrase." }, 500);
-    }
-
-    // Rotate the unused GoTrue password so existing sessions must re-enter.
-    const { error: rotateErr } = await supabase.auth.admin.updateUserById(userId, {
-      password: randomBytes(32).toString("hex"),
-    });
-    if (rotateErr) {
-      this.logger.error(`session rotate after passphrase change failed: ${rotateErr.message}`);
-    }
-
-    return { updated: true };
-  }
-
-  /** True when the typed passphrase matches the stored Argon2id hash. */
-  async verifyCurrentPassphrase(userId: string, passphrase: string): Promise<boolean> {
-    if (!passphrase.trim()) return false;
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from("user_profiles")
-      .select("passphrase_hash")
-      .eq("id", userId)
-      .maybeSingle();
-    if (error || !data?.passphrase_hash) return false;
-    return this.passphrase.verify(data.passphrase_hash as string, passphrase);
   }
 
   /**

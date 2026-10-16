@@ -16,19 +16,13 @@ import {
 } from "@/lib/onairos-result";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { apiFetch } from "@/lib/api-client";
+import { useSessionColor } from "@/contexts/session-color-context";
 import {
   FORMATION_ANIMATION_DURATION_MS,
   assignParticlesToNodes,
   formationTimeline,
 } from "@/lib/constellation-reveal";
 import { ALL_PILLARS, EDGES, STAR_RADIUS, fitShape } from "@/lib/constellation-shape";
-
-const STELLAR_PALETTE = [
-  "#CC3300", "#E84422", "#E87722", "#E8B822",
-  "#D4C87A", "#C8C8C8", "#88AAEE", "#77BBFF",
-  "#5599FF", "#4488EE", "#3366DD", "#2255CC",
-  "#1144BB", "#0033AA"
-];
 
 // ============================================================================
 // Onboarding step machine (PHE-14 foundation)
@@ -199,7 +193,9 @@ export default function OnboardingPage() {
 
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<OnboardingStep>("fork");
-  const [stellarColor, setStellarColor] = useState("#5599FF");
+  // PHE-98: the person's accent, from SessionColorProvider (which also owns the
+  // CSS vars). Canvas code below needs it as a hex.
+  const { sessionColor: stellarColor } = useSessionColor();
   const [userId, setUserId] = useState<string | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -223,7 +219,7 @@ export default function OnboardingPage() {
   const connectionCompletedRef = useRef(false);
 
   // --------------------------------------------------------------------------
-  // Init: stellar color, reduced-motion, user, and resume-on-load.
+  // Init: reduced-motion, user, and resume-on-load.
   // Reads persisted onboarding_step and renders the shell at the saved step.
   // - "done"        → route to /constellation (dashboard); never render shell.
   // - null/"welcome" → default to "fork" (welcome already completed).
@@ -235,26 +231,15 @@ export default function OnboardingPage() {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setPrefersReducedMotion(mediaQuery.matches);
 
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) {
-      setStellarColor(stored);
-      document.documentElement.style.setProperty("--color-stellar", stored);
-    }
-
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
         const { data: profile } = await supabase
           .from("user_profiles")
-          .select("stellar_color, onboarding_step")
+          .select("onboarding_step")
           .eq("id", user.id)
           .single();
-
-        if (profile?.stellar_color) {
-          setStellarColor(profile.stellar_color);
-          document.documentElement.style.setProperty("--color-stellar", profile.stellar_color);
-        }
 
         const saved = profile?.onboarding_step as OnboardingStep | null | undefined;
         if (saved === "done") {
@@ -294,7 +279,9 @@ export default function OnboardingPage() {
         vx: (Math.random() - 0.5) * 0.4,
         vy: (Math.random() - 0.5) * 0.4,
         radius: 0.8 + Math.random() * 1.4,
-        color: STELLAR_PALETTE[Math.floor(Math.random() * STELLAR_PALETTE.length)],
+        // PHE-98: ambient dust is white (--ph-white); the accent is kept for
+        // the constellation itself.
+        color: "var(--ph-white)",
         opacity: 0.10 + Math.random() * 0.08
       });
     }
@@ -495,7 +482,7 @@ export default function OnboardingPage() {
   }, [userId, setOnboardingStep]);
 
   if (!mounted) {
-    return <div style={{ minHeight: "100vh", background: "#0A0A0A" }} />;
+    return <div style={{ minHeight: "100vh", background: "var(--ph-black)" }} />;
   }
 
   const isWalkthrough =
@@ -506,7 +493,7 @@ export default function OnboardingPage() {
     step === "connect";
 
   return (
-    <main style={{ minHeight: "100vh", background: "#0A0A0A", position: "relative", overflow: "hidden" }}>
+    <main style={{ minHeight: "100vh", background: "var(--ph-black)", position: "relative", overflow: "hidden" }}>
       {/* Particle canvas (reused infra) */}
       <canvas
         ref={canvasRef}
@@ -578,7 +565,7 @@ export default function OnboardingPage() {
                 ...fadeDelay(FORK_DELAYS[2]),
                 fontSize: "14.5px",
                 fontWeight: 300,
-                color: "#888",
+                color: "rgba(255,253,253,0.53)",
                 lineHeight: 1.7,
               }}
             >
@@ -604,16 +591,6 @@ export default function OnboardingPage() {
                 transition: "all 0.2s ease",
                 width: "100%",
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#FFFDFD";
-                e.currentTarget.style.color = "#0A0A0A";
-                e.currentTarget.style.borderColor = "#FFFDFD";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = stellarColor;
-                e.currentTarget.style.borderColor = stellarColor;
-              }}
               onFocus={(e) => {
                 e.currentTarget.style.outline = `2px solid ${stellarColor}`;
                 e.currentTarget.style.outlineOffset = "2px";
@@ -636,15 +613,13 @@ export default function OnboardingPage() {
                   ...fadeDelay(FORK_DELAYS[4]),
                   background: "none",
                   border: "none",
-                  color: "#555",
+                  color: "rgba(255,253,253,0.33)",
                   fontSize: "12px",
                   cursor: "pointer",
                   fontFamily: "inherit",
                   transition: "color 0.2s ease",
                   width: "100%",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#999")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
                 onFocus={(e) => {
                   e.currentTarget.style.outline = `2px solid ${stellarColor}`;
                   e.currentTarget.style.outlineOffset = "2px";
@@ -1183,7 +1158,7 @@ function RevealScreen({
         position: "fixed",
         inset: 0,
         zIndex: 5,
-        background: "#0A0A0A",
+        background: "var(--ph-black)",
         opacity: !intro ? 0 : screenFade ? 0 : 1,
         transition: `opacity ${screenFade ? FORMATION.screenFadeDurationMs : FORMATION.loadFadeDurationMs}ms ease`,
         pointerEvents: "none",
@@ -1206,7 +1181,7 @@ function RevealScreen({
           fontWeight: 300,
           letterSpacing: "0.18em",
           textTransform: "lowercase",
-          color: "#888",
+          color: "rgba(255,253,253,0.53)",
           opacity: loadFade || !loadVisible ? 0 : 0.85,
           transition: `opacity ${loadFade ? FORMATION.loadFadeDurationMs : FORMATION.labelFadeDurationMs}ms ease`,
         }}
@@ -1227,7 +1202,7 @@ function RevealScreen({
           fontSize: "22px",
           fontWeight: 300,
           letterSpacing: "0.01em",
-          color: "#FFFDFD",
+          color: "var(--ph-white)",
           opacity: revealVisible ? 1 : 0,
           transition: `opacity ${reducedMotion ? 600 : FORMATION.revealInDurationMs}ms ease`,
         }}
@@ -1294,7 +1269,7 @@ function ConnectScreen({
           ...fadeDelay(CONNECT_DELAYS[2]),
           fontSize: "14.5px",
           fontWeight: 300,
-          color: "#888",
+          color: "rgba(255,253,253,0.53)",
           lineHeight: 1.7,
         }}
       >
@@ -1338,7 +1313,7 @@ function ConnectScreen({
               style={{
                 fontSize: "13px",
                 fontWeight: 300,
-                color: "#999",
+                color: "rgba(255,253,253,0.6)",
                 lineHeight: 1.6,
               }}
             >
@@ -1354,7 +1329,7 @@ function ConnectScreen({
           ...fadeDelay(CONNECT_DELAYS[4]),
           fontSize: "12px",
           fontWeight: 300,
-          color: "#555",
+          color: "rgba(255,253,253,0.33)",
           lineHeight: 1.6,
           marginTop: "14px",
         }}
@@ -1378,7 +1353,7 @@ function ConnectScreen({
           style={{
             fontSize: "13px",
             fontWeight: 400,
-            color: "#E84422",
+            color: "var(--ph-red)",
             lineHeight: 1.5,
             marginTop: "16px",
           }}
@@ -1405,15 +1380,13 @@ function ConnectScreen({
           style={{
             background: "none",
             border: "none",
-            color: "#555",
+            color: "rgba(255,253,253,0.33)",
             fontSize: "12px",
             cursor: "pointer",
             fontFamily: "inherit",
             transition: "color 0.2s ease",
             width: "100%",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#999")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
           onFocus={(e) => {
             e.currentTarget.style.outline = `2px solid ${stellarColor}`;
             e.currentTarget.style.outlineOffset = "2px";
@@ -1678,7 +1651,7 @@ function WalkthroughScreen({
                   ...reveal,
                   fontSize: block.kind === "line" ? "20px" : "15px",
                   fontWeight: 300,
-                  color: block.stellar ? stellarColor : "#888",
+                  color: block.stellar ? stellarColor : "rgba(255,253,253,0.53)",
                   lineHeight: 1.7,
                   marginBottom: block.kind === "line" ? "22px" : undefined,
                 }}
@@ -1709,14 +1682,14 @@ function WalkthroughScreen({
                     key={item.title}
                     style={{
                       padding: "0 0 0 16px",
-                      borderLeft: "1px solid rgba(175,198,242,0.26)",
+                      borderLeft: "1px solid rgba(var(--ph-accent-rgb),0.26)",
                     }}
                   >
                     <h2
                       style={{
                         fontSize: "15px",
                         fontWeight: 400,
-                        color: "#FFFDFD",
+                        color: "var(--ph-white)",
                         lineHeight: 1.4,
                         margin: "0 0 4px",
                       }}
@@ -1727,7 +1700,7 @@ function WalkthroughScreen({
                       style={{
                         fontSize: "13.5px",
                         fontWeight: 300,
-                        color: "#999",
+                        color: "rgba(255,253,253,0.6)",
                         lineHeight: 1.6,
                         maxWidth: "44ch",
                         margin: 0,
@@ -1782,7 +1755,7 @@ function WalkthroughScreen({
                         margin: 0,
                         fontSize: "13px",
                         fontWeight: 300,
-                        color: "#888",
+                        color: "rgba(255,253,253,0.53)",
                         lineHeight: 1.5,
                       }}
                     >
@@ -1818,17 +1791,6 @@ function WalkthroughScreen({
                   width: "100%",
                   transition: `${REVEAL_TRANSITION}, background 0.2s ease, color 0.2s ease, border-color 0.2s ease`,
                 }}
-                onMouseEnter={(e) => {
-                  if (!shown) return;
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = stellarColor;
-                  e.currentTarget.style.borderColor = stellarColor;
-                }}
                 onFocus={(e) => {
                   e.currentTarget.style.outline = `2px solid ${stellarColor}`;
                   e.currentTarget.style.outlineOffset = "2px";
@@ -1855,19 +1817,12 @@ function WalkthroughScreen({
                     pointerEvents: shown ? "all" : "none",
                     background: "none",
                     border: "none",
-                    color: "#555",
+                    color: "rgba(255,253,253,0.33)",
                     fontSize: "12px",
                     cursor: shown ? "pointer" : "default",
                     fontFamily: "inherit",
                     width: "100%",
                     transition: `${REVEAL_TRANSITION}, color 0.2s ease`,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!shown) return;
-                    e.currentTarget.style.color = "#999";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = "#555";
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.outline = `2px solid ${stellarColor}`;
@@ -2027,10 +1982,10 @@ function PolarisIntroScreen({
                   color: block.stellar
                     ? stellarColor
                     : block.muted
-                      ? "#666"
+                      ? "rgba(255,253,253,0.4)"
                       : block.kind === "line"
-                        ? "#FFFDFD"
-                        : "#888",
+                        ? "var(--ph-white)"
+                        : "rgba(255,253,253,0.53)",
                   lineHeight: 1.7,
                   marginBottom: block.kind === "line" ? "22px" : undefined,
                 }}
@@ -2073,7 +2028,7 @@ function PolarisIntroScreen({
                   style={{
                     fontSize: "14px",
                     fontWeight: 400,
-                    color: "#CFCFCF",
+                    color: "rgba(255,253,253,0.8)",
                     lineHeight: 1.5,
                     marginBottom: "10px",
                   }}
@@ -2084,7 +2039,7 @@ function PolarisIntroScreen({
                   style={{
                     fontSize: "14px",
                     fontWeight: 300,
-                    color: "#888",
+                    color: "rgba(255,253,253,0.53)",
                     lineHeight: 1.6,
                     marginBottom: block.src ? "10px" : 0,
                   }}
@@ -2096,7 +2051,7 @@ function PolarisIntroScreen({
                     style={{
                       fontSize: "11px",
                       fontWeight: 300,
-                      color: "#555",
+                      color: "rgba(255,253,253,0.33)",
                       letterSpacing: "0.02em",
                       margin: 0,
                     }}
@@ -2132,17 +2087,6 @@ function PolarisIntroScreen({
                   width: "100%",
                   transition: `${REVEAL_TRANSITION}, background 0.2s ease, color 0.2s ease, border-color 0.2s ease`,
                 }}
-                onMouseEnter={(e) => {
-                  if (!shown) return;
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = stellarColor;
-                  e.currentTarget.style.borderColor = stellarColor;
-                }}
                 onFocus={(e) => {
                   e.currentTarget.style.outline = `2px solid ${stellarColor}`;
                   e.currentTarget.style.outlineOffset = "2px";
@@ -2168,19 +2112,12 @@ function PolarisIntroScreen({
                     pointerEvents: shown ? "all" : "none",
                     background: "none",
                     border: "none",
-                    color: "#555",
+                    color: "rgba(255,253,253,0.33)",
                     fontSize: "12px",
                     cursor: shown ? "pointer" : "default",
                     fontFamily: "inherit",
                     width: "100%",
                     transition: `${REVEAL_TRANSITION}, color 0.2s ease`,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!shown) return;
-                    e.currentTarget.style.color = "#999";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = "#555";
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.outline = `2px solid ${stellarColor}`;

@@ -5,7 +5,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { hexToRgb } from '@/lib/stellar'
+import { useSessionColor } from '@/contexts/session-color-context'
 import {
   Dialog,
   DialogOverlay,
@@ -25,7 +25,6 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 
-import { PassphraseModal } from './passphrase'
 import { NotificationsModal } from './notifications'
 import { ConnectionsModal } from './connections'
 import { DataManagementModal } from './data-management'
@@ -47,7 +46,6 @@ import { SubscriptionModal } from './subscription'
 // ---------------------------------------------------------------------------
 
 export type SettingsModalId =
-  | 'passphrase'
   | 'notifications'
   | 'my-connections'
   | 'data-management'
@@ -57,8 +55,6 @@ export type SettingsModalId =
   | 'feedback'
   | 'upgrade'
   | 'subscription'
-
-const STELLAR_DEFAULT = '#5599FF'
 
 interface SettingsModalsContextValue {
   /** The currently open modal id, or null when nothing is open. */
@@ -85,22 +81,9 @@ export function SettingsModalsProvider({
   children: React.ReactNode
 }) {
   const [openId, setOpenId] = React.useState<SettingsModalId | null>(null)
-  const [stellarColor, setStellarColor] = React.useState(STELLAR_DEFAULT)
-
-  React.useEffect(() => {
-    const stored = localStorage.getItem('phenyx_stellar_color')
-    if (stored) setStellarColor(stored)
-    // The shell paints with `--s` / `--s-rgb` (sidebar orb, plan pill, gear).
-    // SessionColorProvider in the root layout owns those vars and reconciles
-    // them against user_profiles.stellar_color; this only fills them on a fresh
-    // load where nothing has set them yet, so the shell never renders colourless.
-    const root = document.documentElement
-    if (!root.style.getPropertyValue('--s')) {
-      const color = stored || STELLAR_DEFAULT
-      root.style.setProperty('--s', color)
-      root.style.setProperty('--s-rgb', hexToRgb(color))
-    }
-  }, [])
+  // PHE-98: the accent comes from SessionColorProvider (root layout), which
+  // publishes --ph-accent; --stellar / --stellar-rgb alias it in globals.css.
+  const { sessionColor: stellarColor } = useSessionColor()
 
   const openModal = React.useCallback((id: SettingsModalId) => setOpenId(id), [])
   const closeModal = React.useCallback(() => setOpenId(null), [])
@@ -119,7 +102,6 @@ export function SettingsModalsProvider({
           if (!next) closeModal()
         }}
       >
-        {openId === 'passphrase' && <PassphraseModal />}
         {openId === 'notifications' && <NotificationsModal />}
         {openId === 'my-connections' && <ConnectionsModal />}
         {openId === 'data-management' && <DataManagementModal />}
@@ -163,24 +145,18 @@ const contentBaseClassName = cn(
   'overflow-y-auto rounded-2xl border p-6 duration-200',
 )
 
-/** The modal surface: an accent-tinted light source over a blue-black ground. */
-function modalSurfaceStyle(stellarColor: string): React.CSSProperties {
-  const rgb = hexToRgb(stellarColor)
-  return {
-    background: `radial-gradient(120% 88% at 50% -18%, rgba(${rgb},0.10), transparent 66%), linear-gradient(180deg, #0c0f16 0%, #090b10 100%)`,
-    borderColor: `rgba(${rgb},0.20)`,
-    boxShadow:
-      '0 0 0 1px rgba(255,253,253,0.03), 0 30px 80px -20px rgba(0,0,0,0.75)',
-    color: '#FFFDFD',
-    '--stellar': stellarColor,
-    '--stellar-rgb': rgb,
-  } as React.CSSProperties
+/** The modal surface (PHE-98): flat black with a faint accent edge, no gradient. */
+const MODAL_SURFACE_STYLE: React.CSSProperties = {
+  background: 'var(--ph-black)',
+  borderColor: 'rgba(var(--ph-accent-rgb),0.20)',
+  boxShadow: '0 0 0 1px rgba(255,253,253,0.03), 0 30px 80px -20px rgba(0,0,0,0.75)',
+  color: 'var(--ph-white)',
 }
 
 /**
- * Styled dialog content shared by every settings modal. Wires the stellar accent
- * to the `--stellar` / `--stellar-rgb` CSS vars so buttons/toggles can pick it
- * up via Tailwind, and renders the close button. Pass `aria-describedby={undefined}`
+ * Styled dialog content shared by every settings modal. Buttons and toggles
+ * read the accent from the `--stellar` / `--stellar-rgb` aliases of
+ * `--ph-accent`, and this renders the close button. Pass `aria-describedby={undefined}`
  * for modals without a subtitle to keep Radix from warning about a missing
  * description.
  */
@@ -190,20 +166,19 @@ export function SettingsDialogContent({
   children,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content>) {
-  const { stellarColor } = useSettingsModals()
   return (
     <DialogPortal>
       <DialogOverlay className="motion-reduce:animate-none" />
       <DialogPrimitive.Content
         data-slot="settings-dialog-content"
         className={cn(contentBaseClassName, className)}
-        style={{ ...modalSurfaceStyle(stellarColor), ...style }}
+        style={{ ...MODAL_SURFACE_STYLE, ...style }}
         {...props}
       >
         {children}
         <DialogPrimitive.Close
           aria-label="close"
-          className="absolute top-4 right-4 rounded-sm text-[#FFFDFD]/55 opacity-80 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-[var(--stellar)] focus:outline-hidden [&_svg]:size-4"
+          className="absolute top-4 right-4 rounded-sm text-ph-white/55 opacity-80 hover:opacity-100 focus:ring-2 focus:ring-[var(--stellar)] focus:outline-hidden [&_svg]:size-4"
         >
           <XIcon />
           <span className="sr-only">close</span>
@@ -223,7 +198,7 @@ export function ModalHeading({
 }) {
   return (
     <div className="flex flex-col gap-2 pr-6">
-      <DialogTitle className="text-base leading-none font-medium lowercase text-[#FFFDFD]">
+      <DialogTitle className="text-base leading-none font-medium lowercase text-ph-white">
         {title}
       </DialogTitle>
       {subtitle && (
@@ -244,7 +219,7 @@ export function GhostButton({
     <button
       type="button"
       className={cn(
-        'rounded-lg border border-[var(--stellar)] px-6 py-2.5 text-xs text-[var(--stellar)] transition-colors hover:bg-[#FFFDFD] hover:text-[#0A0A0A] disabled:cursor-not-allowed disabled:opacity-50',
+        'rounded-lg border border-[var(--stellar)] px-6 py-2.5 text-xs text-[var(--stellar)] hover:bg-[rgba(var(--stellar-rgb),0.08)] disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -265,7 +240,7 @@ export function PrimaryButton({
     <button
       type="button"
       className={cn(
-        'w-full rounded-[10px] border border-[rgba(var(--stellar-rgb),0.38)] bg-[rgba(var(--stellar-rgb),0.10)] px-6 py-3 text-xs font-medium text-[#FFFDFD] transition-colors hover:bg-[rgba(var(--stellar-rgb),0.18)] disabled:cursor-not-allowed disabled:opacity-50',
+        'w-full rounded-[10px] border border-[rgba(var(--stellar-rgb),0.38)] bg-[rgba(var(--stellar-rgb),0.10)] px-6 py-3 text-xs font-medium text-ph-white hover:bg-[rgba(var(--stellar-rgb),0.18)] disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -273,7 +248,7 @@ export function PrimaryButton({
   )
 }
 
-/** Danger-styled button for destructive actions. */
+/** Danger-styled button for destructive actions (semantic red, PHE-98). */
 export function DangerButton({
   className,
   ...props
@@ -282,7 +257,7 @@ export function DangerButton({
     <button
       type="button"
       className={cn(
-        'rounded-lg border border-[#3a1010] px-5 py-2.5 text-xs text-[#6a2020] transition-colors hover:bg-[#3a1010] hover:text-[#FFFDFD] disabled:cursor-not-allowed disabled:opacity-50',
+        'rounded-lg border border-ph-red/30 px-5 py-2.5 text-xs text-ph-red/80 hover:bg-ph-red/10 disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -310,32 +285,31 @@ export function DangerConfirm({
   cancelLabel?: string
   onConfirm: () => void | Promise<void>
 }) {
-  const { stellarColor } = useSettingsModals()
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
       <AlertDialogContent
         className="rounded-2xl motion-reduce:animate-none motion-reduce:transition-none"
         style={{
-          ...modalSurfaceStyle(stellarColor),
-          borderColor: '#3a1010',
+          ...MODAL_SURFACE_STYLE,
+          borderColor: 'color-mix(in srgb, var(--ph-red) 30%, transparent)',
         }}
       >
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-base font-medium lowercase text-[#FFFDFD]">
+          <AlertDialogTitle className="text-base font-medium lowercase text-ph-white">
             {title}
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-xs leading-relaxed text-[#888]">
+          <AlertDialogDescription className="text-xs leading-relaxed text-ph-white/55">
             {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="border-[#333] bg-transparent text-xs text-[#888] hover:bg-[#1a1a1a] hover:text-[#FFFDFD]">
+          <AlertDialogCancel className="border-ph-white/20 bg-transparent text-xs text-ph-white/55 hover:bg-ph-white/[0.04]">
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={() => onConfirm()}
-            className="border-none bg-[#3a1010] text-xs text-[#FFFDFD] hover:bg-[#511616]"
+            className="border-none bg-ph-red/20 text-xs text-ph-white hover:bg-ph-red/30"
           >
             {confirmLabel}
           </AlertDialogAction>
@@ -345,7 +319,7 @@ export function DangerConfirm({
   )
 }
 
-/** Inline status line — stellar for success, red for error. */
+/** Inline status line — semantic green for success, red for error (PHE-98). */
 export function StatusLine({
   message,
   tone = 'success',
@@ -359,7 +333,7 @@ export function StatusLine({
       role="status"
       aria-live="polite"
       className="text-xs"
-      style={{ color: tone === 'error' ? '#c97a6a' : 'var(--stellar)' }}
+      style={{ color: tone === 'error' ? 'var(--ph-red)' : 'var(--ph-green)' }}
     >
       {message}
     </p>
@@ -370,14 +344,14 @@ export function StatusLine({
 export function ModalErr({ message }: { message: string }) {
   if (!message) return null
   return (
-    <p role="alert" className="text-[11.5px] leading-normal text-[#c97a6a]">
+    <p role="alert" className="text-[11.5px] leading-normal text-ph-red">
       {message}
     </p>
   )
 }
 
 const fieldInputClassName =
-  'w-full border-0 border-b border-[#1a1a1a] bg-transparent px-0 py-2 text-base text-[#FFFDFD] outline-none placeholder:text-[14px] placeholder:font-light placeholder:text-[#FFFDFD]/50 focus:border-[var(--stellar)]'
+  'w-full border-0 border-b border-ph-white/7 bg-transparent px-0 py-2 text-base text-ph-white outline-none placeholder:text-[14px] placeholder:font-light placeholder:text-ph-white/50 focus:border-ph-accent'
 
 /** Label + input matching the v67 modal field. */
 export function ModalField({
@@ -399,7 +373,7 @@ export function ModalField({
 }) {
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-[11.5px] font-medium tracking-[0.1em] text-[#FFFDFD]/50 uppercase">
+      <span className="text-[11.5px] font-medium tracking-[0.1em] text-ph-white/50 uppercase">
         {label}
       </span>
       <input

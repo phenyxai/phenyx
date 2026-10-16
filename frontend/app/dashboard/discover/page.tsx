@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api-client";
 import type { Discovery } from "@/lib/discover";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 import { DiscoverCarousel } from "@/components/phenyx/discover-carousel";
+import { PanelHeader } from "@/components/phenyx/panel-header";
 
 // ============================================================================
 // Discover tab (PHE-103, spec doc 3)
@@ -53,19 +54,20 @@ export default function DiscoverTabPage() {
     <section className="flex min-h-screen flex-col px-6 pb-20 pt-6 lg:px-10">
       <IntroBanner tab="discover" copy={INTRO_COPY.discover} className="mb-2 shrink-0" />
 
-      <header className="float-in pb-8 pt-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#FFFDFD]/52">discover</p>
-        <p className="mt-2 text-[13px] font-light lowercase text-[#FFFDFD]/45">
-          single connections across your platforms, one at a time.
-        </p>
+      <header className="float-in pt-8">
+        <PanelHeader
+          eyebrow="discover"
+          title="what could be next?"
+          sub="single connections across your platforms, one at a time."
+        />
       </header>
 
       {discoveries === null ? (
-        <p className="float-in text-[13px] font-light text-[#FFFDFD]/35" style={delay(0.12)}>
+        <p className="float-in text-[13px] font-light text-ph-white/35" style={delay(0.12)}>
           looking across your platforms for what surfaced. the first set can take a minute.
         </p>
       ) : discoveries.length === 0 ? (
-        <p className="float-in max-w-[52ch] text-[15px] font-light leading-[1.55] text-[#FFFDFD]/40" style={delay(0.12)}>
+        <p className="float-in max-w-[52ch] text-[15px] font-light leading-[1.55] text-ph-white/40" style={delay(0.12)}>
           nothing has surfaced yet. connect more platforms and come back soon.
         </p>
       ) : (

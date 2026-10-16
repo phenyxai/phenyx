@@ -16,14 +16,15 @@ export interface TierState {
 /**
  * Reads the signed-in user's tier from user_profiles (keyed by `id`, = auth.users.id)
  * and exposes { tier, isPro } where isPro = hasFullAccess(tier) — true for pro and
- * gifted. The single tier source for the dashboard; Daily observation gating,
- * Constellation timeline gating, and the you tab's plan badge all read from here.
+ * gifted. The single tier source for the dashboard; Constellation timeline
+ * gating, the insights tab's plan badge, and the shell's tier beside the logo
+ * all read from here.
  *
  * Defaults to "free" until the row resolves (and when signed out) so tier-gated UI
  * fails closed — a pro surface is never shown to an unknown/unauthenticated user.
  *
  * Tier is read directly via the supabase browser client (same path as
- * fetchProfile / the upgrade + daily surfaces); there is no backend tier endpoint.
+ * fetchProfile / the upgrade surfaces); there is no backend tier endpoint.
  */
 export function useTier(): TierState {
   const [tier, setTier] = useState<Tier>("free");

@@ -16,9 +16,7 @@ import {
 
 /** What full includes (v244 prototype, subscription modal). */
 const FULL_INCLUDED = [
-  'every daily observation',
   'more polaris room each week',
-  'a daily point to stay close to',
   'a weekly look at what shifted',
   'a yearly look across your timeline',
 ]
@@ -202,10 +200,10 @@ export function SubscriptionModal() {
       ) : (
         <div>
           <div className="mb-1 flex items-baseline gap-3">
-            <span className="text-[22px] font-normal text-[#FFFDFD]">
+            <span className="text-[22px] font-normal text-ph-white">
               {planName}
             </span>
-            <span className="text-[13px] text-[rgba(var(--stellar-rgb),0.9)]">
+            <span className="text-[13px] text-[rgba(var(--ph-accent-rgb),0.9)]">
               {price}
             </span>
           </div>
@@ -213,7 +211,7 @@ export function SubscriptionModal() {
             {renewLine}
           </p>
 
-          <p className="mb-1.5 text-[10.5px] tracking-[0.14em] text-[rgba(255,253,253,0.44)] uppercase">
+          <p className="mb-1.5 text-[10.5px] tracking-[0.14em] text-[rgba(var(--ph-accent-rgb),0.8)] uppercase">
             what&apos;s included
           </p>
           <ul className="mb-[18px] flex flex-col">
@@ -222,7 +220,7 @@ export function SubscriptionModal() {
                 key={line}
                 className="flex items-start gap-2.5 border-b border-[rgba(255,253,253,0.06)] py-2 text-[12.5px] leading-relaxed text-[rgba(255,253,253,0.68)]"
               >
-                <span aria-hidden="true" className="shrink-0 text-[var(--stellar)]">
+                <span aria-hidden="true" className="shrink-0 text-[var(--ph-accent)]">
                   ✦
                 </span>
                 {line}
@@ -247,7 +245,7 @@ export function SubscriptionModal() {
                 type="button"
                 onClick={handleSwitchToFree}
                 disabled={busy}
-                className="w-full rounded-[10px] border border-[rgba(255,253,253,0.14)] bg-transparent px-6 py-3 text-xs text-[rgba(255,253,253,0.7)] transition-colors hover:border-[rgba(255,253,253,0.28)] hover:text-[#FFFDFD] disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-[10px] border border-[rgba(255,253,253,0.14)] bg-transparent px-6 py-3 text-xs text-[rgba(255,253,253,0.7)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busy ? 'loading…' : 'switch to free'}
               </button>
