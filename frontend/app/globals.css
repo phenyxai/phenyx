@@ -1353,9 +1353,55 @@ nav li > [aria-current="page"] {
 .onb-block .onb-h1 b { font-weight: 600; }
 .onb-block .onb-ey + .onb-h1 { margin-top: 0; }
 .onb-block .onb-h1 + .onb-sub { margin-top: 30px; }
-.onb-block .onb-sub { margin-bottom: 0; }
+/* PHE-125: one body size and spacing on every onboarding screen, with a little
+   more line and letter spacing so it breathes. */
+.onb-block .onb-sub {
+  margin-bottom: 0;
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.75;
+  letter-spacing: .01em;
+  color: rgba(255,253,253,.58);
+}
 .onb-block .onb-sub + .onb-sub { margin-top: 14px; }
 .onb-block .onb-stack { margin-top: 20px; }
+/* The seven chapters on the constellation explainer: one line per description.
+   The rail spans the block's side padding as well, so none of them wrap. */
+.onb-block .onb-rail {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  justify-content: center;
+  column-gap: 18px;
+  align-items: baseline;
+  margin-left: calc(-1 * var(--onb-side));
+  margin-right: calc(-1 * var(--onb-side));
+  text-align: left;
+}
+.onb-block .onb-rail dt,
+.onb-block .onb-rail dd {
+  margin: 0;
+  padding: clamp(5px, 1vh, 10px) 0;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.onb-block .onb-rail dt {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(255,253,253,.78);
+}
+.onb-block .onb-rail dd {
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: .01em;
+  color: rgba(255,253,253,.53);
+}
+@media (max-width: 400px) {
+  .onb-block .onb-rail { column-gap: 12px; }
+  .onb-block .onb-rail dt { font-size: 10px; letter-spacing: .12em; }
+  .onb-block .onb-rail dd { font-size: 12px; }
+}
 
 .onb-otp-lead { margin-top: 7px; }
 .onb-otp-address { margin-top: 0; }

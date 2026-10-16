@@ -2,18 +2,28 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   assignParticlesToNodes,
-  formationTimeline,
+  frameSeconds,
+  lineStartMs,
+  pointReady,
 } from "./constellation-reveal.ts";
 
-test("formationTimeline scales the complete reveal from one total duration", () => {
-  const faster = formationTimeline(17_085);
-  const slower = formationTimeline(23_115);
+test("a point waits for its time, then for 60% of its specks within 26px", () => {
+  const settled = [5, 10, 20, 25, 40];
+  const scattered = [5, 30, 60, 90, 120];
+  assert.equal(pointReady(settled, 999, 1000), false);
+  assert.equal(pointReady(settled, 1000, 1000), true);
+  assert.equal(pointReady(scattered, 1000, 1000), false);
+  assert.equal(pointReady(scattered, 2201, 1000), true);
+});
 
-  assert.equal(faster.completeAtMs, 17_085);
-  assert.equal(slower.completeAtMs, 23_115);
-  assert.equal(faster.condenseAtMs, 3_400);
-  assert.equal(slower.condenseAtMs, 4_600);
-  assert.ok(faster.revealAtMs < slower.revealAtMs);
+test("a line starts 0.26s after the later of its two points", () => {
+  assert.equal(lineStartMs(null, 1000), null);
+  assert.equal(lineStartMs(1000, 1500), 1760);
+});
+
+test("frame time is real elapsed time, capped", () => {
+  assert.equal(frameSeconds(1020, 1000), 0.02);
+  assert.equal(frameSeconds(5000, 1000), 0.05);
 });
 
 test("assignParticlesToNodes keeps 200 nearest claims within an even node capacity", () => {

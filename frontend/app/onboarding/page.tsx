@@ -7,7 +7,6 @@ import Link from "next/link";
 import type { OnairosCompleteData } from "onairos";
 import { OnairosButtonWrapper } from "@/components/onairos-button-wrapper";
 import { clearOnairosClientToken } from "@/lib/onairos";
-import { PolarisBadge } from "@/components/phenyx/polaris-badge";
 import { redactOnairosForProfile } from "@/lib/onairos-snapshot";
 import {
   normalizeOnairosResult,
@@ -18,9 +17,13 @@ import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { apiFetch } from "@/lib/api-client";
 import { useSessionColor } from "@/contexts/session-color-context";
 import {
-  FORMATION_ANIMATION_DURATION_MS,
+  LINE_DURATION_MS,
+  PULL_AT_MS,
+  REVEAL_AT_MS,
   assignParticlesToNodes,
-  formationTimeline,
+  frameSeconds,
+  lineStartMs,
+  pointReady,
 } from "@/lib/constellation-reveal";
 import { ALL_PILLARS, EDGES, STAR_RADIUS, fitShape } from "@/lib/constellation-shape";
 
@@ -30,19 +33,19 @@ import { ALL_PILLARS, EDGES, STAR_RADIUS, fitShape } from "@/lib/constellation-s
 // `onboarding_step` is the single source of truth for the user's position in
 // the post-auth narrative funnel. It is persisted to user_profiles so the flow
 // is resumable across refresh and across devices (see setOnboardingStep + the
-// resume logic in the init effect). The 9 values mirror the prototype go()
+// resume logic in the init effect). The 10 values mirror the prototype go()
 // router and the DB enum added in
 //   supabase/migrations/20260626000000_user_profiles_onboarding_step.sql
 //   supabase/migrations/20260907000000_onboarding_step_constellation_intro.sql
+//   supabase/migrations/20261016120000_phe125_onboarding_step_discover_intro.sql
 //
-// Flow: welcome (separate /welcome route) → fork → manifesto (s4B) →
-//       constellation_intro (s4C) → polaris_intro (s5B) → connect (s6 Onairos)
-//       → synthesizing → reveal → done (→ Constellation). s4A/s5A ship but are not on
-//       the live path.
+// Flow: welcome (separate /welcome route) → fork → manifesto ("your life so
+//       far") → constellation_intro → polaris_intro → discover_intro (PHE-125)
+//       → connect (s6 Onairos) → synthesizing → reveal → done (→ Constellation).
 //
-// The fork branches: "see how it works" → manifesto; "connect my accounts"
-// jumps straight to s6 (Onairos), bypassing manifesto + constellation_intro +
-// polaris_intro. It does NOT skip connections.
+// The fork branches: "see how it works" → manifesto; "connect my platforms"
+// jumps straight to s6 (Onairos), bypassing the four explainers. It does NOT
+// skip connections.
 // ============================================================================
 type OnboardingStep =
   | "welcome"
@@ -50,6 +53,7 @@ type OnboardingStep =
   | "manifesto"
   | "constellation_intro"
   | "polaris_intro"
+  | "discover_intro"
   | "connect"
   | "synthesizing"
   | "reveal"
@@ -62,7 +66,8 @@ const NEXT_STEP: Record<OnboardingStep, OnboardingStep> = {
   fork: "manifesto",
   manifesto: "constellation_intro",
   constellation_intro: "polaris_intro",
-  polaris_intro: "connect",
+  polaris_intro: "discover_intro",
+  discover_intro: "connect",
   connect: "synthesizing",
   synthesizing: "reveal",
   reveal: "done",
@@ -70,16 +75,16 @@ const NEXT_STEP: Record<OnboardingStep, OnboardingStep> = {
 };
 
 // Back-arrow target for each screen. On the NORMAL path s6 (connect) follows the
-// Polaris intro, so `back` returns there. The s3b skip-path reaches connect by
+// discover intro, so `back` returns there. The s3b skip-path reaches connect by
 // bypassing the walkthrough; if such a user taps back they land on the
-// polaris_intro screen (which they skipped) and the polaris_intro →
-// constellation_intro → manifesto → fork chain remains intact — a sensible,
-// non-dead-ending choice (PHE-17 decision).
+// discover_intro screen (which they skipped) and the chain back to the fork
+// remains intact — a sensible, non-dead-ending choice (PHE-17 decision).
 const PREV_STEP: Partial<Record<OnboardingStep, OnboardingStep>> = {
   manifesto: "fork",
   constellation_intro: "manifesto",
   polaris_intro: "constellation_intro",
-  connect: "polaris_intro",
+  discover_intro: "polaris_intro",
+  connect: "discover_intro",
 };
 
 // ============================================================================
@@ -88,15 +93,11 @@ const PREV_STEP: Partial<Record<OnboardingStep, OnboardingStep>> = {
 // Every screen used to carry hand-authored per-element delays and no two
 // agreed. Delays are now derived from each element's position in its list (the
 // block arrays already list elements in visual order, CTA and back last), so
-// every screen fills top-down in one rhythm. Two speeds only: manifesto lines
-// are whole sentences read one at a time, so the element after a line waits a
-// reading beat; everything else steps at the ordinary interval. An action
-// belongs to the beat before it and arrives two steps later, never after a
-// full reading pause of its own. No DOM measurement.
+// every screen fills top-down in one rhythm. An action belongs to the beat
+// before it and arrives two steps later. No DOM measurement.
 // ============================================================================
 const OB_LEAD = 90;
 const OB_STEP = 135;
-const OB_READ = 620;
 
 function cadenceOffsets(blocks: ReadonlyArray<Pick<RevealBlock, "kind">>): number[] {
   let last = 0;
@@ -106,8 +107,7 @@ function cadenceOffsets(blocks: ReadonlyArray<Pick<RevealBlock, "kind">>): numbe
       return last;
     }
     const isAction = block.kind === "cta" || block.kind === "back";
-    const afterLine = blocks[i - 1].kind === "line";
-    last += isAction ? 2 * OB_STEP : afterLine ? OB_READ : OB_STEP;
+    last += isAction ? 2 * OB_STEP : OB_STEP;
     return last;
   });
 }
@@ -129,26 +129,12 @@ const CONNECT_DELAYS = cadenceOffsets([
   { kind: "eyebrow" },
   { kind: "heading" },
   { kind: "body" },
-  { kind: "body" }, // promises
-  { kind: "body" }, // legal line
   { kind: "cta" },
   { kind: "back" },
 ]);
 
 function fadeDelay(ms: number): CSSProperties {
   return { animationDelay: `${ms}ms`, animationFillMode: "both" };
-}
-
-// "\n" inside a line's copy is a forced break (the prototype's <br>).
-function withBreaks(text: string | undefined) {
-  if (!text) return null;
-  const parts = text.split("\n");
-  return parts.map((part, i) => (
-    <Fragment key={i}>
-      {part}
-      {i < parts.length - 1 ? <br /> : null}
-    </Fragment>
-  ));
 }
 
 interface Particle {
@@ -404,7 +390,7 @@ export default function OnboardingPage() {
     // payload that carries traits but omits the platform NAMES still advances
     // (blocking there was the bug — the user connected, we just failed to read it).
     if (normalized.cancelled) {
-      setConnectNotice("connection cancelled. try again when you're ready.");
+      setConnectNotice("connection cancelled. try again when you’re ready.");
       return;
     }
     if (!normalized.ok) {
@@ -490,6 +476,7 @@ export default function OnboardingPage() {
     step === "manifesto" ||
     step === "constellation_intro" ||
     step === "polaris_intro" ||
+    step === "discover_intro" ||
     step === "connect";
 
   return (
@@ -515,6 +502,7 @@ export default function OnboardingPage() {
         {step === "manifesto" && "your life so far"}
         {step === "constellation_intro" && "your constellation, seven chapters"}
         {step === "polaris_intro" && "introducing polaris"}
+        {step === "discover_intro" && "introducing discover"}
         {step === "connect" && "connect your platforms"}
         {step === "synthesizing" && "synthesizing your constellation"}
         {step === "reveal" && "constellation reveal"}
@@ -556,20 +544,11 @@ export default function OnboardingPage() {
             </p>
 
             <h1 className="onb-h1 animate-fade-in" style={fadeDelay(FORK_DELAYS[1])}>
-              want to look around before you connect anything?
+              already know PHENYX?
             </h1>
 
-            <p
-              className="onb-sub animate-fade-in"
-              style={{
-                ...fadeDelay(FORK_DELAYS[2]),
-                fontSize: "14.5px",
-                fontWeight: 300,
-                color: "rgba(255,253,253,0.53)",
-                lineHeight: 1.7,
-              }}
-            >
-              you can connect now, or look around first. nothing moves until you choose it.
+            <p className="onb-sub animate-fade-in" style={fadeDelay(FORK_DELAYS[2])}>
+              you can go straight to connecting your platforms to form your constellation, or take a quick look around first.
             </p>
 
             {/* Primary: see how it works → manifesto (s4B) */}
@@ -602,12 +581,12 @@ export default function OnboardingPage() {
               see how it works
             </button>
 
-            {/* connect my accounts → s6 Onairos directly. Skips the walkthrough,
+            {/* connect my platforms → s6 Onairos directly. Skips the walkthrough,
                 not connections. */}
             <div className="onb-skip">
               <button
                 onClick={() => void setOnboardingStep("connect")}
-                aria-label="connect my accounts"
+                aria-label="connect my platforms"
                 className="animate-fade-in"
                 style={{
                   ...fadeDelay(FORK_DELAYS[4]),
@@ -628,7 +607,7 @@ export default function OnboardingPage() {
                   e.currentTarget.style.outline = "none";
                 }}
               >
-                connect my accounts
+                connect my platforms
               </button>
             </div>
           </div>
@@ -640,12 +619,11 @@ export default function OnboardingPage() {
         {/* ================================================================ */}
 
         {/* ================================================================ */}
-        {/* s4A/s4B — MANIFESTO MOMENT (PHE-15, fully implemented)           */}
-        {/* Variant is resolved centrally (MANIFESTO_VARIANT = "s4B"); the    */}
-        {/* gentle s4B renders, the staggered s4A ships but is unreachable.   */}
+        {/* YOUR LIFE SO FAR / manifesto (PHE-15, copy from PHE-125)         */}
         {/* ================================================================ */}
         {step === "manifesto" && (
-          <ManifestoScreen
+          <WalkthroughScreen
+            blocks={MANIFESTO_BLOCKS}
             stellarColor={stellarColor}
             reducedMotion={prefersReducedMotion}
             onContinue={() => void setOnboardingStep("constellation_intro")}
@@ -659,7 +637,8 @@ export default function OnboardingPage() {
         {/* the polaris intro. The fork's skip path bypasses it.             */}
         {/* ================================================================ */}
         {step === "constellation_intro" && (
-          <ConstellationIntroScreen
+          <WalkthroughScreen
+            blocks={CONSTELLATION_BLOCKS}
             stellarColor={stellarColor}
             reducedMotion={prefersReducedMotion}
             onContinue={() => void setOnboardingStep("polaris_intro")}
@@ -668,14 +647,22 @@ export default function OnboardingPage() {
         )}
 
         {/* ================================================================ */}
-        {/* s5A/s5B — POLARIS INTRODUCTION MOMENT (PHE-16, fully implemented) */}
-        {/* Variant is resolved centrally (POLARIS_VARIANT = "s5B"); the      */}
-        {/* gentle s5B renders, the staggered s5A ships but is unreachable.   */}
-        {/* The example Q&A is authored STATIC copy — no Claude call / token  */}
-        {/* spend, no constellation_state dependency.                        */}
+        {/* POLARIS and DISCOVER explainers (PHE-16, PHE-125). Each sample    */}
+        {/* card is authored STATIC copy — no Claude call / token spend, no   */}
+        {/* constellation_state dependency.                                  */}
         {/* ================================================================ */}
         {step === "polaris_intro" && (
-          <PolarisIntroScreen
+          <WalkthroughScreen
+            blocks={POLARIS_BLOCKS}
+            stellarColor={stellarColor}
+            reducedMotion={prefersReducedMotion}
+            onContinue={() => void setOnboardingStep("discover_intro")}
+            onBack={goBack}
+          />
+        )}
+        {step === "discover_intro" && (
+          <WalkthroughScreen
+            blocks={DISCOVER_BLOCKS}
             stellarColor={stellarColor}
             reducedMotion={prefersReducedMotion}
             onContinue={() => void setOnboardingStep("connect")}
@@ -686,7 +673,7 @@ export default function OnboardingPage() {
         {/* ================================================================ */}
         {/* s6 — ONAIROS PLATFORM CONNECT (PHE-17, fully implemented)        */}
         {/* Self-contained: the s3b skip-path lands here directly without the */}
-        {/* manifesto / polaris_intro having run, so this screen assumes no   */}
+        {/* explainers having run, so this screen assumes no                 */}
         {/* prior narrative state. The CTA mounts the real Onairos SDK; the   */}
         {/* success callback (handleOnairosComplete) validates >=1 platform,  */}
         {/* persists a redacted (token-free) snapshot, fires synthesis, and   */}
@@ -757,15 +744,21 @@ export default function OnboardingPage() {
 }
 
 // ============================================================================
-// Constellation Reveal scrC (PHE-19)
+// Constellation formation scrC (PHE-19, physics and timing from PHE-125)
 // ----------------------------------------------------------------------------
-// Self-contained, full-viewport canvas reveal. Owns its OWN canvas + rAF loop +
-// SLABELS interval + reveal-sequence timers (the ambient background particle
-// canvas in the parent is separate and untouched). All loops/intervals/timers
-// are cancelled on unmount (React strict-mode double-mount safe). Fresh canvas
-// implementation rather than reusing constellation.tsx — that component is an
-// SVG / React-state build, a fundamentally different paradigm from this
-// imperative particle-system rAF loop (200 particles condensing into 7 nodes).
+// Self-contained, full-viewport canvas formation. Owns its OWN canvas + rAF
+// loop + end timers (the ambient background particle canvas in the parent is
+// separate and untouched), all cancelled on unmount (strict-mode safe).
+//
+// Specks drift, then pull toward their point: origin first, emergence and
+// self-creation together, then convergence, becoming, recognition and
+// transcendence. A point appears only once about 60% of its specks have
+// gathered within about 26px of it (1.2s fallback), each line starts 0.26s
+// after the later of its two points, and the physics runs on capped real
+// frame time, so slower devices look the same (rules in lib/constellation-reveal).
+// The labels read "pieces of your life…" then "beginning to find each other.",
+// and once the last line has drawn, "your life, taking form." lands and the
+// screen hands off to the constellation, about ten seconds in all.
 //
 // Pillar model (PHE-100, spec doc 2): all seven nodes glow in stellarColor,
 // intensity ∝ synthesis score. Node POSITIONS, sizes and the seven lines come
@@ -775,35 +768,26 @@ export default function OnboardingPage() {
 // does.
 // ============================================================================
 
-// The exact reveal line (v67 formation end card). Auto-advances to /dashboard.
-const REVEAL_LINE = "none of it is new. it is only in one piece now.";
-
-// Every phase derives from this one total-duration decision. The selected
-// 17.085s value is 15% faster than the original 20.1s choreography.
-const FORMATION = formationTimeline(FORMATION_ANIMATION_DURATION_MS);
+const LABEL_GATHERING = "pieces of your life…";
+const LABEL_FINDING = "beginning to find each other.";
+const LABEL_SWITCH_MS = 4600;
+const REVEAL_LINE = "your life, taking form.";
+const LABEL_FADE_MS = 350;
+const LOAD_FADE_MS = 550;
+const REVEAL_IN_MS = 750;
+const REVEAL_HOLD_MS = 1550;
+const SCREEN_FADE_MS = 1000;
 
 // The seven pillars in ALL_PILLARS order (index 0-6), each sized from its
 // star's real brightness.
 const PILLARS = ALL_PILLARS.map((pillar) => ({ baseR: STAR_RADIUS[pillar] * 0.9 }));
 
-// The seven lines as index pairs, in draw order. Each line draws only once
-// BOTH its endpoint nodes are locked into place.
+// The seven lines as index pairs. Each line draws only once BOTH its endpoint
+// nodes have appeared.
 const CLINES: [number, number][] = EDGES.map(([a, b]) => [
   ALL_PILLARS.indexOf(a),
   ALL_PILLARS.indexOf(b),
 ]);
-
-// SLABELS — cycling FLOAT labels (one per pillar) + the closing label.
-const SLABELS = [
-  "where it all begins",
-  "what pulled you forward",
-  "what you made yourself into",
-  "where everything meets",
-  "who you are becoming",
-  "how the world sees you",
-  "what you are reaching for",
-  "it's all here",
-];
 
 // Maps pillar index → its `constellation_state` score field.
 const SCORE_FIELDS = ALL_PILLARS.map((pillar) => `${pillar}_score` as const);
@@ -811,11 +795,12 @@ const SCORE_FIELDS = ALL_PILLARS.map((pillar) => `${pillar}_score` as const);
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
-function easeInOut(t: number): number {
-  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+function smoothstep(v: number): number {
+  const x = clamp01(v);
+  return x * x * (3 - 2 * x);
 }
 function easeOut(t: number): number {
-  return 1 - (1 - t) * (1 - t);
+  return 1 - Math.pow(1 - clamp01(t), 3);
 }
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
@@ -830,10 +815,11 @@ interface RevealParticle {
   vx: number;
   vy: number;
   radius: number;
-  birthDelay: number;
-  condenseDelay: number;
   target: number;
-  cf: { x: number; y: number } | null; // captured drift pos at condense start
+  phase: number;
+  orbit: number;
+  orbitSpeed: number;
+  seed: number;
 }
 
 function RevealScreen({
@@ -851,12 +837,11 @@ function RevealScreen({
 }) {
   const cvsRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
-  const labelIntervalRef = useRef<number | null>(null);
   const timersRef = useRef<number[]>([]);
   const doneRef = useRef(false);
 
   // Text overlays + screen fade (rcLoad / rc / scrC).
-  const [loadText, setLoadText] = useState(SLABELS[0]);
+  const [loadText, setLoadText] = useState(LABEL_GATHERING);
   const [loadVisible, setLoadVisible] = useState(false);
   const [loadFade, setLoadFade] = useState(false); // final rcLoad fade-out
   const [revealText, setRevealText] = useState("");
@@ -962,13 +947,30 @@ function RevealScreen({
       ctx.stroke();
     };
 
-    const nodeLocked = (i: number, t: number) =>
-      t - FORMATION.condenseAtMs >=
-        i * FORMATION.nodeStaggerMs + FORMATION.pullDurationMs;
+    const finish = () => {
+      setRevealText(REVEAL_LINE);
+      setRevealVisible(true);
+      timersRef.current.push(window.setTimeout(() => setScreenFade(true), REVEAL_HOLD_MS));
+      timersRef.current.push(
+        window.setTimeout(() => {
+          if (!doneRef.current) {
+            doneRef.current = true;
+            onDone();
+          }
+        }, REVEAL_HOLD_MS + SCREEN_FADE_MS),
+      );
+    };
+
+    const cleanup = () => {
+      window.removeEventListener("resize", sizeCanvas);
+      cancelAnimationFrame(rafRef.current);
+      timersRef.current.forEach((id) => clearTimeout(id));
+      timersRef.current = [];
+    };
 
     // ----------------------------------------------------------------------
-    // Reduced-motion: bypass the rAF loop entirely. Snap all 7 locked nodes +
-    // 7 full edges into place, fade the reveal line in, ≤2s total, auto-advance.
+    // Reduced-motion: no rAF loop. Snap all 7 nodes + 7 full edges into place
+    // and land the closing line, then hand off.
     // ----------------------------------------------------------------------
     if (reducedMotion) {
       const np = nodePos();
@@ -977,174 +979,146 @@ function RevealScreen({
       PILLARS.forEach((p, i) =>
         drawNode(np[i].x, np[i].y, p.baseR, glow[i].rgb, glow[i].alpha, 0, i),
       );
-      setLoadVisible(false);
-      setRevealText(REVEAL_LINE);
-      setRevealVisible(true);
-      timersRef.current.push(window.setTimeout(() => setScreenFade(true), 1200));
-      timersRef.current.push(
-        window.setTimeout(() => {
-          if (!doneRef.current) {
-            doneRef.current = true;
-            onDone();
-          }
-        }, 1800),
-      );
-      return () => {
-        window.removeEventListener("resize", sizeCanvas);
-        timersRef.current.forEach((id) => clearTimeout(id));
-        timersRef.current = [];
-      };
+      finish();
+      return cleanup;
     }
 
     // ----------------------------------------------------------------------
-    // Full animated path — build 200 particles, run the 5-phase rAF loop.
+    // Full animated path. Specks start in a loose cloud around the shape and
+    // each is seated on a nearby point.
     // ----------------------------------------------------------------------
-    const N = 200;
-    const M = 60; // inset margin
-    const seeds = Array.from({ length: N }, () => ({
-      x: M + Math.random() * Math.max(1, W - 2 * M),
-      y: M + Math.random() * Math.max(1, H - 2 * M),
-    }));
-    const assignments = assignParticlesToNodes(seeds, nodePos());
-    const particles: RevealParticle[] = seeds.map((seed, i) => {
-      const target = assignments[i].node;
-      return {
-        ...seed,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        radius: 0.4 + Math.random() * 1.6,
-        birthDelay: Math.random() * FORMATION.appearDurationMs,
-        condenseDelay:
-          target * FORMATION.nodeStaggerMs +
-          (target === 3 ? FORMATION.hubDelayMs : 0) +
-          Math.random() * FORMATION.condenseJitterMs,
-        target,
-        cf: null,
-      };
+    const N = 140;
+    const start0 = nodePos();
+    const cx = start0.reduce((sum, n) => sum + n.x, 0) / start0.length;
+    const cy = start0.reduce((sum, n) => sum + n.y, 0) / start0.length;
+    const rx = Math.min(W * 0.3, 420);
+    const ry = Math.min(H * 0.31, 280);
+    const seeds = Array.from({ length: N }, () => {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.pow(Math.random(), 0.66);
+      return { x: cx + Math.cos(a) * rx * r, y: cy + Math.sin(a) * ry * r };
     });
+    const assignments = assignParticlesToNodes(seeds, start0);
+    const particles: RevealParticle[] = seeds.map((seed, i) => ({
+      ...seed,
+      vx: (Math.random() - 0.5) * 10,
+      vy: (Math.random() - 0.5) * 10,
+      radius: 0.7 + Math.random() * 1.45,
+      target: assignments[i].node,
+      phase: Math.random() * Math.PI * 2,
+      orbit: 7 + Math.random() * 19,
+      orbitSpeed: (Math.random() > 0.5 ? 1 : -1) * (0.14 + Math.random() * 0.2),
+      seed: Math.random() * 1000,
+    }));
 
-    // SLABELS cycling follows the scaled formation clock with a short
-    // cross-fade; it clamps on the closing label and clears at REVEAL.
+    const appeared: (number | null)[] = PILLARS.map(() => null);
+    let lineEnd = 0;
+    let fadeAt = Infinity;
+    let label = LABEL_GATHERING;
+    let labelOut = false;
+    let last: number | null = null;
+
     setLoadVisible(true);
-    let labelIdx = 0;
-    const advanceLabel = () => {
-      setLoadVisible(false);
-      timersRef.current.push(
-        window.setTimeout(() => {
-          labelIdx = Math.min(labelIdx + 1, SLABELS.length - 1);
-          setLoadText(SLABELS[labelIdx]);
-          setLoadVisible(true);
-        }, FORMATION.labelFadeDurationMs),
-      );
-    };
-    labelIntervalRef.current = window.setInterval(advanceLabel, FORMATION.appearDurationMs);
-
-    // Reveal sequence timers (absolute offsets from animation start).
-    timersRef.current.push(
-      window.setTimeout(() => {
-        if (labelIntervalRef.current !== null) {
-          clearInterval(labelIntervalRef.current);
-          labelIntervalRef.current = null;
-        }
-        setLoadFade(true);
-      }, FORMATION.revealAtMs),
-    );
-    timersRef.current.push(
-      window.setTimeout(() => {
-        setRevealText(REVEAL_LINE);
-        setRevealVisible(true);
-      }, FORMATION.revealAtMs + FORMATION.loadFadeDurationMs),
-    );
-    timersRef.current.push(
-      window.setTimeout(
-        () => setScreenFade(true),
-        FORMATION.completeAtMs - FORMATION.screenFadeDurationMs,
-      ),
-    );
-    timersRef.current.push(
-      window.setTimeout(() => {
-        if (!doneRef.current) {
-          doneRef.current = true;
-          onDone();
-        }
-      }, FORMATION.completeAtMs),
-    );
 
     const start = performance.now();
     const loop = (now: number) => {
       const t = now - start;
+      const dt = frameSeconds(now, last);
+      last = now;
       const np = nodePos();
       ctx.clearRect(0, 0, W, H);
 
-      // Particles (APPEAR fade-in → FLOAT drift → CONDENSE pull into nodes).
+      // Specks: a slow drift, then a damped pull onto an orbit around their
+      // point that tightens as the point's time comes.
+      const fade = 1 - smoothstep((t - fadeAt) / 700);
       for (const p of particles) {
-        const cStart = FORMATION.condenseAtMs + p.condenseDelay;
-        let cx: number;
-        let cy: number;
-        if (t < cStart) {
-          p.x += p.vx;
-          p.y += p.vy;
-          if (p.x < M || p.x > W - M) p.vx *= -1;
-          if (p.y < M || p.y > H - M) p.vy *= -1;
-          p.x = Math.max(M, Math.min(W - M, p.x));
-          p.y = Math.max(M, Math.min(H - M, p.y));
-          cx = p.x;
-          cy = p.y;
+        const node = np[p.target];
+        const active = smoothstep((t - PULL_AT_MS[p.target]) / 720);
+        if (active > 0) {
+          const dwell = smoothstep((t - (REVEAL_AT_MS[p.target] - 650)) / 420);
+          const orbitR = p.orbit * (1 - 0.8 * dwell);
+          const ang = p.phase + now * 0.001 * p.orbitSpeed;
+          const dx = node.x + Math.cos(ang) * orbitR - p.x;
+          const dy = node.y + Math.sin(ang) * orbitR * 0.68 - p.y;
+          const dist = Math.max(1, Math.hypot(dx, dy));
+          const pull = 1.4 + 2.6 * active;
+          const swirl = (1 - active * 0.5) * 10 * Math.sin(p.phase + now * 0.00042);
+          p.vx += (dx * pull + (-dy / dist) * swirl) * dt;
+          p.vy += (dy * pull + (dx / dist) * swirl) * dt;
         } else {
-          if (!p.cf) p.cf = { x: p.x, y: p.y };
-          const prog = clamp01((t - cStart) / FORMATION.pullDurationMs);
-          const e = easeInOut(prog);
-          const node = np[p.target];
-          cx = p.cf.x + (node.x - p.cf.x) * e;
-          cy = p.cf.y + (node.y - p.cf.y) * e;
+          p.vx += Math.sin(now * 0.00028 + p.seed) * 4.4 * dt;
+          p.vy += Math.cos(now * 0.00024 + p.seed) * 4.4 * dt;
         }
-        const birth = clamp01((t - p.birthDelay) / FORMATION.appearDurationMs);
-        let alpha = (0.45 + p.radius * 0.18) * birth;
-        if (t >= cStart) {
-          // Dim as it merges so the node glow takes over.
-          alpha *= 1 - clamp01((t - cStart) / FORMATION.pullDurationMs) * 0.6;
-        }
-        if (alpha > 0.002) {
-          ctx.globalAlpha = Math.min(1, alpha);
+        const drag = Math.exp(-(active > 0 ? 3.2 : 0.72) * dt);
+        p.vx *= drag;
+        p.vy *= drag;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (fade > 0) {
+          const twinkle = 0.48 + 0.52 * (0.5 + 0.5 * Math.sin(now * 0.002 + p.phase));
+          ctx.globalAlpha = (0.14 + 0.3 * twinkle) * fade;
           ctx.fillStyle = stellarColor;
           ctx.beginPath();
-          ctx.arc(cx, cy, p.radius, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
           ctx.fill();
         }
       }
       ctx.globalAlpha = 1;
 
-      // Edges (LINES) — staggered, each gated on BOTH endpoints locked.
-      CLINES.forEach(([i, j], li) => {
-        if (!nodeLocked(i, t) || !nodeLocked(j, t)) return;
-        const prog = clamp01(
-          (t - (FORMATION.linesAtMs + li * FORMATION.nodeStaggerMs)) /
-            FORMATION.linesDurationMs,
-        );
-        if (prog <= 0) return;
-        drawEdge(np[i].x, np[i].y, np[j].x, np[j].y, easeOut(prog));
+      // A point appears once its specks have gathered.
+      PILLARS.forEach((_, i) => {
+        if (appeared[i] !== null) return;
+        const distances = particles
+          .filter((p) => p.target === i)
+          .map((p) => Math.hypot(p.x - np[i].x, p.y - np[i].y));
+        if (pointReady(distances, t, REVEAL_AT_MS[i])) appeared[i] = t;
       });
 
-      // Nodes (CONDENSE) — draw only locked nodes.
-      PILLARS.forEach((p, i) => {
-        if (!nodeLocked(i, t)) return;
-        drawNode(np[i].x, np[i].y, p.baseR, glow[i].rgb, glow[i].alpha, t, i);
+      // Lines, each once both its points exist.
+      CLINES.forEach(([i, j]) => {
+        const from = lineStartMs(appeared[i], appeared[j]);
+        if (from === null) return;
+        lineEnd = Math.max(lineEnd, from + LINE_DURATION_MS);
+        const prog = (t - from) / LINE_DURATION_MS;
+        if (prog > 0) drawEdge(np[i].x, np[i].y, np[j].x, np[j].y, easeOut(prog));
       });
+
+      // Points light up over 0.46s from the moment they appear.
+      PILLARS.forEach((p, i) => {
+        const at = appeared[i];
+        if (at === null) return;
+        const level = easeOut((t - at) / 460);
+        drawNode(np[i].x, np[i].y, p.baseR, glow[i].rgb, glow[i].alpha * level, t, i);
+      });
+
+      const formed = appeared.every((at) => at !== null);
+      if (formed && fadeAt === Infinity) fadeAt = Math.max((appeared[6] ?? t) + 500, lineEnd - 200);
+
+      // The label swaps once (fully out, then in) and leaves after the last line.
+      if (label === LABEL_GATHERING && t >= LABEL_SWITCH_MS) {
+        label = LABEL_FINDING;
+        setLoadVisible(false);
+        timersRef.current.push(
+          window.setTimeout(() => {
+            setLoadText(LABEL_FINDING);
+            setLoadVisible(true);
+          }, LABEL_FADE_MS),
+        );
+      }
+      if (formed && !labelOut && t > Math.max(9100, lineEnd + 150)) {
+        labelOut = true;
+        setLoadFade(true);
+      }
+      if (formed && t >= Math.max(9650, lineEnd + 650)) {
+        finish();
+        return;
+      }
 
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
 
-    return () => {
-      window.removeEventListener("resize", sizeCanvas);
-      cancelAnimationFrame(rafRef.current);
-      if (labelIntervalRef.current !== null) {
-        clearInterval(labelIntervalRef.current);
-        labelIntervalRef.current = null;
-      }
-      timersRef.current.forEach((id) => clearTimeout(id));
-      timersRef.current = [];
-    };
+    return cleanup;
     // Animation params are captured once at mount; props are stable for the
     // lifetime of the reveal step (constellationState may resolve once, but a
     // mid-flight re-glow is intentionally not required — see ticket).
@@ -1160,7 +1134,7 @@ function RevealScreen({
         zIndex: 5,
         background: "var(--ph-black)",
         opacity: !intro ? 0 : screenFade ? 0 : 1,
-        transition: `opacity ${screenFade ? FORMATION.screenFadeDurationMs : FORMATION.loadFadeDurationMs}ms ease`,
+        transition: `opacity ${screenFade ? SCREEN_FADE_MS : LOAD_FADE_MS}ms ease`,
         pointerEvents: "none",
       }}
     >
@@ -1169,7 +1143,7 @@ function RevealScreen({
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
       />
 
-      {/* rcLoad — cycling phase labels under the canvas. */}
+      {/* rcLoad — the formation labels under the canvas. */}
       <div
         style={{
           position: "absolute",
@@ -1179,17 +1153,16 @@ function RevealScreen({
           textAlign: "center",
           fontSize: "13px",
           fontWeight: 300,
-          letterSpacing: "0.18em",
-          textTransform: "lowercase",
-          color: "rgba(255,253,253,0.53)",
-          opacity: loadFade || !loadVisible ? 0 : 0.85,
-          transition: `opacity ${loadFade ? FORMATION.loadFadeDurationMs : FORMATION.labelFadeDurationMs}ms ease`,
+          letterSpacing: "0.04em",
+          color: "rgba(255,253,253,0.58)",
+          opacity: loadFade || !loadVisible ? 0 : 1,
+          transition: `opacity ${loadFade ? LOAD_FADE_MS : LABEL_FADE_MS}ms ease`,
         }}
       >
         {loadText}
       </div>
 
-      {/* rc — the final reveal line. */}
+      {/* rc — the closing line. */}
       <div
         style={{
           position: "absolute",
@@ -1204,7 +1177,7 @@ function RevealScreen({
           letterSpacing: "0.01em",
           color: "var(--ph-white)",
           opacity: revealVisible ? 1 : 0,
-          transition: `opacity ${reducedMotion ? 600 : FORMATION.revealInDurationMs}ms ease`,
+          transition: `opacity ${REVEAL_IN_MS}ms ease`,
         }}
       >
         {revealText}
@@ -1214,15 +1187,15 @@ function RevealScreen({
 }
 
 // ============================================================================
-// s6 Onairos Platform Connect (PHE-17, copy patched in PHE-77)
+// s6 Onairos Platform Connect (PHE-17, copy from the demo in PHE-125)
 // ----------------------------------------------------------------------------
-// Verbatim v67 framing: "your signals are the source of truth.", three promises,
-// privacy-policy link, and a single "continue with onairos" CTA (the real
-// Onairos SDK via OnairosButtonWrapper). No local platform picker or permission
-// checkboxes. The success path lives in handleOnairosComplete.
+// One line on what connecting does, the privacy-policy link, and a single
+// "connect with onairos" CTA (the real Onairos SDK via OnairosButtonWrapper).
+// No local platform picker or permission checkboxes. The success path lives in
+// handleOnairosComplete. Final Onairos copy is still to come from @janesse.
 //
 // Self-contained: the s3b skip-intro path lands here directly, so it assumes no
-// prior manifesto / polaris_intro state.
+// prior explainer state.
 //
 // NOTE (.hidden CSS-collision guard, acceptance criterion): the Onairos SDK
 // leaks a global `.hidden` class into the page. PHENYX must NOT rely on a bare
@@ -1230,12 +1203,6 @@ function RevealScreen({
 // (`max-lg:hidden`) / scoped variants instead. Enforced via eslint.config.mjs
 // (no-restricted-syntax) + components/phenyx/CONVENTIONS.md.
 // ============================================================================
-const ONAIROS_PROMISES = [
-  "bring in one account at a time, in whatever order you want.",
-  "every observation keeps the moment it came from, so you can always trace it back to the day it happened.",
-  "connect and disconnect whenever you want.",
-] as const;
-
 function ConnectScreen({
   stellarColor,
   notice,
@@ -1260,81 +1227,12 @@ function ConnectScreen({
       </p>
 
       <h1 className="onb-h1 animate-fade-in" style={fadeDelay(CONNECT_DELAYS[1])}>
-        connect only the accounts that feel right.
+        all it takes is connecting your platforms.
       </h1>
 
-      <p
-        className="onb-sub animate-fade-in"
-        style={{
-          ...fadeDelay(CONNECT_DELAYS[2]),
-          fontSize: "14.5px",
-          fontWeight: 300,
-          color: "rgba(255,253,253,0.53)",
-          lineHeight: 1.7,
-        }}
-      >
-        onairos handles the connection itself. you decide which accounts come with you.
-      </p>
-
-      <ul
-        className="onb-stack animate-fade-in"
-        style={{
-          ...fadeDelay(CONNECT_DELAYS[3]),
-          listStyle: "none",
-          padding: 0,
-          marginLeft: "auto",
-          marginRight: "auto",
-          maxWidth: 440,
-          textAlign: "left",
-        }}
-      >
-        {ONAIROS_PROMISES.map((promise, i) => (
-          <li
-            key={i}
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "12px",
-              marginBottom: i === ONAIROS_PROMISES.length - 1 ? 0 : "16px",
-            }}
-          >
-            <span
-              aria-hidden="true"
-              style={{
-                flexShrink: 0,
-                width: "5px",
-                height: "5px",
-                marginTop: "8px",
-                borderRadius: "50%",
-                background: stellarColor,
-              }}
-            />
-            <span
-              style={{
-                fontSize: "13px",
-                fontWeight: 300,
-                color: "rgba(255,253,253,0.6)",
-                lineHeight: 1.6,
-              }}
-            >
-              {promise}
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      <p
-        className="animate-fade-in"
-        style={{
-          ...fadeDelay(CONNECT_DELAYS[4]),
-          fontSize: "12px",
-          fontWeight: 300,
-          color: "rgba(255,253,253,0.33)",
-          lineHeight: 1.6,
-          marginTop: "14px",
-        }}
-      >
-        you can read the details in the{" "}
+      <p className="onb-sub animate-fade-in" style={fadeDelay(CONNECT_DELAYS[2])}>
+        our partnership with onairos lets you choose which platforms to connect, and we help you
+        understand what they reveal about you. you can learn more in our{" "}
         <Link
           href="/privacy-policy"
           target="_blank"
@@ -1362,7 +1260,7 @@ function ConnectScreen({
         </p>
       )}
 
-      <div className="onb-action animate-fade-in" style={fadeDelay(CONNECT_DELAYS[5])}>
+      <div className="onb-action animate-fade-in" style={fadeDelay(CONNECT_DELAYS[3])}>
         <OnairosButtonWrapper
           webpageName="PHENYX"
           requestedData={["personality"]}
@@ -1373,7 +1271,7 @@ function ConnectScreen({
         />
       </div>
 
-      <div className="onb-back animate-fade-in" style={fadeDelay(CONNECT_DELAYS[6])}>
+      <div className="onb-back animate-fade-in" style={fadeDelay(CONNECT_DELAYS[4])}>
         <button
           onClick={onBack}
           aria-label="go back to the previous step"
@@ -1466,103 +1364,49 @@ function revealStyle(shown: boolean): CSSProperties {
 }
 
 // ============================================================================
-// Intro (s4A/s4B) and constellation explainer (s4C) — PHE-15, PHE-90
+// The four explainers: your life so far, your constellation, polaris and
+// discover (PHE-15, PHE-16, PHE-90, copy from the demo in PHE-125)
 // ----------------------------------------------------------------------------
-// Variant selection is centralized here, NOT branched in screen markup: per the
-// locked decision the gentle s4B renders. s4A is retained as data + rendered
-// markup but is unreachable unless MANIFESTO_VARIANT is flipped back to "s4A".
-// Both intro variants and the s4C explainer share one renderer
-// (WalkthroughScreen) so the cadence and the block markup live in one place.
+// Each is an ordered RevealBlock list rendered by WalkthroughScreen, so the
+// cadence and the block markup live in one place. Every explainer has an
+// eyebrow, a headline and one short paragraph, plus at most one sample: the
+// seven chapters (constellation) or one authored card (polaris, discover).
+// The sample cards are STATIC copy — no API/synthesis call, no
+// constellation_state dependency (the user has not synthesized yet).
 // ============================================================================
-type ManifestoVariant = "s4A" | "s4B";
-const MANIFESTO_VARIANT: ManifestoVariant = "s4B";
 
 // One entry per rendered element, listed in visual order (CTA and back last).
 // Delays are not authored here; cadenceOffsets() derives them from the order
 // and kind of each block (see ENTRANCE CADENCE above).
 type RevealBlock = {
-  kind:
-    | "eyebrow"
-    | "heading"
-    | "body"
-    | "line"
-    | "principles"
-    | "rail"
-    | "cta"
-    | "back"
-    | "badge"
-    | "example";
-  // Primary copy (unused by "badge" / "example" / "principles" / "rail").
-  // In a "line", "\n" forces a break where the prototype had a <br>.
+  kind: "eyebrow" | "heading" | "body" | "rail" | "example" | "cta" | "back";
   text?: string;
-  stellar?: boolean;
-  muted?: boolean; // dimmer line (s5A)
-  // "principles": title + body pairs. "rail": chapter name + short description.
+  // "rail": chapter name + its one-line description.
   items?: ReadonlyArray<{ title: string; body: string }>;
-  // "example" block fields — authored STATIC Q&A, no Claude call / token spend.
-  label?: string;
+  // "example": the sample card's title, body and quiet source line.
   q?: string;
   a?: string;
   src?: string;
 };
 
-// s4A (manifesto) — retained-but-unreachable staggered emotional read.
-const S4A_BLOCKS: RevealBlock[] = [
-  { kind: "line", text: "you have been writing this down for years\nwithout meaning to." },
-  {
-    kind: "line",
-    text: "a night you stayed up, a song you wore out,\nsomething you saved and never mentioned.",
-  },
-  {
-    kind: "line",
-    text: "it is all still there, kept in places that were\nnever meant to be read together.",
-  },
-  { kind: "line", text: "so the one person who has never read it whole is you.", stellar: true },
-  { kind: "cta", text: "continue" },
-];
-
-// s4B (gentle) — the shipped variant.
-const S4B_BLOCKS: RevealBlock[] = [
+const MANIFESTO_BLOCKS: RevealBlock[] = [
   { kind: "eyebrow", text: "your life so far" },
-  { kind: "heading", text: "most of it is already written down somewhere." },
+  { kind: "heading", text: "your story is out there, scattered." },
   {
     kind: "body",
-    text: "spotify knows what you listen to. instagram knows what you post. neither of them knows the other, so no one has ever put the pieces together, including you.",
-  },
-  {
-    kind: "principles",
-    items: [
-      {
-        title: "a night you kept",
-        body: "the work you stayed up for, and the thing you saved that afternoon without telling anyone why.",
-      },
-      {
-        title: "the same night, returning",
-        body: "it comes back four years later in something you had not tried before, and you do not remember choosing it twice.",
-      },
-      {
-        title: "the shape it made",
-        body: "seven chapters, and the line your life has been drawing between them the whole time.",
-      },
-    ],
+    text: "pieces of who you are live across every platform you’ve used. PHENYX brings them together so you can see what it all adds up to.",
   },
   { kind: "cta", text: "continue" },
   { kind: "back", text: "back" },
 ];
 
-const MANIFESTO_BLOCKS: Record<ManifestoVariant, RevealBlock[]> = {
-  s4A: S4A_BLOCKS,
-  s4B: S4B_BLOCKS,
-};
-
-// s4C — constellation explainer (v244, PHE-90). Sits between the intro and the
-// polaris intro on the normal path; the fork's skip path bypasses it.
-const S4C_BLOCKS: RevealBlock[] = [
+// The seven chapters, one line each (the rail never wraps a description).
+const CONSTELLATION_BLOCKS: RevealBlock[] = [
   { kind: "eyebrow", text: "your constellation" },
-  { kind: "heading", text: "seven chapters, from where you began to where you are going." },
+  { kind: "heading", text: "watch it all take shape." },
   {
     kind: "body",
-    text: "open any one of them and the moments it was built from are still sitting there underneath.",
+    text: "your constellation traces seven points, from where you began to where you’re going. it grows as you do, and over time the patterns between them come into view.",
   },
   {
     kind: "rail",
@@ -1580,31 +1424,59 @@ const S4C_BLOCKS: RevealBlock[] = [
   { kind: "back", text: "back" },
 ];
 
+// Final polaris explainer copy is still to come from @janesse; this is the demo's.
+const POLARIS_BLOCKS: RevealBlock[] = [
+  { kind: "eyebrow", text: "polaris" },
+  { kind: "heading", text: "when you want to go deeper, ask polaris." },
+  {
+    kind: "body",
+    text: "it meets you where you are. it already understands the context of who you are on PHENYX.",
+  },
+  {
+    kind: "example",
+    q: "“i think i want to direct something. is that actually in my history?”",
+    a: "you kept returning to film through saved references and small projects, even as product became your career. what part of directing do you miss most?",
+    src: "clarify · understand · decide",
+  },
+  { kind: "cta", text: "continue" },
+  { kind: "back", text: "back" },
+];
+
+const DISCOVER_BLOCKS: RevealBlock[] = [
+  { kind: "eyebrow", text: "discover" },
+  { kind: "heading", text: "discover what could be next." },
+  {
+    kind: "body",
+    text: "it brings you people, ideas, and unexpected connections drawn from who you are, so you can save what sparks something or take it to polaris.",
+  },
+  {
+    kind: "example",
+    q: "acoustic ecology",
+    a: "the study of how sound shapes the places we live. it sits right between the music you keep saving and the spaces you keep pinning.",
+    src: "spotify, pinterest · this week",
+  },
+  { kind: "cta", text: "continue" },
+  { kind: "back", text: "back" },
+];
+
 type WalkthroughScreenProps = {
+  blocks: RevealBlock[];
   stellarColor: string;
   reducedMotion: boolean;
   onContinue: () => void;
   onBack: () => void;
 };
 
-function ManifestoScreen(props: WalkthroughScreenProps) {
-  return <WalkthroughScreen {...props} blocks={MANIFESTO_BLOCKS[MANIFESTO_VARIANT]} />;
-}
-
-function ConstellationIntroScreen(props: WalkthroughScreenProps) {
-  return <WalkthroughScreen {...props} blocks={S4C_BLOCKS} />;
-}
-
 // Renders an ordered RevealBlock list inside the shared .onb-block layout with
-// the position-derived cadence. The polaris intro keeps its own renderer for
-// the badge and example kinds.
+// the position-derived cadence. Body copy takes its size and spacing from
+// .onb-sub in globals.css, the same on every screen.
 function WalkthroughScreen({
   blocks,
   stellarColor,
   reducedMotion,
   onContinue,
   onBack,
-}: WalkthroughScreenProps & { blocks: RevealBlock[] }) {
+}: WalkthroughScreenProps) {
   const revealed = useStaggeredReveal(cadenceOffsets(blocks), { lead: 0, reducedMotion });
 
   return (
@@ -1616,154 +1488,95 @@ function WalkthroughScreen({
         switch (block.kind) {
           case "eyebrow":
             return (
-              <p
-                key={i}
-                className="onb-ey"
-                style={{
-                  ...reveal,
-                  color: stellarColor,
-                }}
-              >
+              <p key={i} className="onb-ey" style={{ ...reveal, color: stellarColor }}>
                 {block.text}
               </p>
             );
 
           case "heading":
             return (
-              <h1
-                key={i}
-                className="onb-h1"
-                style={{
-                  ...reveal,
-                }}
-              >
+              <h1 key={i} className="onb-h1" style={reveal}>
                 {block.text}
               </h1>
             );
 
           case "body":
-          case "line":
             return (
-              <p
-                key={i}
-                className={block.kind === "body" ? "onb-sub" : undefined}
-                style={{
-                  ...reveal,
-                  fontSize: block.kind === "line" ? "20px" : "15px",
-                  fontWeight: 300,
-                  color: block.stellar ? stellarColor : "rgba(255,253,253,0.53)",
-                  lineHeight: 1.7,
-                  marginBottom: block.kind === "line" ? "22px" : undefined,
-                }}
-              >
-                {block.kind === "line" ? withBreaks(block.text) : block.text}
+              <p key={i} className="onb-sub" style={reveal}>
+                {block.text}
               </p>
             );
 
-          case "principles":
-            // Three title/body pairs on a hairline rail (s4B).
+          case "rail":
+            // The seven chapters: name, then its one-line description, no
+            // divider lines. A single grid keeps the description column aligned.
+            return (
+              <dl
+                key={i}
+                className="onb-stack onb-rail"
+                aria-label="constellation points"
+                style={reveal}
+              >
+                {block.items?.map((item) => (
+                  <Fragment key={item.title}>
+                    <dt>{item.title}</dt>
+                    <dd>{item.body}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            );
+
+          case "example":
             return (
               <div
                 key={i}
                 className="onb-stack"
                 style={{
                   ...reveal,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "18px",
                   maxWidth: 440,
                   marginLeft: "auto",
                   marginRight: "auto",
+                  padding: "20px 22px",
                   textAlign: "left",
+                  border: "0.5px solid rgba(255,253,253,0.12)",
+                  borderRadius: "12px",
+                  background: "rgba(255,253,253,0.02)",
                 }}
               >
-                {block.items?.map((item) => (
-                  <div
-                    key={item.title}
-                    style={{
-                      padding: "0 0 0 16px",
-                      borderLeft: "1px solid rgba(var(--ph-accent-rgb),0.26)",
-                    }}
-                  >
-                    <h2
-                      style={{
-                        fontSize: "15px",
-                        fontWeight: 400,
-                        color: "var(--ph-white)",
-                        lineHeight: 1.4,
-                        margin: "0 0 4px",
-                      }}
-                    >
-                      {item.title}
-                    </h2>
-                    <p
-                      style={{
-                        fontSize: "13.5px",
-                        fontWeight: 300,
-                        color: "rgba(255,253,253,0.6)",
-                        lineHeight: 1.6,
-                        maxWidth: "44ch",
-                        margin: 0,
-                      }}
-                    >
-                      {item.body}
-                    </p>
-                  </div>
-                ))}
+                <p
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 400,
+                    color: "rgba(255,253,253,0.8)",
+                    lineHeight: 1.5,
+                    marginBottom: "10px",
+                  }}
+                >
+                  {block.q}
+                </p>
+                <p
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 300,
+                    color: "rgba(255,253,253,0.53)",
+                    lineHeight: 1.6,
+                    marginBottom: "10px",
+                  }}
+                >
+                  {block.a}
+                </p>
+                <p
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 300,
+                    color: stellarColor,
+                    letterSpacing: "0.04em",
+                    margin: 0,
+                  }}
+                >
+                  {block.src}
+                </p>
               </div>
-            );
-
-          case "rail":
-            // The seven chapters (s4C): name, then its short description, one
-            // row each, no divider lines. A single grid keeps the description
-            // column aligned across rows.
-            return (
-              <dl
-                key={i}
-                className="onb-stack"
-                aria-label="constellation points"
-                style={{
-                  ...reveal,
-                  display: "grid",
-                  gridTemplateColumns: "max-content minmax(0, 1fr)",
-                  columnGap: "18px",
-                  alignItems: "baseline",
-                  maxWidth: 440,
-                  marginLeft: "auto",
-                  marginRight: "auto",
-                  textAlign: "left",
-                }}
-              >
-                {block.items?.map((item) => (
-                  <Fragment key={item.title}>
-                    <dt
-                      style={{
-                        padding: "clamp(5px, 1vh, 10px) 0",
-                        fontSize: "11px",
-                        fontWeight: 500,
-                        letterSpacing: "0.16em",
-                        textTransform: "uppercase",
-                        color: "rgba(255,253,253,0.78)",
-                        lineHeight: 1.35,
-                      }}
-                    >
-                      {item.title}
-                    </dt>
-                    <dd
-                      style={{
-                        padding: "clamp(5px, 1vh, 10px) 0",
-                        margin: 0,
-                        fontSize: "13px",
-                        fontWeight: 300,
-                        color: "rgba(255,253,253,0.53)",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {item.body}
-                    </dd>
-                  </Fragment>
-                ))}
-              </dl>
             );
 
           case "cta":
@@ -1804,303 +1617,7 @@ function WalkthroughScreen({
             );
 
           case "back":
-            // Gentle-only "back" link to the previous step. Also gated on its
-            // own offset.
-            return (
-              <div key={i} className="onb-back">
-                <button
-                  onClick={onBack}
-                  disabled={!shown}
-                  aria-label="go back to the previous step"
-                  style={{
-                    ...reveal,
-                    pointerEvents: shown ? "all" : "none",
-                    background: "none",
-                    border: "none",
-                    color: "rgba(255,253,253,0.33)",
-                    fontSize: "12px",
-                    cursor: shown ? "pointer" : "default",
-                    fontFamily: "inherit",
-                    width: "100%",
-                    transition: `${REVEAL_TRANSITION}, color 0.2s ease`,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.outline = `2px solid ${stellarColor}`;
-                    e.currentTarget.style.outlineOffset = "2px";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.outline = "none";
-                  }}
-                >
-                  {block.text}
-                </button>
-              </div>
-            );
-
-          default:
-            return null;
-        }
-      })}
-    </div>
-  );
-}
-
-// ============================================================================
-// Polaris Introduction Moment (s5A/s5B) — PHE-16
-// ----------------------------------------------------------------------------
-// Reuses PHE-15's staggered-reveal mechanism (useStaggeredReveal + revealStyle)
-// and variant pattern: variant selection is centralized here, NOT branched in
-// markup. Per the locked decision the gentle s5B renders; s5A is retained as
-// data + rendered markup but is unreachable unless POLARIS_VARIANT is flipped.
-//
-// The screen carries the shared <PolarisBadge> (a "badge" reveal block at the
-// top) and an authored STATIC example Q&A (an "example" reveal block). The
-// example is illustrative onboarding copy — it makes ZERO API/synthesis calls
-// (no apiFetch, no /generate-prompts, no /synthesize-constellation) and has no
-// constellation_state dependency (the user has not synthesized yet).
-// ============================================================================
-type PolarisVariant = "s5A" | "s5B";
-const POLARIS_VARIANT: PolarisVariant = "s5B";
-
-// Shared authored example Q&A (verbatim) — static copy, identical across variants.
-const POLARIS_EXAMPLE = {
-  label: "an example",
-  q: '"why do i keep starting over?"',
-  a: "you have returned to the same three ideas across nine projects since 2021. the projects changed; those ideas kept finding their way back.",
-  src: "claude, pinterest · 2021 – 2026",
-} as const;
-
-// s5A (manifesto) — retained-but-unreachable staggered emotional read. The
-// example sits between the last line and the action and takes its place in
-// the cadence there.
-const S5A_BLOCKS: RevealBlock[] = [
-  { kind: "badge" },
-  { kind: "line", text: "you should not have to\nretell your whole history every time." },
-  { kind: "line", text: "polaris already knows the chapters, so you can start in the middle." },
-  {
-    kind: "line",
-    text: "ask about something you keep circling, and it follows the thread back through the years and brings the moments that answer it.",
-    muted: true,
-  },
-  {
-    kind: "line",
-    text: "those moments come back with the answer, so you can see what it was reading when it said so.",
-    muted: true,
-  },
-  { kind: "example", ...POLARIS_EXAMPLE },
-  { kind: "cta", text: "continue" },
-];
-
-// s5B (gentle) — the shipped variant. The example is the worked polaris Q&A.
-const S5B_BLOCKS: RevealBlock[] = [
-  { kind: "eyebrow", text: "polaris" },
-  { kind: "heading", text: "ask from where you are now." },
-  {
-    kind: "body",
-    text: "polaris already has the chapters, so you can begin anywhere and it will follow the question back through them and bring the moments that answer it.",
-  },
-  { kind: "example", ...POLARIS_EXAMPLE },
-  { kind: "cta", text: "continue" },
-  { kind: "back", text: "back" },
-];
-
-const POLARIS_BLOCKS: Record<PolarisVariant, RevealBlock[]> = {
-  s5A: S5A_BLOCKS,
-  s5B: S5B_BLOCKS,
-};
-
-function PolarisIntroScreen({
-  stellarColor,
-  reducedMotion,
-  onContinue,
-  onBack,
-}: {
-  stellarColor: string;
-  reducedMotion: boolean;
-  onContinue: () => void;
-  onBack: () => void;
-}) {
-  const blocks = POLARIS_BLOCKS[POLARIS_VARIANT];
-  const revealed = useStaggeredReveal(cadenceOffsets(blocks), { lead: 0, reducedMotion });
-
-  return (
-    <div className="onb-block">
-      {blocks.map((block, i) => {
-        const shown = revealed[i];
-        const reveal = revealStyle(shown);
-
-        switch (block.kind) {
-          case "eyebrow":
-            return (
-              <p
-                key={i}
-                className="onb-ey"
-                style={{
-                  ...reveal,
-                  color: stellarColor,
-                }}
-              >
-                {block.text}
-              </p>
-            );
-
-          case "badge":
-            // Shared Polaris badge near the top. The blink is pure CSS; under
-            // reduced motion the dot is frozen at full opacity (frozen prop).
-            return (
-              <div
-                key={i}
-                style={{ ...reveal, display: "flex", justifyContent: "center", marginBottom: "28px" }}
-              >
-                <PolarisBadge frozen={reducedMotion} />
-              </div>
-            );
-
-          case "heading":
-            return (
-              <h1
-                key={i}
-                className="onb-h1"
-                style={{
-                  ...reveal,
-                }}
-              >
-                {block.text}
-              </h1>
-            );
-
-          case "body":
-          case "line":
-            return (
-              <p
-                key={i}
-                className={block.kind === "body" ? "onb-sub" : undefined}
-                style={{
-                  ...reveal,
-                  fontSize: block.kind === "line" ? "20px" : "15px",
-                  fontWeight: 300,
-                  color: block.stellar
-                    ? stellarColor
-                    : block.muted
-                      ? "rgba(255,253,253,0.4)"
-                      : block.kind === "line"
-                        ? "var(--ph-white)"
-                        : "rgba(255,253,253,0.53)",
-                  lineHeight: 1.7,
-                  marginBottom: block.kind === "line" ? "22px" : undefined,
-                }}
-              >
-                {block.kind === "line" ? withBreaks(block.text) : block.text}
-              </p>
-            );
-
-          case "example":
-            // Authored STATIC Q&A card — NOT a live Claude call. No API/synthesis
-            // request fires from this screen; the copy is hard-coded above.
-            return (
-              <div
-                key={i}
-                className="onb-stack"
-                style={{
-                  ...reveal,
-                  maxWidth: 440,
-                  marginLeft: "auto",
-                  marginRight: "auto",
-                  padding: "20px 22px",
-                  textAlign: "left",
-                  border: "0.5px solid rgba(255,253,253,0.12)",
-                  borderRadius: "12px",
-                  background: "rgba(255,253,253,0.02)",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "9px",
-                    color: stellarColor,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.22em",
-                    marginBottom: "12px",
-                  }}
-                >
-                  {block.label}
-                </p>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 400,
-                    color: "rgba(255,253,253,0.8)",
-                    lineHeight: 1.5,
-                    marginBottom: "10px",
-                  }}
-                >
-                  {block.q}
-                </p>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 300,
-                    color: "rgba(255,253,253,0.53)",
-                    lineHeight: 1.6,
-                    marginBottom: block.src ? "10px" : 0,
-                  }}
-                >
-                  {block.a}
-                </p>
-                {block.src ? (
-                  <p
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 300,
-                      color: "rgba(255,253,253,0.33)",
-                      letterSpacing: "0.02em",
-                      margin: 0,
-                    }}
-                  >
-                    {block.src}
-                  </p>
-                ) : null}
-              </div>
-            );
-
-          case "cta":
-            // Gated: inert (pointer-events none + disabled) until its own data-d
-            // offset elapses. CTA → connect (s6).
-            return (
-              <button
-                key={i}
-                className="onb-action"
-                onClick={onContinue}
-                disabled={!shown}
-                aria-label={block.text}
-                style={{
-                  ...reveal,
-                  pointerEvents: shown ? "all" : "none",
-                  background: "transparent",
-                  border: `0.5px solid ${stellarColor}`,
-                  color: stellarColor,
-                  borderRadius: "8px",
-                  padding: "13px 36px",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  cursor: shown ? "pointer" : "default",
-                  fontFamily: "inherit",
-                  width: "100%",
-                  transition: `${REVEAL_TRANSITION}, background 0.2s ease, color 0.2s ease, border-color 0.2s ease`,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.outline = `2px solid ${stellarColor}`;
-                  e.currentTarget.style.outlineOffset = "2px";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.outline = "none";
-                }}
-              >
-                {block.text}
-              </button>
-            );
-
-          case "back":
-            // Gentle-only "back" link → manifesto (s4). Gated on its own offset.
+            // "back" to the previous step, also gated on its own offset.
             return (
               <div key={i} className="onb-back">
                 <button
