@@ -1775,7 +1775,8 @@ nav li > [aria-current="page"] {
 }
 .discover-card[data-depth="main"] { z-index: 2; }
 .discover-card[data-depth="far"] { opacity: 0; pointer-events: none; }
-.discover-card[data-depth="back"] .discover-card__face { opacity: 0.3; }
+/* Text behind the main card sits near 13% (its 80–100% white at 0.15). */
+.discover-card[data-depth="back"] .discover-card__face { opacity: 0.15; }
 .discover-card[data-swapping="true"] { opacity: 0; transform: translateY(4px); filter: blur(2px); }
 .discover-card__face { transition: opacity 0.45s ease; }
 .discover-card__go {
@@ -1790,18 +1791,18 @@ nav li > [aria-current="page"] {
   top: 14%;
   bottom: 14%;
   width: 1px;
-  background: linear-gradient(to bottom, transparent, rgba(255, 253, 253, 0.32), transparent);
-  box-shadow: 0 0 14px rgba(255, 253, 253, 0.08);
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ph-white) 32%, transparent), transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ph-white) 8%, transparent);
   transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 .discover-card[data-side="prev"] .discover-card__go::after { right: -1px; }
 .discover-card[data-side="next"] .discover-card__go::after { left: -1px; }
 .discover-card__go:hover::after,
 .discover-card__go:focus-visible::after {
-  background: linear-gradient(to bottom, transparent, rgba(var(--s-rgb), 0.95), transparent);
-  box-shadow: 0 0 18px rgba(var(--s-rgb), 0.35);
+  background: linear-gradient(to bottom, transparent, rgba(var(--ph-accent-rgb), 0.95), transparent);
+  box-shadow: 0 0 18px rgba(var(--ph-accent-rgb), 0.35);
 }
-.discover button:focus-visible { outline: 2px solid rgba(var(--s-rgb), 0.8); outline-offset: 2px; }
+.discover button:focus-visible { outline: 2px solid rgba(var(--ph-accent-rgb), 0.8); outline-offset: 2px; }
 /* The type label stays on one line, so it never breaks mid-word on phones. */
 .discover-type { white-space: nowrap; }
 @media (max-width: 760px) {

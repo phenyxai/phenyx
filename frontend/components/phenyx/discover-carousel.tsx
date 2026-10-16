@@ -40,7 +40,7 @@ function useInPlaceSwap<T>(target: T, fade: () => boolean): { shown: T; out: boo
   return { shown, out };
 }
 
-const LABEL = "text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[rgba(var(--s-rgb),0.85)]";
+const LABEL = "text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[rgba(var(--ph-accent-rgb),0.85)]";
 const ACTION =
   "rounded-full border px-4 py-2 text-[13px] lowercase transition-colors duration-200 motion-reduce:transition-none";
 
@@ -138,14 +138,14 @@ export function DiscoverCarousel({
                 <span
                   className={`block h-[7px] w-[7px] rounded-full border transition-colors duration-200 motion-reduce:transition-none ${
                     i === index
-                      ? "border-[var(--s)] bg-[var(--s)]"
-                      : "border-[#FFFDFD]/30 group-hover:border-[var(--s)]"
+                      ? "border-[var(--ph-accent)] bg-[var(--ph-accent)]"
+                      : "border-ph-white/30 group-hover:border-[var(--ph-accent)]"
                   }`}
                 />
               </button>
             ))}
           </div>
-          <span aria-live="polite" className="min-w-[3.5ch] text-[12px] font-light tabular-nums text-[#FFFDFD]/45">
+          <span aria-live="polite" className="min-w-[3.5ch] text-[12px] font-light tabular-nums text-ph-white/45">
             {index + 1} / {count}
           </span>
           <StepButton label="next discovery" onClick={() => go(index + 1)} d="M9 6l6 6-6 6" />
@@ -161,7 +161,7 @@ function StepButton({ label, onClick, d }: { label: string; onClick: () => void;
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex h-8 w-8 items-center justify-center rounded-full border border-[#FFFDFD]/12 text-[#FFFDFD]/60 transition-colors duration-200 hover:border-[var(--s)] hover:text-[var(--s)] motion-reduce:transition-none"
+      className="flex h-8 w-8 items-center justify-center rounded-full border border-ph-white/12 text-ph-white/60 transition-colors duration-200 motion-reduce:transition-none"
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d={d} />
@@ -204,7 +204,7 @@ function DiscoverCard({
     <div
       ref={faceRef}
       inert={!active}
-      className="discover-card__face rounded-[18px] border border-[#FFFDFD]/[0.08] bg-[#0E0E0E] p-7 max-[760px]:p-[22px]"
+      className="discover-card__face rounded-[18px] border border-ph-white/[0.08] bg-[color-mix(in_srgb,var(--ph-white)_2.5%,var(--ph-black))] p-7 max-[760px]:p-[22px]"
     >
       <div
         className={`transition-[opacity,transform,filter] duration-150 ease-out motion-reduce:transition-none ${
@@ -214,19 +214,19 @@ function DiscoverCard({
         {showTrail ? (
           <>
             <p className={LABEL}>source trail</p>
-            <p className="mt-3 text-[15px] font-light leading-[1.4] text-[#FFFDFD]/85">{d.headline}</p>
+            <p className="mt-3 text-[15px] font-light leading-[1.4] text-ph-white/85">{d.headline}</p>
             <ul className="mt-6 flex flex-col gap-5">
               {d.trail.map((entry, i) => (
                 <li key={`${entry.platform}-${entry.date}-${i}`} className="group flex gap-3">
                   <span
                     aria-hidden="true"
-                    className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full border border-[rgba(var(--s-rgb),0.7)] transition-colors duration-200 group-hover:bg-[var(--s)] motion-reduce:transition-none"
+                    className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full border border-[rgba(var(--ph-accent-rgb),0.7)] transition-colors duration-200 group-hover:bg-[var(--ph-accent)] motion-reduce:transition-none"
                   />
                   <div className="min-w-0">
-                    <p className="text-[12px] text-[#FFFDFD]/45">
-                      <span className="text-[var(--s)]">{entry.platform}</span> · {trailDate(entry.date)}
+                    <p className="text-[12px] text-ph-white/45">
+                      <span className="text-[var(--ph-accent)]">{entry.platform}</span> · {trailDate(entry.date)}
                     </p>
-                    <p className="mt-1 text-[14px] font-light leading-[1.5] text-[#FFFDFD]/80">{entry.detail}</p>
+                    <p className="mt-1 text-[14px] font-light leading-[1.5] text-ph-white/80">{entry.detail}</p>
                   </div>
                 </li>
               ))}
@@ -235,7 +235,7 @@ function DiscoverCard({
               type="button"
               data-return-focus
               onClick={toggle}
-              className={`${ACTION} mt-7 border-[#FFFDFD]/15 text-[#FFFDFD]/70 hover:border-[var(--s)] hover:text-[var(--s)]`}
+              className={`${ACTION} mt-7 border-ph-white/15 text-ph-white/70`}
             >
               back to the discovery
             </button>
@@ -243,24 +243,24 @@ function DiscoverCard({
         ) : (
           <>
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <span className={`discover-type ${LABEL} text-[var(--s)]`}>{d.type}</span>
-              <span className="text-[12px] font-light text-[#FFFDFD]/45">{d.time_context}</span>
+              <span className={`discover-type ${LABEL} text-[var(--ph-accent)]`}>{d.type}</span>
+              <span className="text-[12px] font-light text-ph-white/45">{d.time_context}</span>
             </div>
-            <h2 className="mt-4 text-[22px] font-normal leading-[1.3] text-[#FFFDFD] max-[760px]:text-[19px]">
+            <h2 className="mt-4 text-[22px] font-normal leading-[1.3] text-ph-white max-[760px]:text-[19px]">
               {d.headline}
             </h2>
 
             <p className={`${LABEL} mt-6`}>what surfaced</p>
-            <p className="mt-2 text-[14.5px] font-light leading-[1.6] text-[#FFFDFD]/80">{d.what_surfaced}</p>
+            <p className="mt-2 text-[14.5px] font-light leading-[1.6] text-ph-white/80">{d.what_surfaced}</p>
 
             <p className={`${LABEL} mt-5`}>why it surfaced now</p>
-            <p className="mt-2 text-[14.5px] font-light leading-[1.6] text-[#FFFDFD]/80">{d.why_now}</p>
+            <p className="mt-2 text-[14.5px] font-light leading-[1.6] text-ph-white/80">{d.why_now}</p>
 
             <ul aria-label="platforms" className="mt-6 flex flex-wrap gap-2">
               {d.sources.map((platform) => (
                 <li
                   key={platform}
-                  className="rounded-full border border-[rgba(var(--s-rgb),0.35)] bg-[rgba(var(--s-rgb),0.08)] px-2.5 py-0.5 text-[11.5px] text-[var(--s)]"
+                  className="rounded-full border border-[rgba(var(--ph-accent-rgb),0.35)] bg-[rgba(var(--ph-accent-rgb),0.08)] px-2.5 py-0.5 text-[11.5px] text-[var(--ph-accent)]"
                 >
                   {platform}
                 </li>
@@ -271,7 +271,7 @@ function DiscoverCard({
               <button
                 type="button"
                 onClick={onExplore}
-                className={`${ACTION} border-[rgba(var(--s-rgb),0.45)] text-[var(--s)] hover:border-[var(--s)] hover:bg-[rgba(var(--s-rgb),0.1)]`}
+                className={`${ACTION} border-[rgba(var(--ph-accent-rgb),0.45)] text-[var(--ph-accent)] hover:border-[var(--ph-accent)] hover:bg-[rgba(var(--ph-accent-rgb),0.1)]`}
               >
                 ✦ explore with polaris
               </button>
@@ -279,7 +279,7 @@ function DiscoverCard({
                 type="button"
                 data-return-focus
                 onClick={toggle}
-                className={`${ACTION} border-[#FFFDFD]/15 text-[#FFFDFD]/70 hover:border-[var(--s)] hover:text-[var(--s)]`}
+                className={`${ACTION} border-ph-white/15 text-ph-white/70`}
               >
                 source trail
               </button>
