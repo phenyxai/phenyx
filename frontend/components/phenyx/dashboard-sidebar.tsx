@@ -1,11 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegment } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { useTier, applyTierUI, type Tier } from "@/lib/use-tier";
-import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { trackTabVisit, trackTabDuration } from "@/lib/analytics";
 import { DASHBOARD_HOME, DASHBOARD_TABS, SETTINGS_HREF, segmentTab, tabTransition } from "@/lib/dashboard-nav";
 import type { TabClock } from "@/lib/dashboard-nav";
@@ -17,21 +16,6 @@ const ORB_STYLE = {
     "radial-gradient(circle at 42% 42%, var(--s) 0%, var(--s) 42%, color-mix(in srgb, var(--s) 55%, transparent) 60%, transparent 100%)",
   boxShadow: "0 0 10px color-mix(in srgb, var(--s) 40%, transparent)",
 } as const;
-
-/** First word of a display name; "you" when there is none to show. */
-function firstName(displayName: string | null | undefined): string {
-  const first = displayName?.trim().split(/\s+/)[0];
-  return first || "you";
-}
-
-async function fetchFirstName(userId: string): Promise<string> {
-  const { data } = await supabase
-    .from("user_profiles")
-    .select("display_name")
-    .eq("id", userId)
-    .maybeSingle();
-  return firstName(data?.display_name);
-}
 
 const ShellTierContext = createContext<Tier>("free");
 
@@ -77,15 +61,33 @@ function BrandLink() {
   );
 }
 
-/** Settings gear: the account row on desktop, the top bar on phones. */
-function SettingsLink({ active, size }: { active: boolean; size: string }) {
+/** Sidebar rows share one shape: the four tabs and settings at the foot. */
+function navItemClass(isActive: boolean): string {
+  return `flex items-center gap-3 rounded-xl px-3 py-[11px] text-[14px] lowercase transition-colors motion-reduce:transition-none ${
+    isActive
+      ? "bg-ph-white/[0.05] font-medium text-ph-white/90"
+      : "text-ph-white/50 hover:bg-ph-white/[0.04] hover:text-ph-white/70"
+  }`;
+}
+
+/** Icon slot of a sidebar row: accent when active (--ph-accent, PHE-98, stellar var as fallback). */
+function NavItemIcon({ isActive, children }: { isActive: boolean; children: ReactNode }) {
+  return (
+    <span className={`flex shrink-0 ${isActive ? "text-[var(--ph-accent,var(--s))]" : "text-ph-white/40"}`}>
+      {children}
+    </span>
+  );
+}
+
+/** Settings gear in the phone top bar (the sidebar foot carries a full row instead). */
+function SettingsLink({ active }: { active: boolean }) {
   return (
     <Link
       href={SETTINGS_HREF}
       aria-label="settings"
       aria-current={active ? "page" : undefined}
       data-active={active ? "true" : undefined}
-      className={`ml-auto flex ${size} shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none ${
+      className={`ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none ${
         active
           ? "border-[rgba(var(--s-rgb),0.35)] bg-[rgba(var(--s-rgb),0.10)] text-ph-white"
           : "border-ph-white/10 text-ph-white/70 hover:border-ph-white/20 hover:bg-ph-white/[0.05] hover:text-ph-white"
@@ -103,16 +105,14 @@ function SettingsLink({ active, size }: { active: boolean; size: string }) {
  * from the route segment (no client-only tab state that can desync from the URL).
  *
  * Top to bottom: brand (stellar orb + PHENYX + plan tier), the four tabs in
- * DASHBOARD_TABS order with their icons, and the account row (first name +
- * settings gear). Desktop only: at or below 760px it is display:none and the
+ * DASHBOARD_TABS order with their icons, and settings at the foot, a regular
+ * row with a gear (PHE-126). Desktop only: at or below 760px it is display:none and the
  * bottom nav plus MobileTopBar take over. It stays mounted there, so the
  * session bounce and tab analytics below still run on phones.
  */
 export function DashboardSidebar() {
   const router = useRouter();
   const segment = useSelectedLayoutSegment();
-  const { openId } = useSettingsModals();
-  const [name, setName] = useState("you");
   const active = segmentTab(segment);
 
   // Engagement instrumentation (PHE-35). The sidebar persists and observes the
@@ -124,44 +124,18 @@ export function DashboardSidebar() {
   // tab being left.
   const clockRef = useRef<TabClock>({ tab: null, enteredAt: Date.now() });
 
-  // Authenticated shell: bounce to sign-in if there is no session, otherwise
-  // read the display name once for the account row. Runs on mount of the
-  // persistent sidebar (does not re-run on tab change).
+  // Authenticated shell: bounce to sign-in if there is no session. Runs on
+  // mount of the persistent sidebar (does not re-run on tab change).
   useEffect(() => {
     let active = true;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!active) return;
-      if (!user) {
-        router.replace("/signin");
-        return;
-      }
-      const next = await fetchFirstName(user.id);
-      if (active) setName(next);
+      if (active && !user) router.replace("/signin");
     })();
     return () => {
       active = false;
     };
   }, [router]);
-
-  // The edit-profile modal can change the display name; re-read it when that
-  // modal closes so the account row never shows a stale name.
-  const prevOpenRef = useRef(openId);
-  useEffect(() => {
-    const closedEditProfile = prevOpenRef.current === "edit-profile" && openId === null;
-    prevOpenRef.current = openId;
-    if (!closedEditProfile) return;
-    let active = true;
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !active) return;
-      const next = await fetchFirstName(user.id);
-      if (active) setName(next);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [openId]);
 
   // Tab engagement: on each segment change, emit a tab_duration for the tab
   // being left, then a tab_visit for the newly-active tab (rules in
@@ -196,18 +170,11 @@ export function DashboardSidebar() {
                 href={tab.href}
                 aria-current={isActive ? "page" : undefined}
                 data-active={isActive ? "true" : undefined}
-                className={`flex items-center gap-3 rounded-xl px-3 py-[11px] text-[14px] lowercase transition-colors motion-reduce:transition-none ${
-                  isActive
-                    ? "bg-ph-white/[0.05] font-medium text-ph-white/90"
-                    : "text-ph-white/50 hover:bg-ph-white/[0.04] hover:text-ph-white/70"
-                }`}
+                className={navItemClass(isActive)}
               >
-                {/* Accent read as --ph-accent (PHE-98) with the stellar var as fallback. */}
-                <span
-                  className={`flex shrink-0 ${isActive ? "text-[var(--ph-accent,var(--s))]" : "text-ph-white/40"}`}
-                >
+                <NavItemIcon isActive={isActive}>
                   <NavIcon tab={tab.id} size={17} />
-                </span>
+                </NavItemIcon>
                 {tab.label}
               </Link>
             </li>
@@ -215,12 +182,19 @@ export function DashboardSidebar() {
         })}
       </ul>
 
-      {/* Account row: first name + settings gear. The gear lights up in the
-          accent while the settings segment is active. */}
-      <div className="mt-auto flex items-center gap-[11px] border-t border-ph-white/[0.07] pt-3.5">
-        <span className="min-w-0 truncate text-[13.5px] font-medium text-ph-white">{name}</span>
-        <SettingsLink active={active === "settings"} size="h-8 w-8" />
-      </div>
+      {/* Settings sits at the foot as a regular row with a gear, styled like
+          the tabs and lit in the accent while its segment is active. */}
+      <Link
+        href={SETTINGS_HREF}
+        aria-current={active === "settings" ? "page" : undefined}
+        data-active={active === "settings" ? "true" : undefined}
+        className={`mt-auto ${navItemClass(active === "settings")}`}
+      >
+        <NavItemIcon isActive={active === "settings"}>
+          <GearIcon size={17} />
+        </NavItemIcon>
+        settings
+      </Link>
     </nav>
   );
 }
@@ -237,7 +211,7 @@ export function MobileTopBar() {
     <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-ph-white/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden">
       <BrandLink />
       <TierBadge />
-      <SettingsLink active={segmentTab(segment) === "settings"} size="h-9 w-9" />
+      <SettingsLink active={segmentTab(segment) === "settings"} />
     </header>
   );
 }

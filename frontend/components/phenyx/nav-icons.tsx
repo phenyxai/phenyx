@@ -48,7 +48,7 @@ export function NavIcon({ tab, size = 18 }: { tab: DashboardTabId; size?: number
   );
 }
 
-/** The settings gear shared by the sidebar account row and the phone top bar. */
+/** The settings gear shared by the sidebar foot and the phone top bar. */
 export function GearIcon({ size = 16 }: { size?: number }) {
   return (
     <svg

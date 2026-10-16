@@ -1,8 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
-
-import { useTier } from "@/lib/use-tier";
 import {
   useSettingsModals,
   type SettingsModalId,
@@ -37,8 +34,8 @@ const GROUPS: SettingsGroup[] = [
     rows: [
       {
         id: "my-connections",
-        label: "connected accounts",
-        sub: "add or disconnect accounts",
+        label: "connected platforms",
+        sub: "add or disconnect platforms",
       },
       {
         id: "notifications",
@@ -48,7 +45,7 @@ const GROUPS: SettingsGroup[] = [
     ],
   },
   {
-    label: "what's yours",
+    label: "what’s yours",
     rows: [
       {
         id: "data-management",
@@ -88,18 +85,14 @@ function GroupLabel({
 
 /**
  * Settings panel (PHE-91 / PHE-95, v244). Not a tab: reached from the sidebar
- * gear and the mobile menu sheet at /dashboard/settings. Three groups of rows
+ * foot (desktop) and the top bar gear (phones) at /dashboard/settings. Three groups of rows
  * that each open a modal by id, then "get in touch". The subscription row opens
- * the subscription modal, which owns the billing-portal and checkout calls.
+ * the subscription modal, which owns the billing-portal and checkout calls. It
+ * shows only an arrow: the tier already sits beside the logo (PHE-126).
  * Gifted is never shown; freeze/pause does not exist.
  */
 export default function SettingsPage() {
-  const { tier, isPro } = useTier();
   const { openModal } = useSettingsModals();
-
-  // Gifted has nothing to downgrade, so its label is the plan alone.
-  const tierLabel =
-    tier === "gifted" ? "full" : isPro ? "full · downgrade" : "free · upgrade";
 
   return (
     <section className="flex flex-col px-10 pt-10 pb-10">
@@ -114,12 +107,7 @@ export default function SettingsPage() {
           <GroupLabel first>account &amp; plan</GroupLabel>
           <SettingsRowButton
             label="subscription"
-            sub="your plan, billing, and what's included"
-            trailing={
-              <span className="ps-tier ml-6 shrink-0 text-[12px] tracking-[0.02em] text-[var(--ph-accent)] opacity-85">
-                {tierLabel}
-              </span>
-            }
+            sub="your plan, billing, and what’s included"
             onClick={() => openModal("subscription")}
           />
           {ACCOUNT_ROWS.map((row) => (
@@ -185,18 +173,16 @@ export default function SettingsPage() {
 }
 
 /**
- * One settings row: label + sub on the left, then the arrow (or a trailing
- * label) sitting 24px past the text rather than at the far edge of the column.
+ * One settings row: label + sub on the left, then the arrow sitting 24px past
+ * the text rather than at the far edge of the column.
  */
 function SettingsRowButton({
   label,
   sub,
-  trailing,
   onClick,
 }: {
   label: string;
   sub: string;
-  trailing?: ReactNode;
   onClick: () => void;
 }) {
   return (
@@ -211,14 +197,12 @@ function SettingsRowButton({
           {sub}
         </span>
       </span>
-      {trailing ?? (
-        <span
-          aria-hidden="true"
-          className="ps-arrow ml-6 shrink-0 text-[11px] text-ph-white/50 transition-[color,transform] duration-[350ms] ease-[cubic-bezier(.22,.61,.36,1)] group-hover:translate-x-[3px] group-hover:text-[var(--ph-accent)]"
-        >
-          →
-        </span>
-      )}
+      <span
+        aria-hidden="true"
+        className="ps-arrow ml-6 shrink-0 text-[11px] text-ph-white/50 transition-[color,transform] duration-[350ms] ease-[cubic-bezier(.22,.61,.36,1)] group-hover:translate-x-[3px] group-hover:text-[var(--ph-accent)]"
+      >
+        →
+      </span>
     </button>
   );
 }
