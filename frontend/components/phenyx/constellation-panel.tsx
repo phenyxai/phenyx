@@ -396,17 +396,20 @@ function Reactions({ observationId, initial }: { observationId: string; initial:
         <ReactionPill on={state.verdict === "reading"} onClick={() => verdict("reading")}>
           not quite
         </ReactionPill>
-        <ReactionPill on={state.following} onClick={follow}>
-          follow this thread
-        </ReactionPill>
-        <span
-          role="img"
-          tabIndex={0}
-          aria-label={FOLLOW_HINT}
-          title={FOLLOW_HINT}
-          className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-ph-white/25 text-[10px] text-ph-white/55"
-        >
-          i
+        {/* The hint wraps with the pill it explains, never onto a line of its own. */}
+        <span className="inline-flex items-center gap-2">
+          <ReactionPill on={state.following} onClick={follow}>
+            follow this thread
+          </ReactionPill>
+          <span
+            role="img"
+            tabIndex={0}
+            aria-label={FOLLOW_HINT}
+            title={FOLLOW_HINT}
+            className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-ph-white/25 text-[10px] text-ph-white/55"
+          >
+            i
+          </span>
         </span>
       </div>
     </section>
