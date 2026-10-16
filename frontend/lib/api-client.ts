@@ -150,11 +150,16 @@ export interface PolarisAllowance {
   limit_reached: boolean
 }
 
+/** PHE-123: the three ways polaris helps (spec doc 4). */
+export type PolarisMode = "clarify" | "understand" | "decide"
+
 export interface PolarisAnswer {
   /** null when limit_reached is true (no Claude call was made). */
   answer: string | null
   pillar_tag: string | null
   thread_id: string
+  /** The conversation's mode (fixed when it was opened). */
+  mode?: PolarisMode
   message_id: string | null
   usage: PolarisUsage
   sparse?: boolean
@@ -171,16 +176,22 @@ export interface PolarisAnswer {
 
 /**
  * Ask Polaris a question. Pass `threadId` to continue an existing conversation;
- * omit it to start a new one (the returned `thread_id` is the id to reuse). Throws
+ * omit it to start a new one (the returned `thread_id` is the id to reuse), with
+ * the mode and, from a moment or a discovery, the context it opens with. Throws
  * on a non-2xx response so callers can surface a retry affordance.
  */
 export async function askPolaris(
   question: string,
   threadId?: string,
+  open?: { mode: PolarisMode; context?: string | null },
 ): Promise<PolarisAnswer> {
   const res = await apiFetch("/api/polaris/ask", {
     method: "POST",
-    body: JSON.stringify({ question, ...(threadId ? { thread_id: threadId } : {}) }),
+    body: JSON.stringify({
+      question,
+      ...(threadId ? { thread_id: threadId } : {}),
+      ...(!threadId && open ? { mode: open.mode, ...(open.context ? { context: open.context } : {}) } : {}),
+    }),
   })
   if (!res.ok) {
     throw new Error("polaris is unavailable right now. please try again.")
@@ -190,13 +201,14 @@ export async function askPolaris(
 
 // ---------------------------------------------------------------------------
 // Polaris chat surface reads (PHE-23). The main view loads `getPolarisThreads()`
-// (past conversations + suggested questions from the user's top pillars); tapping
+// (past conversations + one starter per mode from the user's top pillars); tapping
 // a past conversation calls `getPolarisThread(id)` to reload its decrypted
 // messages. Sending is `askPolaris` above — these two are read-only.
 // ---------------------------------------------------------------------------
 
-/** One question-from-your-record card: a question + the pillar it grounds on. */
-export interface SuggestedQuestion {
+/** One starter on polaris home: a question in one mode, from one of the person's top pillars. */
+export interface PolarisStarter {
+  mode: PolarisMode
   text: string
   pillar_tag: string
 }
@@ -206,13 +218,15 @@ export interface PolarisThreadSummary {
   id: string
   title: string | null
   preview: string | null
+  /** Null on conversations from before modes. */
+  mode: PolarisMode | null
   created_at: string
   updated_at: string
 }
 
 export interface PolarisThreadsResponse {
   threads: PolarisThreadSummary[]
-  suggested_questions: SuggestedQuestion[]
+  starters: PolarisStarter[]
   /** Live weekly question allowance for the idle/chat allowance badge. */
   allowance?: PolarisAllowance
 }
@@ -228,12 +242,12 @@ export interface PolarisMessageView {
 
 export interface PolarisThreadDetail {
   thread_id: string
+  mode: PolarisMode | null
   messages: PolarisMessageView[]
 }
 
 /**
- * Load the Polaris idle view: past conversations (the "your chats" tab is hidden
- * client-side when empty), four pillar-tagged questions, and the weekly
+ * Load polaris home: past conversations, one starter per mode, and the weekly
  * allowance. Throws on a non-2xx so the caller can fall back to an empty idle
  * view.
  */

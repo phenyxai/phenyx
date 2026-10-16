@@ -1,23 +1,22 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeSuggestedQuestions } from "./polaris.service";
+import { computeStarters, parseMode } from "./polaris.service";
 
-test("computeSuggestedQuestions returns four pillar-tagged questions when empty", () => {
-  const qs = computeSuggestedQuestions(null);
-  assert.equal(qs.length, 4);
-  for (const q of qs) {
-    assert.equal(typeof q.text, "string");
-    assert.ok(q.text.length > 0);
-    assert.equal(typeof q.pillar_tag, "string");
-  }
+test("computeStarters gives one starter per mode from the default pillars when empty", () => {
+  const starters = computeStarters(null);
   assert.deepEqual(
-    qs.map((q) => q.pillar_tag),
-    ["origin", "emergence", "self_creation", "convergence"]
+    starters.map((s) => [s.mode, s.pillar_tag]),
+    [
+      ["clarify", "origin"],
+      ["understand", "emergence"],
+      ["decide", "self_creation"],
+    ]
   );
+  for (const s of starters) assert.ok(s.text.length > 0);
 });
 
-test("computeSuggestedQuestions takes the four highest-scoring pillars", () => {
-  const qs = computeSuggestedQuestions({
+test("computeStarters draws each mode from a different top-scoring pillar", () => {
+  const starters = computeStarters({
     origin_score: 10,
     emergence_score: 90,
     self_creation_score: 40,
@@ -26,9 +25,15 @@ test("computeSuggestedQuestions takes the four highest-scoring pillars", () => {
     recognition_score: 20,
     transcendence_score: 5,
   });
-  assert.equal(qs.length, 4);
   assert.deepEqual(
-    qs.map((q) => q.pillar_tag),
-    ["emergence", "becoming", "convergence", "self_creation"]
+    starters.map((s) => s.pillar_tag),
+    ["emergence", "becoming", "convergence"]
   );
+});
+
+test("parseMode keeps a known mode and falls back to clarify", () => {
+  assert.equal(parseMode("decide"), "decide");
+  assert.equal(parseMode("understand"), "understand");
+  assert.equal(parseMode("anything"), "clarify");
+  assert.equal(parseMode(undefined), "clarify");
 });

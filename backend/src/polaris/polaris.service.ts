@@ -16,8 +16,20 @@ import { HONEST_LIMITS_OPENER, SPARSE_NUDGE } from "./polaris-copy";
 
 // Sonnet-tier for chat latency (reality check: claude-sonnet-4-6, NOT an older id).
 const POLARIS_MODEL = "claude-sonnet-4-6";
-// 2-3 plain-text sentences in voice; small ceiling keeps first-token latency low.
-const MAX_TOKENS = 400;
+// A few plain-text sentences in voice (decide may add a three-step plan); a
+// small ceiling keeps first-token latency low.
+const MAX_TOKENS = 600;
+/** Longest opening context (a moment or a discovery) kept on a conversation. */
+const CONTEXT_LIMIT = 1200;
+
+/** PHE-123: every conversation runs in one of three modes (spec doc 4). */
+export const POLARIS_MODES = ["clarify", "understand", "decide"] as const;
+export type PolarisMode = (typeof POLARIS_MODES)[number];
+
+/** A known mode, or clarify when the client sent none (or something else). */
+export function parseMode(value: unknown): PolarisMode {
+  return POLARIS_MODES.includes(value as PolarisMode) ? (value as PolarisMode) : "clarify";
+}
 
 
 const CONSTELLATION_SYNTHESIS_COLUMNS: Record<Pillar, string> = {
@@ -53,6 +65,17 @@ const ALL_PILLARS: Pillar[] = [
 interface AskBody {
   thread_id?: string;
   question?: string;
+  /** Mode for a new conversation; an existing one keeps its own. */
+  mode?: string;
+  /** What the conversation was opened from (a moment or a discovery). */
+  context?: string;
+}
+
+/** The conversation an ask belongs to, with the mode and context it was opened with. */
+interface Conversation {
+  id: string;
+  mode: PolarisMode;
+  context: string | null;
 }
 
 export interface PolarisUsage {
@@ -69,12 +92,14 @@ export interface PolarisThreadSummary {
   id: string;
   title: string | null;
   preview: string | null;
+  mode: PolarisMode | null;
   created_at: string;
   updated_at: string;
 }
 
-/** One BASED ON WHAT WE SEE suggestion: a question + the pillar it grounds on. */
-export interface SuggestedQuestion {
+/** One starter on polaris home: a question in one mode, from one of the person's top pillars. */
+export interface PolarisStarter {
+  mode: PolarisMode;
   text: string;
   pillar_tag: Pillar;
 }
@@ -116,7 +141,7 @@ export class PolarisService {
     if (crisisResult.triggered) {
       // Best-effort, never throws — persists a sha256 hash of the text only.
       await this.crisis.recordCrisisEvent(userId, question, crisisResult.category);
-      const threadId = await this.resolveConversation(userId, body.thread_id);
+      const { id: threadId, mode } = await this.resolveConversation(userId, body);
       await this.persistMessage(userId, threadId, "user", question, null, 0);
       const crisisAnswer = this.voiceStandard.sanitizeProse(
         this.crisis.response.insight
@@ -134,6 +159,7 @@ export class PolarisService {
         answer: crisisAnswer,
         pillar_tag: null,
         thread_id: threadId,
+        mode,
         message_id: aiMessageId,
         usage: this.emptyUsage(),
         is_crisis: true,
@@ -147,11 +173,12 @@ export class PolarisService {
     // lock-out — free simply has a smaller allowance.
     const allowance = await this.tokenBudget.check(userId);
     if (allowance.limit_reached) {
-      const threadId = await this.resolveConversation(userId, body.thread_id);
+      const { id: threadId, mode } = await this.resolveConversation(userId, body);
       return {
         answer: null,
         pillar_tag: null,
         thread_id: threadId,
+        mode,
         message_id: null,
         usage: this.emptyUsage(),
         limit_reached: true,
@@ -160,6 +187,9 @@ export class PolarisService {
         allowance,
       };
     }
+
+    // The conversation carries the mode (and any opening context) for every turn.
+    const conversation = await this.resolveConversation(userId, body);
 
     // (3a) Route to a pillar via the verbatim keyword map; fall back to the user's
     // top-scoring active pillar from constellation_state.
@@ -222,6 +252,7 @@ export class PolarisService {
       traitInsights,
       observations,
       nearestObservation,
+      context: conversation.context,
     });
 
     // (3c) One real-time Claude call. Voice Standard renders FIRST (byte-stable →
@@ -232,6 +263,8 @@ export class PolarisService {
     const systemBlocks = await this.voiceStandard.buildSystemBlocks(
       POLARIS_TASK_INSTRUCTIONS
     );
+    // The mode block is one of three fixed texts, so it stays in the cached prefix.
+    systemBlocks.push({ type: "text", text: MODE_INSTRUCTIONS[conversation.mode] });
     systemBlocks.push({
       type: "text",
       text: groundingBlock,
@@ -292,7 +325,7 @@ export class PolarisService {
     // pillar tag (the Anthropic token usage is logged on each message), then (10)
     // debit the weekly meter by ONE question. Token usage is reported to the client
     // but never drives the meter (PHE-94).
-    const threadId = await this.resolveConversation(userId, body.thread_id);
+    const threadId = conversation.id;
     await this.persistMessage(
       userId,
       threadId,
@@ -320,6 +353,7 @@ export class PolarisService {
       answer,
       pillar_tag: pillar,
       thread_id: threadId,
+      mode: conversation.mode,
       message_id: aiMessageId,
       usage,
       sparse,
@@ -330,9 +364,9 @@ export class PolarisService {
   // ---- chat surface reads (PHE-23) -----------------------------------------
 
   /**
-   * Idle-view payload: past threads (most-recent first; the client hides "your
-   * chats" when empty), four pillar-tagged questions from the top-scoring
-   * pillars, and the live weekly question allowance for the allowance badge.
+   * Idle-view payload: past threads (most-recent first) with their mode, one
+   * starter question per mode from the top-scoring pillars, and the live
+   * weekly question allowance for the allowance badge.
    * Ownership is enforced by the `user_id` filter (service-role client bypasses
    * RLS). `preview` decrypts each thread's first user message.
    */
@@ -340,7 +374,7 @@ export class PolarisService {
     userId: string
   ): Promise<{
     threads: PolarisThreadSummary[];
-    suggested_questions: SuggestedQuestion[];
+    starters: PolarisStarter[];
     allowance: WeeklyAllowance;
   }> {
     const supabase = this.supabaseService.getClient();
@@ -349,7 +383,7 @@ export class PolarisService {
       await Promise.all([
         supabase
           .from("polaris_conversations")
-          .select("id, title, created_at, updated_at")
+          .select("id, title, mode, created_at, updated_at")
           .eq("user_id", userId)
           .order("updated_at", { ascending: false })
           .limit(50),
@@ -367,6 +401,7 @@ export class PolarisService {
         id: row.id as string,
         title: (row.title as string | null) ?? null,
         preview: await this.firstMessagePreview(userId, row.id as string),
+        mode: (row.mode as PolarisMode | null) ?? null,
         created_at: row.created_at as string,
         updated_at: row.updated_at as string,
       }))
@@ -374,7 +409,7 @@ export class PolarisService {
 
     return {
       threads,
-      suggested_questions: computeSuggestedQuestions(constellation),
+      starters: computeStarters(constellation),
       allowance,
     };
   }
@@ -388,12 +423,16 @@ export class PolarisService {
   async getThread(
     userId: string,
     threadId: string
-  ): Promise<{ thread_id: string; messages: PolarisMessageView[] }> {
+  ): Promise<{
+    thread_id: string;
+    mode: PolarisMode | null;
+    messages: PolarisMessageView[];
+  }> {
     const supabase = this.supabaseService.getClient();
 
     const { data: conversation } = await supabase
       .from("polaris_conversations")
-      .select("id, user_id")
+      .select("id, user_id, mode")
       .eq("id", threadId)
       .maybeSingle();
     if (!conversation || conversation.user_id !== userId) {
@@ -414,7 +453,11 @@ export class PolarisService {
       created_at: m.created_at as string,
     }));
 
-    return { thread_id: threadId, messages };
+    return {
+      thread_id: threadId,
+      mode: (conversation.mode as PolarisMode | null) ?? null,
+      messages,
+    };
   }
 
   /** Decrypt the earliest user message of a thread, truncated for the list
@@ -440,31 +483,44 @@ export class PolarisService {
 
   // ---- persistence helpers -------------------------------------------------
 
-  /** Return the caller's conversation id, creating one when `threadId` is absent or
+  /** Return the caller's conversation, creating one when `thread_id` is absent or
    * not owned by the user (service-role client bypasses RLS, so ownership is checked
-   * here). */
+   * here). A new conversation takes the requested mode and opening context (the
+   * context is encrypted at rest, like the messages); an existing one keeps its own. */
   private async resolveConversation(
     userId: string,
-    threadId?: string
-  ): Promise<string> {
+    body: AskBody
+  ): Promise<Conversation> {
     const supabase = this.supabaseService.getClient();
-    if (threadId) {
+    if (body.thread_id) {
       const { data } = await supabase
         .from("polaris_conversations")
-        .select("id, user_id")
-        .eq("id", threadId)
+        .select("id, user_id, mode, context")
+        .eq("id", body.thread_id)
         .maybeSingle();
-      if (data && data.user_id === userId) return data.id as string;
+      if (data && data.user_id === userId) {
+        return {
+          id: data.id as string,
+          mode: parseMode(data.mode),
+          context: data.context ? this.encryption.decrypt(data.context as string) : null,
+        };
+      }
     }
+    const mode = parseMode(body.mode);
+    const context = body.context?.trim().slice(0, CONTEXT_LIMIT) || null;
     const { data, error } = await supabase
       .from("polaris_conversations")
-      .insert({ user_id: userId })
+      .insert({
+        user_id: userId,
+        mode,
+        context: context ? this.encryption.encrypt(context) : null,
+      })
       .select("id")
       .single();
     if (error || !data) {
       throw new HttpException({ error: "could not open conversation" }, 500);
     }
-    return data.id as string;
+    return { id: data.id as string, mode, context };
   }
 
   /** Append one polaris_messages turn (append-only table). `body` is encrypted at
@@ -515,50 +571,59 @@ export class PolarisService {
 
 // ---- pure helpers (no DI; unit-testable) -----------------------------------
 
-// One suggested question per pillar (BASED ON WHAT WE SEE). Lowercase, in voice;
-// each is grounded on its pillar so tapping it routes cleanly through the ask
-// pipeline's keyword/top-pillar cascade.
-const PILLAR_QUESTIONS: Record<Pillar, string> = {
-  origin: "what pulled me toward the things i started with?",
-  emergence: "what were people noticing about me before i noticed it myself?",
-  self_creation: "what does the way i make things say about me?",
-  convergence: "where do my different worlds actually meet?",
-  becoming: "who am i becoming when no one is watching?",
-  recognition: "how do people actually experience me?",
-  transcendence: "where is all of this quietly heading?",
+// One starter question per mode for each pillar (spec doc 4), lowercase and in
+// voice, written as the person would ask it. Polaris home shows one per mode,
+// each drawn from a different one of the person's top pillars.
+const STARTER_QUESTIONS: Record<PolarisMode, Record<Pillar, string>> = {
+  clarify: {
+    origin: "what from where i started still shapes the questions i ask now?",
+    emergence: "why did the things i chose on my own matter so much to me?",
+    self_creation: "what am i really trying to build when i make things?",
+    convergence: "why do my separate interests keep pulling toward each other?",
+    becoming: "what is actually changing for me right now?",
+    recognition: "what are people seeing in me that i haven’t named yet?",
+    transcendence: "what am i reaching for underneath my plans?",
+  },
+  understand: {
+    origin: "what pulled me toward the things i started with?",
+    emergence: "what were people noticing about me before i noticed it myself?",
+    self_creation: "what does the way i make things keep returning to?",
+    convergence: "where do my different worlds actually meet?",
+    becoming: "what keeps showing up in how i spend my time lately?",
+    recognition: "how do people actually experience me?",
+    transcendence: "where is all of this quietly heading?",
+  },
+  decide: {
+    origin: "what from my earliest interests is worth bringing back now?",
+    emergence: "which of the things i chose for myself should get more room?",
+    self_creation: "what should i make next, given what i keep returning to?",
+    convergence: "how could i bring my separate worlds into one project?",
+    becoming: "what is one next step that fits how i’m changing?",
+    recognition: "how do i build on what people are starting to see?",
+    transcendence: "what would a first step toward where this is heading look like?",
+  },
 };
 
-// Default suggestions when the constellation has no scores yet — four active
-// pillars so idle "questions from your record" always has four cards.
-const DEFAULT_SUGGESTED_PILLARS: Pillar[] = [
-  "origin",
-  "emergence",
-  "self_creation",
-  "convergence",
-];
+// Starters when the constellation has no scores yet.
+const DEFAULT_STARTER_PILLARS: Pillar[] = ["origin", "emergence", "self_creation"];
 
 /**
- * Compute the four questions-from-your-record suggestions from the user's
- * top-scoring pillars. Ranks every pillar by constellation score, takes the
- * top four, and pads with the default active pillars when scores are thin
- * so the idle tab always has four pillar-tagged questions.
+ * One starter per mode, in mode order, each from a different one of the
+ * person's three top-scoring pillars (padded with the default pillars when
+ * scores are thin), so the three cover different parts of their life.
  */
-export function computeSuggestedQuestions(
+export function computeStarters(
   constellation: Record<string, unknown> | null | undefined
-): SuggestedQuestion[] {
-  const ranked = topScoringPillars(constellation, ALL_PILLARS.length);
-  const chosen: Pillar[] = [];
-  for (const pillar of ranked) {
-    if (chosen.length >= 4) break;
-    chosen.push(pillar);
-  }
-  for (const pillar of DEFAULT_SUGGESTED_PILLARS) {
-    if (chosen.length >= 4) break;
+): PolarisStarter[] {
+  const chosen: Pillar[] = topScoringPillars(constellation, POLARIS_MODES.length);
+  for (const pillar of DEFAULT_STARTER_PILLARS) {
+    if (chosen.length >= POLARIS_MODES.length) break;
     if (!chosen.includes(pillar)) chosen.push(pillar);
   }
-  return chosen.map((pillar) => ({
-    text: PILLAR_QUESTIONS[pillar],
-    pillar_tag: pillar,
+  return POLARIS_MODES.map((mode, i) => ({
+    mode,
+    text: STARTER_QUESTIONS[mode][chosen[i]],
+    pillar_tag: chosen[i],
   }));
 }
 
@@ -630,6 +695,13 @@ rules, never break these:
 - no diagnostic or clinical language. no advice framed as therapy.
 - never ask who the person is. you already have their constellation, so start from the grounding and skip introductions.`;
 
+/** One block per mode, after the task instructions. Fixed text, so each caches. */
+const MODE_INSTRUCTIONS: Record<PolarisMode, string> = {
+  clarify: `mode: clarify. the person wants to untangle a question. help them see what they are really asking: name the tension you can see in their grounding, in two or three sentences, then end with one short question that helps them say it more precisely.`,
+  understand: `mode: understand. the person wants to explore a recurring pattern. follow it to its source in the grounding: where it began, what keeps reinforcing it and where it shows now, naming the dates and platforms you were given. keep it to a few sentences and end with one short question back to them.`,
+  decide: `mode: decide. the person wants to choose a direction and shape next steps. weigh the options against what their grounding shows about when they do their best work and what they keep returning to. you may lay out a numbered plan of at most three short steps, each on its own line. end with one short question back to them.`,
+};
+
 /** Build the per-user grounding block that anchors the Claude call. Byte-stable for a
  * given (pillar, synthesis, traits, observations) so it caches across identical
  * same-session questions. Carries the verbatim honest-limits instruction. */
@@ -639,8 +711,10 @@ function buildGroundingBlock(input: {
   traitInsights: string[];
   observations: string[];
   nearestObservation: string | null;
+  /** The moment or discovery the conversation was opened from, if any. */
+  context?: string | null;
 }): string {
-  const { pillar, synthesis, traitInsights, observations, nearestObservation } =
+  const { pillar, synthesis, traitInsights, observations, nearestObservation, context } =
     input;
 
   const lines: string[] = [];
@@ -663,6 +737,11 @@ function buildGroundingBlock(input: {
       ? observations.map((o) => `- ${o}`).join("\n")
       : "none yet"
   );
+  if (context) {
+    lines.push("");
+    lines.push("the person opened this conversation from:");
+    lines.push(context);
+  }
   lines.push("");
   lines.push("honest-limits rule:");
   if (nearestObservation) {
