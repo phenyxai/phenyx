@@ -8,13 +8,22 @@ import {
   SystemBlock,
   VoiceStandardService,
 } from "../voice-standard/voice-standard.service";
+import {
+  EMIT_INSIGHTS_TOOL,
+  INSIGHTS_INSTRUCTIONS,
+  normalizeInsights,
+  type InsightsReading,
+} from "./insights";
 
 // Model IDs are exact — do not append date suffixes or downgrade.
 const SYNTHESIS_MODEL = "claude-opus-4-8"; // PHE-34 core synthesis (tool use, high effort)
-const PROSE_MODEL = "claude-sonnet-4-6"; // PHE-36 mantra + PHE-38 foresight (low effort)
+const PROSE_MODEL = "claude-sonnet-4-6"; // PHE-36 mantra, PHE-38 foresight, PHE-124 insights
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
+
+/** Dated moments sent to the insights prompt, oldest first. */
+const INSIGHTS_MOMENT_LIMIT = 40;
 
 /** The four active pillars at onboarding. The other three stay locked (null). */
 const ACTIVE_PILLARS = [
@@ -191,6 +200,8 @@ you must return the line by calling the emit_foresight tool.`;
 @Injectable()
 export class SynthesisService {
   private readonly logger = new Logger(SynthesisService.name);
+  /** user:version pairs with an insights run in flight on this instance. */
+  private readonly insightsInFlight = new Set<string>();
 
   constructor(
     private readonly config: ConfigService,
@@ -329,6 +340,7 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
     if (!idempotent) {
       this.enqueue("mantra", () => this.generateMantra(userId, version));
       this.enqueue("foresight", () => this.generateForesight(userId, version));
+      this.queueInsights(userId, version);
       // PHE-24 — this synthesize() call IS the Onairos-analysis-complete seam (the
       // Onairos trait object arrives here). Generate the trait-level grounding rows
       // from the same snapshot, tagged with the new version. Runs as its own pass
@@ -455,6 +467,86 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
       return null;
     }
     return foresight;
+  }
+
+  /**
+   * PHE-124 — generate the insights reading for the given version and store it
+   * on constellation_state.insights, tagged with that version. Stale-guarded
+   * like the foresight: the write only lands while the row is still at
+   * `version`. Grounded in the constellation summary plus dated moments.
+   */
+  async generateInsights(
+    userId: string,
+    version: number
+  ): Promise<InsightsReading | null> {
+    const summary = await this.loadConstellationSummary(userId, version);
+    if (!summary) return null;
+
+    const supabase = this.supabaseService.getClient();
+    const { data: moments } = await supabase
+      .from("observations")
+      .select("pillar, body, span_start, span_end, source_platforms")
+      .eq("user_id", userId)
+      .not("body", "is", null)
+      .order("span_start", { ascending: true, nullsFirst: false })
+      .limit(INSIGHTS_MOMENT_LIMIT);
+    const dated = (moments ?? [])
+      .map((m) => {
+        const from = (m.span_start as string | null)?.slice(0, 7) ?? "undated";
+        const to = (m.span_end as string | null)?.slice(0, 7);
+        const platforms = ((m.source_platforms as string[] | null) ?? []).join(", ");
+        return `- ${to && to !== from ? `${from} to ${to}` : from} · ${platforms || "unknown platform"} · ${m.pillar}: ${m.body}`;
+      })
+      .join("\n");
+
+    let insights: InsightsReading;
+    try {
+      const out = await this.callClaudeTool<unknown>({
+        model: PROSE_MODEL,
+        effort: "medium",
+        maxTokens: 2000,
+        taskInstructions: INSIGHTS_INSTRUCTIONS,
+        userMessage: `${summary}\n\ndated moments:\n${dated || "none yet"}`,
+        tool: EMIT_INSIGHTS_TOOL,
+      });
+      insights = normalizeInsights(
+        out,
+        (text) => this.voiceStandard.sanitizeProse(text, "insights"),
+        version,
+        new Date()
+      );
+    } catch (e) {
+      this.logger.error(`insights generation failed for ${userId}`, e as Error);
+      return null;
+    }
+
+    const { error } = await supabase
+      .from("constellation_state")
+      .update({ insights })
+      .eq("user_id", userId)
+      .eq("version", version);
+    if (error) {
+      this.logger.error(`insights persist failed for ${userId}`, error);
+      return null;
+    }
+    return insights;
+  }
+
+  /**
+   * Generate insights in the background unless a run for this version is
+   * already going on this instance. Called after synthesis and, lazily, when
+   * the insights tab finds no reading for the current version.
+   */
+  // ponytail: per-instance guard; several instances may each run once, add a DB claim if that costs too much.
+  queueInsights(userId: string, version: number): void {
+    const key = `${userId}:${version}`;
+    if (this.insightsInFlight.has(key)) return;
+    this.insightsInFlight.add(key);
+    this.enqueue("insights", () =>
+      this.generateInsights(userId, version).finally(() =>
+        this.insightsInFlight.delete(key)
+      )
+    );
   }
 
   /**

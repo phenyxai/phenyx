@@ -5,6 +5,8 @@ import { ConfirmCodeService } from "../auth/confirm-code.service";
 import { StripeService } from "../stripe/stripe.service";
 import { pickHeldConstants, type HeldConstant } from "./held";
 import { PILLARS } from "../constellation/layout";
+import { SynthesisService } from "../synthesis/synthesis.service";
+import { insightsStale, type InsightsReading } from "../synthesis/insights";
 
 /**
  * PHE-30 / PHE-38 / PHE-75 / PHE-95 — read model behind `GET /profile/overview`.
@@ -14,6 +16,10 @@ import { PILLARS } from "../constellation/layout";
  * billing shape behind the subscription modal: how full is paid for and, on a
  * monthly subscription, when it next renews. Snapshot/foresight are still
  * returned for older clients but the you tab does not render them.
+ *
+ * PHE-124: also the insights reading. A reading written for an older
+ * constellation version is still returned while a fresh one is generated in
+ * the background.
  */
 
 export interface ProfileSnapshotItem {
@@ -53,6 +59,8 @@ export interface ProfileOverviewResponse {
   /** Kept for older clients; Profile v67 does not render this. */
   snapshot: ProfileSnapshotItem[];
   foresight: string | null;
+  /** PHE-124 insights reading; null until the first one has been generated. */
+  insights: InsightsReading | null;
   /** `free` or `pro` — gifted is never returned as product copy. */
   tier: "free" | "pro";
   notification_prefs: NotificationPrefs;
@@ -90,7 +98,8 @@ export class ProfileService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly confirmCode: ConfirmCodeService,
-    private readonly stripe: StripeService
+    private readonly stripe: StripeService,
+    private readonly synthesis: SynthesisService
   ) {}
 
   async getOverview(userId: string): Promise<ProfileOverviewResponse> {
@@ -124,7 +133,7 @@ export class ProfileService {
         supabase
           .from("constellation_state")
           .select(
-            "foresight, origin_synthesis, emergence_synthesis, self_creation_synthesis, convergence_synthesis"
+            "version, insights, foresight, origin_synthesis, emergence_synthesis, self_creation_synthesis, convergence_synthesis"
           )
           .eq("user_id", userId)
           .maybeSingle(),
@@ -144,6 +153,10 @@ export class ProfileService {
       keyword_tags: string[] | null;
       insight: string | null;
     }[];
+
+    if (insightsStale(state?.insights, state?.version)) {
+      this.synthesis.queueInsights(userId, state?.version as number);
+    }
 
     const rawTier = (profileRes.data?.tier as string | null) ?? "free";
     const tier = rawTier === "free" ? "free" : "pro";
@@ -170,6 +183,7 @@ export class ProfileService {
       held: pickHeldConstants(this.buildHeld(traits, state)),
       snapshot: this.buildSnapshot(traits, state),
       foresight: (state?.foresight as string | null) ?? null,
+      insights: (state?.insights as InsightsReading | null) ?? null,
       tier,
       notification_prefs: readStoredPrefs(promptTimes),
       renews_at: renewsAt,

@@ -12,6 +12,8 @@ import { PersonaModule } from "../persona/persona.module";
   providers: [SynthesisService, CrisisService, TraitProfileService],
   // TraitProfileService is exported so the Polaris module (PHE-22, other chain)
   // can inject it cross-module in the P3 reconciliation and call inferTraitInsight.
-  exports: [CrisisService, TraitProfileService],
+  // SynthesisService is exported so the profile overview can queue a missing
+  // insights reading (PHE-124).
+  exports: [CrisisService, TraitProfileService, SynthesisService],
 })
 export class SynthesisModule {}

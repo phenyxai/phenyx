@@ -1,39 +1,62 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { useTier } from "@/lib/use-tier";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
-import { apiFetch, type ProfileOverview } from "@/lib/api-client";
+import { apiFetch, type InsightsReading, type ProfileOverview } from "@/lib/api-client";
 import { colorName, resolveAccent } from "@/lib/stellar";
-import { constellationAge, fetchConstellation, type ConstellationData } from "@/lib/constellation";
+import { constellationAge, fetchConstellation, relativeTime, type ConstellationData } from "@/lib/constellation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 import { PanelHeader } from "@/components/phenyx/panel-header";
-import { pickHeldConstants } from "./held";
-import { buildInsightsStats, formatJoinedSince } from "./stats";
+import { buildInsightsStats } from "./stats";
 
-/** Section labels are lowercase in source; the uppercase treatment is styling. */
+type Header = { name: string; color: string | null; platforms: number; insights: InsightsReading | null };
+
+/** Small, lowercase, accent: the section label used across the reading. */
 function SectionLabel({ children }: { children: string }) {
+  return <h2 className="mb-3 text-[12px] tracking-[0.04em] text-[var(--ph-accent)]">{children}</h2>;
+}
+
+function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <h2 className="mb-5 text-[11px] font-semibold tracking-[0.15em] text-[rgba(var(--ph-accent-rgb),0.85)] uppercase">
+    <section className="mb-12">
+      <SectionLabel>{label}</SectionLabel>
       {children}
-    </h2>
+    </section>
+  );
+}
+
+/** Shown in place of a section until the first reading has been generated. */
+function Forming() {
+  return <p className="text-[13px] font-light italic text-ph-white/40">forming.</p>;
+}
+
+/** One sentence and the short line under it (becoming clearer, needs shape). */
+function ReadingLine({ value }: { value: InsightsReading["becoming_clearer"] | undefined }) {
+  if (!value) return <Forming />;
+  return (
+    <>
+      <p className="max-w-[60ch] text-[17px] font-light leading-[1.55] text-ph-white/92">{value.line}</p>
+      {value.support && (
+        <p className="mt-2 max-w-[60ch] text-[13.5px] font-light leading-[1.6] text-ph-white/55">{value.support}</p>
+      )}
+    </>
   );
 }
 
 /**
- * Insights tab (PHE-96; the you tab in PHE-91 / PHE-95, Profile before that).
- * One screen under the shared panel header: identity, connected platforms,
- * your color, the "your constellation" stats block, and what has stayed with
- * you. The grouped settings rows and "get in touch" live on /dashboard/settings,
- * reached from the sidebar gear (the top bar gear on phones). Gifted is never
- * shown; freeze/pause does not exist.
+ * Insights tab (PHE-124, spec doc 5; the you tab before PHE-96). Steps back
+ * from single moments: the header (name, color, last updated), three stats
+ * computed from real data, what is becoming clearer, what still needs shape,
+ * what matters to you, and the three eras of the timeline. The reading comes
+ * from `/profile/overview`; until the first one is generated each section
+ * says "forming." and keeps its place, so the structure is the same on every
+ * plan. Name and email edits live in settings.
  */
 export default function InsightsTabPage() {
-  const { isPro } = useTier();
-  const { openModal, openId, stellarColor } = useSettingsModals();
-  const [overview, setOverview] = useState<ProfileOverview | null>(null);
+  const { openId, stellarColor } = useSettingsModals();
+  const [header, setHeader] = useState<Header | null>(null);
   const [constellation, setConstellation] = useState<ConstellationData | null>(null);
 
   const load = useCallback(async () => {
@@ -41,47 +64,38 @@ export default function InsightsTabPage() {
       const res = await apiFetch("/profile/overview");
       if (res.ok) {
         const body = (await res.json()) as ProfileOverview;
-        setOverview({
-          ...body,
-          held: pickHeldConstants(body.held ?? []),
+        setHeader({
+          name: body.display_name?.trim() ?? "",
+          color: body.stellar_color,
+          platforms: body.connected_platforms?.length ?? 0,
+          insights: body.insights ?? null,
         });
         return;
       }
     } catch {
-      // fall through
+      // Fall through to the direct read so the header still shows.
     }
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) {
-      setOverview(null);
-      return;
-    }
+    if (!user) return;
     const { data: profile } = await supabase
       .from("user_profiles")
-      .select("display_name, stellar_color, created_at")
+      .select("display_name, stellar_color")
       .eq("id", user.id)
       .maybeSingle();
-    setOverview({
-      display_name: profile?.display_name ?? null,
-      email: user.email ?? null,
-      joined: formatJoinedSince(profile?.created_at as string | null),
-      stellar_color: profile?.stellar_color ?? null,
-      connected_platforms: [],
-      held: pickHeldConstants([]),
-      snapshot: [],
-      foresight: null,
-      tier: isPro ? "pro" : "free",
-      renews_at: null,
-      billing_period: null,
+    setHeader({
+      name: (profile?.display_name as string | null)?.trim() ?? "",
+      color: (profile?.stellar_color as string | null) ?? null,
+      platforms: 0,
+      insights: null,
     });
-  }, [isPro]);
+  }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  // The stats block reads the same payload the constellation tab renders.
   useEffect(() => {
     let active = true;
     fetchConstellation().then((result) => {
@@ -92,169 +106,100 @@ export default function InsightsTabPage() {
     };
   }, []);
 
+  // A settings modal (edit profile, connections) can change what the header
+  // shows; re-read when one closes.
   const prevOpen = useRef(openId);
   useEffect(() => {
     if (prevOpen.current !== null && openId === null) void load();
     prevOpen.current = openId;
   }, [openId, load]);
 
-  const displayName = overview?.display_name?.trim() ?? "";
-  const email = overview?.email?.trim() ?? "";
-  const joined = overview?.joined?.trim() ?? "";
-  const platforms = overview?.connected_platforms ?? [];
-  const held = overview?.held ?? [];
-  const swatch = resolveAccent(overview?.stellar_color || stellarColor);
-  const stellarName = colorName(swatch);
-  const badge = isPro ? "full" : "free";
+  const reading = header?.insights ?? null;
+  const swatch = resolveAccent(header?.color || stellarColor);
+  const updated = reading?.generated_at ?? constellation?.generated_at ?? null;
   const stats = buildInsightsStats(
-    constellation,
-    platforms.length,
+    header?.platforms ?? 0,
     constellation ? constellationAge(constellation) : null,
+    constellation?.tenure.since ?? null,
   );
 
   return (
     <>
-      <IntroBanner
-        tab="insights"
-        copy={INTRO_COPY.insights}
-        className="mx-10 mt-10"
-      />
+      <IntroBanner tab="insights" copy={INTRO_COPY.insights} className="mt-10 [@media(max-width:760px)]:mx-5 [@media(min-width:761px)]:mx-10" />
 
-      <section className="flex flex-col px-10 pt-8 pb-10">
+      <section className="flex flex-col pt-8 pb-10 [@media(max-width:760px)]:px-5 [@media(min-width:761px)]:px-10">
         <div className="w-full max-w-[820px]">
-          <PanelHeader eyebrow="insights" title="everything gathered here so far" />
+          <PanelHeader eyebrow="insights" title={header?.name || "your reading"} />
 
-          <div className="mb-[38px] flex flex-wrap items-start gap-x-14 gap-y-8 border-b border-[rgba(255,253,253,0.045)] pb-8">
-            <div className="flex min-w-[200px] flex-col gap-1">
-              <div className="flex items-center gap-2.5">
-                {displayName && (
-                  <p className="text-[15px] font-medium tracking-[-0.01em] text-ph-white">
-                    {displayName}
-                  </p>
-                )}
-                <span
-                  className={`inline-flex shrink-0 items-center rounded-full border px-[7px] py-0.5 text-[9px] tracking-[0.14em] uppercase ${
-                    isPro
-                      ? "border-[rgba(var(--ph-accent-rgb),0.4)] text-[var(--ph-accent)]"
-                      : "border-ph-white/18 text-ph-white/50"
-                  }`}
-                >
-                  {badge}
-                </span>
-                <button
-                  type="button"
-                  title="edit name and email"
-                  aria-label="edit name and email"
-                  onClick={() => openModal("edit-profile")}
-                  className="flex min-h-[26px] min-w-[26px] items-center justify-center p-1.5 text-ph-white/60 transition-colors"
-                >
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                  </svg>
-                </button>
-              </div>
-              {email && (
-                <p className="text-[13px] tracking-[0.02em] text-ph-white/62">
-                  {email}
-                </p>
-              )}
-              {joined && (
-                <p className="mt-1 text-[11px] tracking-[0.02em] text-ph-white/50">
-                  {joined}
-                </p>
-              )}
-            </div>
-
-            <div className="min-w-[240px] flex-1">
-              <SectionLabel>connected platforms</SectionLabel>
-              <div className="flex flex-wrap gap-1.5">
-                {platforms.length === 0 ? (
-                  <p className="text-[11px] text-ph-white/50">no platforms connected.</p>
-                ) : (
-                  platforms.map((platform) => (
-                    <span
-                      key={platform}
-                      className="rounded-lg border border-[rgba(var(--ph-accent-rgb),0.3)] px-[9px] py-0.5 text-[11px] tracking-[0.03em] lowercase text-[rgba(var(--ph-accent-rgb),0.9)]"
-                    >
-                      {platform}
-                    </span>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="min-w-[220px]">
-              <SectionLabel>your color</SectionLabel>
-              <div className="flex items-center gap-3">
-                <div
-                  className="h-[18px] w-[18px] shrink-0 rounded-full"
-                  style={{
-                    background: swatch,
-                    boxShadow: `0 0 10px color-mix(in srgb, ${swatch} 40%, transparent)`,
-                  }}
-                  aria-hidden="true"
-                />
-                <p className="text-[13.5px] font-light leading-relaxed text-ph-white/72">
-                  {stellarName}
-                </p>
-              </div>
-            </div>
-          </div>
+          <p className="-mt-3 mb-10 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] font-light text-ph-white/60">
+            <span
+              aria-hidden="true"
+              className="h-[14px] w-[14px] shrink-0 rounded-full"
+              style={{ background: swatch, boxShadow: `0 0 10px color-mix(in srgb, ${swatch} 40%, transparent)` }}
+            />
+            <span>{colorName(swatch)}</span>
+            {updated && <span className="text-ph-white/45">· updated {relativeTime(updated)}</span>}
+          </p>
 
           {stats.length > 0 && (
-            <div className="mb-[52px]">
-              <SectionLabel>your constellation</SectionLabel>
-              <dl className="flex flex-col gap-3">
-                {stats.map((row) => (
-                  <div
-                    key={row.key}
-                    className="grid grid-cols-[minmax(0,140px)_auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1 border-b border-[rgba(255,253,253,0.06)] py-2.5 last:border-b-0 max-sm:grid-cols-[1fr_auto]"
-                  >
-                    <dt className="text-[12px] tracking-[0.12em] text-[rgba(255,253,253,0.5)] uppercase">
-                      {row.label}
-                    </dt>
-                    <dd className="m-0 text-[17px] font-normal text-[rgba(255,253,253,0.92)]">
-                      {row.value}
-                    </dd>
-                    {row.note && (
-                      <dd className="m-0 text-[13px] text-[rgba(255,253,253,0.55)] max-sm:col-span-full">
-                        {row.note}
-                      </dd>
-                    )}
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
-
-          <div className="mb-[52px]">
-            <SectionLabel>what has stayed with you</SectionLabel>
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-              {held.map((item) => (
-                <div
-                  key={item.title}
-                  className="rounded-xl border border-[rgba(255,253,253,0.045)] bg-ph-white/[0.008] px-[22px] py-5"
-                >
-                  <p className="mb-1.5 text-[13px] tracking-[0.01em] text-[var(--ph-accent)]">
-                    {item.title}
-                  </p>
-                  <p className="text-[13px] leading-relaxed text-ph-white/78">
-                    {item.body}
-                  </p>
+            <dl className="mb-14 flex flex-wrap gap-x-14 gap-y-6">
+              {stats.map((stat) => (
+                <div key={stat.key} className="flex flex-col-reverse gap-1">
+                  <dt className="text-[12px] text-ph-white/50">{stat.label}</dt>
+                  <dd className="m-0 text-[24px] font-light tracking-[-0.01em] text-ph-white/92">{stat.value}</dd>
                 </div>
               ))}
-            </div>
-          </div>
+            </dl>
+          )}
+
+          <Section label="what is becoming clearer">
+            <ReadingLine value={reading?.becoming_clearer} />
+          </Section>
+
+          <Section label="what still needs shape">
+            <ReadingLine value={reading?.needs_shape} />
+          </Section>
+
+          <Section label="what matters to you">
+            {reading && reading.matters.length > 0 ? (
+              <div className="grid gap-x-12 gap-y-7 [@media(max-width:640px)]:grid-cols-1 [@media(min-width:641px)]:grid-cols-2">
+                {reading.matters.map((item) => (
+                  <div key={item.title}>
+                    <p className="mb-1.5 text-[14.5px] text-ph-white/90">{item.title}</p>
+                    <p className="text-[13.5px] font-light leading-[1.6] text-ph-white/60">{item.body}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Forming />
+            )}
+          </Section>
+
+          <Section label="your timeline">
+            {reading && reading.eras.length > 0 ? (
+              <ol className="flex flex-col gap-8">
+                {reading.eras.map((era) => (
+                  <li key={era.title} className="flex gap-4">
+                    <span
+                      aria-hidden="true"
+                      className="mt-[7px] h-[7px] w-[7px] shrink-0 rounded-full border border-[rgba(var(--ph-accent-rgb),0.7)]"
+                    />
+                    <div>
+                      <p className="text-[12px] tracking-[0.02em] text-[var(--ph-accent)]">
+                        {era.place ? `${era.years} · ${era.place}` : era.years}
+                      </p>
+                      <p className="mt-1 text-[15px] text-ph-white/90">{era.title}</p>
+                      <p className="mt-1.5 max-w-[60ch] text-[13.5px] font-light leading-[1.6] text-ph-white/60">
+                        {era.line}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <Forming />
+            )}
+          </Section>
         </div>
       </section>
     </>

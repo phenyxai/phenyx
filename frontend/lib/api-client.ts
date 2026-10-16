@@ -59,6 +59,16 @@ export interface ProfileSnapshotItem {
 /** How full is paid for; null when there is no billing (free, gifted). */
 export type BillingPeriod = "monthly" | "yearly"
 
+/** PHE-124 insights reading (backend `InsightsReading`). */
+export interface InsightsReading {
+  version: number
+  generated_at: string
+  becoming_clearer: { line: string; support: string } | null
+  needs_shape: { line: string; support: string } | null
+  matters: { title: string; body: string }[]
+  eras: { title: string; years: string; place: string | null; line: string }[]
+}
+
 /** Shape of `GET /profile/overview` (backend `ProfileOverviewResponse`). */
 export interface ProfileOverview {
   display_name: string | null
@@ -74,6 +84,8 @@ export interface ProfileOverview {
   snapshot: ProfileSnapshotItem[]
   /** Forward-looking foresight line; null until the engine has generated one. */
   foresight: string | null
+  /** Insights reading; null until the first one has been generated. */
+  insights: InsightsReading | null
   /** `free` or `pro` — gifted is never returned as product copy. */
   tier: "free" | "pro"
   notification_prefs?: Record<string, boolean>
@@ -113,6 +125,7 @@ export async function fetchProfileOverview(): Promise<ProfileOverview | null> {
     held: [],
     snapshot: [],
     foresight: null,
+    insights: null,
     tier: "free",
     renews_at: null,
     billing_period: null,
