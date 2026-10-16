@@ -34,6 +34,20 @@ export interface ClusterObservationInput {
   span_end?: string | null;
   sources?: string[] | null;
   assembled_evidence?: Evidence | null;
+  /** PHE-122 moment fields; null on observations from before them. */
+  title?: string | null;
+  what_happened?: string | null;
+  why_it_matters?: string | null;
+  what_connects?: string | null;
+  occurred_at?: string | null;
+  /** The person's reaction to this moment, when there is one. */
+  feedback?: MomentFeedback | null;
+}
+
+/** "this feels true" is `new`, "not quite" is `reading`; `following` is "follow this thread". */
+export interface MomentFeedback {
+  verdict: "new" | "known" | "reading" | null;
+  following: boolean;
 }
 
 export interface ClusterObservation {
@@ -47,6 +61,16 @@ export interface ClusterObservation {
   /** True when the evidence chain is withheld (free). Body still ships. */
   locked: boolean;
   evidence: Evidence | null;
+  /** PHE-122: the moment as the opened point lists it. */
+  title: string | null;
+  what_happened: string | null;
+  why_it_matters: string | null;
+  what_connects: string | null;
+  /** When it happened: the moment's own date, else the start of its window. */
+  occurred_at: string | null;
+  /** The platform it came from (the first of its sources). */
+  platform: string | null;
+  feedback: MomentFeedback | null;
 }
 
 export interface Cluster {
@@ -99,6 +123,13 @@ function serveObservation(
     is_new: row.is_new,
     locked: !tracesUnlocked,
     evidence,
+    title: row.title ?? null,
+    what_happened: row.what_happened ?? null,
+    why_it_matters: row.why_it_matters ?? null,
+    what_connects: row.what_connects ?? null,
+    occurred_at: row.occurred_at ?? row.span_start?.slice(0, 10) ?? null,
+    platform: row.source_platforms?.[0] ?? null,
+    feedback: row.feedback ?? null,
   };
 }
 

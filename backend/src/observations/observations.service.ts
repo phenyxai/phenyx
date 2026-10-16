@@ -132,7 +132,7 @@ export class ObservationsService {
         .maybeSingle(),
       supabase
         .from("observation_feedback")
-        .select("observation_id,verdict,opened")
+        .select("observation_id,verdict,opened,following")
         .eq("user_id", userId),
       this.unseenSignalMomentIds(userId),
     ]);
@@ -444,11 +444,25 @@ export class ObservationsService {
     }
 
     const patch = parsed.value;
-    const clearingVerdict = patch.verdict === null;
-    const markingOpened = patch.opened === true;
+    const { data: existing } = await supabase
+      .from("observation_feedback")
+      .select("verdict,opened,following")
+      .eq("user_id", userId)
+      .eq("observation_id", observationId)
+      .maybeSingle();
 
-    // `change it` deletes the row so the three buttons return.
-    if (clearingVerdict && !markingOpened) {
+    const next: ObservationFeedbackState = {
+      verdict:
+        patch.verdict !== undefined
+          ? patch.verdict
+          : ((existing?.verdict as ObservationFeedbackState["verdict"]) ?? null),
+      opened: patch.opened === true || existing?.opened === true,
+      following: patch.following ?? existing?.following === true,
+    };
+
+    // Nothing left to keep (a cleared verdict, never opened, not followed):
+    // delete the row so the reactions return to their resting state.
+    if (!next.verdict && !next.opened && !next.following) {
       const { error } = await supabase
         .from("observation_feedback")
         .delete()
@@ -458,46 +472,25 @@ export class ObservationsService {
         this.logger.error(`feedback delete failed for ${observationId}: ${error.message}`);
         throw new HttpException({ error: "feedback failed" }, 500);
       }
-      return { verdict: null, opened: false };
+      return next;
     }
 
-    const { data: existing } = await supabase
-      .from("observation_feedback")
-      .select("verdict,opened")
-      .eq("user_id", userId)
-      .eq("observation_id", observationId)
-      .maybeSingle();
-
-    const nextVerdict =
-      patch.verdict !== undefined
-        ? patch.verdict
-        : ((existing?.verdict as ObservationFeedbackState["verdict"]) ?? null);
-    const nextOpened = markingOpened ? true : existing?.opened === true;
-
-    const { data: upserted, error } = await supabase
+    const { error } = await supabase
       .from("observation_feedback")
       .upsert(
         {
           user_id: userId,
           observation_id: observationId,
-          verdict: nextVerdict,
-          opened: nextOpened,
+          ...next,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,observation_id" }
-      )
-      .select("verdict,opened")
-      .maybeSingle();
+      );
     if (error) {
       this.logger.error(`feedback upsert failed for ${observationId}: ${error.message}`);
       throw new HttpException({ error: "feedback failed" }, 500);
     }
-
-    return {
-      verdict:
-        (upserted?.verdict as ObservationFeedbackState["verdict"]) ?? nextVerdict,
-      opened: upserted?.opened === true || nextOpened,
-    };
+    return next;
   }
 
   /**
@@ -766,9 +759,21 @@ strict prohibitions, never break these:
             typeof o.window_end === "string" && o.window_end.trim()
               ? o.window_end
               : null,
+          title: this.momentText(o.title),
+          what_happened: this.momentText(o.what_happened),
+          why_it_matters: this.momentText(o.why_it_matters),
+          what_connects: this.momentText(o.what_connects),
+          occurred_at: typeof o.occurred_at === "string" ? o.occurred_at : null,
         };
       })
       .filter((c): c is ObservationCandidate => c !== null);
+  }
+
+  /** A moment field through the voice sanitizer; empty when the model sent none. */
+  private momentText(value: unknown): string {
+    return typeof value === "string" && value.trim()
+      ? this.voiceStandard.sanitizeProse(value, "observation")
+      : "";
   }
 
   private emitObservationsTool() {
@@ -835,6 +840,29 @@ strict prohibitions, never break these:
                   description:
                     "Inclusive ISO-8601 end of the supporting record window, or an empty string when unknown.",
                 },
+                title: {
+                  type: "string",
+                  description:
+                    "The moment in one short line of about eight words, no full stop, e.g. 'a board of warm rooms you never stop adding to'.",
+                },
+                what_happened: {
+                  type: "string",
+                  description: "One sentence: the observed fact, naming the platform.",
+                },
+                why_it_matters: {
+                  type: "string",
+                  description: "One sentence: what the moment suggests, as a reflection.",
+                },
+                what_connects: {
+                  type: "string",
+                  description:
+                    "One sentence: how this moment leads to a later one, or an empty string when nothing does yet.",
+                },
+                occurred_at: {
+                  type: "string",
+                  description:
+                    "ISO-8601 date (YYYY-MM-DD) the moment happened, from its earliest supporting record; an empty string when unknown.",
+                },
               },
               required: [
                 "pillar",
@@ -847,6 +875,11 @@ strict prohibitions, never break these:
                 "source_record_keys",
                 "window_start",
                 "window_end",
+                "title",
+                "what_happened",
+                "why_it_matters",
+                "what_connects",
+                "occurred_at",
               ],
             },
           },
@@ -867,6 +900,8 @@ each body is two to three sentences written to the person as "you", reflecting w
 new-signal diffing is the core rule: only surface genuinely novel patterns. you will be shown the observations already surfaced to this person, so do not restate them, rephrase them, or emit near-duplicates. if a pattern only confirms something already surfaced, omit it. if nothing genuinely new surfaced, emit an empty observations array.
 
 for each observation choose a stable signal_key that identifies the underlying pattern (not the prose), so the same pattern always produces the same key. prefer cross-platform reads (source_platforms with 2+ platforms), since they are the strongest signals.
+
+each observation is also a moment on the person’s constellation, so give it a title (one short line of about eight words, no full stop), what_happened (one sentence on the observed fact, naming the platform), why_it_matters (one sentence on what it suggests), what_connects (one sentence on how it leads to a later moment, or empty when nothing does yet) and occurred_at (the date it happened, from its earliest supporting record).
 
 also return the concrete supporting_points, exact source_record_keys copied from the grounding, and the inclusive ISO-8601 window_start/window_end. a bare platform name is not a source record key. do not emit two angles on the same pillar that share a source record or overlap the same time window; keep the one with more supporting points.
 
@@ -922,6 +957,16 @@ strict prohibitions, never break these:
       .map((f) => `- [${f.pillar}] ${f.body}`)
       .join("\n");
 
+    // PHE-122: what the person said feels true, and the threads they follow.
+    const trueMoments = context.feedbackSignals
+      .filter((f) => f.verdict === "new" && f.body)
+      .map((f) => `- [${f.pillar}] ${f.body}`)
+      .join("\n");
+    const followed = context.feedbackSignals
+      .filter((f) => f.following && f.body)
+      .map((f) => `- [${f.pillar}] ${f.body}`)
+      .join("\n");
+
     return `USER CONSTELLATION
 archetype: ${state?.archetype ?? "unknown"}
 foresight: ${state?.foresight ?? "none"}
@@ -939,6 +984,12 @@ ${alreadySurfaced || "none yet — this is the first pass"}
 
 CLAIMS FLAGGED AS A BAD READING (do NOT regenerate these patterns)
 ${readingClaims || "none"}
+
+MOMENTS THE PERSON SAID FEEL TRUE (patterns to build on)
+${trueMoments || "none"}
+
+THREADS THE PERSON IS FOLLOWING (surface what continues them when it is genuinely new)
+${followed || "none"}
 
 Surface only genuinely novel observations via emit_observations.`;
   }
@@ -1002,10 +1053,14 @@ Surface only genuinely novel observations via emit_observations.`;
     const supabase = this.supabaseService.getClient();
     const { data: fb } = await supabase
       .from("observation_feedback")
-      .select("observation_id, verdict")
+      .select("observation_id, verdict, following")
       .eq("user_id", userId)
-      .in("verdict", ["known", "reading"]);
-    const rows = (fb ?? []) as { observation_id: string; verdict: string | null }[];
+      .or("verdict.in.(new,known,reading),following.eq.true");
+    const rows = (fb ?? []) as {
+      observation_id: string;
+      verdict: string | null;
+      following: boolean | null;
+    }[];
     if (rows.length === 0) return [];
 
     const ids = rows.map((r) => r.observation_id);
@@ -1024,11 +1079,16 @@ Surface only genuinely novel observations via emit_observations.`;
     for (const row of rows) {
       const o = byId.get(row.observation_id);
       if (!o) continue;
-      if (row.verdict !== "known" && row.verdict !== "reading") continue;
+      const verdict =
+        row.verdict === "new" || row.verdict === "known" || row.verdict === "reading"
+          ? row.verdict
+          : null;
+      if (!verdict && !row.following) continue;
       out.push({
         signal_hash: o.signal_hash,
         pillar: o.pillar,
-        verdict: row.verdict,
+        verdict,
+        following: row.following === true,
         body: o.body,
       });
     }

@@ -372,11 +372,10 @@ export function ConstellationCanvas({
       >
         {overlayNodes.map((node, i) => {
           const detail = data.pillars[node.pillar];
-          const areaCount = detail.clusters.length;
           const n = detail.observation_count;
-          const label = areaCount
-            ? `${pillarLabel(node.pillar)}, ${n} observation${n === 1 ? "" : "s"} in ${areaCount} area${areaCount === 1 ? "" : "s"}`
-            : `${pillarLabel(node.pillar)}, no observations yet`;
+          const label = n
+            ? `${pillarLabel(node.pillar)}, ${n} moment${n === 1 ? "" : "s"}`
+            : `${pillarLabel(node.pillar)}, no moments yet`;
           return (
             <button
               key={node.pillar}

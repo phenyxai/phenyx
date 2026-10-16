@@ -32,9 +32,14 @@ export type { Pillar, Vec3 } from "./constellation-shape";
 export {
   constellationAge,
   firstSentence,
+  momentTitle,
+  momentYear,
   newObservationCount,
   pillarLabel,
   PILLAR_LENS,
+  POINT_ERA,
+  pointMetaLine,
+  pointMoments,
   storyLine,
   synthesisLine,
 } from "./constellation-text";
@@ -43,6 +48,12 @@ export type { ConstellationAge, SynthesisLine } from "./constellation-text";
 // ---------------------------------------------------------------------------
 // Normalized shapes consumed by the canvas + panel
 // ---------------------------------------------------------------------------
+
+/** The person's reaction to a moment: "this feels true" is `new`, "not quite" is `reading`. */
+export interface MomentFeedback {
+  verdict: "new" | "known" | "reading" | null;
+  following: boolean;
+}
 
 export interface ClusterObservation {
   id: string;
@@ -55,6 +66,14 @@ export interface ClusterObservation {
   /** Trace withheld (free). The sentence still ships. */
   locked?: boolean;
   evidence?: Evidence | null;
+  /** PHE-122 moment fields; null on observations from before them. */
+  title?: string | null;
+  what_happened?: string | null;
+  why_it_matters?: string | null;
+  what_connects?: string | null;
+  occurred_at?: string | null;
+  platform?: string | null;
+  feedback?: MomentFeedback | null;
 }
 
 export interface Cluster {
@@ -67,11 +86,19 @@ export interface Cluster {
   observations: ClusterObservation[];
 }
 
+/** PHE-122: what an opened point shows above its moments. */
+export interface PointMeta {
+  story: string;
+  years: string;
+  place: string;
+}
+
 export interface PillarDetail {
   pillar: Pillar;
   position: Vec3;
   score: number | null;
   synthesis: string | null;
+  point?: PointMeta | null;
   observation_count: number;
   has_new: boolean;
   source_platforms: string[];
@@ -226,6 +253,13 @@ function normalizeCluster(raw: any): Cluster | null {
         is_new: Boolean(o.is_new),
         locked: Boolean(o.locked),
         evidence: o.evidence ?? null,
+        title: o.title ?? null,
+        what_happened: o.what_happened ?? null,
+        why_it_matters: o.why_it_matters ?? null,
+        what_connects: o.what_connects ?? null,
+        occurred_at: o.occurred_at ?? null,
+        platform: o.platform ?? null,
+        feedback: o.feedback ?? null,
       }))
     : [];
   return {
@@ -306,6 +340,7 @@ function normalizeEndpoint(raw: any, fallbackColor: string): ConstellationData {
     const detail = base.pillars[key];
     detail.score = p.score ?? null;
     detail.synthesis = p.synthesis ?? null;
+    detail.point = p.point ?? null;
     detail.observation_count = p.observation_count ?? 0;
     detail.has_new = Boolean(p.has_new);
     detail.source_platforms = Array.isArray(p.source_platforms)
@@ -382,6 +417,21 @@ function normalizeSignal(raw: any): NewSignal | null {
 }
 
 /** PHE-102 — the banner was opened; the signal never shows as new again. */
+/**
+ * PHE-122: save a reaction or a follow on one moment. Throws on a non-2xx so the
+ * caller can put the pill back.
+ */
+export async function sendMomentFeedback(
+  observationId: string,
+  patch: { verdict?: MomentFeedback["verdict"]; following?: boolean },
+): Promise<void> {
+  const res = await apiFetch(`/observations/${observationId}/feedback`, {
+    method: "POST",
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error(`feedback ${res.status}`);
+}
+
 export async function markSignalSeen(): Promise<void> {
   try {
     await apiFetch("/constellation/signal/seen", { method: "POST" });
