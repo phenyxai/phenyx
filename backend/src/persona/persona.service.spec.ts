@@ -78,6 +78,7 @@ async function runSynthesis(
     },
   };
 
+  const queued: string[] = [];
   const service = new PersonaService(
     { get: () => "test-key" } as any,
     { getClient: () => client } as any,
@@ -85,6 +86,15 @@ async function runSynthesis(
     {
       buildSystemBlocks: async () => [],
       sanitizeProse: (value: string) => value,
+    } as any,
+    {
+      queueInsights: (userId: string, version: number) =>
+        queued.push(`insights ${userId} v${version}`),
+    } as any,
+    {
+      generate: async (userId: string, options: { trigger: string }) => {
+        queued.push(`moments ${userId} ${options.trigger}`);
+      },
     } as any
   );
 
@@ -96,7 +106,9 @@ async function runSynthesis(
   } finally {
     global.fetch = originalFetch;
   }
-  return { modelBody, writes, calls, error };
+  // Let the fire-and-forget downstream queue settle.
+  await new Promise((resolve) => setImmediate(resolve));
+  return { modelBody, writes, calls, error, queued };
 }
 
 const constellationWrite = (writes: Array<{ table: string; payload: unknown }>) =>
@@ -214,4 +226,10 @@ test("PHE-100: a full refresh replaces the snapshot and bumps the version", asyn
   const payload = constellationWrite(writes);
   assert.equal(payload?.version, 4);
   for (const p of PILLARS) assert.ok(`${p}_synthesis` in (payload ?? {}), `${p} written`);
+});
+
+test("a saved version queues its moments, then its insights reading", async () => {
+  const { error, queued } = await runSynthesis(SEVEN, { traits: {} }, 3);
+  assert.equal(error, null);
+  assert.deepEqual(queued, ["moments user-1 signal", "insights user-1 v4"]);
 });
