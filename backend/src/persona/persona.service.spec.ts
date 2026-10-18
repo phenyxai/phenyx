@@ -197,6 +197,17 @@ test("PHE-100: a refresh missing any part keeps the previous snapshot", async ()
   assert.equal(writes.length, 0, "no constellation or profile write, version stays 3");
 });
 
+test("the portrait is saved as {prose, version} for the your life so far text", async () => {
+  const { error, writes } = await runSynthesis({ ...SEVEN, portrait: "your life so far" }, { traits: {} }, 3);
+  assert.equal(error, null);
+  assert.deepEqual(constellationWrite(writes)?.portrait, { prose: "your life so far", version: 4 });
+});
+
+test("a reply without a portrait leaves the stored one alone", async () => {
+  const { writes } = await runSynthesis(SEVEN, { traits: {} }, 3);
+  assert.ok(!("portrait" in (constellationWrite(writes) ?? {})), "portrait not overwritten");
+});
+
 test("PHE-100: a full refresh replaces the snapshot and bumps the version", async () => {
   const { error, writes } = await runSynthesis(SEVEN, { traits: {} }, 3);
   assert.equal(error, null);
