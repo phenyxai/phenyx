@@ -4,7 +4,7 @@
 // The one source for the signed-in app's tabs. The desktop sidebar and the
 // phone bottom nav both render DASHBOARD_TABS in array order, never sorted:
 // constellation, discover, polaris, insights (spec doc 1). Constellation is the
-// home route. Settings is reached from the account row (desktop) or the top bar
+// home route. Settings is reached from the sidebar foot (desktop) or the top bar
 // gear (phones), not from a tab.
 //
 // No runtime imports, so this module runs under `node --test` and next.config.ts
