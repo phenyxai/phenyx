@@ -43,7 +43,7 @@ create policy discoveries_select_own on public.discoveries
   for select to authenticated
   using ((select auth.uid()) = user_id);
 
-revoke all on table public.discoveries from public, anon;
+revoke all on table public.discoveries from public, anon, authenticated;
 grant select on table public.discoveries to authenticated;
 grant all on table public.discoveries to service_role;
 
