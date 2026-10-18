@@ -54,8 +54,8 @@ return only a valid json object in this exact shape, with no preamble, markdown 
   "transcendence": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" }
 }`;
 
-/** Seven paragraphs plus JSON need well over 2000 tokens; only used tokens are billed. */
-const SYNTHESIS_MAX_TOKENS = 4096;
+/** Seven paragraphs plus JSON need well over 2000 tokens, and Haiku 5.5's thinking counts too; only used tokens are billed. */
+const SYNTHESIS_MAX_TOKENS = 16000;
 const SYNTHESIS_ATTEMPTS = 2;
 
 /** PHE-122: what a point shows when it is opened, beside its synthesis. */
@@ -106,12 +106,15 @@ export class PersonaService {
       let synthesis: PillarSyntheses | null = null;
       for (let attempt = 1; attempt <= SYNTHESIS_ATTEMPTS && !synthesis; attempt++) {
         const claude = await this.requestSynthesis(system, sanitizedOnairosData);
-        const text = claude?.content?.[0]?.text;
+        // Haiku 5.5 thinks by default, so a thinking block comes before the text.
+        const text = Array.isArray(claude?.content)
+          ? claude.content.find((b: any) => b?.type === "text")?.text
+          : undefined;
         if (claude?.stop_reason === "max_tokens" || typeof text !== "string") {
           // eslint-disable-next-line no-console
           console.error(
             `synthesis reply unusable (attempt ${attempt}):`,
-            claude?.stop_reason ?? "no content"
+            claude?.error?.message ?? claude?.stop_reason ?? "no content"
           );
           continue;
         }
