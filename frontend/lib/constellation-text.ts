@@ -8,11 +8,11 @@
 // not); `lib/constellation.ts` re-exports it, which is where the app imports
 // from.
 
-import type { ConstellationData, Pillar, PillarDetail } from "./constellation";
+import type { ClusterObservation, ConstellationData, Pillar, PillarDetail } from "./constellation";
 
-/** Lowercase display label for a pillar (`self_creation` → `self creation`). */
+/** Lowercase display label for a pillar (`self_creation` → `self-creation`, as the spec names it). */
 export function pillarLabel(pillar: Pillar): string {
-  return pillar.replace(/_/g, " ");
+  return pillar.replace(/_/g, "-");
 }
 
 // Exactly four digits, so a fractional-second run in an ISO timestamp is never
@@ -145,12 +145,14 @@ export function firstSentence(text: string | null | undefined): string {
 }
 
 /**
- * The one line a point shows in the overview: the first sentence of its lead
- * observation, else of the lead area's preview, else the point's lens.
+ * The one line a point shows: its generated story (PHE-122), else the first
+ * sentence of its lead observation, else of the lead area's preview, else the
+ * point's lens.
  */
 export function storyLine(detail: PillarDetail): string {
   const lead = detail.clusters[0];
   return (
+    detail.point?.story?.trim() ||
     firstSentence(lead?.observations[0]?.body) ||
     firstSentence(lead?.preview) ||
     PILLAR_LENS[detail.pillar]
@@ -164,4 +166,45 @@ export function newObservationCount(detail: PillarDetail): number {
     for (const observation of cluster.observations) if (observation.is_new) count += 1;
   }
   return count;
+}
+
+// ---------------------------------------------------------------------------
+// Points and moments (PHE-122)
+// ---------------------------------------------------------------------------
+
+/** The part of a life each point covers (Oct 3 guidelines), shown beside its years. */
+export const POINT_ERA: Record<Pillar, string> = {
+  origin: "childhood",
+  emergence: "teenage years",
+  self_creation: "leaving home",
+  convergence: "a turning point",
+  becoming: "finding your voice",
+  recognition: "today",
+  transcendence: "what’s next",
+};
+
+/** "2013 – 2017 · teenage years · los angeles", leaving out what is unknown. */
+export function pointMetaLine(detail: PillarDetail): string {
+  return [detail.point?.years, POINT_ERA[detail.pillar], detail.point?.place]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** Every moment under a point, oldest first; undated ones follow, newest surfaced first. */
+export function pointMoments(detail: PillarDetail): ClusterObservation[] {
+  const all = detail.clusters.flatMap((cluster) => cluster.observations);
+  const dated = all.filter((m) => m.occurred_at).sort((a, b) => a.occurred_at!.localeCompare(b.occurred_at!));
+  const undated = all.filter((m) => !m.occurred_at).sort((a, b) => b.surfaced_at.localeCompare(a.surfaced_at));
+  return [...dated, ...undated];
+}
+
+/** A moment's one line: its own title, else the first sentence of its body. */
+export function momentTitle(moment: ClusterObservation): string {
+  return moment.title?.trim() || firstSentence(moment.body).replace(/[.?!]+$/, "");
+}
+
+/** The year a moment happened; empty when it is undated. */
+export function momentYear(moment: ClusterObservation): string {
+  return /^\d{4}/.exec(moment.occurred_at ?? "")?.[0] ?? "";
 }

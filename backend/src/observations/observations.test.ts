@@ -542,6 +542,9 @@ test("parseFeedbackBody accepts verdicts, null, and opened", () => {
   assert.equal(parseFeedbackBody({}).ok, false);
   assert.equal(parseFeedbackBody({ verdict: "data" }).ok, false);
   assert.equal(parseFeedbackBody({ opened: "yes" }).ok, false);
+  // PHE-122: "follow this thread" on its own is a valid body.
+  assert.deepEqual(parseFeedbackBody({ following: true }), { ok: true, value: { following: true } });
+  assert.equal(parseFeedbackBody({ following: "yes" }).ok, false);
 });
 
 test("attachFeedback maps rows onto served observations; missing → null", () => {
@@ -549,7 +552,7 @@ test("attachFeedback maps rows onto served observations; missing → null", () =
   const attached = attachFeedback(served, [
     { observation_id: "a", verdict: "known", opened: true },
   ]);
-  assert.deepEqual(attached[0].feedback, { verdict: "known", opened: true });
+  assert.deepEqual(attached[0].feedback, { verdict: "known", opened: true, following: false });
   assert.equal(attached[1].feedback, null);
 });
 
@@ -738,4 +741,28 @@ test("getDailyFeed pro: the chain and the sources ship on every row", async () =
   assert.equal(one.evidence?.sig, "frequency");
   assert.ok(Array.isArray(one.evidence?.entries));
   assert.ok(one.evidence?.closer);
+});
+
+test("buildInsertRows carries the PHE-122 moment fields and keeps only a real date", () => {
+  const [withMoment, withoutDate] = buildInsertRows(
+    "user-1",
+    [
+      cand({
+        signal_key: "moment-a",
+        title: " a board of warm rooms ",
+        what_happened: "you start a pinterest board.",
+        why_it_matters: "the light you saved returns.",
+        what_connects: "",
+        occurred_at: "2013-05-02T10:00:00Z",
+      }),
+      cand({ signal_key: "moment-b", occurred_at: "sometime in 2013" }),
+    ],
+    true
+  );
+  assert.equal(withMoment.title, "a board of warm rooms");
+  assert.equal(withMoment.what_happened, "you start a pinterest board.");
+  assert.equal(withMoment.what_connects, null);
+  assert.equal(withMoment.occurred_at, "2013-05-02");
+  assert.equal(withoutDate.title, null);
+  assert.equal(withoutDate.occurred_at, null);
 });

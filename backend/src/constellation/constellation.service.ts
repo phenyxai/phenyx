@@ -15,6 +15,7 @@ import {
   type AreaRow,
   type Cluster,
   type ClusterObservationInput,
+  type MomentFeedback,
 } from "./clusters";
 import {
   PILLARS,
@@ -39,10 +40,18 @@ import {
  * Pro + tenure ≥ 1 year only.
  */
 
+/** PHE-122: what an opened point shows above its moments. */
+export interface PointMeta {
+  story: string;
+  years: string;
+  place: string;
+}
+
 export interface ConstellationPillar {
   pillar: Pillar;
   score: number | null;
   synthesis: string | null;
+  point: PointMeta | null;
   observation_count: number;
   has_new: boolean;
   source_platforms: string[];
@@ -118,6 +127,7 @@ export class ConstellationService {
       spanRes,
       latestRes,
       signalRes,
+      feedbackRes,
     ] = await Promise.all([
       supabase
         .from("user_profiles")
@@ -132,7 +142,7 @@ export class ConstellationService {
       supabase
         .from("observations")
         .select(
-          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at,area_id,points,signal_type,evidence_n,evidence_span,span_start,span_end,record_count,sources"
+          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at,area_id,points,signal_type,evidence_n,evidence_span,span_start,span_end,record_count,sources,title,what_happened,why_it_matters,what_connects,occurred_at"
         )
         .eq("user_id", userId)
         .order("surfaced_at", { ascending: false }),
@@ -170,6 +180,11 @@ export class ConstellationService {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      // PHE-122: reactions and follows, shown on each opened moment.
+      supabase
+        .from("observation_feedback")
+        .select("observation_id,verdict,following")
+        .eq("user_id", userId),
     ]);
 
     const tier = (profileRes.data?.tier as string | null) ?? "free";
@@ -183,10 +198,22 @@ export class ConstellationService {
     // PHE-102: "new" means part of the unseen signal. Observations are
     // append-only, so their stored is_new never clears; the signal's seen_at does.
     const signal = (signalRes.data ?? null) as NewSignal | null;
+    const feedback = new Map<string, MomentFeedback>();
+    for (const f of (feedbackRes.data ?? []) as {
+      observation_id: string;
+      verdict: MomentFeedback["verdict"];
+      following: boolean | null;
+    }[]) {
+      feedback.set(f.observation_id, { verdict: f.verdict ?? null, following: f.following === true });
+    }
     const rows = markNewFromSignal(
       (obsRes.data ?? []) as ClusterObservationInput[],
       new Set(signal?.observation_ids ?? [])
-    ).map((row) => ({ ...row, pillar: normalizePillar(row.pillar) }));
+    ).map((row) => ({
+      ...row,
+      pillar: normalizePillar(row.pillar),
+      feedback: feedback.get(row.id) ?? null,
+    }));
 
     const withEvidence = await this.attachClusterEvidence(
       userId,
@@ -290,6 +317,7 @@ export class ConstellationService {
         pillar,
         score: this.readScore(state, pillar),
         synthesis: this.readSynthesis(state, pillar),
+        point: readPoint(state, pillar),
         observation_count: observationCount,
         has_new: clusters.some((c) => c.has_new),
         source_platforms: sourcePlatforms,
@@ -458,4 +486,15 @@ function unwrapSourceRecord(row: unknown): SourceRecordPreview | null {
     record_type: typeof r.record_type === "string" ? r.record_type : "",
     occurred_at: typeof r.occurred_at === "string" ? r.occurred_at : null,
   };
+}
+
+/** The opened point's story, years and place from constellation_state.points. */
+function readPoint(state: Record<string, unknown> | null, pillar: Pillar): PointMeta | null {
+  const points = state?.points;
+  const raw =
+    points && typeof points === "object" ? (points as Record<string, unknown>)[pillar] : null;
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const text = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  return { story: text(r.story), years: text(r.years), place: text(r.place) };
 }

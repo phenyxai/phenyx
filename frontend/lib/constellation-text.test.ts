@@ -3,7 +3,11 @@ import { test } from "node:test";
 import {
   constellationAge,
   firstSentence,
+  momentTitle,
+  momentYear,
   newObservationCount,
+  pointMetaLine,
+  pointMoments,
   storyLine,
   synthesisLine,
 } from "./constellation-text.ts";
@@ -137,7 +141,7 @@ test("synthesisLine lists three areas with commas and reads the pillar label wit
   ]);
   assert.equal(
     synthesisLine(d, true)?.text,
-    "a, b and c all sit under self creation, and they hold together, on 3 things you did rather than anything you said about yourself.",
+    "a, b and c all sit under self-creation, and they hold together, on 3 things you did rather than anything you said about yourself.",
   );
 });
 
@@ -209,4 +213,31 @@ test("newObservationCount counts is_new across every area under the point", () =
   ]);
   assert.equal(newObservationCount(d), 2);
   assert.equal(newObservationCount(detail("origin", [])), 0);
+});
+
+test("pointMetaLine reads years, era and place, leaving out what is unknown", () => {
+  const detail = (point: unknown) => ({ pillar: "emergence", point }) as any;
+  assert.equal(
+    pointMetaLine(detail({ story: "", years: "2013 – 2017", place: "los angeles" })),
+    "2013 – 2017 · teenage years · los angeles",
+  );
+  assert.equal(pointMetaLine(detail(null)), "teenage years");
+});
+
+test("pointMoments lists a point's moments oldest first, undated last", () => {
+  const m = (id: string, occurred_at: string | null, surfaced_at = "2026-01-01") => ({ id, occurred_at, surfaced_at }) as any;
+  const detail = {
+    clusters: [
+      { observations: [m("late", "2016-02-01"), m("undated-old", null, "2026-01-01")] },
+      { observations: [m("early", "2013-05-02"), m("undated-new", null, "2026-03-01")] },
+    ],
+  } as any;
+  assert.deepEqual(pointMoments(detail).map((x) => x.id), ["early", "late", "undated-new", "undated-old"]);
+});
+
+test("momentTitle falls back to the body's first sentence, momentYear to empty", () => {
+  assert.equal(momentTitle({ title: "a board of warm rooms", body: "x." } as any), "a board of warm rooms");
+  assert.equal(momentTitle({ title: null, body: "you start a board. it grows." } as any), "you start a board");
+  assert.equal(momentYear({ occurred_at: "2013-05-02" } as any), "2013");
+  assert.equal(momentYear({ occurred_at: null } as any), "");
 });

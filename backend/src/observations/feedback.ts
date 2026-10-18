@@ -2,12 +2,14 @@ import { computeSignalHash, normalizePillar } from "./signal-hash";
 import { orderCandidates, type ObservationCandidate, type ServedObservation } from "./gating";
 
 /**
- * PHE-72 — observation feedback (`does this land?`).
+ * PHE-72 — observation feedback (`does this land?`), PHE-122 moment reactions.
  *
  * Verdicts are internal storage keys, never user-facing copy:
- *   new     ← yes
+ *   new     ← yes / this feels true
  *   known   ← yes, already knew
  *   reading ← not quite
+ * `following` is "follow this thread": it keeps the moment close and feeds
+ * the threads into the next generation.
  */
 
 export const FEEDBACK_VERDICTS = ["new", "known", "reading"] as const;
@@ -16,12 +18,14 @@ export type FeedbackVerdict = (typeof FEEDBACK_VERDICTS)[number];
 export interface ObservationFeedbackState {
   verdict: FeedbackVerdict | null;
   opened: boolean;
+  following: boolean;
 }
 
 export interface FeedbackSignal {
   signal_hash: string;
   pillar: string;
   verdict: FeedbackVerdict | null;
+  following?: boolean;
   /** Writer-only; never sent to the client feedback payload. */
   body?: string;
 }
@@ -29,6 +33,7 @@ export interface FeedbackSignal {
 export interface ParsedFeedbackBody {
   verdict?: FeedbackVerdict | null;
   opened?: boolean;
+  following?: boolean;
 }
 
 const VERDICT_SET: ReadonlySet<string> = new Set(FEEDBACK_VERDICTS);
@@ -49,8 +54,9 @@ export function parseFeedbackBody(body: unknown): ParseFeedbackResult {
 
   const hasVerdict = Object.prototype.hasOwnProperty.call(body, "verdict");
   const hasOpened = Object.prototype.hasOwnProperty.call(body, "opened");
-  if (!hasVerdict && !hasOpened) {
-    return { ok: false, error: "verdict or opened is required" };
+  const hasFollowing = Object.prototype.hasOwnProperty.call(body, "following");
+  if (!hasVerdict && !hasOpened && !hasFollowing) {
+    return { ok: false, error: "verdict, opened or following is required" };
   }
 
   const value: ParsedFeedbackBody = {};
@@ -69,6 +75,12 @@ export function parseFeedbackBody(body: unknown): ParseFeedbackResult {
     }
     value.opened = body.opened;
   }
+  if (hasFollowing) {
+    if (typeof body.following !== "boolean") {
+      return { ok: false, error: "following must be a boolean" };
+    }
+    value.following = body.following;
+  }
 
   return { ok: true, value };
 }
@@ -77,6 +89,7 @@ export interface FeedbackRow {
   observation_id: string;
   verdict: string | null;
   opened: boolean;
+  following?: boolean | null;
 }
 
 function asVerdict(value: string | null): FeedbackVerdict | null {
@@ -94,6 +107,7 @@ export function attachFeedback(
     byId.set(row.observation_id, {
       verdict: asVerdict(row.verdict),
       opened: row.opened === true,
+      following: row.following === true,
     });
   }
   return observations.map((o) => ({

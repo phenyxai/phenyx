@@ -55,6 +55,12 @@ export interface ObservationCandidate {
   /** Inclusive UTC window for the records behind this observation. */
   window_start?: string | null;
   window_end?: string | null;
+  /** PHE-122 moment fields: one short line, then the three readings and the date. */
+  title?: string;
+  what_happened?: string;
+  why_it_matters?: string;
+  what_connects?: string;
+  occurred_at?: string | null;
   /** 0..1, used only for deterministic ordering; not persisted (no column). */
   confidence: number;
 }
@@ -192,6 +198,17 @@ export interface ObservationInsert {
   points?: string[];
   span_start?: string | null;
   span_end?: string | null;
+  title?: string | null;
+  what_happened?: string | null;
+  why_it_matters?: string | null;
+  what_connects?: string | null;
+  occurred_at?: string | null;
+}
+
+/** "2013-05-02" or "2013-05-02T…" → "2013-05-02"; anything else → null. */
+export function momentDate(value: string | null | undefined): string | null {
+  const m = value?.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return m && !Number.isNaN(Date.parse(m[1])) ? m[1] : null;
 }
 
 /**
@@ -227,6 +244,11 @@ export function buildInsertRows(
       points: c.supporting_points?.filter((point) => point.trim()),
       span_start: window?.startIso ?? null,
       span_end: window?.endIso ?? null,
+      title: c.title?.trim() || null,
+      what_happened: c.what_happened?.trim() || null,
+      why_it_matters: c.why_it_matters?.trim() || null,
+      what_connects: c.what_connects?.trim() || null,
+      occurred_at: momentDate(c.occurred_at),
     });
   }
   return rows;

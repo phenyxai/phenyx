@@ -29,7 +29,6 @@ const SWAP_OUT_MS = 180;
 export default function ConstellationTabPage() {
   const [data, setData] = useState<ConstellationData | null>(null);
   const [selectedPillar, setSelectedPillar] = useState<Pillar | null>(null);
-  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -42,51 +41,33 @@ export default function ConstellationTabPage() {
     };
   }, []);
 
-  const openPillar = useCallback((pillar: Pillar) => {
-    setSelectedPillar(pillar);
-    setSelectedClusterId(null);
-  }, []);
-
-  const back = useCallback(() => {
-    if (selectedClusterId) {
-      setSelectedClusterId(null);
-      return;
-    }
-    setSelectedPillar(null);
-  }, [selectedClusterId]);
-
-  const closePoint = useCallback(() => {
-    setSelectedClusterId(null);
-    setSelectedPillar(null);
-  }, []);
+  const openPillar = useCallback((pillar: Pillar) => setSelectedPillar(pillar), []);
+  const closePoint = useCallback(() => setSelectedPillar(null), []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       const target = event.target as HTMLElement | null;
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
-      if (selectedClusterId || selectedPillar) {
+      if (selectedPillar) {
         event.preventDefault();
         closePoint();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [closePoint, selectedClusterId, selectedPillar]);
+  }, [closePoint, selectedPillar]);
 
   // In-place swap: the panel fades fully out, swaps to the new view, then
   // floats back in. The map never moves. Only when the reader had scrolled
   // into the panel (its top above the viewport, e.g. a row deep in the
   // overview list) does its top come back into view, and only while it is
   // hidden, so nothing visible jumps.
-  const [shown, setShown] = useState<{ pillar: Pillar | null; cluster: string | null }>({
-    pillar: null,
-    cluster: null,
-  });
+  const [shown, setShown] = useState<Pillar | null>(null);
   const [swapping, setSwapping] = useState(false);
   useEffect(() => {
-    if (shown.pillar === selectedPillar && shown.cluster === selectedClusterId) return;
-    const next = { pillar: selectedPillar, cluster: selectedClusterId };
+    if (shown === selectedPillar) return;
+    const next = selectedPillar;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setShown(next);
       return;
@@ -101,7 +82,7 @@ export default function ConstellationTabPage() {
       setSwapping(false);
     }, SWAP_OUT_MS);
     return () => window.clearTimeout(timer);
-  }, [selectedPillar, selectedClusterId, shown]);
+  }, [selectedPillar, shown]);
 
   const age = data ? constellationAge(data) : null;
 
@@ -157,11 +138,9 @@ export default function ConstellationTabPage() {
           {data ? (
             <ConstellationPanel
               data={data}
-              selectedPillar={shown.pillar}
-              selectedClusterId={shown.cluster}
+              selectedPillar={shown}
               onSelectPillar={openPillar}
-              onSelectCluster={setSelectedClusterId}
-              onBack={back}
+              onBack={closePoint}
             />
           ) : (
             <p className="text-[13px] font-light lowercase text-ph-white/30">

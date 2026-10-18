@@ -16,7 +16,7 @@ import { useIntroBanner, type DashboardTab } from "@/lib/first-visit";
 /** Verbatim, lowercase intro copy per tab (single source of truth, per AC). */
 export const INTRO_COPY: Record<DashboardTab, string> = {
   constellation:
-    "each point is a pillar of your identity. tap one to see what it is built from.",
+    "each point is a part of your story. open one to see the moments it was built from.",
   discover:
     "each card is one connection found across your platforms, with the dated sources behind it.",
   polaris:

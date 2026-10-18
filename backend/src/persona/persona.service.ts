@@ -4,6 +4,7 @@ import { SupabaseService } from "../supabase/supabase.service";
 import { OnairosSnapshotService } from "./onairos-snapshot.service";
 import { VoiceStandardService } from "../voice-standard/voice-standard.service";
 import { PILLARS } from "../constellation/layout";
+import { normalizeDateSpan } from "../voice-standard/sanitize-prose";
 
 // Task-specific instructions only — voice/tone rules come from the shared Voice
 // Standard block (PHE-20), composed at call time via buildSystemBlocks().
@@ -37,24 +38,36 @@ scoring rules:
 for each pillar return:
 - score: integer 0-100
 - synthesis: one paragraph, written directly to the person as "you". no therapeutic language. no "journey", "authentic", "growth". specific to their data, never generic, reflecting back what their data shows.
+- story: one sentence that tells this part of their life, written to "you", the line shown first when they open the point.
+- years: the span of years the pillar covers, as full years like "2013 – 2017" (the latest pillars may end in "now"), or an empty string when the data does not date it.
+- place: where this part of their life happened, spelled out in full like "los angeles", or an empty string when the data does not show it. never guess a place.
 
 return only a valid json object in this exact shape, with no preamble, markdown or explanation:
 
 {
-  "origin": { "score": 0-100, "synthesis": "string" },
-  "emergence": { "score": 0-100, "synthesis": "string" },
-  "self_creation": { "score": 0-100, "synthesis": "string" },
-  "convergence": { "score": 0-100, "synthesis": "string" },
-  "becoming": { "score": 0-100, "synthesis": "string" },
-  "recognition": { "score": 0-100, "synthesis": "string" },
-  "transcendence": { "score": 0-100, "synthesis": "string" }
+  "origin": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" },
+  "emergence": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" },
+  "self_creation": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" },
+  "convergence": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" },
+  "becoming": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" },
+  "recognition": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" },
+  "transcendence": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" }
 }`;
 
 /** Seven paragraphs plus JSON need well over 2000 tokens; only used tokens are billed. */
 const SYNTHESIS_MAX_TOKENS = 4096;
 const SYNTHESIS_ATTEMPTS = 2;
 
-type PillarSyntheses = Partial<Record<(typeof PILLARS)[number], { score: number; synthesis: string }>>;
+/** PHE-122: what a point shows when it is opened, beside its synthesis. */
+export interface PointMeta {
+  story: string;
+  years: string;
+  place: string;
+}
+
+type PillarSyntheses = Partial<
+  Record<(typeof PILLARS)[number], { score: number; synthesis: string; point: PointMeta }>
+>;
 
 interface GeneratePromptsBody {
   userId?: string;
@@ -159,6 +172,9 @@ export class PersonaService {
                 [`${p}_synthesis`, v.synthesis],
               ])
             ),
+            points: Object.fromEntries(
+              Object.entries(synthesis).map(([p, v]) => [p, v.point])
+            ),
           },
           { onConflict: "user_id" }
         );
@@ -243,6 +259,14 @@ export class PersonaService {
         score: Math.round(Math.min(100, Math.max(0, raw.score))),
         // Plain-text guard — strip any markup the model slipped in.
         synthesis: this.voiceStandard.sanitizeProse(raw.synthesis, "pillar"),
+        point: {
+          story: typeof raw.story === "string" ? this.voiceStandard.sanitizeProse(raw.story, "pillar") : "",
+          years:
+            typeof raw.years === "string"
+              ? normalizeDateSpan(raw.years.trim().toLowerCase()).replace(/(\d{4})\s*[-–—]\s*now\b/, "$1 – now")
+              : "",
+          place: typeof raw.place === "string" ? this.voiceStandard.sanitizeProse(raw.place) : "",
+        },
       };
     }
     return Object.keys(out).length > 0 ? out : null;
