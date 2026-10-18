@@ -39,7 +39,11 @@ async function runSynthesis(
     const raw = reply && typeof reply === "object" && "raw" in reply ? (reply as RawReply) : null;
     return {
       json: async () => ({
-        content: [{ text: raw ? raw.raw : JSON.stringify(reply) }],
+        // Shaped like a Haiku 5.5 reply: a thinking block before the text.
+        content: [
+          { type: "thinking", thinking: "" },
+          { type: "text", text: raw ? raw.raw : JSON.stringify(reply) },
+        ],
         stop_reason: raw?.stop_reason ?? "end_turn",
       }),
     };
