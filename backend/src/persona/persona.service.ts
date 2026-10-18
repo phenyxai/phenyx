@@ -42,6 +42,8 @@ for each pillar return:
 - years: the span of years the pillar covers, as full years like "2013 – 2017" (the latest pillars may end in "now"), or an empty string when the data does not date it.
 - place: where this part of their life happened, spelled out in full like "los angeles", or an empty string when the data does not show it. never guess a place.
 
+also return portrait: one or two paragraphs that read the seven pillars together as one picture of their life so far, written to "you" in the same voice and grounded in the same data. it is the "your life so far" text shown above the points.
+
 return only a valid json object in this exact shape, with no preamble, markdown or explanation:
 
 {
@@ -51,7 +53,8 @@ return only a valid json object in this exact shape, with no preamble, markdown 
   "convergence": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" },
   "becoming": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" },
   "recognition": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" },
-  "transcendence": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" }
+  "transcendence": { "score": 0-100, "synthesis": "string", "story": "string", "years": "string", "place": "string" },
+  "portrait": "string"
 }`;
 
 /** Seven paragraphs plus JSON need well over 2000 tokens, and Haiku 5.5's thinking counts too; only used tokens are billed. */
@@ -104,6 +107,7 @@ export class PersonaService {
       // one more try before the run fails.
       const system = await this.voiceStandard.buildSystemBlocks(TASK_INSTRUCTIONS);
       let synthesis: PillarSyntheses | null = null;
+      let portrait: string | null = null;
       for (let attempt = 1; attempt <= SYNTHESIS_ATTEMPTS && !synthesis; attempt++) {
         const claude = await this.requestSynthesis(system, sanitizedOnairosData);
         // Haiku 5.5 thinks by default, so a thinking block comes before the text.
@@ -118,7 +122,9 @@ export class PersonaService {
           );
           continue;
         }
-        synthesis = this.readPillars(text);
+        const reply = this.readReply(text);
+        synthesis = reply?.pillars ?? null;
+        portrait = reply?.portrait ?? null;
         if (!synthesis) {
           // eslint-disable-next-line no-console
           console.error(`synthesis reply unreadable (attempt ${attempt})`);
@@ -178,6 +184,9 @@ export class PersonaService {
             points: Object.fromEntries(
               Object.entries(synthesis).map(([p, v]) => [p, v.point])
             ),
+            // Same {prose, version} shape apply_constellation_synthesis writes.
+            // Without one, a refresh keeps the last portrait.
+            ...(portrait ? { portrait: { prose: portrait, version: newVersion } } : {}),
           },
           { onConflict: "user_id" }
         );
@@ -238,11 +247,13 @@ export class PersonaService {
   }
 
   /**
-   * Read the seven-pillar JSON reply, tolerating a ```json fence around it.
-   * A missing or malformed pillar is skipped; null when the reply is not JSON
-   * or holds no usable pillar at all.
+   * Read the seven-pillar JSON reply and its portrait, tolerating a ```json
+   * fence around it. A missing or malformed pillar is skipped; null when the
+   * reply is not JSON or holds no usable pillar at all.
    */
-  private readPillars(text: string): PillarSyntheses | null {
+  private readReply(
+    text: string
+  ): { pillars: PillarSyntheses; portrait: string | null } | null {
     const body = text
       .trim()
       .replace(/^```(?:json)?\s*/i, "")
@@ -272,6 +283,11 @@ export class PersonaService {
         },
       };
     }
-    return Object.keys(out).length > 0 ? out : null;
+    if (Object.keys(out).length === 0) return null;
+    const portrait =
+      typeof parsed.portrait === "string"
+        ? this.voiceStandard.sanitizeProse(parsed.portrait, "portrait")
+        : "";
+    return { pillars: out, portrait: portrait || null };
   }
 }
