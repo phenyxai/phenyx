@@ -1,46 +1,40 @@
-export const FORMATION_ANIMATION_DURATION_MS = 17_085;
+// PHE-125: the onboarding formation's timing rules (spec doc 6), kept free of
+// imports so they run under plain `node --test`. Per-point arrays are in
+// ALL_PILLARS order: origin, emergence, self-creation, convergence, becoming,
+// recognition, transcendence.
 
-export interface FormationTimeline {
-  appearDurationMs: number;
-  condenseAtMs: number;
-  pullDurationMs: number;
-  nodeStaggerMs: number;
-  linesAtMs: number;
-  linesDurationMs: number;
-  revealAtMs: number;
-  loadFadeDurationMs: number;
-  revealInDurationMs: number;
-  labelFadeDurationMs: number;
-  hubDelayMs: number;
-  condenseJitterMs: number;
-  screenFadeDurationMs: number;
-  completeAtMs: number;
-}
+/** When each point's specks start pulling in (ms from the start). */
+export const PULL_AT_MS = [700, 1800, 1800, 3000, 4250, 5500, 6700] as const;
+/** The earliest each point may appear (ms from the start). */
+export const REVEAL_AT_MS = [2400, 3500, 3500, 4750, 6000, 7250, 8450] as const;
+
+export const GATHER_RADIUS_PX = 26;
+export const GATHER_SHARE = 0.6;
+export const REVEAL_FALLBACK_MS = 1200;
+export const LINE_DELAY_MS = 260;
+export const LINE_DURATION_MS = 800;
+const MAX_FRAME_S = 0.05;
 
 /**
- * Scale every formation beat from the original 20.1 second choreography.
- * Changing FORMATION_ANIMATION_DURATION_MS is the only duration decision the
- * reveal exposes; the relative phase timing stays intact.
+ * A point appears once about 60% of its specks sit within about 26px of it,
+ * never before its scheduled time, and at most 1.2s after it if the specks
+ * never settle.
  */
-export function formationTimeline(totalDuration: number): FormationTimeline {
-  const scaleOriginalMs = (originalMs: number) =>
-    Math.round((originalMs / 20_100) * totalDuration);
-  return {
-    appearDurationMs: scaleOriginalMs(2_000),
-    condenseAtMs: scaleOriginalMs(4_000),
-    pullDurationMs: scaleOriginalMs(1_800),
-    nodeStaggerMs: scaleOriginalMs(300),
-    linesAtMs: scaleOriginalMs(8_300),
-    linesDurationMs: scaleOriginalMs(2_400),
-    revealAtMs: scaleOriginalMs(11_700),
-    loadFadeDurationMs: scaleOriginalMs(800),
-    revealInDurationMs: scaleOriginalMs(2_200),
-    labelFadeDurationMs: scaleOriginalMs(350),
-    hubDelayMs: scaleOriginalMs(800),
-    condenseJitterMs: scaleOriginalMs(600),
-    screenFadeDurationMs: scaleOriginalMs(1_800),
-    completeAtMs: totalDuration,
-  };
+export function pointReady(distances: readonly number[], t: number, revealAt: number): boolean {
+  if (t < revealAt) return false;
+  if (t > revealAt + REVEAL_FALLBACK_MS) return true;
+  const near = distances.filter((d) => d < GATHER_RADIUS_PX).length;
+  return near >= distances.length * GATHER_SHARE;
+}
+
+/** A line starts 0.26s after the later of its two points appeared; null until both have. */
+export function lineStartMs(a: number | null, b: number | null): number | null {
+  return a === null || b === null ? null : Math.max(a, b) + LINE_DELAY_MS;
+}
+
+/** Real seconds since the last frame, capped so a stalled frame never flings the specks. */
+export function frameSeconds(now: number, last: number | null): number {
+  return Math.min(MAX_FRAME_S, Math.max(0.004, (now - (last ?? now - 16)) / 1000));
 }
 
 interface Point {
