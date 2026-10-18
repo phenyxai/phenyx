@@ -13,13 +13,12 @@ import { useIntroBanner, type DashboardTab } from "@/lib/first-visit";
 // which is already frozen under `prefers-reduced-motion` in globals.css.
 // ============================================================================
 
-/**
- * Verbatim, lowercase intro copy per tab (single source of truth, per AC).
- * Discover has none yet: its banner belongs to the discover issue.
- */
-export const INTRO_COPY: Record<Exclude<DashboardTab, "discover">, string> = {
+/** Verbatim, lowercase intro copy per tab (single source of truth, per AC). */
+export const INTRO_COPY: Record<DashboardTab, string> = {
   constellation:
     "each point is a pillar of your identity. tap one to see what it is built from.",
+  discover:
+    "each card is one connection found across your platforms, with the dated sources behind it.",
   polaris:
     "polaris answers what you ask, using only what your constellation has already shown.",
   insights: "insights steps back from single moments to what is becoming clearer across your history.",
