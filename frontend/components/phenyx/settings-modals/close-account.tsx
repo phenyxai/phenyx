@@ -12,22 +12,24 @@ import {
   SettingsDialogContent,
   useSettingsModals,
 } from './modal-host'
+import { ConfirmCodeField } from './confirm-code-field'
 import { closeAccountClientError } from './validation'
 
 /**
- * close your account — own screen with two gates: passphrase, then type
- * `delete my account`. Checks run in fill order. Never alert.
+ * close your account — own screen with two gates: a code emailed to the
+ * account (PHE-97: no passphrase), then type `delete my account`. Checks run in
+ * fill order. Never alert.
  */
 export function CloseAccountModal() {
   const router = useRouter()
   const { openModal } = useSettingsModals()
-  const [passphrase, setPassphrase] = React.useState('')
+  const [code, setCode] = React.useState('')
   const [phrase, setPhrase] = React.useState('')
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState('')
 
   const handleDelete = async () => {
-    const clientError = closeAccountClientError(passphrase, phrase)
+    const clientError = closeAccountClientError(code, phrase)
     if (clientError) {
       setError(clientError)
       return
@@ -38,7 +40,7 @@ export function CloseAccountModal() {
       const res = await apiFetch('/account/close', {
         method: 'POST',
         body: JSON.stringify({
-          passphrase,
+          code,
           confirmation: phrase,
         }),
       })
@@ -72,20 +74,20 @@ export function CloseAccountModal() {
         ].map((item) => (
           <li
             key={item}
-            className="relative py-1.5 pl-4 text-[12.5px] leading-snug text-[#FFFDFD]/70 before:absolute before:top-[13px] before:left-0 before:h-1 before:w-1 before:rounded-full before:bg-[#a06054]"
+            className="relative py-1.5 pl-4 text-[12.5px] leading-snug text-ph-white/70 before:absolute before:top-[13px] before:left-0 before:h-1 before:w-1 before:rounded-full before:bg-ph-red/70"
           >
             {item}
           </li>
         ))}
       </ul>
 
-      <p className="mb-4 text-[12.5px] leading-relaxed text-[#888]">
+      <p className="mb-4 text-[12.5px] leading-relaxed text-ph-white/55">
         all of it goes, and none of it comes back. if you want to keep any of
         it,{' '}
         <button
           type="button"
           onClick={() => openModal('data-management')}
-          className="cursor-pointer border-0 border-b border-[rgba(var(--s-rgb),0.35)] bg-transparent p-0 font-inherit text-[rgba(var(--s-rgb),0.9)]"
+          className="cursor-pointer border-0 border-b border-[rgba(var(--ph-accent-rgb),0.35)] bg-transparent p-0 font-inherit text-[rgba(var(--ph-accent-rgb),0.9)]"
         >
           export it first
         </button>
@@ -93,14 +95,7 @@ export function CloseAccountModal() {
       </p>
 
       <div className="flex flex-col gap-4">
-        <ModalField
-          label="your passphrase"
-          type="password"
-          autoComplete="current-password"
-          placeholder="confirm it is you"
-          value={passphrase}
-          onChange={setPassphrase}
-        />
+        <ConfirmCodeField value={code} onChange={setCode} />
         <ModalField
           label={
             <>
@@ -122,14 +117,14 @@ export function CloseAccountModal() {
         type="button"
         onClick={handleDelete}
         disabled={saving}
-        className="mt-1.5 w-full rounded-md border border-[#5a2a2a] bg-transparent px-4 py-3 text-[11px] text-[#c97a6a] disabled:opacity-50"
+        className="mt-1.5 w-full rounded-md border border-ph-red/30 bg-transparent px-4 py-3 text-[11px] text-ph-red/80 disabled:opacity-50"
       >
         {saving ? 'closing…' : 'delete my account'}
       </button>
       <button
         type="button"
         onClick={() => openModal('account')}
-        className="mt-2 w-full rounded-md border border-[#282828] bg-transparent px-4 py-3 text-[11px] text-[#FFFDFD]/60"
+        className="mt-2 w-full rounded-md border border-ph-white/[0.12] bg-transparent px-4 py-3 text-[11px] text-ph-white/60"
       >
         keep my account
       </button>

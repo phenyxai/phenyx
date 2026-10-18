@@ -91,7 +91,7 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body
         suppressHydrationWarning
-        className={`${plusJakartaSans.variable} antialiased bg-[#0A0A0A] text-[#FFFDFD]`}
+        className={`${plusJakartaSans.variable} antialiased bg-ph-black text-ph-white`}
       >
         <SessionColorProvider>
           {children}

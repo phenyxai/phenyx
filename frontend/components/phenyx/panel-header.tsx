@@ -1,5 +1,5 @@
 /**
- * Shared header for the you and settings panels (PHE-95 / v244, prototype
+ * Shared header for the insights, discover and settings panels (PHE-95 / v244, prototype
  * `.you-intro`): an accent eyebrow, a light display title, and an optional
  * sub. Sits in a 640px column so it reads with the 820px content below it.
  */
@@ -14,7 +14,7 @@ export function PanelHeader({
 }) {
   return (
     <div className="mb-[clamp(26px,3vw,40px)] max-w-[640px]">
-      <p className="mb-[14px] text-[11px] font-semibold tracking-[0.18em] text-[rgba(var(--s-rgb),0.9)] uppercase">
+      <p className="mb-[14px] text-[11px] font-semibold tracking-[0.18em] text-[rgba(var(--ph-accent-rgb),0.9)] uppercase">
         {eyebrow}
       </p>
       <h1

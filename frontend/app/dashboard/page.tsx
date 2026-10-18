@@ -1,13 +1,14 @@
 import { redirect } from "next/navigation";
+import { DASHBOARD_HOME } from "@/lib/dashboard-nav";
 
 /**
- * /dashboard → /dashboard/constellation. PHE-100: the constellation is the home
- * and overview screen (spec doc 1 and 2). Every entry routes through here:
- * sign-in (`signin-client.tsx`), the end of onboarding's formation, and any
- * bare /dashboard link, so this one redirect makes constellation home
- * everywhere. Daily stays reachable at /dashboard/daily; nav order and tab
- * names belong to the navigation issue.
+ * /dashboard → /dashboard/constellation. The constellation is the home and
+ * overview screen (spec doc 1 and 2; PHE-100, PHE-96). Every entry routes
+ * through here: sign-in, the end of onboarding's formation, and any bare
+ * /dashboard link, so this one redirect makes constellation home everywhere.
+ * Old /dashboard/daily and /dashboard/you bookmarks are redirected in
+ * next.config.ts.
  */
 export default function DashboardPage() {
-  redirect("/dashboard/constellation");
+  redirect(DASHBOARD_HOME);
 }

@@ -23,6 +23,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { pillarLabel, type ConstellationData, type Pillar } from "@/lib/constellation";
+import { hexToRgb, resolveAccent } from "@/lib/stellar";
 import {
   ALL_PILLARS,
   EDGES,
@@ -98,7 +99,9 @@ export function ConstellationCanvas({
     const current = dataRef.current;
     const nodes = nodePixelsRef.current;
     const pixelByPillar = new Map(nodes.map((n) => [n.pillar, n]));
-    const stellar = current.stellar_color;
+    // PHE-98: the same resolved accent as --ph-accent (a stale or off-palette
+    // value paints neutral), as a real hex for the canvas.
+    const stellar = resolveAccent(current.stellar_color);
 
     // Faint, non-interactive edges.
     ctx.lineWidth = 1;
@@ -190,14 +193,18 @@ export function ConstellationCanvas({
         ctx.stroke();
       }
 
-      // New-signal dot, top-right of the core.
-      if (detail.has_new) {
-        const dx = node.x + node.r + 2;
-        const dy = node.y - node.r - 2;
-        ctx.beginPath();
-        ctx.arc(dx, dy, 2, 0, Math.PI * 2);
-        ctx.fillStyle = "#FFFDFD";
-        ctx.fill();
+      // PHE-102: "new signal" tag beside the unseen signal's point, flipped
+      // to the left when it would run off the right edge.
+      if (current.signal?.pillar === node.pillar) {
+        const label = "new signal";
+        ctx.font = `500 10px ${getComputedStyle(canvas).fontFamily}`;
+        ctx.textBaseline = "middle";
+        const width = ctx.measureText(label).width;
+        const gap = node.r + 8;
+        const right = node.x + gap + width <= w - 4;
+        ctx.textAlign = right ? "left" : "right";
+        ctx.fillStyle = stellar;
+        ctx.fillText(label, right ? node.x + gap : node.x - gap, node.y);
       }
     }
   }, []);
@@ -384,7 +391,7 @@ export function ConstellationCanvas({
                 setKbIndex(i);
                 onSelectPillar(node.pillar);
               }}
-              className="pointer-events-auto absolute h-11 w-11 -translate-x-1/2 -translate-y-1/2 rounded-full border-0 bg-transparent p-0 focus-visible:bg-[#FFFDFD]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--s,#88AAEE)] motion-reduce:transition-none"
+              className="pointer-events-auto absolute h-11 w-11 -translate-x-1/2 -translate-y-1/2 rounded-full border-0 bg-transparent p-0 focus-visible:bg-ph-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ph-accent)] motion-reduce:transition-none"
               style={{ left: node.x, top: node.y }}
             />
           );
@@ -407,8 +414,5 @@ export function ConstellationCanvas({
 
 /** Blend a hex color with an alpha channel, tolerant of malformed input. */
 function withAlpha(hex: string, alpha: number): string {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return `rgba(85,153,255,${alpha})`;
-  const n = parseInt(m[1], 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  return `rgba(${hexToRgb(hex)}, ${alpha})`;
 }

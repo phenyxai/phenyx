@@ -1,120 +1,58 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
-import { DRAWER_ID, useDashboardDrawer } from "@/components/phenyx/dashboard-drawer";
+import { DASHBOARD_TABS, segmentTab } from "@/lib/dashboard-nav";
+import { NavIcon } from "@/components/phenyx/nav-icons";
 
 // ============================================================================
-// Mobile bottom nav (PHE-91 / v244)
+// Mobile bottom nav (PHE-91 / v244, PHE-96)
 // ----------------------------------------------------------------------------
-// At or below 760px the sidebar becomes a drawer and this fixed bar drives
-// navigation: daily, polaris, stars (constellation), you, and a menu item that
-// toggles the sidebar drawer (every destination plus the account row and
-// settings). The active item mirrors the route segment, the same way the
-// sidebar does. Rendered once from the dashboard layout; hidden on desktop.
-// Display is set by a media variant on both sides — see the Onairos note in
-// dashboard-drawer.tsx.
+// At or below 760px this fixed bar is the only navigation: constellation,
+// discover, polaris, insights, in DASHBOARD_TABS order (the sidebar's order).
+// There is no drawer; settings sits in MobileTopBar. The active item mirrors
+// the route segment, the same way the sidebar does, and carries
+// aria-current="page" + data-active. Rendered once from the dashboard layout.
+//
+// NOTE (Onairos CSS collision): onairos.css ships its own Tailwind utilities
+// (.flex, .hidden, .fixed, .block, ...) and loads after globals.css, so a bare
+// utility beats our responsive variant for the same property. Anything that
+// changes between phone and desktop sets BOTH sides with a media variant
+// ([@media(max-width:760px)]: and [@media(min-width:761px)]:) and never pairs
+// a bare utility with one.
 // ============================================================================
-
-type TabId = "daily" | "polaris" | "constellation" | "you";
-
-const BAR_ITEMS: readonly { id: TabId; label: string }[] = [
-  { id: "daily", label: "daily" },
-  { id: "polaris", label: "polaris" },
-  { id: "constellation", label: "stars" },
-  { id: "you", label: "you" },
-];
-
-/** 20px stroke icons, paths from the v244 prototype. */
-const ICONS: Record<TabId, ReactNode> = {
-  daily: (
-    <>
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
-    </>
-  ),
-  polaris: <path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6z" />,
-  constellation: (
-    <>
-      <circle cx="6" cy="7" r="1.4" />
-      <circle cx="17" cy="6" r="1.4" />
-      <circle cx="12" cy="13" r="1.4" />
-      <circle cx="8" cy="18" r="1.4" />
-      <path d="M7 8l4 4M13 12l3-5M11 14l-2 3" />
-    </>
-  ),
-  you: (
-    <>
-      <circle cx="12" cy="8" r="3.2" />
-      <path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5" />
-    </>
-  ),
-};
-
-function Icon({ children, strokeWidth = 1.7 }: { children: ReactNode; strokeWidth?: number }) {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  );
-}
 
 const ITEM_BASE =
   "flex min-w-0 flex-1 flex-col items-center gap-[3px] px-0.5 py-1.5 transition-colors motion-reduce:transition-none";
-const ITEM_ON = "text-[var(--s)]";
-const ITEM_OFF = "text-[#FFFDFD]/50";
+// Accent read as --ph-accent (PHE-98) with the stellar var as fallback.
+const ITEM_ON = "text-[var(--ph-accent,var(--s))]";
+const ITEM_OFF = "text-ph-white/50";
 
 export function MobileBottomNav() {
-  const segment = useSelectedLayoutSegment();
-  const active = segment ?? "daily";
-  const { open, toggle } = useDashboardDrawer();
+  const active = segmentTab(useSelectedLayoutSegment());
 
   return (
     <nav
       aria-label="sections"
-      className="fixed inset-x-0 bottom-0 z-[120] items-stretch justify-around border-t border-[#FFFDFD]/[0.07] bg-[rgba(8,8,8,0.94)] px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden"
+      className="fixed inset-x-0 bottom-0 z-[120] items-stretch justify-around border-t border-ph-white/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden"
     >
-      {BAR_ITEMS.map((item) => {
-        const isActive = active === item.id;
+      {DASHBOARD_TABS.map((tab) => {
+        const isActive = active === tab.id;
         return (
           <Link
-            key={item.id}
-            href={`/dashboard/${item.id}`}
+            key={tab.id}
+            href={tab.href}
             aria-current={isActive ? "page" : undefined}
+            data-active={isActive ? "true" : undefined}
             className={`${ITEM_BASE} ${isActive ? ITEM_ON : ITEM_OFF}`}
           >
             <span className="flex h-[22px] items-center justify-center">
-              <Icon>{ICONS[item.id]}</Icon>
+              <NavIcon tab={tab.id} size={20} />
             </span>
-            <span className="text-[10px] tracking-[0.02em]">{item.label}</span>
+            <span className="text-[10px] tracking-[0.02em]">{tab.label}</span>
           </Link>
         );
       })}
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={DRAWER_ID}
-        onClick={toggle}
-        className={`${ITEM_BASE} ${active === "settings" ? ITEM_ON : ITEM_OFF}`}
-      >
-        <span className="flex h-[22px] items-center justify-center">
-          <Icon strokeWidth={1.9}>
-            <path d="M4 7h16M4 12h16M4 17h16" />
-          </Icon>
-        </span>
-        <span className="text-[10px] tracking-[0.02em]">menu</span>
-      </button>
     </nav>
   );
 }

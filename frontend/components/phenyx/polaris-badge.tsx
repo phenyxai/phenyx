@@ -7,7 +7,7 @@ import type { CSSProperties } from "react";
 // PolarisBadge — reusable Polaris identity pill (PHE-16)
 // ----------------------------------------------------------------------------
 // A small pill containing a blinking dot + the `POLARIS` label, tinted in the
-// Polaris/stellar blue. Extracted as a standalone component so the same
+// person's accent (PHE-98: the polaris tag is an accent hint, flat, no blue). Extracted as a standalone component so the same
 // markup/CSS is reused across surfaces (the onboarding Polaris-intro screen
 // here, and the dashboard Polaris tab later) without duplicating the blink
 // keyframe.
@@ -28,7 +28,7 @@ import type { CSSProperties } from "react";
 // ============================================================================
 
 export interface PolarisBadgeProps {
-  /** Tint color for the dot, label, border, and fill. Defaults to Polaris blue. */
+  /** Tint color for the dot, label, border, and fill. Defaults to the accent. */
   color?: string;
   /** Pill scale. `sm` is the compact onboarding/dashboard size; `md` is larger. */
   size?: "sm" | "md";
@@ -44,8 +44,8 @@ export interface PolarisBadgeProps {
   className?: string;
 }
 
-// Default Polaris/stellar blue (matches the lighter end of the stellar palette).
-const DEFAULT_POLARIS_BLUE = "#77BBFF";
+// PHE-98: the person's accent; any CSS color (including a var()) works.
+const DEFAULT_POLARIS_COLOR = "var(--ph-accent)";
 
 const SIZES = {
   sm: { padV: 4, padH: 10, dot: 6, gap: 7, font: 9, radius: 999 },
@@ -77,7 +77,7 @@ function injectPolarisBadgeStyles() {
 }
 
 export function PolarisBadge({
-  color = DEFAULT_POLARIS_BLUE,
+  color = DEFAULT_POLARIS_COLOR,
   size = "sm",
   frozen = false,
   style,
@@ -101,7 +101,7 @@ export function PolarisBadge({
         borderRadius: `${s.radius}px`,
         border: `0.5px solid ${color}`,
         // Low-alpha fill of the tint color, plus the tint as the label color.
-        background: `${color}14`,
+        background: `color-mix(in srgb, ${color} 8%, transparent)`,
         color,
         fontSize: `${s.font}px`,
         fontWeight: 600,

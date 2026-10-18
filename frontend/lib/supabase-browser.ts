@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { oauthCallbackUrl } from "@/lib/auth-redirect";
 
 const PLACEHOLDER_URL = "https://placeholder.supabase.co";
 /** JWT-shaped placeholder so `createBrowserClient` never receives empty strings during prerender */
@@ -39,6 +40,24 @@ export async function setSessionFromTokens(tokens: {
   });
   if (error) {
     console.error("[phenyx] failed to set session after OTP verify:", error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * PHE-97: start Google sign-in. Supabase sends the browser to Google and back to
+ * /auth/callback (PKCE; the code verifier rides in a cookie this client sets),
+ * where the route handler exchanges the code and completes the profile. Resolves
+ * false only when the redirect could not start (e.g. the provider is disabled).
+ */
+export async function signInWithGoogle(returnTo?: string | null): Promise<boolean> {
+  const { error } = await supabaseBrowser.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: oauthCallbackUrl(window.location.origin, returnTo) },
+  });
+  if (error) {
+    console.error("[phenyx] google sign-in did not start:", error.message);
     return false;
   }
   return true;

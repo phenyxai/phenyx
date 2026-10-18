@@ -3,13 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { STELLAR_DEFAULT, hexToRgb } from "@/lib/stellar";
 import { signupStart, otpSend, otpVerify } from "@/lib/api-client";
-import { setSessionFromTokens } from "@/lib/supabase-browser";
-import { setOtpFlowContext, clearOtpFlowContext } from "@/lib/otp-flow-context";
+import { setSessionFromTokens, signInWithGoogle } from "@/lib/supabase-browser";
+import { postAuthDestination } from "@/lib/auth-redirect";
+import { AuthBrand, GoogleIcon, TermsLine } from "@/components/phenyx/auth-chrome";
 
-// s1 = account creation (name + email + passphrase); s2 = email OTP.
+// s1 = create your account (name + email, or google); s2 = email OTP.
 type Screen = "s1" | "s2";
 
 // Staged draft survives an s2 refresh within its TTL (see edge cases in PHE-7).
@@ -24,13 +23,11 @@ interface StoredDraft {
 
 export default function JoinPage() {
   const router = useRouter();
-  const [stellarColor, setStellarColor] = useState("#5599FF");
   const [screen, setScreen] = useState<Screen>("s1");
 
-  // s1 fields — name, email, passphrase. Nothing else.
+  // s1 fields — name and email. Nothing else (PHE-97: no passphrase).
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [passphrase, setPassphrase] = useState("");
 
   // s2 state.
   const [draftId, setDraftId] = useState("");
@@ -39,22 +36,10 @@ export default function JoinPage() {
 
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [showResend, setShowResend] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) {
-      setStellarColor(stored);
-      document.documentElement.style.setProperty("--color-stellar", stored);
-      document.documentElement.style.setProperty("--s-rgb", hexToRgb(stored));
-    } else {
-      // Pre-auth: no persisted identity yet. Use the deterministic default accent
-      // (not random) — the server-assigned color is adopted after account creation.
-      setStellarColor(STELLAR_DEFAULT);
-      document.documentElement.style.setProperty("--color-stellar", STELLAR_DEFAULT);
-      document.documentElement.style.setProperty("--s-rgb", hexToRgb(STELLAR_DEFAULT));
-    }
-
     // Rehydrate a staged draft so refreshing s2 keeps the OTP screen. An expired
     // draft is discarded and the user restarts at s1.
     try {
@@ -82,6 +67,18 @@ export default function JoinPage() {
     }
   }, [screen]);
 
+  // Google creates the account on its own round trip; /auth/callback completes
+  // the profile and sends a new person to welcome.
+  const handleGoogle = async () => {
+    setError("");
+    setGoogleBusy(true);
+    const started = await signInWithGoogle();
+    if (!started) {
+      setError("google sign-in didn’t start. try again, or use your email.");
+      setGoogleBusy(false);
+    }
+  };
+
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -89,7 +86,6 @@ export default function JoinPage() {
     // Client-side mirror of the server validation (server is the source of truth).
     const trimmedName = name.trim();
     const trimmedEmail = email.trim().toLowerCase();
-    const trimmedPassphrase = passphrase.trim();
 
     if (trimmedName.length < 2) {
       setError("your name needs at least 2 characters");
@@ -99,24 +95,14 @@ export default function JoinPage() {
       setError("please enter a valid email");
       return;
     }
-    if (trimmedPassphrase.length < 8) {
-      setError("your passphrase needs at least 8 characters");
-      return;
-    }
 
     setIsLoading(true);
     try {
-      localStorage.setItem("phenyx_stellar_color", stellarColor);
-      setOtpFlowContext("signup");
-
       const { draft_id, maskedEmail: masked } = await signupStart({
         name: trimmedName,
         email: trimmedEmail,
-        passphrase: trimmedPassphrase,
       });
 
-      // Discard the raw passphrase from component state once it is staged server-side.
-      setPassphrase("");
       setDraftId(draft_id);
       setMaskedEmail(masked);
 
@@ -143,8 +129,8 @@ export default function JoinPage() {
     setError("");
 
     try {
-      // Verify the code; on success the backend creates the account (signup) and
-      // returns a session the browser adopts so the user is authenticated.
+      // Verify the code; on success the backend creates the account (or, for an
+      // email that already has one, signs that person in) and returns a session.
       const result = await otpVerify({
         draftId,
         code: otp.trim(),
@@ -154,8 +140,7 @@ export default function JoinPage() {
       if (result.status === "ok" && result.session) {
         await setSessionFromTokens(result.session);
         sessionStorage.removeItem(DRAFT_STORAGE_KEY);
-        clearOtpFlowContext();
-        router.push("/welcome");
+        router.push(postAuthDestination({ isNew: result.is_new !== false }));
         return;
       }
 
@@ -196,374 +181,211 @@ export default function JoinPage() {
     setScreen("s1");
   };
 
-  const cardStyle = {
-    background: "transparent",
-    border: "none",
-    borderRadius: 0,
-    padding: "44px 40px",
-    maxWidth: "400px",
-    width: "100%",
-  };
-
-  const sendButtonStyles: React.CSSProperties = {
-    width: "100%",
-    padding: "15px",
-    fontSize: "14px",
-    fontWeight: 400,
-    fontFamily: "inherit",
-    letterSpacing: "0.02em",
-    borderRadius: "6px",
-    cursor: "pointer",
-    transition: "all 0.25s ease",
-    textAlign: "center",
-    background: "transparent",
-    border: "1px solid #4d4d4d",
-    color: "rgba(255,253,253,.92)",
-  };
-
-  const labelStyles: React.CSSProperties = {
-    display: "block",
-    fontSize: "11px",
-    letterSpacing: "0.13em",
-    color: "rgba(255,253,253,.5)",
-    textTransform: "uppercase",
-    marginBottom: "6px",
-  };
-
   return (
     <main
       className={
         screen === "s2"
           ? "onb-v67 min-h-screen bg-[#080808] animate-fade-in"
-          : "min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4 animate-fade-in"
+          : "min-h-screen bg-[#080808] flex flex-col items-center justify-center px-5 py-24"
       }
     >
-      {/* Topbar */}
-      <header
-        className="fixed top-0 left-0 right-0 flex items-center justify-between"
-        style={{ padding: "20px 24px 16px", zIndex: 10 }}
-      >
-        <Link href="/" className="flex items-center" style={{ gap: "8px" }}>
-          <Image
-            src="/phenyx-logo.png"
-            alt="PHENYX"
-            width={20}
-            height={20}
-            style={{ opacity: 0.9 }}
-          />
-          <span
-            style={{
-              fontSize: "11px",
-              letterSpacing: "0.2em",
-              fontWeight: 600,
-              color: "#FFFDFD",
-              opacity: 0.9,
-            }}
-          >
-            PHENYX
-          </span>
+      <header className="auth-topbar">
+        <AuthBrand />
+        <Link href="/signin" className="auth-topbar-link" aria-label="sign in to your existing account">
+          sign in
         </Link>
-        <div style={{ fontSize: "11px" }}>
-          <Link
-            href="/signin"
-            className="transition-opacity hover:opacity-100"
-            style={{ color: stellarColor, opacity: 0.8 }}
-            aria-label="sign in to your existing account"
-          >
-            sign in
-          </Link>
-        </div>
       </header>
 
-      {/* Card */}
-      <div
-        className={screen === "s2" ? "onb-block onb-block--sm onb-block--otp" : undefined}
-        style={screen === "s2" ? undefined : cardStyle}
-      >
-        {screen === "s2" ? (
-          <>
-            <h1
-              className="onb-h1"
-              style={{
-                marginBottom: 0,
-              }}
-            >
-              check your email.
-            </h1>
-            <p
-              className="onb-otp-lead"
-              style={{
-                fontSize: "14.5px",
-                fontWeight: 300,
-                color: "rgba(255,253,253,.55)",
-                lineHeight: 1.7,
-                marginBottom: "10px",
-              }}
-            >
-              we sent a code to
-            </p>
-            <p
-              className="onb-otp-address"
-              style={{
-                color: "#FFFDFD",
-                fontSize: "13px",
-                letterSpacing: ".02em",
-                marginBottom: 0,
-              }}
-            >
-              {maskedEmail}
-            </p>
+      {screen === "s2" ? (
+        <div className="onb-block onb-block--sm onb-block--otp">
+          <h1 className="onb-h1" style={{ marginBottom: 0 }}>
+            check your email.
+          </h1>
+          <p
+            className="onb-otp-lead"
+            style={{
+              fontSize: "14.5px",
+              fontWeight: 300,
+              color: "rgba(255,253,253,.55)",
+              lineHeight: 1.7,
+              marginBottom: "10px",
+            }}
+          >
+            we sent a code to
+          </p>
+          <p
+            className="onb-otp-address"
+            style={{
+              color: "#FFFDFD",
+              fontSize: "13px",
+              letterSpacing: ".02em",
+              marginBottom: 0,
+            }}
+          >
+            {maskedEmail}
+          </p>
 
-            <form
-              onSubmit={handleVerify}
-              aria-label="verify your code"
-            >
-              <div className="flex justify-center">
-                <label htmlFor="otp" className="sr-only">
-                  enter the 6 digit code
-                </label>
-                <input
-                  id="otp"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  autoComplete="one-time-code"
-                  aria-label="6 digit verification code"
-                  placeholder="······"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  autoFocus
-                  className="onb-otp-input"
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    borderBottom: "1px solid #2a2a2a",
-                    borderRadius: "0",
-                    color: "#FFFDFD",
-                    fontSize: "34px",
-                    letterSpacing: "0.5em",
-                    textIndent: "0.5em",
-                    textAlign: "center",
-                    width: "260px",
-                    padding: "18px 0",
-                    transition: "border-color 0.2s ease",
-                  }}
-                  onFocus={(e) => (e.target.style.borderBottomColor = stellarColor)}
-                  onBlur={(e) => (e.target.style.borderBottomColor = "#2a2a2a")}
-                />
-              </div>
+          <form onSubmit={handleVerify} aria-label="verify your code">
+            <div className="flex justify-center">
+              <label htmlFor="otp" className="sr-only">
+                enter the 6 digit code
+              </label>
+              <input
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                autoComplete="one-time-code"
+                aria-label="6 digit verification code"
+                placeholder="······"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                autoFocus
+                className="onb-otp-input"
+                style={{
+                  letterSpacing: "0.5em",
+                  textIndent: "0.5em",
+                  textAlign: "center",
+                  transition: "border-color 0.2s ease",
+                }}
+              />
+            </div>
 
-              <div
-                role="alert"
-                aria-live="polite"
-                style={{ minHeight: "20px", marginTop: "8px" }}
-              >
-                {error && (
-                  <p
+            <div role="alert" aria-live="polite" style={{ minHeight: "20px", marginTop: "8px" }}>
+              {error && <p className="auth-error">{error}</p>}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              aria-busy={isLoading}
+              aria-label="verify my code"
+              className="onb-action auth-brand-btn"
+              data-ph-hover="off"
+            >
+              {isLoading ? "verifying…" : "continue"}
+            </button>
+
+            <p
+              className="onb-otp-resend"
+              aria-live="polite"
+              style={{
+                color: "rgba(255,253,253,.5)",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {showResend ? (
+                <>
+                  didn’t get it?{" "}
+                  <button
+                    type="button"
+                    onClick={handleResendCode}
+                    aria-label="resend verification code"
                     style={{
-                      fontSize: "11px",
-                      color: "#E84422",
-                      textAlign: "center",
+                      background: "transparent",
+                      border: "none",
+                      color: "inherit",
+                      cursor: "pointer",
+                      font: "inherit",
+                      padding: 0,
+                      textDecoration: "underline",
+                      textUnderlineOffset: "3px",
                     }}
                   >
-                    {error}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                aria-busy={isLoading}
-                aria-label="verify my code"
-                className="onb-action"
-                style={sendButtonStyles}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.borderColor = stellarColor;
-                  e.currentTarget.style.color = stellarColor;
-                }}
-              >
-                {isLoading ? "verifying..." : "continue"}
-              </button>
-
-              <p
-                className="onb-otp-resend"
-                aria-live="polite"
-                style={{
-                  color: "rgba(255,253,253,.5)",
-                  fontSize: "12px",
-                  textAlign: "center",
-                }}
-              >
-                {showResend ? (
-                  <>
-                    didn&apos;t get it?{" "}
-                    <button
-                      type="button"
-                      onClick={handleResendCode}
-                      aria-label="resend verification code"
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "inherit",
-                        cursor: "pointer",
-                        font: "inherit",
-                        padding: 0,
-                        textDecoration: "underline",
-                        textUnderlineOffset: "3px",
-                      }}
-                    >
-                      resend code
-                    </button>
-                  </>
-                ) : (
-                  "code sent"
-                )}
-              </p>
-
-              <button
-                type="button"
-                onClick={handleStartOver}
-                className="onb-back"
-                style={{
-                  fontSize: "12px",
-                  color: "rgba(255,253,253,.55)",
-                  textAlign: "center",
-                  cursor: "pointer",
-                  background: "none",
-                  border: "none",
-                  fontFamily: "inherit",
-                  transition: "color 0.2s ease",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFDFD")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,253,253,.55)")}
-              >
-                back
-              </button>
-            </form>
-          </>
-        ) : (
-          <>
-            <h1
-              style={{
-                fontSize: "21px",
-                fontWeight: 300,
-                color: "#FFFDFD",
-                letterSpacing: "-0.01em",
-                lineHeight: 1.26,
-                marginBottom: "8px",
-              }}
-            >
-              create your account.
-            </h1>
-            <p
-              style={{
-                fontSize: "14.5px",
-                fontWeight: 300,
-                color: "rgba(255,253,253,.55)",
-                lineHeight: 1.7,
-                marginBottom: "clamp(24px, 3.8vh, 40px)",
-              }}
-            >
-              just enough to make this space yours. you can change these later.
+                    resend code
+                  </button>
+                </>
+              ) : (
+                "code sent"
+              )}
             </p>
 
-            <form onSubmit={handleContinue} aria-label="create your account">
-              {/* your name */}
-              <div>
-                <label htmlFor="name" style={labelStyles}>
-                  your name
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  autoComplete="name"
-                  aria-required="true"
-                  placeholder="how the world knows you"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoFocus
-                  className="auth-input"
-                />
-              </div>
+            <button type="button" onClick={handleStartOver} className="onb-back auth-text-action">
+              back
+            </button>
+          </form>
+        </div>
+      ) : (
+        <section className="auth-flow" aria-labelledby="join-title">
+          <h1 id="join-title" className="auth-h auth-reveal" style={{ "--d": "80ms" } as React.CSSProperties}>
+            create your account.
+          </h1>
+          <p className="auth-lede auth-reveal" style={{ "--d": "260ms" } as React.CSSProperties}>
+            just enough to make this space yours. you can change these later.
+          </p>
 
-              {/* email */}
-              <div style={{ marginTop: "18px" }}>
-                <label htmlFor="email" style={labelStyles}>
-                  email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  aria-required="true"
-                  placeholder="you@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="auth-input"
-                />
-              </div>
+          <form
+            onSubmit={handleContinue}
+            aria-label="create your account"
+            className="auth-form auth-reveal"
+            style={{ "--d": "520ms" } as React.CSSProperties}
+          >
+            <label htmlFor="name" className="auth-label">
+              your name
+            </label>
+            <input
+              id="name"
+              type="text"
+              autoComplete="name"
+              aria-required="true"
+              placeholder="what you’d like to be called"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+              className="auth-input"
+            />
 
-              {/* your passphrase */}
-              <div style={{ marginTop: "18px" }}>
-                <label htmlFor="passphrase" style={labelStyles}>
-                  your passphrase
-                </label>
-                <input
-                  id="passphrase"
-                  type="password"
-                  autoComplete="new-password"
-                  aria-required="true"
-                  placeholder="a private phrase you will remember"
-                  value={passphrase}
-                  onChange={(e) => setPassphrase(e.target.value)}
-                  className="auth-input"
-                />
-                <p style={{ fontSize: "10px", color: "#444", marginTop: "8px", lineHeight: 1.6 }}>
-                  you will use this with your name when you return.
-                </p>
-              </div>
+            <label htmlFor="email" className="auth-label" style={{ marginTop: "18px" }}>
+              email
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              aria-required="true"
+              placeholder="you@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="auth-input"
+            />
+            <p className="auth-hint">we’ll send your sign-in code here.</p>
 
-              {error && (
-                <p
-                  role="alert"
-                  aria-live="polite"
-                  style={{ fontSize: "11px", color: "#E84422", marginTop: "16px" }}
-                >
-                  {error}
-                </p>
-              )}
+            {error && (
+              <p role="alert" aria-live="polite" className="auth-error">
+                {error}
+              </p>
+            )}
 
+            <div className="auth-actions">
               <button
                 type="submit"
+                className="auth-brand-btn"
+                data-ph-hover="off"
                 disabled={isLoading}
-                aria-label="continue"
-                style={{ ...sendButtonStyles, marginTop: "26px" }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#FFFDFD";
-                  e.currentTarget.style.borderColor = "#FFFDFD";
-                  e.currentTarget.style.color = "#0A0A0A";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.borderColor = stellarColor;
-                  e.currentTarget.style.color = stellarColor;
-                }}
+                aria-busy={isLoading}
               >
-                {isLoading ? "..." : "continue"}
+                {isLoading ? "…" : "continue"}
               </button>
-            </form>
-          </>
-        )}
-      </div>
-
+              <p className="auth-or" aria-hidden="true">
+                or
+              </p>
+              <button
+                type="button"
+                className="auth-brand-btn auth-brand-btn--outline"
+                onClick={handleGoogle}
+                disabled={googleBusy}
+                aria-busy={googleBusy}
+              >
+                <GoogleIcon />
+                <span>{googleBusy ? "connecting to google…" : "continue with google"}</span>
+              </button>
+              <TermsLine />
+            </div>
+          </form>
+        </section>
+      )}
     </main>
   );
 }

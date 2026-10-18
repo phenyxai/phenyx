@@ -1,7 +1,7 @@
 import { HttpException, Injectable, Logger } from "@nestjs/common";
 import type { Stripe } from "stripe/cjs/stripe.core.js";
 import { SupabaseService } from "../supabase/supabase.service";
-import { PassphraseService } from "../auth/passphrase.service";
+import { ConfirmCodeService } from "../auth/confirm-code.service";
 import { StripeService } from "../stripe/stripe.service";
 import { pickHeldConstants, type HeldConstant } from "./held";
 import { PILLARS } from "../constellation/layout";
@@ -89,7 +89,7 @@ export class ProfileService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly passphrase: PassphraseService,
+    private readonly confirmCode: ConfirmCodeService,
     private readonly stripe: StripeService
   ) {}
 
@@ -200,22 +200,10 @@ export class ProfileService {
 
   async updateIdentity(
     userId: string,
-    body: { display_name?: unknown; email?: unknown; passphrase?: unknown }
+    body: { display_name?: unknown; email?: unknown; code?: unknown }
   ): Promise<{ updated: true }> {
-    const passphrase = typeof body.passphrase === "string" ? body.passphrase : "";
-    if (!passphrase.trim()) {
-      throw new HttpException(
-        { error: "enter your passphrase to confirm the change." },
-        400
-      );
-    }
-    const ok = await this.verifyCurrentPassphrase(userId, passphrase);
-    if (!ok) {
-      throw new HttpException(
-        { error: "enter your passphrase to confirm the change." },
-        400
-      );
-    }
+    // PHE-97: confirmed with a code emailed to the account (no passphrase).
+    await this.confirmCode.assertValid(userId, body.code);
 
     const supabase = this.supabaseService.getClient();
     const name =
@@ -346,21 +334,6 @@ export class ProfileService {
     const trimmed = text.trim();
     const match = trimmed.match(/^.*?[.!?](\s|$)/);
     return (match ? match[0] : trimmed).trim();
-  }
-
-  private async verifyCurrentPassphrase(
-    userId: string,
-    passphrase: string
-  ): Promise<boolean> {
-    if (!passphrase.trim()) return false;
-    const { data, error } = await this.supabaseService
-      .getClient()
-      .from("user_profiles")
-      .select("passphrase_hash")
-      .eq("id", userId)
-      .maybeSingle();
-    if (error || !data?.passphrase_hash) return false;
-    return this.passphrase.verify(data.passphrase_hash as string, passphrase);
   }
 
   private async resolveEmail(userId: string): Promise<string | null> {

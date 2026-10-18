@@ -2,230 +2,107 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import { fetchProfile } from "@/lib/api-client";
-import { STELLAR_DEFAULT, colorName, hexToRgb } from "@/lib/stellar";
+import { colorName } from "@/lib/stellar";
+import { useSessionColor } from "@/contexts/session-color-context";
+import { AuthBrand } from "@/components/phenyx/auth-chrome";
+
+// Reveal stages: 0 = nothing, 1 = orb, 2 = name, 3 = color line (the accent is
+// revealed here), 4 = enter. Timings follow the prototype's welcome sequence.
+const STAGE_DELAYS = [100, 820, 1680, 2600];
 
 /**
- * s3 — the stellar color reveal. The color is the account's persisted, immutable
- * identity (server-assigned in PHE-13); this screen only reads and reveals it.
- * The orb animates in, then the copy staggers — unless the visitor prefers
- * reduced motion, in which case the orb + copy appear at once with no stagger.
+ * s3 — welcome: the person's name, then their assigned accent. The color is the
+ * account's persisted, immutable identity (server-assigned in PHE-13); this
+ * screen only reads and reveals it. Until the color line the orb and the stellar
+ * icon beside the PHENYX wordmark are brand blue; at the color line both turn to
+ * the accent, and the icon stays that color from here on (the rest of the app
+ * paints it from the same `--s` the SessionColorProvider publishes).
+ *
+ * The sequence waits for the profile so the name and color never swap mid-reveal.
+ * Under reduced motion everything appears at once with the accent already shown.
  */
 export default function WelcomePage() {
   const router = useRouter();
-  const [stellarColor, setStellarColor] = useState(STELLAR_DEFAULT);
+  const { sessionColor, applySessionColor } = useSessionColor();
   const [firstName, setFirstName] = useState("traveler");
-  const [mounted, setMounted] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  // Reveal stages: 0 = nothing, 1 = orb, 2 = copy + button.
+  const [ready, setReady] = useState(false);
   const [stage, setStage] = useState(0);
 
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const reduce = mq.matches;
-    setReduceMotion(reduce);
-
-    const applyColor = (color: string) => {
-      setStellarColor(color);
-      const root = document.documentElement;
-      root.style.setProperty("--s", color);
-      root.style.setProperty("--s-rgb", hexToRgb(color));
-      root.style.setProperty("--color-stellar", color);
-    };
-
-    // Paint the last-known color immediately to avoid a flash, then reconcile
-    // against the authoritative persisted profile.
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) applyColor(stored);
-
+    let active = true;
     fetchProfile()
       .then((profile) => {
-        if (profile?.stellar_color) {
-          applyColor(profile.stellar_color);
-          localStorage.setItem("phenyx_stellar_color", profile.stellar_color);
-        }
-        if (profile?.display_name) {
-          setFirstName(profile.display_name.split(" ")[0]);
-        }
+        if (!active) return;
+        // Publish through the session color mechanism: this page is reached by
+        // client-side navigation, so the provider has not seen the new account.
+        if (profile?.stellar_color) applySessionColor(profile.stellar_color);
+        const first = profile?.display_name?.trim().split(/\s+/)[0];
+        if (first) setFirstName(first.toLowerCase());
       })
       .catch(() => {
         // Best-effort: keep the stored/default color and generic name.
+      })
+      .finally(() => {
+        if (active) setReady(true);
       });
+    return () => {
+      active = false;
+    };
+  }, [applySessionColor]);
 
-    setMounted(true);
-
-    if (reduce) {
-      // No stagger — reveal everything at once.
-      setStage(2);
+  useEffect(() => {
+    if (!ready) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setStage(4);
       return;
     }
-    const t1 = setTimeout(() => setStage(1), 100);
-    const t2 = setTimeout(() => setStage(2), 900);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, []);
+    const timers = STAGE_DELAYS.map((delay, i) => setTimeout(() => setStage(i + 1), delay));
+    return () => timers.forEach(clearTimeout);
+  }, [ready]);
 
-  const handleContinue = () => {
+  const handleEnter = () => {
     // s3 welcome → onboarding. The onboarding page self-routes via the persisted
     // onboarding_step (defaulting to the s3b fork when unset), so we just hand
     // off to /onboarding here — no step is set on this side. (PHE-14)
     router.push("/onboarding");
   };
 
-  if (!mounted) {
-    return <div style={{ minHeight: "100vh", background: "#080808" }} />;
-  }
-
-  // Reduced motion gets no transition/translate; full motion fades + lifts in.
-  const orbVisible = stage >= 1;
-  const copyVisible = stage >= 2;
-  const transition = reduceMotion ? "none" : "opacity 0.7s ease, transform 0.7s ease";
+  const revealed = stage >= 3;
 
   return (
-    <main
-      className={`onb-v67${reduceMotion ? "" : " animate-fade-in"}`}
-      style={{
-        minHeight: "100vh",
-        background: "#080808",
-        position: "relative",
-      }}
-    >
-      {/* Topbar */}
-      <header
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          gap: "10px",
-          padding: "20px 24px",
-          zIndex: 50,
-        }}
-      >
-        <Link
-          href="/"
-          aria-label="Go to homepage"
-          style={{ display: "flex", alignItems: "center", gap: "10px" }}
-        >
-          <Image
-            src="/phenyx-logo.png"
-            alt="PHENYX"
-            width={20}
-            height={20}
-            style={{ opacity: 0.9 }}
-          />
-          <span
-            style={{
-              fontSize: "11px",
-              color: "#666",
-              letterSpacing: "0.08em",
-              fontWeight: 300,
-            }}
-          >
-            PHENYX
-          </span>
-        </Link>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[#080808] px-5 py-24">
+      <header className="auth-topbar">
+        <AuthBrand revealed={revealed} />
       </header>
 
-      <div className="onb-block onb-block--welcome">
-        <div className="onb-welcome-body">
-          {/* The assigned color, revealed as a glowing orb. */}
-          <div
-            style={{
-              width: "16px",
-              height: "16px",
-              borderRadius: "50%",
-              background: stellarColor,
-              boxShadow: `0 0 24px ${stellarColor}, 0 0 48px color-mix(in srgb, ${stellarColor} 50%, transparent)`,
-              opacity: orbVisible ? 1 : 0,
-              transform: orbVisible ? "scale(1)" : "scale(0.6)",
-              transition,
-              animation: reduceMotion ? undefined : "pulse 3s ease-in-out infinite",
-            }}
-          />
-
-          {/* Welcome copy — staggers in after the orb (or appears at once on RM). */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-              opacity: copyVisible ? 1 : 0,
-              transform: copyVisible || reduceMotion ? "translateY(0)" : "translateY(8px)",
-              transition,
-            }}
-          >
-            <h1
-              style={{
-                fontSize: "21px",
-                fontWeight: 300,
-                color: "#FFFDFD",
-                letterSpacing: "-0.02em",
-                margin: 0,
-              }}
-            >
-              welcome, <b style={{ fontWeight: 500 }}>{firstName}.</b>
-            </h1>
-            <p
-              style={{
-                fontSize: "13px",
-                fontWeight: 300,
-                color: "#666",
-                lineHeight: 1.6,
-                margin: 0,
-              }}
-            >
-              your color is {colorName(stellarColor)}.
-            </p>
-          </div>
-        </div>
-
-        <button
-          className="onb-action"
-          onClick={handleContinue}
-          style={{
-            background: "transparent",
-            border: `0.5px solid ${stellarColor}`,
-            borderRadius: "10px",
-            padding: "14px 32px",
-            fontSize: "13px",
-            fontWeight: 400,
-            color: stellarColor,
-            cursor: "pointer",
-            transition: reduceMotion ? "none" : "all 0.2s ease",
-            fontFamily: "inherit",
-            width: "100%",
-            opacity: copyVisible ? 1 : 0,
-            pointerEvents: copyVisible ? "auto" : "none",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#FFFDFD";
-            e.currentTarget.style.borderColor = "#FFFDFD";
-            e.currentTarget.style.color = "#0A0A0A";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.borderColor = stellarColor;
-            e.currentTarget.style.color = stellarColor;
-          }}
+      <section className="auth-flow" aria-labelledby="welcome-title">
+        <div
+          aria-hidden="true"
+          className="welcome-orb"
+          data-in={stage >= 1 ? "true" : "false"}
+          data-revealed={revealed ? "true" : undefined}
+          style={{ marginBottom: "30px" }}
+        />
+        <h1
+          id="welcome-title"
+          className="auth-h welcome-step"
+          data-in={stage >= 2 ? "true" : "false"}
         >
-          continue
+          welcome, {firstName}.
+        </h1>
+        <p className="auth-lede welcome-step" data-in={revealed ? "true" : "false"}>
+          your stellar color is <b className="welcome-color">{colorName(sessionColor)}</b>.
+        </p>
+        <button
+          type="button"
+          className="welcome-enter welcome-step"
+          data-in={stage >= 4 ? "true" : "false"}
+          onClick={handleEnter}
+        >
+          enter
         </button>
-      </div>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.7; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.1); }
-        }
-      `}</style>
+      </section>
     </main>
   );
 }

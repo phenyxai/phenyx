@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ConstellationCanvas } from "@/components/phenyx/constellation-canvas";
 import { ConstellationPanel } from "@/components/phenyx/constellation-panel";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
+import { NewSignalBanner } from "@/components/phenyx/new-signal-banner";
 import {
   constellationAge,
   fetchConstellation,
@@ -113,15 +114,22 @@ export default function ConstellationTabPage() {
       />
 
       <header className="px-6 pb-5 pt-8 lg:px-10">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#FFFDFD]/52">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[rgba(var(--ph-accent-rgb),0.9)]">
           your constellation
         </p>
         {age && (
-          <p className="mt-2 text-[13px] font-light lowercase text-[#FFFDFD]/45">
+          <p className="mt-2 text-[13px] font-light lowercase text-ph-white/45">
             {age.label} of your life, from {age.from} to now.
           </p>
         )}
       </header>
+
+      {/* PHE-102: only while an unseen signal exists; collapsed until opened. */}
+      {data?.signal && (
+        <div className="px-6 pb-5 lg:px-10">
+          <NewSignalBanner data={data} />
+        </div>
+      )}
 
       {/* The 1024px split lives in globals.css (.constellation-split), not in
           lg: classes, so the onairos SDK's stylesheet cannot override it. */}
@@ -156,7 +164,7 @@ export default function ConstellationTabPage() {
               onBack={back}
             />
           ) : (
-            <p className="text-[13px] font-light lowercase text-[#FFFDFD]/30">
+            <p className="text-[13px] font-light lowercase text-ph-white/30">
               aligning your constellation…
             </p>
           )}

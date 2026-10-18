@@ -32,6 +32,13 @@ import {
   type FeedbackSignal,
   type ObservationFeedbackState,
 } from "./feedback";
+import {
+  buildNewSignalRow,
+  markNewFromSignal,
+  shouldCreateSignal,
+  type EmittedSignal,
+  type InsertedMoment,
+} from "./new-signal";
 
 /**
  * PHE-37 — Observation Generation Engine (Lane 6 foundation).
@@ -101,12 +108,16 @@ export class ObservationsService {
   // Reads
   // -------------------------------------------------------------------------
 
-  /** Daily feed — the envelope `frontend/app/dashboard/daily/page.tsx` consumes. */
+  /**
+   * Daily feed envelope. No frontend consumer since PHE-96 removed the daily
+   * tab (and with it the `/observations/:id/feedback` caller); kept until the
+   * endpoint removal follow-up.
+   */
   async getDailyFeed(userId: string): Promise<DailyFeedResponse> {
     const supabase = this.supabaseService.getClient();
     const capabilities = this.billing.capabilitiesFor(await this.getUserTier(userId));
 
-    const [{ data: rows }, { data: state }, { data: feedbackRows }] = await Promise.all([
+    const [{ data: rows }, { data: state }, { data: feedbackRows }, signalMoments] = await Promise.all([
       supabase
         .from("observations")
         .select(
@@ -123,11 +134,12 @@ export class ObservationsService {
         .from("observation_feedback")
         .select("observation_id,verdict,opened")
         .eq("user_id", userId),
+      this.unseenSignalMomentIds(userId),
     ]);
 
     const withEvidence = await this.attachEvidenceHierarchy(
       userId,
-      (rows ?? []) as ObservationRow[],
+      markNewFromSignal((rows ?? []) as ObservationRow[], signalMoments),
       capabilities.evidenceTracesPerDay
     );
 
@@ -149,15 +161,41 @@ export class ObservationsService {
     const supabase = this.supabaseService.getClient();
     const capabilities = this.billing.capabilitiesFor(await this.getUserTier(userId));
 
-    const { data: rows } = await supabase
-      .from("observations")
-      .select(
-        "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at"
-      )
-      .eq("user_id", userId)
-      .order("surfaced_at", { ascending: false });
+    const [{ data: rows }, signalMoments] = await Promise.all([
+      supabase
+        .from("observations")
+        .select(
+          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at"
+        )
+        .eq("user_id", userId)
+        .order("surfaced_at", { ascending: false }),
+      this.unseenSignalMomentIds(userId),
+    ]);
 
-    return { pillars: groupTimelineByPillar((rows ?? []) as ObservationRow[], capabilities) };
+    return {
+      pillars: groupTimelineByPillar(
+        markNewFromSignal((rows ?? []) as ObservationRow[], signalMoments),
+        capabilities
+      ),
+    };
+  }
+
+  /**
+   * PHE-102 — the moments of the user's newest unseen signal, the same one
+   * `/constellation` serves. Empty when there is none (or the table is missing),
+   * so nothing reads as new.
+   */
+  private async unseenSignalMomentIds(userId: string): Promise<Set<string>> {
+    const { data } = await this.supabaseService
+      .getClient()
+      .from("new_signals")
+      .select("observation_ids")
+      .eq("user_id", userId)
+      .is("seen_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return new Set((data?.observation_ids as string[] | null) ?? []);
   }
 
   /**
@@ -357,12 +395,17 @@ export class ObservationsService {
       const { data: inserted, error } = await supabase
         .from("observations")
         .upsert(rows, { onConflict: "user_id,signal_hash", ignoreDuplicates: true })
-        .select("id");
+        .select("id,pillar,body,source_platforms,evidence_span,span_start,span_end");
       if (error) {
         this.logger.error(`observation insert failed for ${userId}: ${error.message}`);
         throw error;
       }
       generated = inserted?.length ?? 0;
+      // PHE-102: rows that got past signal_hash dedup are patterns that weren't
+      // there before. Only a refresh (prior observations exist) makes a signal.
+      if (shouldCreateSignal(context.recent.length > 0, generated)) {
+        await this.createNewSignal(userId, inserted as InsertedMoment[]);
+      }
     }
 
     this.markEventProcessed(options.eventId);
@@ -557,10 +600,26 @@ export class ObservationsService {
     const system = await this.voiceStandard.buildSystemBlocks(this.taskInstructions());
     const userMessage = this.buildUserMessage(context);
 
-    // NOTE: adaptive thinking is incompatible with a forced tool_choice, so the
-    // tool is offered with tool_choice:auto and the task prompt instructs the
-    // model to always call emit_observations. We read the tool_use block back.
-    let claude: any;
+    const claude = await this.callClaudeTool(apiKey, system, this.emitObservationsTool(), userMessage);
+    if (!claude) return { candidates: [] };
+
+    const cacheReadTokens: number | undefined = claude?.usage?.cache_read_input_tokens;
+    const candidates = this.parseToolResult(claude);
+    return { candidates, cacheReadTokens };
+  }
+
+  /**
+   * One Claude call offering a single tool. Adaptive thinking is incompatible
+   * with a forced tool_choice, so the tool is offered with tool_choice:auto and
+   * the task prompt instructs the model to always call it. Null on transport
+   * failure; callers read the tool_use block back.
+   */
+  private async callClaudeTool(
+    apiKey: string,
+    system: unknown,
+    tool: { name: string },
+    userMessage: string
+  ): Promise<any | null> {
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -575,19 +634,99 @@ export class ObservationsService {
           thinking: { type: "adaptive" },
           output_config: { effort: "high" },
           system,
-          tools: [this.emitObservationsTool()],
+          tools: [tool],
           messages: [{ role: "user", content: userMessage }],
         }),
       });
-      claude = await res.json();
+      return await res.json();
     } catch (e) {
-      this.logger.error(`Claude call failed: ${(e as Error).message}`);
-      return { candidates: [] };
+      this.logger.error(`Claude ${tool.name} call failed: ${(e as Error).message}`);
+      return null;
     }
+  }
 
-    const cacheReadTokens: number | undefined = claude?.usage?.cache_read_input_tokens;
-    const candidates = this.parseToolResult(claude);
-    return { candidates, cacheReadTokens };
+  /**
+   * PHE-102 — store a new signal for the moments this refresh inserted. Claude
+   * writes the summary, the points involved and ideas for action; on any
+   * failure the row still lands with fallbacks (see buildNewSignalRow). Never
+   * throws: the observations are already in, and a missing signal only means
+   * no banner.
+   */
+  private async createNewSignal(userId: string, moments: InsertedMoment[]): Promise<void> {
+    try {
+      let emitted: EmittedSignal | null = null;
+      const apiKey = this.config.get<string>("ANTHROPIC_API_KEY");
+      if (apiKey) {
+        const system = await this.voiceStandard.buildSystemBlocks(this.newSignalInstructions());
+        const userMessage = `NEW MOMENTS (found in this refresh, not there before)\n${moments
+          .map(
+            (m) =>
+              `- [${m.pillar}] ${m.body} (${(m.source_platforms ?? []).join(", ") || "no platform"})`
+          )
+          .join("\n")}\n\nDescribe this new signal via emit_new_signal.`;
+        const claude = await this.callClaudeTool(apiKey, system, this.emitNewSignalTool(), userMessage);
+        const blocks: any[] = Array.isArray(claude?.content) ? claude.content : [];
+        const input = blocks.find((b) => b?.type === "tool_use" && b?.name === "emit_new_signal")?.input;
+        if (input && typeof input === "object") {
+          emitted = {
+            point: typeof input.point === "string" ? input.point : undefined,
+            points: Array.isArray(input.points)
+              ? input.points.filter((p: unknown): p is string => typeof p === "string")
+              : [],
+            summary:
+              typeof input.summary === "string"
+                ? this.voiceStandard.sanitizeProse(input.summary)
+                : undefined,
+            ideas: Array.isArray(input.ideas)
+              ? input.ideas
+                  .filter((i: unknown): i is string => typeof i === "string")
+                  .map((i: string) => this.voiceStandard.sanitizeProse(i))
+              : [],
+          };
+        }
+      }
+      const { error } = await this.supabaseService
+        .getClient()
+        .from("new_signals")
+        .insert(buildNewSignalRow(userId, moments, emitted));
+      if (error) this.logger.error(`new signal insert failed for ${userId}: ${error.message}`);
+    } catch (e) {
+      this.logger.error(`new signal failed for ${userId}: ${(e as Error).message}`);
+    }
+  }
+
+  private newSignalInstructions(): string {
+    return `you describe a new signal for PHENYX: a pattern a data refresh found in the user's platforms that wasn't there before. you are given the new moments behind it.
+
+choose the one point (pillar) the signal belongs to, list every point the moments touch, write a summary of what newly surfaced and up to three ideas for action the person could try.
+
+the summary is one or two sentences that reflect ("you keep returning to…", "this suggests…") and name the platforms the moments come from. ideas are gentle, concrete invitations the person can take or leave, one sentence each.
+
+you MUST return your result by calling the emit_new_signal tool. do not answer in plain text.
+
+strict prohibitions, never break these:
+- no diagnostic or clinical language
+- never use: depression, anxiety, trauma, disorder, symptoms, diagnosis, treatment, pathology
+- no therapeutic advice: ideas are invitations, never prescriptions`;
+  }
+
+  private emitNewSignalTool() {
+    return {
+      name: "emit_new_signal",
+      description: "Describe the new signal formed by the moments this refresh found.",
+      strict: true,
+      input_schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          point: { type: "string", enum: [...PILLAR_ORDER] },
+          points: { type: "array", items: { type: "string", enum: [...PILLAR_ORDER] } },
+          summary: { type: "string" },
+          ideas: { type: "array", items: { type: "string" } },
+        },
+        required: ["point", "points", "summary", "ideas"],
+      },
+    };
   }
 
   /** Extract the `emit_observations` tool input from a Claude response. */

@@ -15,6 +15,7 @@ import { PersonaModule } from "./persona/persona.module";
 import { PolarisModule } from "./polaris/polaris.module";
 import { EventsModule } from "./events/events.module";
 import { ObservationsModule } from "./observations/observations.module";
+import { DiscoverModule } from "./discover/discover.module";
 import { OnairosModule } from "./onairos/onairos.module";
 import { AccountModule } from "./account/account.module";
 import { ConstellationModule } from "./constellation/constellation.module";
@@ -23,10 +24,8 @@ import { ProfileModule } from "./profile/profile.module";
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    // Per-IP HTTP request-rate limiting (defense-in-depth at the transport layer,
-    // complementing the per-account/per-IP failure lockout in LoginThrottleService).
-    // Baseline global cap; PHE-12 should add a tighter @Throttle on POST /auth/signin
-    // (e.g. { limit: 5, ttl: 60000 }) for the brute-force-sensitive verify route.
+    // Per-IP HTTP request-rate limiting (defense-in-depth at the transport layer).
+    // Baseline global cap; OTP sends carry their own per-email ledger.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     ScheduleModule.forRoot(),
     CommonModule,
@@ -40,6 +39,7 @@ import { ProfileModule } from "./profile/profile.module";
     PolarisModule,
     EventsModule,
     ObservationsModule,
+    DiscoverModule,
     OnairosModule,
     AccountModule,
     ConstellationModule,

@@ -7,11 +7,7 @@ import {
   findCredentialLeak,
   isCredentialKey,
 } from "./account.redaction";
-import {
-  closeAccountError,
-  isDeleteConfirmed,
-  passphraseChangeError,
-} from "./account.dto";
+import { closeAccountError, isDeleteConfirmed } from "./account.dto";
 
 const TOKEN = "eyJ.SECRET-SESSION-JWT.value";
 
@@ -92,13 +88,19 @@ const fakeEncryption = {
   decrypt: (payload: string) => payload.replace(/^ENCRYPTED::/, ""),
 } as any;
 
-const fakePassphrase = {
-  verify: async (_hash: string, passphrase: string) => passphrase === "correct-phrase",
-  hash: async (value: string) => `hashed:${value}`,
+// Stands in for ConfirmCodeService: "123456" is the live code for the account.
+const fakeConfirmCode = {
+  assertValid: async (_userId: string, code: unknown) => {
+    if (code !== "123456") {
+      const err: any = new Error("bad code");
+      err.getStatus = () => 400;
+      throw err;
+    }
+  },
 } as any;
 
-function makeService(supabase: any, passphrase: any = fakePassphrase) {
-  return new AccountService(supabase, fakeEncryption, passphrase);
+function makeService(supabase: any, confirmCode: any = fakeConfirmCode) {
+  return new AccountService(supabase, fakeEncryption, confirmCode);
 }
 
 test("exportAccount returns a single bundle with all sections and never a token", async () => {
@@ -135,107 +137,24 @@ test("isDeleteConfirmed requires the typed phrase, lowercased and trimmed", () =
   assert.ok(!isDeleteConfirmed(undefined));
 });
 
-test("closeAccountError runs in fill order: passphrase then phrase", () => {
+test("closeAccountError runs in fill order: code then phrase", () => {
   assert.equal(
     closeAccountError("", ""),
-    "enter your passphrase to confirm it is you."
+    "enter the code we sent to your email."
   );
   assert.equal(
-    closeAccountError("secret", ""),
+    closeAccountError("123456", ""),
     "type delete my account exactly, to confirm."
   );
   assert.equal(
-    closeAccountError("secret", "delete my account"),
+    closeAccountError("123456", "delete my account"),
     null
   );
 });
 
-test("passphraseChangeError covers the four invalid cases", () => {
-  assert.equal(
-    passphraseChangeError("", "new", "new"),
-    "enter your current passphrase to confirm it is you."
-  );
-  assert.equal(
-    passphraseChangeError("old", "", ""),
-    "enter a new passphrase."
-  );
-  assert.equal(
-    passphraseChangeError("old", "new", "other"),
-    "the two new passphrases do not match."
-  );
-  assert.equal(
-    passphraseChangeError("same", "same", "same"),
-    "that is your current passphrase. choose a different one."
-  );
-  assert.equal(passphraseChangeError("old", "new", "new"), null);
-});
-
-test("closeAccount rejects without passphrase and never calls admin.deleteUser", async () => {
-  let deleteCalled = false;
-  const supabase = {
+function makeDeleteSupabase(deletedIds: string[]) {
+  return {
     getClient: () => ({
-      from() {
-        return {
-          select: () => ({
-            eq: () => ({
-              maybeSingle: async () => ({ data: { passphrase_hash: "h" }, error: null }),
-            }),
-          }),
-        };
-      },
-      auth: { admin: { deleteUser: async () => { deleteCalled = true; return { error: null }; } } },
-    }),
-  } as any;
-
-  await assert.rejects(
-    () => makeService(supabase).closeAccount("user-1", { confirmation: "delete my account" }),
-    (err: any) => err?.getStatus?.() === 400,
-    "missing passphrase is a 400"
-  );
-  assert.equal(deleteCalled, false, "no deletion attempted without passphrase");
-});
-
-test("closeAccount rejects a wrong phrase even when the passphrase is present", async () => {
-  let deleteCalled = false;
-  const supabase = {
-    getClient: () => ({
-      from() {
-        return {
-          select: () => ({
-            eq: () => ({
-              maybeSingle: async () => ({ data: { passphrase_hash: "h" }, error: null }),
-            }),
-          }),
-        };
-      },
-      auth: { admin: { deleteUser: async () => { deleteCalled = true; return { error: null }; } } },
-    }),
-  } as any;
-
-  await assert.rejects(
-    () =>
-      makeService(supabase).closeAccount("user-1", {
-        passphrase: "correct-phrase",
-        confirmation: "please delete",
-      }),
-    (err: any) => err?.getStatus?.() === 400
-  );
-  assert.equal(deleteCalled, false);
-});
-
-test("closeAccount with both gates deletes the auth user", async () => {
-  const deletedIds: string[] = [];
-  const supabase = {
-    getClient: () => ({
-      from() {
-        return {
-          select: () => ({
-            eq: () => ({
-              maybeSingle: async () => ({ data: { passphrase_hash: "h" }, error: null }),
-            }),
-          }),
-        };
-      },
       auth: {
         admin: {
           deleteUser: async (id: string) => {
@@ -246,42 +165,53 @@ test("closeAccount with both gates deletes the auth user", async () => {
       },
     }),
   } as any;
+}
 
-  const res = await makeService(supabase).closeAccount("user-1", {
-    passphrase: "correct-phrase",
+test("closeAccount rejects without a code and never calls admin.deleteUser", async () => {
+  const deletedIds: string[] = [];
+  await assert.rejects(
+    () =>
+      makeService(makeDeleteSupabase(deletedIds)).closeAccount("user-1", {
+        confirmation: "delete my account",
+      }),
+    (err: any) => err?.getStatus?.() === 400,
+    "missing code is a 400"
+  );
+  assert.deepEqual(deletedIds, [], "no deletion attempted without a code");
+});
+
+test("closeAccount rejects a wrong code even when the phrase is typed", async () => {
+  const deletedIds: string[] = [];
+  await assert.rejects(
+    () =>
+      makeService(makeDeleteSupabase(deletedIds)).closeAccount("user-1", {
+        code: "000000",
+        confirmation: "delete my account",
+      }),
+    (err: any) => err?.getStatus?.() === 400
+  );
+  assert.deepEqual(deletedIds, []);
+});
+
+test("closeAccount rejects a wrong phrase even when the code is right", async () => {
+  const deletedIds: string[] = [];
+  await assert.rejects(
+    () =>
+      makeService(makeDeleteSupabase(deletedIds)).closeAccount("user-1", {
+        code: "123456",
+        confirmation: "please delete",
+      }),
+    (err: any) => err?.getStatus?.() === 400
+  );
+  assert.deepEqual(deletedIds, []);
+});
+
+test("closeAccount with both gates deletes the auth user", async () => {
+  const deletedIds: string[] = [];
+  const res = await makeService(makeDeleteSupabase(deletedIds)).closeAccount("user-1", {
+    code: "123456",
     confirmation: "delete my account",
   });
   assert.deepEqual(res, { deleted: true });
   assert.deepEqual(deletedIds, ["user-1"]);
-});
-
-test("changePassphrase rejects new-equals-current before writing", async () => {
-  let updated = false;
-  const supabase = {
-    getClient: () => ({
-      from() {
-        return {
-          select: () => ({
-            eq: () => ({
-              maybeSingle: async () => ({ data: { passphrase_hash: "h" }, error: null }),
-            }),
-          }),
-          update: () => {
-            updated = true;
-            return { eq: async () => ({ error: null }) };
-          },
-        };
-      },
-    }),
-  } as any;
-
-  await assert.rejects(
-    () =>
-      makeService(supabase).changePassphrase("user-1", {
-        currentPassphrase: "same",
-        newPassphrase: "same",
-      }),
-    (err: any) => err?.getStatus?.() === 400
-  );
-  assert.equal(updated, false);
 });
