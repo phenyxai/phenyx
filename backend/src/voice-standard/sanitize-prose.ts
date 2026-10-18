@@ -62,6 +62,7 @@ export type VoiceSurface =
   | "trait"
   | "mantra"
   | "foresight"
+  | "insights"
   | "observation"
   | "discovery"
   | "polaris";
@@ -75,6 +76,7 @@ const LIMITS: Record<VoiceSurface, Partial<Record<LengthUnit, number>>> = {
   trait: { sentences: 3 },
   mantra: { lines: 2 },
   foresight: { lines: 1 },
+  insights: { sentences: 2 },
   observation: { sentences: 3 },
   // What surfaced and why it surfaced now: one sentence each (PHE-103).
   discovery: { sentences: 1 },

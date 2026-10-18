@@ -52,13 +52,16 @@ test("formatJoined reads 'with PHENYX since <month year>'", () => {
 // getOverview with fakes
 // ---------------------------------------------------------------------------
 
-function makeSupabase(profile: Record<string, unknown>) {
+function makeSupabase(
+  profile: Record<string, unknown>,
+  state: Record<string, unknown> | null = null
+) {
   const tableData: Record<string, unknown> = {
     user_profiles: profile,
     user_persona: { connected_platforms: ["spotify", "reddit"] },
     onairos_connections: [{ platform: "spotify" }, { platform: "youtube" }],
     user_traits: [],
-    constellation_state: null,
+    constellation_state: state,
   };
   return {
     getClient() {
@@ -92,6 +95,15 @@ const fakeConfirmCode = {
   assertValid: async () => undefined,
 } as any;
 
+function makeSynthesis() {
+  const queued: string[] = [];
+  return {
+    synthesis: { queueInsights: (user: string, v: number) => queued.push(`${user}:${v}`) } as any,
+    queued,
+  };
+}
+const fakeSynthesis = makeSynthesis().synthesis;
+
 function makeStripe(retrieve: (id: string) => Promise<unknown>) {
   const calls: string[] = [];
   const stripe = {
@@ -124,7 +136,8 @@ test("getOverview on a monthly subscription reads renews_at from Stripe", async 
       subscription_status: "active",
     }),
     fakeConfirmCode,
-    stripe
+    stripe,
+    fakeSynthesis
   );
   const overview = await service.getOverview("user-1");
   assert.equal(overview.tier, "pro");
@@ -147,7 +160,8 @@ test("getOverview on yearly_paid is yearly with no renewal and no Stripe call", 
       subscription_status: "yearly_paid",
     }),
     fakeConfirmCode,
-    stripe
+    stripe,
+    fakeSynthesis
   );
   const overview = await service.getOverview("user-1");
   assert.equal(overview.billing_period, "yearly");
@@ -164,7 +178,8 @@ test("getOverview on a gift has no billing period and no renewal", async () => {
       subscription_status: "gift",
     }),
     fakeConfirmCode,
-    stripe
+    stripe,
+    fakeSynthesis
   );
   const overview = await service.getOverview("user-1");
   assert.equal(overview.tier, "pro");
@@ -182,7 +197,8 @@ test("getOverview on free never consults Stripe, even with a stale subscription 
       subscription_status: "canceled",
     }),
     fakeConfirmCode,
-    stripe
+    stripe,
+    fakeSynthesis
   );
   const overview = await service.getOverview("user-1");
   assert.equal(overview.tier, "free");
@@ -202,7 +218,8 @@ test("getOverview still returns when Stripe fails: renews_at null, billing_perio
       subscription_status: "active",
     }),
     fakeConfirmCode,
-    stripe
+    stripe,
+    fakeSynthesis
   );
   const overview = await service.getOverview("user-1");
   assert.equal(overview.billing_period, "monthly");
@@ -222,9 +239,38 @@ test("getOverview still returns when the Stripe key is missing", async () => {
       subscription_status: "active",
     }),
     fakeConfirmCode,
-    stripe
+    stripe,
+    fakeSynthesis
   );
   const overview = await service.getOverview("user-1");
   assert.equal(overview.billing_period, "monthly");
   assert.equal(overview.renews_at, null);
+});
+
+test("getOverview returns a stale insights reading and queues a fresh one", async () => {
+  const { stripe } = makeStripe(async () => ({}));
+  const { synthesis, queued } = makeSynthesis();
+  const reading = { version: 2, generated_at: "2026-10-01T00:00:00.000Z", matters: [], eras: [] };
+  const service = new ProfileService(
+    makeSupabase({ tier: "free", prompt_times: {} }, { version: 3, insights: reading }),
+    fakeConfirmCode,
+    stripe,
+    synthesis
+  );
+  const overview = await service.getOverview("user-1");
+  assert.deepEqual(overview.insights, reading);
+  assert.deepEqual(queued, ["user-1:3"]);
+});
+
+test("getOverview leaves a current insights reading alone", async () => {
+  const { stripe } = makeStripe(async () => ({}));
+  const { synthesis, queued } = makeSynthesis();
+  const service = new ProfileService(
+    makeSupabase({ tier: "free", prompt_times: {} }, { version: 3, insights: { version: 3 } }),
+    fakeConfirmCode,
+    stripe,
+    synthesis
+  );
+  await service.getOverview("user-1");
+  assert.deepEqual(queued, []);
 });
