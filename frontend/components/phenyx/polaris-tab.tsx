@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type ReactNode,
   type RefObject,
 } from "react";
 import { useSearchParams } from "next/navigation";
@@ -16,8 +15,9 @@ import {
   getPolarisThread,
   getPolarisThreads,
   type PolarisAllowance,
+  type PolarisMode,
+  type PolarisStarter,
   type PolarisThreadSummary,
-  type SuggestedQuestion,
 } from "@/lib/api-client";
 import {
   V67_PRICING,
@@ -29,22 +29,26 @@ import { trackPolarisMessage } from "@/lib/analytics";
 import { useTier } from "@/lib/use-tier";
 
 // ============================================================================
-// PolarisTab: v244 idle + chat surfaces (PHE-73, PHE-94)
+// PolarisTab: home + conversation (PHE-73, PHE-94, modes from PHE-123)
 // ----------------------------------------------------------------------------
 // Two views behind one flex-column panel (never display:block, which unpins
 // the composer from the foot):
 //
-//   • IDLE: centered hero (star, "polaris", tagline, allowance badge) + live
-//     composer + three explore tabs (questions from your constellation,
-//     starting points, your chats).
-//   • CHAT: ← · polaris · <pillar> · allowance badge · new. Messages fill the
-//     panel; composer is pinned to the foot.
+//   • HOME: "where would you like to begin?", the allowance badge, a free-text
+//     box, the three modes (clarify, understand, decide), one starter question
+//     per mode from the person's top pillars, and past conversations with
+//     search. Picking a starter selects its mode and fills in the question.
+//   • CONVERSATION: back to polaris, the mode tag, the allowance badge, then
+//     the question as a full-width title with its topic line. Each run of
+//     replies opens with a "✦ polaris" tag; three follow-ups sit under the
+//     latest reply; "keep going…" stays pinned to the foot while only the
+//     conversation scrolls.
 //
-// Every tier gets the composer. The weekly allowance is counted in QUESTIONS
-// (3 on free, 40 on full) and both numbers on the badge come from the backend
-// allowance. The badge, and the at-limit state, open the top-up sheet on full
-// and the upgrade modal on free. Deep-link `/dashboard/polaris?q=...&pillar=...`
-// starts chat with that as the first user turn.
+// The weekly allowance is counted in QUESTIONS (3 on free, 40 on full) and both
+// numbers on the badge come from the backend allowance. The badge, and the
+// at-limit state, open the top-up sheet on full and the upgrade modal on free.
+// Deep links `/dashboard/polaris?q=&mode=&context=` (a moment or a discovery)
+// open a conversation with that question, mode and context and send it.
 // ============================================================================
 
 const ACCENT = "var(--ph-accent)";
@@ -53,27 +57,23 @@ const ACCENT = "var(--ph-accent)";
 const ALLOWANCE_NOTE =
   "questions reset every week. a top-up adds a few more before then and does not change the reset.";
 
-const COMPOSER_PLACEHOLDER =
-  "ask from where you are. polaris already has the context.";
+const HOME_PLACEHOLDER = "what are you trying to clarify, understand or decide?";
+const CHAT_PLACEHOLDER = "keep going…";
 
-/** v67 starting-point chips (verbatim). Each seeds a chat with its label + pillar. */
-const STARTING_CHIPS: ReadonlyArray<{ label: string; pillar: string }> = [
-  { label: "my work", pillar: "self-creation" },
-  { label: "how i come across", pillar: "recognition" },
-  { label: "where i am going", pillar: "transcendence" },
-  { label: "what lands", pillar: "recognition" },
-  { label: "what i hold back", pillar: "self-creation" },
-  { label: "2am", pillar: "becoming" },
-  { label: "what i keep starting", pillar: "becoming" },
-  { label: "what i return to", pillar: "origin" },
-  { label: "the year it changed", pillar: "origin" },
-  { label: "what i finish", pillar: "self-creation" },
-  { label: "who i sound like", pillar: "recognition" },
-  { label: "what i am circling", pillar: "convergence" },
+const MODES: ReadonlyArray<{ id: PolarisMode; blurb: string }> = [
+  { id: "clarify", blurb: "untangle a question" },
+  { id: "understand", blurb: "explore a recurring pattern" },
+  { id: "decide", blurb: "choose a direction and shape next steps" },
 ];
 
-type ExploreTab = "record" | "starts" | "chats";
-type View = "idle" | "chat";
+// ponytail: fixed follow-ups per mode; generate them per reply if these start to feel generic.
+const FOLLOW_UPS: Record<PolarisMode, readonly string[]> = {
+  clarify: ["what am i really asking?", "where did this begin?", "what would make this clearer?"],
+  understand: ["where did this begin?", "what keeps reinforcing it?", "what could i do with it now?"],
+  decide: ["what does my history already support?", "what would i be giving up?", "what could the first step be?"],
+};
+
+type View = "home" | "chat";
 
 interface CrisisResources {
   us: string;
@@ -100,23 +100,28 @@ function datedLabel(iso: string): string {
     .toLowerCase();
 }
 
-function displayPillar(pillar: string | null | undefined): string {
-  if (!pillar) return "";
-  return pillar.replace(/_/g, "-");
+/** The topic line under a conversation's title: the part of the constellation it drew on. */
+function topicLine(pillar: string | null | undefined): string | null {
+  return pillar ? `drawing on ${pillar.replace(/_/g, "-")}` : null;
 }
 
-function readExploreDeepLink(searchParams: { get: (key: string) => string | null }): {
+function asMode(value: string | null | undefined): PolarisMode | null {
+  return MODES.some((m) => m.id === value) ? (value as PolarisMode) : null;
+}
+
+function readDeepLink(searchParams: { get: (key: string) => string | null }): {
   q: string;
-  pillar: string | null;
+  mode: PolarisMode | null;
+  context: string | null;
 } {
-  let q = searchParams.get("q")?.trim() ?? "";
-  let pillar = searchParams.get("pillar")?.trim() || null;
-  if (!q && typeof window !== "undefined") {
-    const live = new URLSearchParams(window.location.search);
-    q = live.get("q")?.trim() ?? "";
-    if (!pillar) pillar = live.get("pillar")?.trim() || null;
-  }
-  return { q, pillar };
+  const read = (key: string) => {
+    let value = searchParams.get(key)?.trim() ?? "";
+    if (!value && typeof window !== "undefined") {
+      value = new URLSearchParams(window.location.search).get(key)?.trim() ?? "";
+    }
+    return value;
+  };
+  return { q: read("q"), mode: asMode(read("mode")), context: read("context") || null };
 }
 
 function autosize(el: HTMLTextAreaElement | null) {
@@ -130,12 +135,11 @@ export function PolarisTab() {
   const { openModal } = useSettingsModals();
   const { tier, isPro } = useTier();
 
-  const [view, setView] = useState<View>("idle");
-  const [explore, setExplore] = useState<ExploreTab>("record");
+  const [view, setView] = useState<View>("home");
   const [topupOpen, setTopupOpen] = useState(false);
 
   const [threads, setThreads] = useState<PolarisThreadSummary[]>([]);
-  const [suggested, setSuggested] = useState<SuggestedQuestion[]>([]);
+  const [starters, setStarters] = useState<PolarisStarter[]>([]);
   // Backend allowance snapshot. Until it loads, the badge falls back to the
   // tier's full allowance so it never reads "0 of 0".
   const [allowance, setAllowance] = useState<Pick<
@@ -143,15 +147,21 @@ export function PolarisTab() {
     "remaining" | "limit"
   > | null>(null);
 
+  // The mode picked on home (null until one is), and the open conversation's.
+  const [mode, setMode] = useState<PolarisMode | null>(null);
+  const [chatMode, setChatMode] = useState<PolarisMode>("clarify");
+  const [chatTitle, setChatTitle] = useState<string | null>(null);
+  const [chatTopic, setChatTopic] = useState<string | null>(null);
+  const [usedFollowUps, setUsedFollowUps] = useState<string[]>([]);
+
   const [threadId, setThreadId] = useState<string | undefined>(undefined);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatFocus, setChatFocus] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const idleInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const homeInputRef = useRef<HTMLTextAreaElement | null>(null);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const threadIdRef = useRef<string | undefined>(undefined);
@@ -182,31 +192,31 @@ export function PolarisTab() {
     else openUpgrade();
   }, [isPro, openTopup, openUpgrade]);
 
-  const loadIdle = useCallback(async () => {
+  const loadHome = useCallback(async () => {
     try {
       const data = await getPolarisThreads();
       setThreads(data.threads ?? []);
-      setSuggested(data.suggested_questions ?? []);
+      setStarters(data.starters ?? []);
       applyAllowance(data.allowance);
       if (typeof data.allowance?.limit_reached === "boolean") {
         setLimitReached(data.allowance.limit_reached);
       }
     } catch {
       setThreads([]);
-      setSuggested([]);
+      setStarters([]);
     }
   }, [applyAllowance]);
 
   useEffect(() => {
-    void loadIdle();
-  }, [loadIdle]);
+    void loadHome();
+  }, [loadHome]);
 
   useEffect(() => {
     if (view === "chat") {
       chatInputRef.current?.focus();
       autosize(chatInputRef.current);
     } else {
-      autosize(idleInputRef.current);
+      autosize(homeInputRef.current);
     }
   }, [view]);
 
@@ -215,7 +225,7 @@ export function PolarisTab() {
   }, [messages, sending, view]);
 
   const sendQuestion = useCallback(
-    async (question: string, seedThreadId?: string) => {
+    async (question: string, open?: { mode: PolarisMode; context?: string | null }) => {
       const q = question.trim();
       if (!q || sending) return;
 
@@ -228,10 +238,11 @@ export function PolarisTab() {
       ]);
 
       try {
-        const res = await askPolaris(q, seedThreadId ?? threadIdRef.current);
+        const res = await askPolaris(q, threadIdRef.current, open);
         setThreadId(res.thread_id);
         threadIdRef.current = res.thread_id;
-        if (res.pillar_tag) setChatFocus(displayPillar(res.pillar_tag));
+        if (res.mode) setChatMode(res.mode);
+        if (res.pillar_tag) setChatTopic(topicLine(res.pillar_tag));
         applyAllowance(res.allowance);
 
         if (res.limit_reached) {
@@ -271,17 +282,21 @@ export function PolarisTab() {
     [sending, openAllowance, applyAllowance, tierLimit]
   );
 
-  const openChat = useCallback(
-    (seed?: string, pillar?: string | null) => {
+  /** Open a fresh conversation in `nextMode` and send its first question. */
+  const startChat = useCallback(
+    (question: string, nextMode: PolarisMode, context?: string | null) => {
       setMessages([]);
       setThreadId(undefined);
       threadIdRef.current = undefined;
       setLimitReached(false);
       setError(null);
       setInput("");
-      setChatFocus(displayPillar(pillar) || null);
+      setChatMode(nextMode);
+      setChatTitle(question.trim());
+      setChatTopic(null);
+      setUsedFollowUps([]);
       setView("chat");
-      if (seed) void sendQuestion(seed, undefined);
+      void sendQuestion(question, { mode: nextMode, context });
     },
     [sendQuestion]
   );
@@ -291,6 +306,10 @@ export function PolarisTab() {
     setLimitReached(false);
     setThreadId(id);
     threadIdRef.current = id;
+    setMessages([]);
+    setChatTitle(null);
+    setChatTopic(null);
+    setUsedFollowUps([]);
     setView("chat");
     try {
       const detail = await getPolarisThread(id);
@@ -301,21 +320,19 @@ export function PolarisTab() {
           body: m.body,
         }))
       );
-      const tagged = detail.messages.find((m) => m.pillar_tag);
-      setChatFocus(displayPillar(tagged?.pillar_tag) || null);
+      setChatMode(detail.mode ?? "clarify");
+      setChatTitle(detail.messages.find((m) => m.role === "user")?.body ?? null);
+      setChatTopic(topicLine(detail.messages.find((m) => m.pillar_tag)?.pillar_tag));
     } catch {
-      setMessages([]);
-      setChatFocus(null);
       setError("could not load this conversation. please try again.");
     }
   }, []);
 
-  const backToIdle = useCallback(() => {
-    setView("idle");
-    setChatFocus(null);
+  const backToHome = useCallback(() => {
+    setView("home");
     setInput("");
-    void loadIdle();
-  }, [loadIdle]);
+    void loadHome();
+  }, [loadHome]);
 
   const submitInput = useCallback(() => {
     const q = input.trim();
@@ -324,34 +341,52 @@ export function PolarisTab() {
       openAllowance();
       return;
     }
-    setInput("");
     if (view !== "chat") {
-      setMessages([]);
-      setThreadId(undefined);
-      threadIdRef.current = undefined;
-      setError(null);
-      setChatFocus(null);
-      setView("chat");
+      startChat(q, mode ?? "clarify");
+      return;
     }
+    setInput("");
     void sendQuestion(q);
-  }, [input, sendQuestion, remaining, openAllowance, view]);
+  }, [input, remaining, openAllowance, view, startChat, mode, sendQuestion]);
 
-  // Deep links (PHE-70) route here with ?q=&pillar=. Read the query on
-  // the client so a client-side `router.push` from another tab is picked up even if
-  // this tab was already in the tree. Strip the query with
-  // history.replaceState (not router.replace) so Next does not remount the
-  // tab and drop the chat that just started.
+  const pickStarter = useCallback((starter: PolarisStarter) => {
+    setMode(starter.mode);
+    setInput(starter.text);
+    requestAnimationFrame(() => {
+      autosize(homeInputRef.current);
+      homeInputRef.current?.focus();
+    });
+  }, []);
+
+  const followUp = useCallback(
+    (question: string) => {
+      if (remaining <= 0) {
+        openAllowance();
+        return;
+      }
+      setUsedFollowUps((prev) => [...prev, question]);
+      void sendQuestion(question);
+    },
+    [remaining, openAllowance, sendQuestion]
+  );
+
+  // Deep links (PHE-70, PHE-123) route here with ?q=&mode=&context=. Read the
+  // query on the client so a client-side `router.push` from another tab is
+  // picked up even if this tab was already in the tree. Strip the query with
+  // history.replaceState (not router.replace) so Next does not remount the tab
+  // and drop the conversation that just started. A link without a mode opens
+  // in understand: it comes from a moment or a discovery to follow further.
   useEffect(() => {
-    const { q, pillar } = readExploreDeepLink(searchParams);
+    const { q, mode: linkMode, context } = readDeepLink(searchParams);
     if (!q) return;
-    const key = `${q}|${pillar ?? ""}`;
+    const key = `${q}|${linkMode ?? ""}|${context ?? ""}`;
     if (consumedDeepLinks.has(key)) return;
     consumedDeepLinks.add(key);
-    openChat(q, pillar);
+    startChat(q, linkMode ?? "understand", context);
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", "/dashboard/polaris");
     }
-  }, [searchParams, openChat]);
+  }, [searchParams, startChat]);
 
   return (
     <div
@@ -365,11 +400,13 @@ export function PolarisTab() {
     >
       <style>{`
         @layer base {
-          [data-testid="polaris-panel"] textarea[aria-label="ask polaris"]::placeholder {
+          [data-testid="polaris-panel"] textarea[data-polaris-input]::placeholder {
             color: rgba(255,253,253,0.52) !important;
           }
-          [data-testid="polaris-panel"] textarea[aria-label="ask polaris"],
-          [data-testid="polaris-panel"] textarea[aria-label="ask polaris"]:focus {
+          [data-testid="polaris-panel"] textarea[data-polaris-input],
+          [data-testid="polaris-panel"] textarea[data-polaris-input]:focus,
+          [data-testid="polaris-panel"] input[data-polaris-search],
+          [data-testid="polaris-panel"] input[data-polaris-search]:focus {
             background: transparent !important;
             border: none !important;
             border-radius: 0 !important;
@@ -380,7 +417,7 @@ export function PolarisTab() {
         /* PHE-98: text and border warm to the accent through the shared
            hover rule in globals.css; only fills and inner marks live here. */
         @media (hover: hover) {
-          [data-polaris-question-card]:hover {
+          [data-polaris-card]:hover {
             background: rgba(255,253,253,0.02) !important;
           }
           [data-polaris-allowance-badge]:hover [data-polaris-allowance-plus] {
@@ -391,24 +428,28 @@ export function PolarisTab() {
           }
         }
       `}</style>
-      {view === "idle" ? (
-        <IdleView
-          suggested={suggested}
+      {view === "home" ? (
+        <HomeView
+          starters={starters}
           threads={threads}
+          mode={mode}
           allowanceLabel={allowanceLabel}
           input={input}
           sending={sending}
-          explore={explore}
-          inputRef={idleInputRef}
-          onExplore={setExplore}
+          inputRef={homeInputRef}
+          onMode={setMode}
+          onStarter={pickStarter}
           onInputChange={setInput}
           onSubmit={submitInput}
-          onOpenChat={openChat}
           onOpenThread={openThread}
           onAllowance={openAllowance}
         />
       ) : (
         <ChatView
+          mode={chatMode}
+          title={chatTitle}
+          topic={chatTopic}
+          followUps={FOLLOW_UPS[chatMode].filter((f) => !usedFollowUps.includes(f))}
           messages={messages}
           input={input}
           sending={sending}
@@ -416,10 +457,10 @@ export function PolarisTab() {
           isPro={isPro}
           error={error}
           allowanceLabel={allowanceLabel}
-          chatFocus={chatFocus}
           inputRef={chatInputRef}
           bottomRef={bottomRef}
-          onBack={backToIdle}
+          onBack={backToHome}
+          onFollowUp={followUp}
           onInputChange={setInput}
           onSubmit={submitInput}
           onAllowance={openAllowance}
@@ -437,40 +478,52 @@ export function PolarisTab() {
 }
 
 // ---------------------------------------------------------------------------
-// Idle
+// Home
 // ---------------------------------------------------------------------------
 
-function IdleView({
-  suggested,
+/** Small, lowercase, accent: the label above a group on polaris home. */
+function GroupLabel({ children }: { children: string }) {
+  return (
+    <p style={{ fontSize: 12, letterSpacing: "0.04em", color: ACCENT, margin: "0 0 10px" }}>
+      {children}
+    </p>
+  );
+}
+
+function HomeView({
+  starters,
   threads,
+  mode,
   allowanceLabel,
   input,
   sending,
-  explore,
   inputRef,
-  onExplore,
+  onMode,
+  onStarter,
   onInputChange,
   onSubmit,
-  onOpenChat,
   onOpenThread,
   onAllowance,
 }: {
-  suggested: SuggestedQuestion[];
+  starters: PolarisStarter[];
   threads: PolarisThreadSummary[];
+  mode: PolarisMode | null;
   allowanceLabel: string;
   input: string;
   sending: boolean;
-  explore: ExploreTab;
   inputRef: RefObject<HTMLTextAreaElement | null>;
-  onExplore: (tab: ExploreTab) => void;
+  onMode: (mode: PolarisMode) => void;
+  onStarter: (starter: PolarisStarter) => void;
   onInputChange: (v: string) => void;
   onSubmit: () => void;
-  onOpenChat: (seed?: string, pillar?: string | null) => void;
   onOpenThread: (id: string) => void;
   onAllowance: () => void;
 }) {
-  const showChats = threads.length > 0;
-  const active = explore === "chats" && !showChats ? "record" : explore;
+  const [search, setSearch] = useState("");
+  const needle = search.trim().toLowerCase();
+  const shown = needle
+    ? threads.filter((t) => `${t.title ?? ""} ${t.preview ?? ""}`.toLowerCase().includes(needle))
+    : threads;
 
   return (
     <div
@@ -478,9 +531,6 @@ function IdleView({
         flex: 1,
         minHeight: 0,
         overflowY: "auto",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
         padding: "24px 24px 40px",
       }}
     >
@@ -491,39 +541,26 @@ function IdleView({
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
             textAlign: "center",
             gap: 10,
             marginBottom: 26,
           }}
         >
-          <span aria-hidden="true" style={{ fontSize: 30, color: ACCENT, flexShrink: 0 }}>
+          <span aria-hidden="true" style={{ fontSize: 30, color: ACCENT }}>
             ✦
           </span>
-          <span
+          <h1
             style={{
-              fontSize: 13,
-              letterSpacing: "0.24em",
-              textTransform: "uppercase",
-              fontWeight: 600,
-              color: "rgba(var(--ph-accent-rgb),0.85)",
-            }}
-          >
-            polaris
-          </span>
-          <p
-            style={{
-              fontSize: "clamp(15px, 1.5vw, 19px)",
+              fontSize: "clamp(18px, 1.8vw, 22px)",
               fontWeight: 300,
               color: "rgba(255,253,253,0.94)",
               lineHeight: 1.35,
               letterSpacing: "-0.01em",
               margin: 0,
-              textAlign: "center",
             }}
           >
-            what are you curious about today?
-          </p>
+            where would you like to begin?
+          </h1>
           <AllowanceBadge
             label={allowanceLabel}
             onClick={onAllowance}
@@ -531,224 +568,195 @@ function IdleView({
           />
         </div>
 
+        <Composer
+          value={input}
+          placeholder={HOME_PLACEHOLDER}
+          disabled={sending}
+          inputRef={inputRef}
+          onChange={onInputChange}
+          onSubmit={onSubmit}
+        />
+
         <div
+          role="group"
+          aria-label="modes"
           style={{
-            background: "rgba(255,253,253,0.018)",
-            border: "1px solid rgba(255,253,253,0.1)",
-            borderRadius: 18,
-            padding: "18px 20px 12px",
-            marginBottom: 26,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: 10,
+            margin: "22px 0 34px",
           }}
         >
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => {
-              onInputChange(e.target.value);
-              autosize(e.currentTarget);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                onSubmit();
-              }
-            }}
-            aria-label="ask polaris"
-            placeholder={COMPOSER_PLACEHOLDER}
-            rows={1}
-            disabled={sending}
-            style={textareaStyle}
-          />
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              marginTop: 8,
-            }}
-          >
-            <SendButton onClick={onSubmit} disabled={sending || !input.trim()} />
-          </div>
+          {MODES.map((m) => {
+            const selected = mode === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => onMode(m.id)}
+                data-polaris-card
+                style={{
+                  ...cardStyle,
+                  borderColor: selected ? ACCENT : "rgba(255,253,253,0.08)",
+                  background: selected ? "rgba(var(--ph-accent-rgb),0.08)" : "transparent",
+                }}
+              >
+                <span style={{ display: "block", fontSize: 14, color: selected ? ACCENT : "rgba(255,253,253,0.88)" }}>
+                  {m.id}
+                </span>
+                <span style={{ display: "block", marginTop: 4, fontSize: 12.5, fontWeight: 300, color: "rgba(255,253,253,0.5)" }}>
+                  {m.blurb}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        <div style={{ marginTop: 4 }}>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "8px 16px",
-              justifyContent: "flex-start",
-              marginBottom: 20,
-            }}
-          >
-            <ExploreTabButton
-              active={active === "record"}
-              onClick={() => onExplore("record")}
-            >
-              questions from your constellation
-            </ExploreTabButton>
-            <ExploreTabButton
-              active={active === "starts"}
-              onClick={() => onExplore("starts")}
-            >
-              starting points
-            </ExploreTabButton>
-            {showChats && (
-              <ExploreTabButton
-                active={active === "chats"}
-                onClick={() => onExplore("chats")}
+        {starters.length > 0 && (
+          <div style={{ marginBottom: 34 }}>
+            <GroupLabel>start with one of these</GroupLabel>
+            {starters.map((s) => (
+              <button
+                key={s.mode}
+                type="button"
+                onClick={() => onStarter(s)}
+                data-polaris-card
+                style={{ ...cardStyle, width: "100%", marginBottom: 8 }}
               >
-                your chats
-              </ExploreTabButton>
-            )}
+                <span style={{ display: "block", fontSize: 12, color: ACCENT, marginBottom: 4 }}>{s.mode}</span>
+                <span style={{ display: "block", fontSize: 13.5, fontWeight: 300, lineHeight: 1.5, color: "rgba(255,253,253,0.8)" }}>
+                  {s.text}
+                </span>
+              </button>
+            ))}
           </div>
+        )}
 
-          {active === "record" && (
-            <div>
-              {suggested.map((s) => (
-                <button
-                  key={s.pillar_tag + s.text}
-                  type="button"
-                  onClick={() => onOpenChat(s.text, s.pillar_tag)}
-                  className="motion-reduce:transition-none"
-                  data-polaris-question-card
-                  style={questionCardStyle}
-                >
-                  <p
-                    style={{
-                      fontSize: 11.5,
-                      letterSpacing: "0.1em",
-                      color: ACCENT,
-                      textTransform: "uppercase",
-                      margin: "0 0 5px",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {displayPillar(s.pillar_tag)}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: 13.5,
-                      color: "inherit",
-                      lineHeight: 1.5,
-                      fontWeight: 300,
-                      margin: 0,
-                    }}
-                  >
-                    {s.text}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {active === "starts" && (
+        {threads.length > 0 && (
+          <div>
+            <GroupLabel>past conversations</GroupLabel>
             <div
               style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 7,
-                justifyContent: "flex-start",
+                borderBottom: "1px solid rgba(255,253,253,0.08)",
+                padding: "4px 0 8px",
+                marginBottom: 10,
               }}
             >
-              {STARTING_CHIPS.map((chip) => (
-                <button
-                  key={chip.label}
-                  type="button"
-                  onClick={() => onOpenChat(chip.label, chip.pillar)}
-                  className="motion-reduce:transition-none"
-                  data-polaris-chip
-                  style={chipStyle}
-                >
-                  {chip.label}
-                </button>
-              ))}
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label="search past conversations"
+                placeholder="search"
+                data-polaris-search
+                style={{ ...textareaStyle, fontSize: 13 }}
+              />
             </div>
-          )}
-
-          {active === "chats" && showChats && (
-            <div>
-              {threads.map((t) => (
+            {shown.length === 0 ? (
+              <p style={{ fontSize: 13, fontWeight: 300, color: "rgba(255,253,253,0.4)", margin: 0 }}>
+                nothing matches that yet.
+              </p>
+            ) : (
+              shown.map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => onOpenThread(t.id)}
-                  className="motion-reduce:transition-none"
-                  data-polaris-thread
-                  style={threadRowStyle}
+                  data-polaris-card
+                  style={{ ...cardStyle, width: "100%", marginBottom: 6, padding: "12px 16px" }}
                 >
-                  <p
-                    style={{
-                      fontSize: 11,
-                      color: "rgba(255,253,253,0.5)",
-                      letterSpacing: "0.06em",
-                      margin: "0 0 4px",
-                    }}
-                  >
+                  <span style={{ display: "block", fontSize: 11, color: "rgba(255,253,253,0.5)", letterSpacing: "0.04em", marginBottom: 4 }}>
                     {datedLabel(t.updated_at)}
-                  </p>
-                  <p
+                    {t.mode && <span style={{ color: ACCENT }}> · {t.mode}</span>}
+                  </span>
+                  <span
                     style={{
+                      display: "block",
                       fontSize: 13,
-                      color: "inherit",
                       fontWeight: 300,
-                      margin: 0,
+                      color: "rgba(255,253,253,0.75)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
                   >
                     {t.title ?? t.preview ?? "conversation"}
-                  </p>
+                  </span>
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function ExploreTabButton({
-  active,
-  onClick,
-  children,
+/** The question box: home's and the conversation's. Its border brightens while you type. */
+function Composer({
+  value,
+  placeholder,
+  disabled,
+  inputRef,
+  onChange,
+  onSubmit,
 }: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
+  value: string;
+  placeholder: string;
+  disabled: boolean;
+  inputRef: RefObject<HTMLTextAreaElement | null>;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
 }) {
+  const typing = value.trim().length > 0;
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="motion-reduce:transition-none"
-      data-polaris-explore-tab
-      data-active={active}
+    <div
       style={{
-        flexShrink: 0,
-        fontFamily: "inherit",
-        fontSize: 12,
-        letterSpacing: "0.02em",
-        color: active ? ACCENT : "rgba(255,253,253,0.52)",
-        background: "none",
-        border: "none",
-        padding: "7px 14px",
-        cursor: "pointer",
-        borderRadius: 16,
+        display: "flex",
+        alignItems: "flex-end",
+        gap: 10,
+        background: "rgba(255,253,253,0.02)",
+        border: `1px solid ${typing ? "rgba(var(--ph-accent-rgb),0.5)" : "rgba(255,253,253,0.1)"}`,
+        borderRadius: 14,
+        padding: "12px 14px",
+        transition: "border-color var(--ph-hover-duration, 0.2s) ease",
       }}
     >
-      {children}
-    </button>
+      <textarea
+        ref={inputRef}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          autosize(e.currentTarget);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            onSubmit();
+          }
+        }}
+        aria-label="ask polaris"
+        data-polaris-input
+        placeholder={placeholder}
+        rows={1}
+        disabled={disabled}
+        style={{ ...textareaStyle, maxHeight: 140 }}
+      />
+      <SendButton onClick={onSubmit} disabled={disabled || !typing} testId="polaris-send" />
+    </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Chat
+// Conversation
 // ---------------------------------------------------------------------------
 
 function ChatView({
+  mode,
+  title,
+  topic,
+  followUps,
   messages,
   input,
   sending,
@@ -756,14 +764,18 @@ function ChatView({
   isPro,
   error,
   allowanceLabel,
-  chatFocus,
   inputRef,
   bottomRef,
   onBack,
+  onFollowUp,
   onInputChange,
   onSubmit,
   onAllowance,
 }: {
+  mode: PolarisMode;
+  title: string | null;
+  topic: string | null;
+  followUps: string[];
   messages: ChatMessage[];
   input: string;
   sending: boolean;
@@ -771,14 +783,18 @@ function ChatView({
   isPro: boolean;
   error: string | null;
   allowanceLabel: string;
-  chatFocus: string | null;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   bottomRef: RefObject<HTMLDivElement | null>;
   onBack: () => void;
+  onFollowUp: (question: string) => void;
   onInputChange: (v: string) => void;
   onSubmit: () => void;
   onAllowance: () => void;
 }) {
+  const last = messages[messages.length - 1];
+  const showFollowUps =
+    !sending && !limitReached && !error && last?.role === "assistant" && !last.isCrisis && followUps.length > 0;
+
   return (
     <div
       style={{
@@ -796,75 +812,46 @@ function ChatView({
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          paddingBottom: 16,
+          paddingBottom: 14,
           flexShrink: 0,
-          gap: 10,
-          flexWrap: "wrap",
+          gap: 12,
         }}
       >
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="back to polaris"
-          style={headerTextBtn}
-        >
-          ←
+        <button type="button" onClick={onBack} aria-label="back to polaris" style={headerTextBtn}>
+          ← polaris
         </button>
-        <div
+        <span
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 7,
-            minWidth: 0,
-            flexWrap: "wrap",
-            flex: 1,
+            marginLeft: "auto",
+            fontSize: 11.5,
+            color: ACCENT,
+            border: "1px solid rgba(var(--ph-accent-rgb),0.4)",
+            borderRadius: 999,
+            padding: "3px 10px",
           }}
         >
-          <span aria-hidden="true" style={{ fontSize: 12, color: ACCENT }}>
-            ✦
-          </span>
-          <span
+          {mode}
+        </span>
+        <AllowanceBadge label={allowanceLabel} onClick={onAllowance} />
+      </div>
+
+      {title && (
+        <header style={{ flexShrink: 0, paddingBottom: 16 }}>
+          <h2
             style={{
-              fontSize: 11.5,
-              letterSpacing: "0.14em",
-              color: ACCENT,
-              textTransform: "uppercase",
-              fontWeight: 600,
+              fontSize: "clamp(18px, 1.9vw, 22px)",
+              fontWeight: 300,
+              lineHeight: 1.35,
+              color: "rgba(255,253,253,0.94)",
+              margin: 0,
+              textWrap: "pretty",
             }}
           >
-            polaris
-          </span>
-          {chatFocus && (
-            <span
-              style={{
-                fontSize: 11,
-                color: ACCENT,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                fontWeight: 600,
-                minWidth: 0,
-                overflowWrap: "anywhere",
-              }}
-            >
-              · {chatFocus}
-            </span>
-          )}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            flexShrink: 0,
-          }}
-        >
-          <AllowanceBadge label={allowanceLabel} onClick={onAllowance} />
-          <button type="button" onClick={onBack} style={headerTextBtn}>
-            new
-          </button>
-        </div>
-      </div>
+            {title}
+          </h2>
+          {topic && <p style={{ fontSize: 12.5, color: ACCENT, margin: "6px 0 0" }}>{topic}</p>}
+        </header>
+      )}
 
       <div
         style={{
@@ -876,17 +863,24 @@ function ChatView({
           flexDirection: "column",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-            marginBottom: 14,
-          }}
-        >
-          {messages.map((m) => (
-            <MessageBubble key={m.id} message={m} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+          {messages.map((m, i) => (
+            <MessageBubble
+              key={m.id}
+              message={m}
+              opensRun={m.role === "assistant" && messages[i - 1]?.role !== "assistant"}
+            />
           ))}
+
+          {showFollowUps && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+              {followUps.map((f) => (
+                <button key={f} type="button" onClick={() => onFollowUp(f)} style={followUpStyle}>
+                  {f}
+                </button>
+              ))}
+            </div>
+          )}
 
           {sending && (
             <p
@@ -923,8 +917,8 @@ function ChatView({
                 }}
               >
                 {isPro
-                  ? "you've reached this week's polaris limit. add more to keep going."
-                  : "you've reached this week's polaris limit. upgrade for more"}
+                  ? "you’ve reached this week’s polaris limit. add more to keep going."
+                  : "you’ve reached this week’s polaris limit. upgrade for more."}
               </p>
               <button
                 type="button"
@@ -968,97 +962,71 @@ function ChatView({
         </div>
       </div>
 
-      <div
-        style={{
-          borderTop: "1px solid rgba(255,253,253,0.05)",
-          paddingTop: 16,
-          paddingBottom: 20,
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: "rgba(255,253,253,0.02)",
-            border: "1px solid rgba(255,253,253,0.08)",
-            borderRadius: 14,
-            padding: "10px 14px",
-          }}
-        >
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => {
-              onInputChange(e.target.value);
-              autosize(e.currentTarget);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                onSubmit();
-              }
-            }}
-            aria-label="ask polaris"
-            placeholder={COMPOSER_PLACEHOLDER}
-            rows={1}
-            disabled={sending}
-            style={{ ...textareaStyle, maxHeight: 110 }}
-          />
-          <SendButton
-            onClick={onSubmit}
-            disabled={sending || !input.trim()}
-            testId="polaris-send"
-          />
-        </div>
+      <div style={{ paddingTop: 12, paddingBottom: 20, flexShrink: 0 }}>
+        <Composer
+          value={input}
+          placeholder={CHAT_PLACEHOLDER}
+          disabled={sending}
+          inputRef={inputRef}
+          onChange={onInputChange}
+          onSubmit={onSubmit}
+        />
       </div>
     </div>
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+/**
+ * One turn. The person's turns sit right in a neutral bubble; polaris's replies
+ * carry a faint warm tint and border, and each run of them opens with an accent
+ * "✦ polaris" tag.
+ */
+function MessageBubble({ message, opensRun }: { message: ChatMessage; opensRun: boolean }) {
   const isUser = message.role === "user";
   return (
-    <div
-      style={{
-        alignSelf: isUser ? "flex-end" : "flex-start",
-        maxWidth: "88%",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        padding: "14px 18px",
-        fontSize: 14,
-        lineHeight: 1.7,
-        fontWeight: 300,
-        color: isUser ? "rgba(255,253,253,0.9)" : "rgba(255,253,253,0.72)",
-        background: isUser ? "rgba(var(--ph-accent-rgb),0.08)" : "rgba(255,253,253,0.02)",
-        border: isUser
-          ? "1px solid rgba(var(--ph-accent-rgb),0.18)"
-          : "1px solid rgba(255,253,253,0.08)",
-        borderRadius: isUser ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
-        textAlign: isUser ? "right" : "left",
-        whiteSpace: "pre-wrap",
-      }}
-    >
-      {message.body}
-      {message.isCrisis && message.resources && (
-        <span
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            fontSize: 13,
-            fontWeight: 300,
-            color: "rgba(255,253,253,0.6)",
-            textAlign: "left",
-          }}
-        >
-          <span>{message.resources.us}</span>
-          <span>{message.resources.text}</span>
-          <span>{message.resources.international}</span>
-        </span>
+    <div style={{ alignSelf: isUser ? "flex-end" : "flex-start", maxWidth: "88%" }}>
+      {opensRun && (
+        <p style={{ fontSize: 11.5, letterSpacing: "0.04em", color: ACCENT, margin: "6px 0 6px 2px" }}>
+          ✦ polaris
+        </p>
       )}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          padding: "14px 18px",
+          fontSize: 14,
+          lineHeight: 1.7,
+          fontWeight: 300,
+          color: isUser ? "rgba(255,253,253,0.9)" : "rgba(255,253,253,0.78)",
+          background: isUser ? "rgba(255,253,253,0.03)" : "rgba(var(--ph-accent-rgb),0.045)",
+          border: isUser
+            ? "1px solid rgba(255,253,253,0.08)"
+            : "1px solid rgba(var(--ph-accent-rgb),0.16)",
+          borderRadius: isUser ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
+          textAlign: "left",
+          whiteSpace: "pre-wrap",
+        }}
+      >
+        {message.body}
+        {message.isCrisis && message.resources && (
+          <span
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              fontSize: 13,
+              fontWeight: 300,
+              color: "rgba(255,253,253,0.6)",
+            }}
+          >
+            <span>{message.resources.us}</span>
+            <span>{message.resources.text}</span>
+            <span>{message.resources.international}</span>
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -1311,44 +1279,31 @@ const textareaStyle: CSSProperties = {
   padding: "2px 0",
 };
 
-const questionCardStyle: CSSProperties = {
+const cardStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  justifyContent: "flex-start",
   padding: "14px 16px",
-  border: "1px solid rgba(255,253,253,0.07)",
-  borderRadius: 10,
+  border: "1px solid rgba(255,253,253,0.08)",
+  borderRadius: 12,
   background: "transparent",
   color: "rgba(255,253,253,0.8)",
   cursor: "pointer",
-  marginBottom: 6,
   textAlign: "left",
-  width: "100%",
   fontFamily: "inherit",
   transition: "border-color 0.2s ease, background 0.2s ease",
 };
 
-const chipStyle: CSSProperties = {
+const followUpStyle: CSSProperties = {
   fontFamily: "inherit",
-  fontSize: 13,
-  padding: "7px 15px",
-  border: "1px solid rgba(255,253,253,0.08)",
-  borderRadius: 20,
+  fontSize: 12.5,
+  padding: "6px 13px",
+  border: "1px solid rgba(var(--ph-accent-rgb),0.4)",
+  borderRadius: 999,
   background: "transparent",
-  color: "rgba(255,253,253,0.5)",
+  color: ACCENT,
   cursor: "pointer",
-  transition: "border-color 0.2s ease, color 0.2s ease",
-};
-
-const threadRowStyle: CSSProperties = {
-  padding: "12px 16px",
-  border: "1px solid rgba(255,253,253,0.07)",
-  borderRadius: 9,
-  background: "rgba(255,253,253,0.01)",
-  color: "rgba(255,253,253,0.5)",
-  cursor: "pointer",
-  marginBottom: 6,
-  width: "100%",
-  textAlign: "left",
-  fontFamily: "inherit",
-  transition: "border-color 0.2s ease",
 };
 
 const headerTextBtn: CSSProperties = {
