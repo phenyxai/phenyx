@@ -193,14 +193,18 @@ export function ConstellationCanvas({
         ctx.stroke();
       }
 
-      // New-signal dot, top-right of the core.
-      if (detail.has_new) {
-        const dx = node.x + node.r + 2;
-        const dy = node.y - node.r - 2;
-        ctx.beginPath();
-        ctx.arc(dx, dy, 2, 0, Math.PI * 2);
-        ctx.fillStyle = "#FFFDFD";
-        ctx.fill();
+      // PHE-102: "new signal" tag beside the unseen signal's point, flipped
+      // to the left when it would run off the right edge.
+      if (current.signal?.pillar === node.pillar) {
+        const label = "new signal";
+        ctx.font = `500 10px ${getComputedStyle(canvas).fontFamily}`;
+        ctx.textBaseline = "middle";
+        const width = ctx.measureText(label).width;
+        const gap = node.r + 8;
+        const right = node.x + gap + width <= w - 4;
+        ctx.textAlign = right ? "left" : "right";
+        ctx.fillStyle = stellar;
+        ctx.fillText(label, right ? node.x + gap : node.x - gap, node.y);
       }
     }
   }, []);
