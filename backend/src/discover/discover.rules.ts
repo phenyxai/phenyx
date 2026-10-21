@@ -3,34 +3,31 @@ import { PILLAR_ORDER, isValidPillar } from "../observations/gating";
 import { normalizePillar } from "../observations/signal-hash";
 
 /**
- * PHE-103 — the card rules for discover, as pure functions so they run under
- * `node --test` without Nest, Supabase or Claude.
+ * PHE-103 / PHE-129 — the card rules for discover, as pure functions so they
+ * run under `node --test` without Nest, Supabase or Claude.
+ *
+ * PHE-129 (Oct 20 demo): a discovery points outward. It names a real place,
+ * person, thing to try, detail or medium (or something from the person's own
+ * history worth returning to), says what it is, and gives one personal reason
+ * grounded in a dated source on a connected platform.
  *
  * Order in the service: {@link validateDiscovery} each candidate (limits,
  * trims, dated trail), {@link dedupeDiscoveries} the survivors (PHE-83 carry
  * over), then {@link selectSet} the seven that are shown.
  */
 
-/** Spec doc 3: each discovery has exactly one of these, shown as its label. */
-export const DISCOVERY_TYPES = [
-  "resurfaced",
-  "connection",
-  "pattern",
-  "rhythm",
-  "unfinished thread",
-  "memory",
-  "taste",
-  "possibility",
-  "health",
-  "language",
-  "network",
-] as const;
+/**
+ * Each discovery has exactly one kind; the card shows it as "a place", "a
+ * person", "something to try", "from your history", "a detail" or "a medium".
+ */
+export const DISCOVERY_TYPES = ["place", "person", "try", "history", "detail", "medium"] as const;
 
 export type DiscoveryType = (typeof DISCOVERY_TYPES)[number];
 
-/** The prompt asks for about 50 characters; past this the card is regenerated. */
-export const HEADLINE_MAX = 60;
-export const TIME_CONTEXT_MAX = 40;
+/** The prompt asks for about 55 characters; past this the card is regenerated. */
+export const HEADLINE_MAX = 72;
+/** The question polaris opens with, when the person asks about the card. */
+export const QUESTION_MAX = 120;
 export const SET_SIZE = 7;
 
 export interface TrailEntry {
@@ -40,14 +37,24 @@ export interface TrailEntry {
   detail: string;
 }
 
+/** The public side of a discovery, for "behind this discovery": who or what, and one line on it. */
+export interface PublicStory {
+  /** The name it goes by, e.g. "brian eno" or "jazz kissa". */
+  label: string;
+  /** A few words, e.g. "music for a place". */
+  title: string;
+  detail: string;
+}
+
 /** One card as Claude emits it through `emit_discoveries`. */
 export interface DiscoveryCandidate {
   type: string;
   pillar: string;
-  time_context: string;
   headline: string;
-  what_surfaced: string;
-  why_now: string;
+  detail: string;
+  reason: string;
+  question: string;
+  story: PublicStory;
   trail: TrailEntry[];
   confidence: number;
 }
@@ -56,11 +63,17 @@ export interface DiscoveryCandidate {
 export interface Discovery {
   type: DiscoveryType;
   pillar: string;
-  time_context: string;
+  /** One idea, one sentence. */
   headline: string;
-  what_surfaced: string;
-  why_now: string;
-  /** The platform pills: the trail's platforms, so every pill has a dated source. */
+  /** What it is, in one or two sentences. */
+  detail: string;
+  /** The one personal reason, from the person's own dated sources. */
+  reason: string;
+  /** What "ask polaris" opens with. */
+  question: string;
+  /** Null for the person's own history, or when there is no public side. */
+  story: PublicStory | null;
+  /** The platforms behind the reason: the trail's, so every one has a dated source. */
   sources: string[];
   /** Earliest first. */
   trail: TrailEntry[];
@@ -71,15 +84,26 @@ const DATE = /^\d{4}(-\d{2}(-\d{2})?)?$/;
 
 /** Text up to the first sentence end. A decimal like "2.5" is not an end. */
 export function firstSentence(text: string): string {
-  const match = text.match(/^.*?[.!?](?=\s|$)/s);
+  return firstSentences(text, 1);
+}
+
+/** Text up to the `n`th sentence end. */
+export function firstSentences(text: string, n: number): string {
+  const match = text.match(new RegExp(`^(?:.*?[.!?](?=\\s|$)){1,${n}}`, "s"));
   return (match ? match[0] : text).trim();
 }
 
+/** Ends the line with `mark` unless it already ends a sentence. */
+function closed(text: string, mark: "." | "?"): string {
+  return /[.!?]$/.test(text) ? text : `${text}${mark}`;
+}
+
 /**
- * Check one candidate against the card limits. The two sentence fields are
- * trimmed to their first sentence; anything that can't be trimmed honestly
- * (a long headline, a headline with two ideas, no dated source on a connected
- * platform) returns null so the service can regenerate it.
+ * Check one candidate against the card limits. The detail is trimmed to two
+ * sentences and the reason to one; anything that can't be trimmed honestly (a
+ * long headline, a headline with two ideas, no question, no dated source on a
+ * connected platform) returns null so the service can regenerate it. A public
+ * story missing any part is dropped, and the person's own history never has one.
  */
 export function validateDiscovery(
   candidate: DiscoveryCandidate,
@@ -88,15 +112,21 @@ export function validateDiscovery(
   if (!(DISCOVERY_TYPES as readonly string[]).includes(candidate.type)) return null;
   if (!isValidPillar(candidate.pillar)) return null;
 
-  const headline = sanitizeProse(candidate.headline).replace(/[.!?]+$/, "");
-  if (!headline || headline.length > HEADLINE_MAX || /[.!?]\s/.test(headline)) return null;
+  const line = sanitizeProse(candidate.headline).replace(/[.!]+$/, "");
+  if (!line || line.length > HEADLINE_MAX || /[.!?]\s/.test(line)) return null;
+  const headline = closed(line, ".");
 
-  const time_context = sanitizeProse(candidate.time_context).replace(/\.+$/, "");
-  if (!time_context || time_context.length > TIME_CONTEXT_MAX) return null;
+  const detail = firstSentences(sanitizeProse(candidate.detail, "discovery"), 2);
+  const reason = firstSentence(sanitizeProse(candidate.reason, "discovery"));
+  const asked = sanitizeProse(candidate.question, "discovery");
+  if (!detail || !reason || !asked || asked.length > QUESTION_MAX) return null;
+  const question = closed(asked.replace(/[.!]+$/, ""), "?");
 
-  const what_surfaced = firstSentence(sanitizeProse(candidate.what_surfaced, "discovery"));
-  const why_now = firstSentence(sanitizeProse(candidate.why_now, "discovery"));
-  if (!what_surfaced || !why_now) return null;
+  const story = {
+    label: sanitizeProse(candidate.story?.label ?? ""),
+    title: sanitizeProse(candidate.story?.title ?? "").replace(/[.!?]+$/, ""),
+    detail: firstSentence(sanitizeProse(candidate.story?.detail ?? "", "discovery")),
+  };
 
   const trail = candidate.trail
     .map((entry) => ({
@@ -117,10 +147,11 @@ export function validateDiscovery(
   return {
     type: candidate.type as DiscoveryType,
     pillar: normalizePillar(candidate.pillar),
-    time_context,
     headline,
-    what_surfaced,
-    why_now,
+    detail,
+    reason,
+    question,
+    story: candidate.type !== "history" && story.label && story.title && story.detail ? story : null,
     sources: [...new Set(trail.map((entry) => entry.platform))],
     trail,
     confidence: candidate.confidence,
@@ -132,25 +163,16 @@ export function discoveryStrength(card: Discovery): number {
   return card.trail.length * 2 + Math.max(0, Math.min(1, card.confidence || 0));
 }
 
-/** First and last trail dates as comparable yyyy-mm-dd strings; a bare year runs to its end. */
-function trailWindow(card: Discovery): [start: string, end: string] {
-  const first = card.trail[0].date;
-  const last = card.trail[card.trail.length - 1].date;
-  return [`${first}-00-00`.slice(0, 10), `${last}-99-99`.slice(0, 10)];
-}
-
 /**
  * Two cards say the same thing when they rest on the same dated source (a
- * shared platform and date in their trails), or sit on the same constellation
- * point over overlapping time.
+ * shared platform and date in their trails) or point at the same thing (the
+ * same public name). Several outward picks may share a point and a stretch of
+ * time, since a place and a person can grow from the same years.
  */
 export function discoveriesOverlap(a: Discovery, b: Discovery): boolean {
   const cited = new Set(a.trail.map((entry) => `${entry.platform}@${entry.date}`));
   if (b.trail.some((entry) => cited.has(`${entry.platform}@${entry.date}`))) return true;
-  if (a.pillar !== b.pillar) return false;
-  const [aStart, aEnd] = trailWindow(a);
-  const [bStart, bEnd] = trailWindow(b);
-  return aStart <= bEnd && bStart <= aEnd;
+  return !!a.story && !!b.story && a.story.label.toLowerCase() === b.story.label.toLowerCase();
 }
 
 /**

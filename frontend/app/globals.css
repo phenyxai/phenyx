@@ -1805,15 +1805,16 @@ nav li > [aria-current="page"] {
   .float-in { animation: none; }
 }
 
-/* PHE-103 discover carousel. Every card shares one grid cell, so the stage is
-   as tall as the tallest card; --offset (0 main, -1/1 neighbours) places each
-   one 56px from the next. Neighbours are dimmed with a faint lit edge on the
-   side facing the main card, warming to the accent on hover. Phones show the
+/* PHE-103 / PHE-129 discover carousel. Every card shares one grid cell, so
+   the stage is as tall as the tallest card and every card shares one rhythm;
+   --offset (0 main, -1/1 neighbours) places each one 70px from the next.
+   Neighbours are dimmed but legible, with a faint lit edge on the side facing
+   the main card, warming to the accent on hover. Phones show the
    main card alone and swap it in place. Unlayered, like the constellation
    split above, so neither Tailwind nor the onairos stylesheet overrides it. */
 .discover-stage {
   display: grid;
-  grid-template-columns: min(560px, 100%);
+  grid-template-columns: min(430px, 100%);
   justify-content: center;
   overflow: hidden;
   touch-action: pan-y;
@@ -1822,15 +1823,17 @@ nav li > [aria-current="page"] {
   grid-area: 1 / 1;
   position: relative;
   z-index: 1;
-  transform: translateX(calc(var(--offset, 0) * (100% + 56px)));
+  transform: translateX(calc(var(--offset, 0) * (100% + 70px)));
   transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.45s ease, filter 0.2s ease;
 }
 .discover-card[data-depth="main"] { z-index: 2; }
+.discover-card__face { border-color: rgba(255, 253, 253, 0.04); }
+.discover-card[data-depth="main"] .discover-card__face { border-color: rgba(var(--ph-accent-rgb), 0.22); }
 .discover-card[data-depth="far"] { opacity: 0; pointer-events: none; }
-/* Text behind the main card sits near 13% (its 80–100% white at 0.15). */
-.discover-card[data-depth="back"] .discover-card__face { opacity: 0.15; }
+/* Neighbours stay legible: their text sits near 25%. */
+.discover-card[data-depth="back"] .discover-card__face { opacity: 0.28; transform: scale(0.94); }
 .discover-card[data-swapping="true"] { opacity: 0; transform: translateY(4px); filter: blur(2px); }
-.discover-card__face { transition: opacity 0.45s ease; }
+.discover-card__face { transition: opacity 0.45s ease, transform 0.45s ease, border-color 0.45s ease; }
 .discover-card__go {
   position: absolute;
   inset: 0;
