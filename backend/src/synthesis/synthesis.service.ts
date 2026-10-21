@@ -11,10 +11,12 @@ import {
 import {
   EMIT_INSIGHTS_TOOL,
   INSIGHTS_INSTRUCTIONS,
+  POINTS_ORDER_LINE,
   normalizeInsights,
   type InsightsReading,
-  polarisUsageLine,
+  type MomentIndex,
 } from "./insights";
+import type { Pillar } from "../observations/gating";
 
 // Model IDs are exact — do not append date suffixes or downgrade.
 const SYNTHESIS_MODEL = "claude-opus-4-8"; // PHE-34 core synthesis (tool use, high effort)
@@ -23,9 +25,9 @@ const PROSE_MODEL = "claude-sonnet-4-6"; // PHE-36 mantra, PHE-38 foresight, PHE
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
 
-/** Dated moments sent to the insights prompt, oldest first. */
-const INSIGHTS_MOMENT_LIMIT = 40;
-const INSIGHTS_CONVERSATION_LIMIT = 60;
+/** Moments sent to the insights prompt, oldest first. */
+// ponytail: capped; send them all once a person's moments outgrow this and the prompt still fits.
+const INSIGHTS_MOMENT_LIMIT = 80;
 
 /** The four active pillars at onboarding. The other three stay locked (null). */
 const ACTIVE_PILLARS = [
@@ -475,7 +477,9 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
    * PHE-124 — generate the insights reading for the given version and store it
    * on constellation_state.insights, tagged with that version. Stale-guarded
    * like the foresight: the write only lands while the row is still at
-   * `version`. Grounded in the constellation summary plus dated moments.
+   * `version`. PHE-129 (prompt 11.8): grounded in the point stories and every
+   * moment with its id, so each line, value, pattern and milestone can name the
+   * moments it rests on.
    */
   async generateInsights(
     userId: string,
@@ -485,29 +489,41 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
     if (!summary) return null;
 
     const supabase = this.supabaseService.getClient();
-    const [{ data: moments }, { data: conversations }] = await Promise.all([
+    const [{ data: moments }, { data: state }] = await Promise.all([
       supabase
         .from("observations")
-        .select("pillar, body, span_start, span_end, source_platforms")
+        .select("id, pillar, title, what_happened, body, occurred_at, span_start, source_platforms")
         .eq("user_id", userId)
         .not("body", "is", null)
+        .order("occurred_at", { ascending: true, nullsFirst: false })
         .order("span_start", { ascending: true, nullsFirst: false })
         .limit(INSIGHTS_MOMENT_LIMIT),
-      // Modes and dates only: the questions themselves stay encrypted in polaris.
-      supabase
-        .from("polaris_conversations")
-        .select("mode, created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(INSIGHTS_CONVERSATION_LIMIT),
+      supabase.from("constellation_state").select("points").eq("user_id", userId).maybeSingle(),
     ]);
-    const dated = (moments ?? [])
+    const rows = (moments ?? []) as {
+      id: string;
+      pillar: Pillar;
+      title: string | null;
+      what_happened: string | null;
+      body: string;
+      occurred_at: string | null;
+      span_start: string | null;
+      source_platforms: string[] | null;
+    }[];
+    const index: MomentIndex = new Map(
+      rows.map((m) => [m.id, { date: m.occurred_at ?? m.span_start?.slice(0, 10) ?? null, pillar: m.pillar }])
+    );
+    const listed = rows
       .map((m) => {
-        const from = (m.span_start as string | null)?.slice(0, 7) ?? "undated";
-        const to = (m.span_end as string | null)?.slice(0, 7);
-        const platforms = ((m.source_platforms as string[] | null) ?? []).join(", ");
-        return `- ${to && to !== from ? `${from} to ${to}` : from} · ${platforms || "unknown platform"} · ${m.pillar}: ${m.body}`;
+        const when = index.get(m.id)?.date?.slice(0, 7) ?? "undated";
+        const platforms = (m.source_platforms ?? []).join(", ") || "unknown platform";
+        const title = m.title ? `${m.title}: ` : "";
+        return `- [${m.id}] ${m.pillar} · ${when} · ${platforms} · ${title}${m.what_happened ?? m.body}`;
       })
+      .join("\n");
+    const points = Object.entries((state?.points as Record<string, { story?: string } | null> | null) ?? {})
+      .map(([pillar, p]) => (p?.story ? `- ${pillar}: ${p.story}` : null))
+      .filter(Boolean)
       .join("\n");
 
     let insights: InsightsReading;
@@ -515,18 +531,19 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
       const out = await this.callClaudeTool<unknown>({
         model: PROSE_MODEL,
         effort: "medium",
-        maxTokens: 2000,
+        maxTokens: 4000,
         taskInstructions: INSIGHTS_INSTRUCTIONS,
-        userMessage: `${summary}\n\ndated moments:\n${dated || "none yet"}\n\npolaris use: ${polarisUsageLine(
-          (conversations ?? []) as { mode: string | null; created_at: string }[]
-        )}`,
+        userMessage: `${summary}\n\n<points>\n${points || "none written yet"}\n</points>\n\n<moments>\n${
+          listed || "none yet"
+        }\n</moments>\n\n<points_order>${POINTS_ORDER_LINE}</points_order>`,
         tool: EMIT_INSIGHTS_TOOL,
       });
       insights = normalizeInsights(
         out,
         (text) => this.voiceStandard.sanitizeProse(text, "insights"),
         version,
-        new Date()
+        new Date(),
+        index
       );
     } catch (e) {
       this.logger.error(`insights generation failed for ${userId}`, e as Error);

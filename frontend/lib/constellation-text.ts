@@ -17,52 +17,7 @@ export function pillarLabel(pillar: Pillar): string {
 
 // Exactly four digits, so a fractional-second run in an ISO timestamp is never
 // read as a year.
-const FIRST_YEAR = /(?<!\d)\d{4}(?!\d)/;
 const EVERY_YEAR = /(?<!\d)\d{4}(?!\d)/g;
-
-function firstYear(text: string | null | undefined): number | null {
-  if (!text) return null;
-  const match = FIRST_YEAR.exec(text);
-  return match ? Number(match[0]) : null;
-}
-
-// ---------------------------------------------------------------------------
-// Age line
-// ---------------------------------------------------------------------------
-
-export interface ConstellationAge {
-  /** The calendar year the constellation starts in. */
-  from: number;
-  /** "12 years, 9 months": months omitted when zero, singular at one. */
-  label: string;
-}
-
-/**
- * How much of a life the constellation covers. The start year is the first
- * four-digit year in `timeline.span`, else the year of `tenure.since`; months
- * are counted from january of that year to `now`. Null when neither source
- * carries a year, so the caller renders nothing.
- */
-export function constellationAge(
-  data: ConstellationData,
-  now: Date = new Date(),
-): ConstellationAge | null {
-  let from: number | null = null;
-  for (const entry of data.timeline.span) {
-    from = firstYear(entry);
-    if (from != null) break;
-  }
-  if (from == null) from = firstYear(data.tenure.since);
-  if (from == null) return null;
-
-  const months = Math.max(1, (now.getFullYear() - from) * 12 + now.getMonth() + 1);
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  const parts: string[] = [];
-  if (years) parts.push(`${years} ${years === 1 ? "year" : "years"}`);
-  if (rest) parts.push(`${rest} ${rest === 1 ? "month" : "months"}`);
-  return { from, label: parts.join(", ") };
-}
 
 // ---------------------------------------------------------------------------
 // Synthesis line

@@ -59,20 +59,20 @@ export interface ProfileSnapshotItem {
 /** How full is paid for; null when there is no billing (free, gifted). */
 export type BillingPeriod = "monthly" | "yearly"
 
-/** PHE-124 / PHE-129 insights reading (backend `InsightsReading`). */
+/** PHE-124 / PHE-129 insights reading (backend `InsightsReading`). Each line and item names the moments it rests on. */
 export interface InsightsReading {
   version: number
   generated_at: string
-  /** "your story so far": one line and its dated milestones, oldest first. */
+  /** "your story so far": one line and five milestones on real moments, in date order. */
   story?: {
-    summary: string
-    milestones: { date: string; title: string; pillar: string }[]
+    line: string
+    milestones: { moment_id: string; label: string; date: string; pillar: string }[]
   } | null
-  becoming_clearer: { line: string; support: string } | null
-  needs_shape: { line: string; support: string } | null
-  matters: { title: string; body: string }[]
-  /** "how you find your way"; absent on readings from before PHE-129. */
-  ways?: { title: string; body: string }[]
+  becoming_clearer: { line: string; support: string; moment_ids: string[] } | null
+  needs_shape: { line: string; support: string; moment_ids: string[] } | null
+  matters: { title: string; body: string; moment_ids: string[] }[]
+  /** "how you find your way". */
+  patterns?: { title: string; body: string; moment_ids: string[] }[]
 }
 
 /** Shape of `GET /profile/overview` (backend `ProfileOverviewResponse`). */

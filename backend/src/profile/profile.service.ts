@@ -6,7 +6,7 @@ import { StripeService } from "../stripe/stripe.service";
 import { pickHeldConstants, type HeldConstant } from "./held";
 import { PILLARS } from "../constellation/layout";
 import { SynthesisService } from "../synthesis/synthesis.service";
-import { insightsStale, type InsightsReading } from "../synthesis/insights";
+import { insightsStale, servedInsights, type InsightsReading } from "../synthesis/insights";
 
 /**
  * PHE-30 / PHE-38 / PHE-75 / PHE-95 — read model behind `GET /profile/overview`.
@@ -183,7 +183,7 @@ export class ProfileService {
       held: pickHeldConstants(this.buildHeld(traits, state)),
       snapshot: this.buildSnapshot(traits, state),
       foresight: (state?.foresight as string | null) ?? null,
-      insights: (state?.insights as InsightsReading | null) ?? null,
+      insights: servedInsights(state?.insights),
       tier,
       notification_prefs: readStoredPrefs(promptTimes),
       renews_at: renewsAt,

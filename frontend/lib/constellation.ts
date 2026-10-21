@@ -25,11 +25,10 @@ import { ALL_PILLARS, NODE_LAYOUT, type Pillar, type Vec3 } from "./constellatio
 export { ALL_PILLARS, EDGES, NODE_LAYOUT } from "./constellation-shape";
 export type { Pillar, Vec3 } from "./constellation-shape";
 
-// Pure text helpers (the pillar label, the age line, the synthesis line, the
+// Pure text helpers (the pillar label, the synthesis line, the
 // overview story rows) live in `./constellation-text` so they run under plain
 // node for unit tests; they are re-exported here so the app has one import path.
 export {
-  constellationAge,
   eraLine,
   firstSentence,
   momentTitle,
@@ -45,7 +44,7 @@ export {
   synthesisLine,
   threadAreas,
 } from "./constellation-text";
-export type { ConstellationAge, SynthesisLine } from "./constellation-text";
+export type { SynthesisLine } from "./constellation-text";
 
 // ---------------------------------------------------------------------------
 // Normalized shapes consumed by the canvas + panel

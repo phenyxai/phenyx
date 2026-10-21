@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  constellationAge,
   eraLine,
   firstSentence,
   momentTitle,
@@ -59,52 +58,6 @@ function detail(pillar: Pillar, clusters: Cluster[]): PillarDetail {
     clusters,
   };
 }
-
-function data(span: string[], since: string | null): ConstellationData {
-  return {
-    timeline: { span, note: null, eras: [], breaks: [], return_line: null, card: null, empty: true },
-    tenure: { years: 0, since },
-  } as unknown as ConstellationData;
-}
-
-const sept2026 = new Date(2026, 8, 7);
-
-test("constellationAge reads the first year in the timeline span and counts from january", () => {
-  assert.deepEqual(constellationAge(data(["2014", "2026"], null), sept2026), {
-    from: 2014,
-    label: "12 years, 9 months",
-  });
-});
-
-test("constellationAge skips span entries without a year", () => {
-  assert.deepEqual(constellationAge(data(["now", "since 2020"], null), sept2026), {
-    from: 2020,
-    label: "6 years, 9 months",
-  });
-});
-
-test("constellationAge falls back to the tenure year and uses the singular", () => {
-  assert.deepEqual(constellationAge(data([], "2025-09-01T00:00:00Z"), sept2026), {
-    from: 2025,
-    label: "1 year, 9 months",
-  });
-  assert.deepEqual(constellationAge(data([], "2026-05-20T00:00:00Z"), new Date(2026, 0, 15)), {
-    from: 2026,
-    label: "1 month",
-  });
-});
-
-test("constellationAge omits the months part when it is zero", () => {
-  assert.deepEqual(constellationAge(data(["2025"], null), new Date(2025, 11, 31)), {
-    from: 2025,
-    label: "1 year",
-  });
-});
-
-test("constellationAge is null when neither source carries a year", () => {
-  assert.equal(constellationAge(data([], null), sept2026), null);
-  assert.equal(constellationAge(data(["soon"], "not a date"), sept2026), null);
-});
 
 test("synthesisLine needs two named areas; core signals do not count as named", () => {
   const one = detail("origin", [

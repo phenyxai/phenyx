@@ -6,12 +6,17 @@ import Link from "next/link";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { apiFetch, type InsightsReading, type ProfileOverview } from "@/lib/api-client";
 import { colorName, resolveAccent } from "@/lib/stellar";
-import { constellationAge, fetchConstellation, relativeTime, type ConstellationData } from "@/lib/constellation";
+import { fetchConstellation, relativeTime, type ConstellationData } from "@/lib/constellation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
-import { buildInsightsStats } from "./stats";
+import { buildInsightsStats, momentFacts } from "./stats";
 
-type Header = { name: string; color: string | null; platforms: number; insights: InsightsReading | null };
+type Header = { name: string; color: string | null; platforms: string[]; insights: InsightsReading | null };
+
+/** Where a reading points: its first moment, opened in the constellation. */
+function momentHref(ids: string[] | undefined): string | null {
+  return ids?.[0] ? `/dashboard/constellation?moment=${encodeURIComponent(ids[0])}` : null;
+}
 
 /** Small, lowercase, accent: the label on each reading. */
 function SectionLabel({ children }: { children: string }) {
@@ -55,13 +60,23 @@ function Disclosure({ title, children }: { title: string; children: ReactNode })
   );
 }
 
-function Items({ items }: { items: { title: string; body: string }[] | undefined }) {
+/** Values and patterns: each title opens the moment it rests on. */
+function Items({ items }: { items: { title: string; body: string; moment_ids?: string[] }[] | undefined }) {
   if (!items?.length) return <Forming />;
   return (
     <div className="grid gap-x-12 gap-y-6 [@media(max-width:640px)]:grid-cols-1 [@media(min-width:641px)]:grid-cols-2">
       {items.map((item) => (
         <div key={item.title}>
-          <p className="mb-1.5 text-[14.5px] text-ph-white/90">{item.title}</p>
+          {momentHref(item.moment_ids) ? (
+            <Link
+              href={momentHref(item.moment_ids)!}
+              className="mb-1.5 block text-[14.5px] text-ph-white/90 transition-colors duration-200 hover:text-[var(--ph-accent)]"
+            >
+              {item.title}
+            </Link>
+          ) : (
+            <p className="mb-1.5 text-[14.5px] text-ph-white/90">{item.title}</p>
+          )}
           <p className="text-[13.5px] font-light leading-[1.6] text-ph-white/65">{item.body}</p>
         </div>
       ))}
@@ -70,8 +85,8 @@ function Items({ items }: { items: { title: string; body: string }[] | undefined
 }
 
 /**
- * "your story so far": one line, then the milestones on a line whose dots
- * brighten toward now. Each milestone opens its point on the constellation.
+ * "your story so far": one line, then five milestones on a line whose dots
+ * brighten toward now. Each milestone opens its moment on the constellation.
  * Phones stack them.
  */
 function Story({ story }: { story: InsightsReading["story"] | undefined }) {
@@ -80,16 +95,16 @@ function Story({ story }: { story: InsightsReading["story"] | undefined }) {
       <p className="text-[12px] font-medium text-[var(--ph-accent)]">your story so far</p>
       {story ? (
         <>
-          <p className="mt-2.5 text-[16px] leading-[1.6] text-ph-white/90">{story.summary}</p>
+          <p className="mt-2.5 text-[16px] leading-[1.6] text-ph-white/90">{story.line}</p>
           <ol className="relative mt-6 grid gap-x-6 gap-y-5 [@media(max-width:640px)]:grid-cols-1 [@media(min-width:641px)]:grid-flow-col [@media(min-width:641px)]:auto-cols-fr">
             {story.milestones.map((m, i) => (
-              <li key={`${m.date}-${m.title}`} className="relative">
+              <li key={m.moment_id} className="relative">
                 {i < story.milestones.length - 1 && (
                   <span aria-hidden="true" className="absolute top-[4px] left-[9px] h-px w-[calc(100%+24px)] bg-[rgba(var(--ph-accent-rgb),0.45)] [@media(max-width:640px)]:hidden" />
                 )}
                 <Link
-                  href={`/dashboard/constellation?point=${m.pillar}`}
-                  aria-label={`explore milestone: ${m.date}, ${m.title}`}
+                  href={`/dashboard/constellation?moment=${encodeURIComponent(m.moment_id)}`}
+                  aria-label={`open this moment: ${m.date}, ${m.label}`}
                   className="group relative [@media(min-width:641px)]:block [@media(max-width:640px)]:grid [@media(max-width:640px)]:grid-cols-[9px_1fr] [@media(max-width:640px)]:gap-x-3.5"
                 >
                   <span
@@ -99,7 +114,7 @@ function Story({ story }: { story: InsightsReading["story"] | undefined }) {
                   />
                   <time className="block text-[12px] font-light text-ph-white/78 [@media(min-width:641px)]:mt-4">{m.date}</time>
                   <b className="block text-[15px] [@media(min-width:641px)]:mt-2 [@media(max-width:640px)]:mt-1 font-medium leading-[1.45] text-ph-white/90 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
-                    {m.title}
+                    {m.label}
                   </b>
                 </Link>
               </li>
@@ -138,7 +153,7 @@ export default function InsightsTabPage() {
         setHeader({
           name: body.display_name?.trim() ?? "",
           color: body.stellar_color,
-          platforms: body.connected_platforms?.length ?? 0,
+          platforms: body.connected_platforms ?? [],
           insights: body.insights ?? null,
         });
         return;
@@ -158,7 +173,7 @@ export default function InsightsTabPage() {
     setHeader({
       name: (profile?.display_name as string | null)?.trim() ?? "",
       color: (profile?.stellar_color as string | null) ?? null,
-      platforms: 0,
+      platforms: [],
       insights: null,
     });
   }, []);
@@ -188,11 +203,10 @@ export default function InsightsTabPage() {
   const reading = header?.insights ?? null;
   const swatch = resolveAccent(header?.color || stellarColor);
   const updated = reading?.generated_at ?? constellation?.generated_at ?? null;
-  const stats = buildInsightsStats(
-    header?.platforms ?? 0,
-    constellation ? constellationAge(constellation) : null,
-    constellation?.tenure.since ?? null,
-  );
+  // Connected platforms count the connections plus every platform the moments draw on.
+  const facts = momentFacts(constellation);
+  const platforms = new Set([...(header?.platforms ?? []).map((p) => p.trim().toLowerCase()), ...facts.platforms]);
+  const stats = buildInsightsStats(platforms.size, facts.firstYear, constellation?.tenure.since ?? null);
 
   return (
     <>
@@ -260,7 +274,7 @@ export default function InsightsTabPage() {
             <Items items={reading?.matters} />
           </Disclosure>
           <Disclosure title="how you find your way">
-            <Items items={reading?.ways} />
+            <Items items={reading?.patterns} />
           </Disclosure>
         </div>
       </section>
