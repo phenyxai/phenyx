@@ -8,7 +8,7 @@ import { trailDate, trailYears, type Discovery } from "@/lib/discover";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 import { CardLink, DiscoverCarousel, StarIcon } from "@/components/phenyx/discover-carousel";
 import { HeaderChip, PanelHeader } from "@/components/phenyx/panel-header";
-import { Arrow } from "@/components/phenyx/constellation-panel";
+import { Arrow } from "@/components/phenyx/nav-icons";
 import { Popup, PrimaryButton } from "@/components/phenyx/settings-modals/modal-host";
 
 // ============================================================================

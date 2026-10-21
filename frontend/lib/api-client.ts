@@ -237,11 +237,26 @@ export interface PolarisThreadSummary {
   updated_at: string
 }
 
+/** PHE-129: a plan card's state, keyed by the polaris reply it came from. */
+export interface PolarisPlanState {
+  message_id: string
+  done: number[]
+  saved: boolean
+}
+
+/** A saved plan; `body` is its decrypted reply, parsed into steps on the client. */
+export interface PolarisSavedPlan extends PolarisPlanState {
+  thread_id: string
+  body: string
+  saved_at: string
+}
+
 export interface PolarisThreadsResponse {
   threads: PolarisThreadSummary[]
   starters: PolarisStarter[]
-  /** Live weekly question allowance for the idle/chat allowance badge. */
+  /** Live weekly question allowance for the usage pop-up. */
   allowance?: PolarisAllowance
+  plans?: PolarisSavedPlan[]
 }
 
 /** A single reloaded turn; `body` is decrypted server-side, rendered plain-text. */
@@ -257,6 +272,7 @@ export interface PolarisThreadDetail {
   thread_id: string
   mode: PolarisMode | null
   messages: PolarisMessageView[]
+  plans?: PolarisPlanState[]
 }
 
 /**
@@ -279,6 +295,19 @@ export async function getPolarisThread(id: string): Promise<PolarisThreadDetail>
   const res = await apiFetch(`/api/polaris/threads/${id}`)
   if (!res.ok) throw new Error("could not load this conversation")
   return (await res.json()) as PolarisThreadDetail
+}
+
+/** Check a plan's steps (`done` replaces them) or save it. Throws on a non-2xx. */
+export async function setPolarisPlan(
+  messageId: string,
+  patch: { done?: number[]; saved?: boolean },
+): Promise<PolarisPlanState> {
+  const res = await apiFetch(`/api/polaris/plans/${messageId}`, {
+    method: "POST",
+    body: JSON.stringify(patch),
+  })
+  if (!res.ok) throw new Error("could not save the plan")
+  return (await res.json()) as PolarisPlanState
 }
 
 export interface SignupStartResult {

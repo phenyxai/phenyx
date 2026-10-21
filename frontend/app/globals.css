@@ -122,8 +122,9 @@
   ::placeholder {
     font-family: inherit;
   }
-  /* Global input styling for dark theme */
-  input:not(.auth-input):not(.onb-otp-input), textarea, select {
+  /* Global input styling for dark theme. A field inside its own frame (the
+     polaris box and search, PHE-129) opts out with .ph-bare-field. */
+  input:not(.auth-input):not(.onb-otp-input):not(.ph-bare-field), textarea:not(.ph-bare-field), select {
     background: #0d0d0d !important;
     color: #FFFDFD !important;
     border: 0.5px solid #1e1e1e !important;
@@ -135,10 +136,10 @@
     box-sizing: border-box !important;
     -webkit-appearance: none !important;
   }
-  input:not(.auth-input):not(.onb-otp-input)::placeholder, textarea::placeholder {
+  input:not(.auth-input):not(.onb-otp-input):not(.ph-bare-field)::placeholder, textarea:not(.ph-bare-field)::placeholder {
     color: #333 !important;
   }
-  input:not(.auth-input):not(.onb-otp-input):focus, textarea:focus {
+  input:not(.auth-input):not(.onb-otp-input):not(.ph-bare-field):focus, textarea:not(.ph-bare-field):focus {
     border-color: var(--color-stellar) !important;
     outline: none !important;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-stellar) 8%, transparent) !important;

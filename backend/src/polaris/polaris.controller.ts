@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Post,
   Req,
   UseGuards,
@@ -56,5 +57,21 @@ export class PolarisController {
   async getThread(@Req() req: Request, @Param("id") id: string) {
     const user = (req as any).user as { id: string };
     return this.polarisService.getThread(user.id, id);
+  }
+
+  /**
+   * POST /api/polaris/plans/:messageId — a plan card's check-offs and save
+   * (PHE-129). Body: { done?: number[], saved?: boolean }. The reply must be
+   * the caller's; anything else is a 404.
+   */
+  @Post("plans/:messageId")
+  @UseGuards(SupabaseAuthGuard)
+  async setPlan(
+    @Req() req: Request,
+    @Param("messageId", ParseUUIDPipe) messageId: string,
+    @Body() body: { done?: unknown; saved?: unknown }
+  ) {
+    const user = (req as any).user as { id: string };
+    return this.polarisService.setPlan(user.id, messageId, body ?? {});
   }
 }

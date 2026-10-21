@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeStarters, parseMode } from "./polaris.service";
+import { computeStarters, parseMode, planSteps } from "./polaris.service";
 
 test("computeStarters gives one starter per mode from the default pillars when empty", () => {
   const starters = computeStarters(null);
@@ -36,4 +36,10 @@ test("parseMode keeps a known mode and falls back to clarify", () => {
   assert.equal(parseMode("understand"), "understand");
   assert.equal(parseMode("anything"), "clarify");
   assert.equal(parseMode(undefined), "clarify");
+});
+
+test("planSteps keeps whole step indexes in range, once each, in order", () => {
+  assert.deepEqual(planSteps([3, 1, 1, -1, 2.5, 40, "2", 0]), [0, 1, 3]);
+  assert.deepEqual(planSteps("1,2"), []);
+  assert.deepEqual(planSteps(undefined), []);
 });

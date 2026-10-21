@@ -104,6 +104,31 @@ export interface PolarisStarter {
   pillar_tag: Pillar;
 }
 
+/** PHE-129: a plan card's state, keyed by the reply it came from: the checked steps and the save. */
+export interface PolarisPlanState {
+  message_id: string;
+  done: number[];
+  saved: boolean;
+}
+
+/** A saved plan for "your conversations": its reply decrypted, for the client to parse into steps. */
+export interface PolarisSavedPlan extends PolarisPlanState {
+  thread_id: string;
+  body: string;
+  saved_at: string;
+}
+
+/** ponytail: plans have at most a handful of steps; indexes past this are dropped. */
+const PLAN_STEPS_MAX = 12;
+const SAVED_PLANS_MAX = 20;
+
+/** Checked step indexes from a request: whole numbers in range, once each, in order. */
+export function planSteps(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  const steps = value.filter((n): n is number => Number.isInteger(n) && n >= 0 && n < PLAN_STEPS_MAX);
+  return [...new Set(steps)].sort((a, b) => a - b);
+}
+
 /** A single turn returned when a thread is reloaded (body decrypted for render). */
 export interface PolarisMessageView {
   id: string;
@@ -376,10 +401,11 @@ export class PolarisService {
     threads: PolarisThreadSummary[];
     starters: PolarisStarter[];
     allowance: WeeklyAllowance;
+    plans: PolarisSavedPlan[];
   }> {
     const supabase = this.supabaseService.getClient();
 
-    const [{ data: conversations }, { data: constellation }, allowance] =
+    const [{ data: conversations }, { data: constellation }, allowance, plans] =
       await Promise.all([
         supabase
           .from("polaris_conversations")
@@ -393,6 +419,7 @@ export class PolarisService {
           .eq("user_id", userId)
           .maybeSingle(),
         this.tokenBudget.check(userId),
+        this.savedPlans(userId),
       ]);
 
     const rows = conversations ?? [];
@@ -411,7 +438,84 @@ export class PolarisService {
       threads,
       starters: computeStarters(constellation),
       allowance,
+      plans,
     };
+  }
+
+  /**
+   * PHE-129: check a plan's steps or save it. The plan is keyed by the polaris
+   * reply it came from, which must be the caller's; `done` replaces the checked
+   * steps and `saved` sets or clears the save, each only when sent.
+   */
+  async setPlan(
+    userId: string,
+    messageId: string,
+    patch: { done?: unknown; saved?: unknown }
+  ): Promise<PolarisPlanState> {
+    const supabase = this.supabaseService.getClient();
+    const { data: message } = await supabase
+      .from("polaris_messages")
+      .select("id, user_id, role")
+      .eq("id", messageId)
+      .maybeSingle();
+    if (!message || message.user_id !== userId || message.role !== "assistant") {
+      throw new HttpException({ error: "plan not found" }, 404);
+    }
+    const { data: existing } = await supabase
+      .from("polaris_plans")
+      .select("done, saved_at")
+      .eq("message_id", messageId)
+      .maybeSingle();
+    const done = patch.done === undefined ? planSteps(existing?.done) : planSteps(patch.done);
+    const savedAt =
+      typeof patch.saved !== "boolean"
+        ? ((existing?.saved_at as string | null) ?? null)
+        : patch.saved
+          ? ((existing?.saved_at as string | null) ?? new Date().toISOString())
+          : null;
+    const { error } = await supabase.from("polaris_plans").upsert({
+      message_id: messageId,
+      user_id: userId,
+      done,
+      saved_at: savedAt,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw new HttpException({ error: "could not save the plan" }, 500);
+    return { message_id: messageId, done, saved: savedAt !== null };
+  }
+
+  /** Saved plans, newest first, each with its reply decrypted. */
+  private async savedPlans(userId: string): Promise<PolarisSavedPlan[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data: plans } = await supabase
+      .from("polaris_plans")
+      .select("message_id, done, saved_at")
+      .eq("user_id", userId)
+      .not("saved_at", "is", null)
+      .order("saved_at", { ascending: false })
+      .limit(SAVED_PLANS_MAX);
+    if (!plans?.length) return [];
+    const { data: messages } = await supabase
+      .from("polaris_messages")
+      .select("id, conversation_id, body")
+      .eq("user_id", userId)
+      .in("id", plans.map((p) => p.message_id as string));
+    const byId = new Map((messages ?? []).map((m) => [m.id as string, m]));
+    return plans.flatMap((p) => {
+      const m = byId.get(p.message_id as string);
+      return m
+        ? [
+            {
+              message_id: p.message_id as string,
+              thread_id: m.conversation_id as string,
+              body: this.encryption.decrypt(m.body as string),
+              done: planSteps(p.done),
+              saved: true,
+              saved_at: p.saved_at as string,
+            },
+          ]
+        : [];
+    });
   }
 
   /**
@@ -427,6 +531,7 @@ export class PolarisService {
     thread_id: string;
     mode: PolarisMode | null;
     messages: PolarisMessageView[];
+    plans: PolarisPlanState[];
   }> {
     const supabase = this.supabaseService.getClient();
 
@@ -453,10 +558,24 @@ export class PolarisService {
       created_at: m.created_at as string,
     }));
 
+    const replies = messages.filter((m) => m.role === "assistant").map((m) => m.id);
+    const { data: planRows } = replies.length
+      ? await supabase
+          .from("polaris_plans")
+          .select("message_id, done, saved_at")
+          .eq("user_id", userId)
+          .in("message_id", replies)
+      : { data: [] };
+
     return {
       thread_id: threadId,
       mode: (conversation.mode as PolarisMode | null) ?? null,
       messages,
+      plans: (planRows ?? []).map((p) => ({
+        message_id: p.message_id as string,
+        done: planSteps(p.done),
+        saved: p.saved_at !== null,
+      })),
     };
   }
 
@@ -699,7 +818,7 @@ rules, never break these:
 const MODE_INSTRUCTIONS: Record<PolarisMode, string> = {
   clarify: `mode: clarify. the person wants to untangle a question. help them see what they are really asking: name the tension you can see in their grounding, in two or three sentences, then end with one short question that helps them say it more precisely.`,
   understand: `mode: understand. the person wants to explore a recurring pattern. follow it to its source in the grounding: where it began, what keeps reinforcing it and where it shows now, naming the dates and platforms you were given. keep it to a few sentences and end with one short question back to them.`,
-  decide: `mode: decide. the person wants to choose a direction and shape next steps. weigh the options against what their grounding shows about when they do their best work and what they keep returning to. you may lay out a numbered plan of at most three short steps, each on its own line. end with one short question back to them.`,
+  decide: `mode: decide. the person wants to choose a direction and shape next steps. weigh the options against what their grounding shows about when they do their best work and what they keep returning to. you may lay out a numbered plan of at most four short steps, each on its own line, introduced by one short line that names it and ends in a colon (for example "a four-week shape:"). a step may open with when it happens and a colon, such as "week one: choose one room and one sound to work with.". end with one short question back to them.`,
 };
 
 /** Build the per-user grounding block that anchors the Claude call. Byte-stable for a
