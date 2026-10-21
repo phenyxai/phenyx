@@ -17,12 +17,17 @@ import {
   StatusLine,
 } from './modal-host'
 
+/** PHE-129: the list shows this many platforms, then "+ n more". */
+const SHOWN = 5
+
 /**
- * my connections — currently connected tags and a single Onairos CTA.
- * Add/remove happens through Onairos; there is no in-app pause or disconnect.
+ * connections — the connected platforms five at a time, and a single Onairos
+ * CTA. Add/remove happens through Onairos; there is no in-app pause or
+ * disconnect.
  */
 export function ConnectionsModal() {
   const [connected, setConnected] = React.useState<string[]>([])
+  const [all, setAll] = React.useState(false)
   const [error, setError] = React.useState('')
 
   const load = React.useCallback(async () => {
@@ -72,27 +77,34 @@ export function ConnectionsModal() {
   return (
     <SettingsDialogContent>
       <ModalHeading
-        title="my connections"
-        subtitle="connected platforms feed your constellation. manage every connection in one place through onairos."
+        title="connections"
+        subtitle="these are the platforms that are part of your constellation. you can add or remove them through onairos."
       />
 
-      <section aria-label="currently connected" className="flex flex-col gap-2">
-        <p className="text-[9px] tracking-[0.14em] text-[rgba(var(--ph-accent-rgb),0.85)] uppercase">
-          currently connected
-        </p>
+      <section aria-label="currently connected">
         {connected.length === 0 ? (
-          <p className="text-xs text-ph-white/35">no platforms connected.</p>
+          <p className="text-[13px] text-ph-white/45">no platforms connected yet.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {connected.map((platform) => (
-              <span
+          <ul className="flex flex-col">
+            {(all ? connected : connected.slice(0, SHOWN)).map((platform) => (
+              <li
                 key={platform}
-                className="rounded-full border border-[rgba(var(--ph-accent-rgb),0.3)] bg-transparent px-3 py-1 text-[11px] lowercase text-[rgba(var(--ph-accent-rgb),0.9)]"
+                className="flex items-center justify-between border-b border-ph-white/[0.06] py-2.5 text-[14px] lowercase text-ph-white/88"
               >
                 {platform}
-              </span>
+                <span className="text-[12px] text-[rgba(var(--ph-accent-rgb),0.9)]">connected</span>
+              </li>
             ))}
-          </div>
+          </ul>
+        )}
+        {!all && connected.length > SHOWN && (
+          <button
+            type="button"
+            onClick={() => setAll(true)}
+            className="mt-2.5 text-[13px] text-ph-white/60 transition-colors duration-200 hover:text-[var(--ph-accent)]"
+          >
+            + {connected.length - SHOWN} more
+          </button>
         )}
       </section>
 
@@ -100,15 +112,10 @@ export function ConnectionsModal() {
         <OnairosButtonWrapper
           webpageName="PHENYX"
           requestedData={['personality']}
-          buttonText="continue with onairos"
+          buttonText="manage connections with onairos"
           onComplete={handleComplete}
         />
       </div>
-
-      <p className="text-[11.5px] leading-relaxed text-ph-white/50">
-        add, remove, or manage any platform directly through onairos. your
-        constellation retains the patterns already observed.
-      </p>
 
       {error && <StatusLine message={error} tone="error" />}
     </SettingsDialogContent>

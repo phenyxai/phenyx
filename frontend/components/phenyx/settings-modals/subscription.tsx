@@ -9,28 +9,46 @@ import { supabaseBrowser as supabase } from '@/lib/supabase-browser'
 import { useTier } from '@/lib/use-tier'
 import {
   ModalHeading,
-  PrimaryButton,
   SettingsDialogContent,
   StatusLine,
 } from './modal-host'
 
-/** What full includes (v244 prototype, subscription modal). */
-const FULL_INCLUDED = [
-  'more polaris room each week',
-  'a weekly look at what shifted',
-  'a yearly look across your timeline',
-]
+type PlanId = 'free' | 'monthly' | 'yearly'
 
-/**
- * What free includes. Reconciled with the upgrade modal's "free shows you what
- * is true" framing and the v243 gating (plan decision 13); the prototype's
- * "one daily observation" / "the evidence behind everything shown" are stale.
- */
-const FREE_INCLUDED = [
-  'every observation of the day',
-  'your seven-point constellation',
-  'three polaris questions each week',
-  'the span of time behind each observation',
+const SAVED = Math.round(V67_PRICING.monthly * 12 - V67_PRICING.yearly)
+
+/** PHE-129: three cards, few words (Oct 20 demo), in this system's own terms. */
+const PLANS: { id: PlanId; name: string; price: string; per: string; lines: string[] }[] = [
+  {
+    id: 'free',
+    name: 'free',
+    price: '$0',
+    per: '',
+    lines: [
+      'every moment on your constellation',
+      'your insights',
+      'a new set of discoveries each week',
+      `${V67_PRICING.polarisWeeklyQuestions.free} polaris questions a week`,
+    ],
+  },
+  {
+    id: 'monthly',
+    name: 'full',
+    price: `$${V67_PRICING.monthly}`,
+    per: 'a month',
+    lines: [
+      'the dated sources behind each moment',
+      'everything in free',
+      `${V67_PRICING.polarisWeeklyQuestions.full} polaris questions a week`,
+    ],
+  },
+  {
+    id: 'yearly',
+    name: 'full · annual',
+    price: `$${V67_PRICING.yearly}`,
+    per: 'a year',
+    lines: ['everything in full', 'billed once a year', `about $${SAVED} saved`],
+  },
 ]
 
 const MONTHS = [
@@ -48,9 +66,6 @@ const MONTHS = [
   'december',
 ] as const
 
-const MONTHLY = `$${V67_PRICING.monthly}`
-const YEARLY = `$${V67_PRICING.yearly}`
-
 type Billing = Pick<ProfileOverview, 'tier' | 'renews_at' | 'billing_period'>
 
 /** "1 october 2026" (local time), or null for anything unparseable. */
@@ -62,12 +77,13 @@ export function formatRenewDate(iso: string | null | undefined): string | null {
 }
 
 /**
- * subscription modal (PHE-95 / v244, settings > subscription). Plan name and
- * price, the renew line, what's included, and the one action the plan allows:
- * full monthly can switch to free through the Stripe billing portal; free can
- * upgrade through the same monthly checkout as the upgrade modal; yearly and
- * gifted have nothing to do here. Renders from live plan state via
- * `/profile/overview`, with `useTier` as the fallback when that read fails.
+ * plan & billing (PHE-95 / v244, PHE-129, settings > membership). Three cards,
+ * free, full and full annual, with the current one marked and the moves the
+ * plan allows: free can choose full monthly or annual through Stripe
+ * checkout; full monthly can switch to free through the Stripe billing
+ * portal; yearly and gifted have nothing to do here. Renders from live plan
+ * state via `/profile/overview`, with `useTier` as the fallback when that
+ * read fails.
  */
 export function SubscriptionModal() {
   const router = useRouter()
@@ -107,29 +123,16 @@ export function SubscriptionModal() {
   const period = billing?.billing_period ?? null
   const renewDate = formatRenewDate(billing?.renews_at)
 
-  const planName = full ? 'full' : 'free'
-  const price = !full
-    ? 'free'
-    : period === 'yearly'
-      ? `${YEARLY} / year`
-      : `${MONTHLY} / month`
-
-  let renewLine: string
-  if (!full) {
-    renewLine = 'no billing on free'
-  } else if (period === 'monthly') {
-    renewLine = renewDate
-      ? `renews ${renewDate} · or ${YEARLY}/year`
-      : `renews monthly · or ${YEARLY}/year`
-  } else if (period === 'yearly') {
-    renewLine = 'paid for the year'
-  } else {
-    renewLine = 'no billing on this plan'
+  const current: PlanId = !full ? 'free' : period === 'yearly' ? 'yearly' : 'monthly'
+  // The one move each card offers from the current plan, if any.
+  const action = (id: PlanId): (() => void) | null => {
+    if (id === current) return null
+    if (current === 'free') return () => handleCheckout(id === 'yearly' ? 'yearly' : 'monthly')
+    if (current === 'monthly' && period === 'monthly' && id === 'free') return handleSwitchToFree
+    return null
   }
 
-  const included = full ? FULL_INCLUDED : FREE_INCLUDED
-
-  const handleUpgrade = async () => {
+  const handleCheckout = async (billingPeriod: 'monthly' | 'yearly') => {
     setBusy(true)
     setError('')
     try {
@@ -144,7 +147,7 @@ export function SubscriptionModal() {
         method: 'POST',
         body: JSON.stringify({
           checkoutKind: 'pro',
-          billingPeriod: 'monthly',
+          billingPeriod,
           userId: user.id,
         }),
       })
@@ -192,68 +195,62 @@ export function SubscriptionModal() {
   }
 
   return (
-    <SettingsDialogContent aria-describedby={undefined}>
-      <ModalHeading title="your subscription" />
+    <SettingsDialogContent aria-describedby={undefined} className="w-[min(820px,calc(100vw-40px))]">
+      <ModalHeading title="plan & billing" />
 
       {!ready ? (
         <div className="min-h-[240px]" aria-busy="true" />
       ) : (
         <div>
-          <div className="mb-1 flex items-baseline gap-3">
-            <span className="text-[22px] font-normal text-ph-white">
-              {planName}
-            </span>
-            <span className="text-[13px] text-[rgba(var(--ph-accent-rgb),0.9)]">
-              {price}
-            </span>
+          <div className="grid gap-3 [@media(max-width:640px)]:grid-cols-1 [@media(min-width:641px)]:grid-cols-3">
+            {PLANS.map((plan) => {
+              const on = plan.id === current
+              const move = action(plan.id)
+              return (
+                <section
+                  key={plan.id}
+                  aria-label={plan.name}
+                  className={`flex flex-col rounded-2xl border bg-ph-white/[0.02] p-5 ${
+                    on ? 'border-[rgba(var(--ph-accent-rgb),0.5)]' : 'border-ph-white/10'
+                  }`}
+                >
+                  <p className="text-[14.5px] text-ph-white/92">{plan.name}</p>
+                  <p className="mt-3 flex items-baseline gap-2">
+                    <span className="text-[26px] font-light text-ph-white">{plan.price}</span>
+                    {plan.per && <span className="text-[12px] text-ph-white/55">{plan.per}</span>}
+                  </p>
+                  <ul className="mt-3 mb-5 flex flex-col gap-2">
+                    {plan.lines.map((line) => (
+                      <li key={line} className="flex items-start gap-2.5 text-[13px] leading-[1.45] text-ph-white/72">
+                        <span aria-hidden="true" className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[var(--ph-accent)]" />
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-auto">
+                    {on ? (
+                      <p className="py-2 text-center text-[13px] text-[var(--ph-accent)]">
+                        {plan.id === 'monthly' && renewDate ? `current plan · renews ${renewDate}` : 'current plan'}
+                      </p>
+                    ) : move ? (
+                      <button
+                        type="button"
+                        onClick={move}
+                        disabled={busy}
+                        className="h-[42px] w-full rounded-full border border-ph-white/24 text-[13px] text-ph-white/85 transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] disabled:opacity-50"
+                      >
+                        {busy ? 'loading…' : 'choose'}
+                      </button>
+                    ) : null}
+                  </div>
+                </section>
+              )
+            })}
           </div>
-          <p className="mb-[18px] text-[12px] text-[rgba(255,253,253,0.5)]">
-            {renewLine}
+
+          <p className="mt-4 text-center text-[12px] text-ph-white/50">
+            payments run through stripe. cancel any time.
           </p>
-
-          <p className="mb-1.5 text-[10.5px] tracking-[0.14em] text-[rgba(var(--ph-accent-rgb),0.8)] uppercase">
-            what&apos;s included
-          </p>
-          <ul className="mb-[18px] flex flex-col">
-            {included.map((line) => (
-              <li
-                key={line}
-                className="flex items-start gap-2.5 border-b border-[rgba(255,253,253,0.06)] py-2 text-[12.5px] leading-relaxed text-[rgba(255,253,253,0.68)]"
-              >
-                <span aria-hidden="true" className="shrink-0 text-[var(--ph-accent)]">
-                  ✦
-                </span>
-                {line}
-              </li>
-            ))}
-          </ul>
-
-          {!full && (
-            <>
-              <PrimaryButton onClick={handleUpgrade} disabled={busy}>
-                {busy ? 'loading…' : `upgrade to full · ${MONTHLY}/month`}
-              </PrimaryButton>
-              <p className="mt-2.5 text-center text-[11.5px] text-[rgba(255,253,253,0.5)]">
-                or {YEARLY}/year. cancel any time.
-              </p>
-            </>
-          )}
-
-          {full && period === 'monthly' && (
-            <>
-              <button
-                type="button"
-                onClick={handleSwitchToFree}
-                disabled={busy}
-                className="w-full rounded-[10px] border border-[rgba(255,253,253,0.14)] bg-transparent px-6 py-3 text-xs text-[rgba(255,253,253,0.7)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {busy ? 'loading…' : 'switch to free'}
-              </button>
-              <p className="mt-2.5 text-center text-[11.5px] text-[rgba(255,253,253,0.5)]">
-                cancel any time. you keep full until the period ends.
-              </p>
-            </>
-          )}
 
           {error && (
             <div className="mt-3">

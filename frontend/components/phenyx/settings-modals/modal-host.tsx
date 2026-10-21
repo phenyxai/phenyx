@@ -28,7 +28,6 @@ import {
 import { NotificationsModal } from './notifications'
 import { ConnectionsModal } from './connections'
 import { DataManagementModal } from './data-management'
-import { AccountModal } from './account'
 import { CloseAccountModal } from './close-account'
 import { EditProfileModal } from './edit-profile'
 import { FeedbackModal } from './feedback'
@@ -49,7 +48,6 @@ export type SettingsModalId =
   | 'notifications'
   | 'my-connections'
   | 'data-management'
-  | 'account'
   | 'close-account'
   | 'edit-profile'
   | 'feedback'
@@ -105,7 +103,6 @@ export function SettingsModalsProvider({
         {openId === 'notifications' && <NotificationsModal />}
         {openId === 'my-connections' && <ConnectionsModal />}
         {openId === 'data-management' && <DataManagementModal />}
-        {openId === 'account' && <AccountModal />}
         {openId === 'close-account' && <CloseAccountModal />}
         {openId === 'edit-profile' && <EditProfileModal />}
         {openId === 'feedback' && <FeedbackModal />}
