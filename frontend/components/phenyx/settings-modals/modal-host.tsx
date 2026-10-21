@@ -137,7 +137,7 @@ const contentBaseClassName = cn(
   'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
   'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
   'motion-reduce:animate-none motion-reduce:transition-none',
-  'fixed top-[50%] left-[50%] z-50 grid w-[min(440px,calc(100vw-40px))] max-w-none',
+  'fixed top-[50%] left-[50%] z-50 grid grid-cols-[minmax(0,1fr)] w-[min(440px,calc(100vw-40px))] max-w-none',
   'max-h-[calc(100dvh-4rem)] translate-x-[-50%] translate-y-[-50%] gap-4',
   'overflow-y-auto rounded-2xl border p-6 duration-200',
 )

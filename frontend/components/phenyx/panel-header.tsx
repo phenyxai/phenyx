@@ -26,12 +26,12 @@ export function PanelHeader({
   );
 }
 
-/** A header chip: one pill shape for every tab's indicator and icon buttons. */
+/** A header chip: one pill shape for every tab's indicator and icon buttons. `data-on` lights it in the accent (a primary action). */
 export function HeaderChip({ className = "", ...props }: ComponentProps<"button">) {
   return (
     <button
       type="button"
-      className={`inline-flex h-[34px] items-center justify-center gap-2 rounded-full border border-ph-white/12 bg-ph-white/[0.02] px-3.5 text-[12.5px] font-medium text-ph-white/68 transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-ph-white/95 [&_svg]:size-4 ${className}`}
+      className={`inline-flex h-[34px] items-center justify-center gap-2 rounded-full border border-ph-white/12 bg-ph-white/[0.02] px-3.5 text-[12.5px] font-medium text-ph-white/68 transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-ph-white/95 data-[on=true]:border-[rgba(var(--ph-accent-rgb),0.5)] data-[on=true]:text-[var(--ph-accent)] [&_svg]:size-4 ${className}`}
       {...props}
     />
   );

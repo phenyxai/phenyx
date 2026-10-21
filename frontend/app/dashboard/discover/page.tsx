@@ -149,7 +149,7 @@ export default function DiscoverTabPage() {
           {allowance && (
             <HeaderChip
               onClick={() => setPopup(available > 0 ? "use" : "more")}
-              className={available > 0 ? "border-[rgba(var(--ph-accent-rgb),0.5)] text-[var(--ph-accent)]" : ""}
+              data-on={available > 0}
             >
               {available > 0 ? `${available} new ${available === 1 ? "discovery" : "discoveries"}` : "new discovery"}
             </HeaderChip>

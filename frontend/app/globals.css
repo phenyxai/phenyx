@@ -123,8 +123,8 @@
     font-family: inherit;
   }
   /* Global input styling for dark theme. A field inside its own frame (the
-     polaris box and search, PHE-129) opts out with .ph-bare-field. */
-  input:not(.auth-input):not(.onb-otp-input):not(.ph-bare-field), textarea:not(.ph-bare-field), select {
+     polaris box, search and pickers, PHE-129) opts out with .ph-bare-field. */
+  input:not(.auth-input):not(.onb-otp-input):not(.ph-bare-field), textarea:not(.ph-bare-field), select:not(.ph-bare-field) {
     background: #0d0d0d !important;
     color: #FFFDFD !important;
     border: 0.5px solid #1e1e1e !important;

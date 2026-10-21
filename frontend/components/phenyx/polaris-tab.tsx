@@ -1078,7 +1078,7 @@ function ListRow({ onClick, title, meta }: { onClick: () => void; title: string;
       <span className="min-w-0 flex-1 truncate text-[14.5px] text-ph-white/88 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
         {title}
       </span>
-      <span className="max-w-[40%] shrink-0 truncate text-[12px] text-ph-white/55">{meta}</span>
+      <span className="max-w-[14rem] shrink-0 truncate text-[12px] text-ph-white/55">{meta}</span>
     </button>
   );
 }
