@@ -103,13 +103,14 @@ test("tabTransition: a clock running backwards never yields negative seconds", (
   assert.deepEqual(t.duration, { tab: "insights", seconds: 0 });
 });
 
-test("legacy routes redirect: daily to constellation, you and profile to insights", () => {
+test("legacy routes redirect: daily to constellation, you and profile to insights, join to sign-in", () => {
   const map = Object.fromEntries(LEGACY_REDIRECTS.map((r) => [r.source, r.destination]));
   assert.deepEqual(map, {
     "/dashboard/daily": "/dashboard/constellation",
     "/dashboard/you": "/dashboard/insights",
     "/dashboard/profile": "/dashboard/insights",
     "/daily": "/dashboard/constellation",
+    "/join": "/signin",
   });
 });
 

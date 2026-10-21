@@ -30,7 +30,8 @@ export const SETTINGS_HREF = "/dashboard/settings";
 
 /**
  * Old paths kept alive for bookmarks. Daily was removed and the you tab became
- * insights; /dashboard/profile already pointed at you. next.config.ts turns
+ * insights; /dashboard/profile already pointed at you. Sign-in is google only
+ * (PHE-129), so the email sign-up at /join leads to it. next.config.ts turns
  * each into a `<source>/:path*` redirect, covering the route and its subpaths.
  */
 export const LEGACY_REDIRECTS: readonly { source: string; destination: string }[] = [
@@ -38,6 +39,7 @@ export const LEGACY_REDIRECTS: readonly { source: string; destination: string }[
   { source: "/dashboard/you", destination: "/dashboard/insights" },
   { source: "/dashboard/profile", destination: "/dashboard/insights" },
   { source: "/daily", destination: DASHBOARD_HOME },
+  { source: "/join", destination: "/signin" },
 ];
 
 const SEGMENTS: readonly string[] = [...DASHBOARD_TABS.map((t) => t.id), "settings"];
