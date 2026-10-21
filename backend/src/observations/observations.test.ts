@@ -38,6 +38,8 @@ import {
 const billing = new BillingService();
 const FREE = billing.capabilitiesFor("free");
 const PRO = billing.capabilitiesFor("pro");
+// PHE-129: free now ships every trace too; the locked path is exercised with no traces left.
+const NO_TRACES = { ...FREE, evidenceTracesPerDay: 0 };
 
 // ---------------------------------------------------------------------------
 // signal_hash — dedup / novelty key
@@ -277,14 +279,14 @@ test("firstSentence takes the leading clause and strips markup", () => {
   assert.equal(firstSentence("boards of canada returned after <b>six</b> years."), "boards of canada returned after six years.");
 });
 
-test("applyReadGate free tier (v244): every body and span, no trace on any row", () => {
+test("applyReadGate with no traces left: every body and span, no trace on any row", () => {
   const served = applyReadGate(
     [
       row({ id: "fresh", evidence_span: "2016 - 2026" }),
       row({ id: "older", span_start: "2019-03-01T00:00:00Z", span_end: "2024-08-01T00:00:00Z" }),
       row({ id: "oldest" }),
     ],
-    FREE
+    NO_TRACES
   );
   assert.equal(served.length, 3);
   // Every row keeps the sentence: the day is the same on free and full.
@@ -326,7 +328,7 @@ test("applyReadGate pro/gifted: all unlocked with source_platforms + provenance 
   assert.ok(served.every((o) => o.span === "cross-platform pattern / 6 months"));
 });
 
-test("groupTimelineByPillar groups by pillar and keeps every body for free", () => {
+test("groupTimelineByPillar groups by pillar and keeps every body and trace for free", () => {
   const groups = groupTimelineByPillar(
     [
       row({ id: "1", pillar: "origin" }),
@@ -340,8 +342,8 @@ test("groupTimelineByPillar groups by pillar and keeps every body for free", () 
   const served = groups.flatMap((g) => g.observations);
   assert.equal(served.length, 3);
   assert.ok(served.every((o) => o.body === "the body"));
-  // v244: free never receives a trace, on the timeline as on the feed.
-  assert.equal(served.filter((o) => o.locked === true).length, 3);
+  // PHE-129: free sees what happened and its sources, on the timeline as on the feed.
+  assert.equal(served.filter((o) => o.locked === true).length, 0);
 });
 
 // ---------------------------------------------------------------------------
@@ -415,7 +417,7 @@ test("redactEvidence drops chart/entries/closer on a locked trace", () => {
   assert.equal(redactEvidence(maraEvidence, true), maraEvidence);
 });
 
-test("applyReadGate free (v244): every row keeps only sig+recs, never the chain", () => {
+test("applyReadGate with no traces left: every row keeps only sig+recs, never the chain", () => {
   const served = applyReadGate(
     [
       row({
@@ -444,7 +446,7 @@ test("applyReadGate free (v244): every row keeps only sig+recs, never the chain"
         assembled_evidence: maraEvidence,
       }),
     ],
-    FREE
+    NO_TRACES
   );
   assert.ok(served.every((o) => o.locked === true));
   // The door keeps its kind label and count so the client can name it.
@@ -715,20 +717,16 @@ function makeFeedService(tier: string) {
   );
 }
 
-test("getDailyFeed free (v244): every row served, span kept, door named, no chain or sources", async () => {
+test("getDailyFeed free (PHE-129): every row served with its sources, like full", async () => {
   const feed = await makeFeedService("free").getDailyFeed("u1");
   assert.equal(feed.mantra, "the line of the day");
   assert.equal(feed.observations.length, 2);
-  assert.ok(feed.observations.every((o) => o.locked === true));
-  assert.ok(feed.observations.every((o) => o.sources === undefined));
-  assert.ok(feed.observations.every((o) => o.meta_line === undefined));
-  const [one, two] = feed.observations;
+  const [one] = feed.observations;
+  assert.equal(one.locked, false);
   assert.equal(one.sentence, "the body.");
+  assert.deepEqual(one.sources, ["spotify", "chatgpt"]);
   assert.equal(one.span, "2016 – 2026");
-  assert.deepEqual(one.evidence, { sig: "frequency", recs: 1847 });
-  // No signal type: nothing to name, so no door at all.
-  assert.equal(two.evidence, null);
-  assert.equal(two.span, undefined);
+  assert.ok(Array.isArray(one.evidence?.entries));
 });
 
 test("getDailyFeed pro: the chain and the sources ship on every row", async () => {
