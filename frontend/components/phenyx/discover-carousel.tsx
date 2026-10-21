@@ -19,7 +19,7 @@ import { kindLabel, loopOffset, type Discovery } from "@/lib/discover";
 const SWAP_OUT_MS = 180;
 const SWIPE_PX = 40;
 
-const onPhone = () => window.matchMedia("(max-width: 760px)").matches;
+const onPhone = () => window.matchMedia("(max-width: 640px)").matches;
 
 /** In-place swap: the old content fades fully out before the new floats in. */
 function useInPlaceSwap<T>(target: T, fade: () => boolean): { shown: T; out: boolean } {
@@ -221,7 +221,7 @@ function DiscoverCard({
           <StarIcon filled={d.saved} />
         </button>
       </div>
-      <h2 className="mt-2 text-[21px] font-normal leading-[1.35] text-ph-white/95 max-[760px]:text-[19px]">{d.headline}</h2>
+      <h2 className="mt-2 text-[21px] font-normal leading-[1.35] text-ph-white/95 max-[640px]:text-[19px]">{d.headline}</h2>
       <p className="mt-3 text-[14px] leading-[1.6] text-ph-white/80">{d.detail}</p>
       <p className="mt-3 text-[13px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">{d.reason}</p>
       <div className="mt-auto flex flex-wrap gap-2 pt-3">

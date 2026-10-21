@@ -196,9 +196,9 @@ export default function InsightsTabPage() {
 
   return (
     <>
-      <IntroBanner tab="insights" copy={INTRO_COPY.insights} className="mt-10 [@media(max-width:760px)]:mx-5 [@media(min-width:761px)]:mx-10" />
+      <IntroBanner tab="insights" copy={INTRO_COPY.insights} className="mt-10 [@media(max-width:640px)]:mx-5 [@media(min-width:641px)]:mx-10" />
 
-      <section className="flex flex-col pt-8 pb-10 [@media(max-width:760px)]:px-5 [@media(min-width:761px)]:px-10">
+      <section className="flex flex-col pt-8 pb-10 [@media(max-width:640px)]:px-5 [@media(min-width:641px)]:px-10">
         <div className="w-full max-w-[1040px]">
           <header className="mb-7 flex flex-wrap items-start justify-between gap-x-10 gap-y-5">
             <div className="min-w-0">
@@ -251,7 +251,7 @@ export default function InsightsTabPage() {
 
           <Story story={reading?.story} />
 
-          <div className="mt-11 mb-10 grid gap-x-[88px] gap-y-10 [@media(max-width:760px)]:grid-cols-1 [@media(min-width:761px)]:grid-cols-2">
+          <div className="mt-11 mb-10 grid gap-x-[88px] gap-y-10 [@media(max-width:640px)]:grid-cols-1 [@media(min-width:641px)]:grid-cols-2">
             <ReadingLine label="what is becoming clearer" value={reading?.becoming_clearer} />
             <ReadingLine label="what still needs shape" value={reading?.needs_shape} />
           </div>

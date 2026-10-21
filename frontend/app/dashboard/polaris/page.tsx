@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function PolarisTabPage() {
   return (
     <section
-      className="flex h-screen flex-col [@media(max-width:760px)]:h-[calc(100svh-124px-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]"
+      className="flex h-screen flex-col [@media(max-width:640px)]:h-[calc(100svh-124px-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]"
       style={{ display: "flex" }}
     >
       <IntroBanner

@@ -367,7 +367,7 @@ function MomentRow({
       {open && (
         <div
           id={bodyId}
-          className="flex flex-col gap-3 pb-4 pl-[111px] pr-6 motion-safe:animate-fade-in-up [@media(max-width:760px)]:pl-[34px]"
+          className="flex flex-col gap-3 pb-4 pl-[111px] pr-6 motion-safe:animate-fade-in-up [@media(max-width:640px)]:pl-[34px]"
         >
           {happened && (
             <section>

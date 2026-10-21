@@ -2,9 +2,9 @@
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
-/* Tablets: the dashboard sidebar becomes an icon rail beside the page (PHE-129). */
+/* Tablets (641 to 999px): the dashboard sidebar becomes an icon rail beside the page (PHE-129). */
 @custom-variant rail {
-  @media (min-width: 761px) and (max-width: 999px) {
+  @media (min-width: 641px) and (max-width: 999px) {
     @slot;
   }
 }
@@ -1861,7 +1861,7 @@ nav li > [aria-current="page"] {
 .discover button:focus-visible { outline: 2px solid rgba(var(--ph-accent-rgb), 0.8); outline-offset: 2px; }
 /* The type label stays on one line, so it never breaks mid-word on phones. */
 .discover-type { white-space: nowrap; }
-@media (max-width: 760px) {
+@media (max-width: 640px) {
   /* Shorter than the 180ms swap, so the card is fully out before it changes. */
   .discover-card { transform: none; transition: opacity 0.15s ease, filter 0.15s ease, transform 0.15s ease; }
   .discover-card:not([data-depth="main"]) { display: none; }

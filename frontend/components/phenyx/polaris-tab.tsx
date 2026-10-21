@@ -752,7 +752,7 @@ function ChatView({
           type="button"
           aria-label="back to top"
           onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed right-8 bottom-[140px] z-10 flex h-[34px] w-[34px] items-center justify-center rounded-full border border-ph-white/14 bg-[var(--ph-black)] text-ph-white/70 transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] [@media(max-width:760px)]:bottom-[200px] [@media(max-width:760px)]:right-4"
+          className="fixed right-8 bottom-[140px] z-10 flex h-[34px] w-[34px] items-center justify-center rounded-full border border-ph-white/14 bg-[var(--ph-black)] text-ph-white/70 transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] [@media(max-width:640px)]:bottom-[200px] [@media(max-width:640px)]:right-4"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M6 14.5l6-6 6 6" />

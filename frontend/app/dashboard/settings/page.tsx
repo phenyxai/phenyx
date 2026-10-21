@@ -65,7 +65,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <section className="flex flex-col pt-14 pb-10 [@media(max-width:760px)]:px-5 [@media(min-width:761px)]:px-10">
+    <section className="flex flex-col pt-14 pb-10 [@media(max-width:640px)]:px-5 [@media(min-width:641px)]:px-10">
       <div className="w-full max-w-[760px]">
         {GROUPS.map((group, i) => (
           <div key={group.label} className={i > 0 ? "mt-6 border-t border-ph-white/[0.08] pt-6" : ""}>

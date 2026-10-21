@@ -21,14 +21,14 @@ import {
 
 const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-test("tabs run constellation, discover, polaris, insights", () => {
+test("tabs run constellation, polaris, discover, insights", () => {
   assert.deepEqual(
     DASHBOARD_TABS.map((t) => t.id),
-    ["constellation", "discover", "polaris", "insights"],
+    ["constellation", "polaris", "discover", "insights"],
   );
   assert.deepEqual(
     DASHBOARD_TABS.map((t) => t.label),
-    ["constellation", "discover", "polaris", "insights"],
+    ["constellation", "polaris", "discover", "insights"],
   );
   for (const tab of DASHBOARD_TABS) {
     assert.equal(tab.href, `/dashboard/${tab.id}`);

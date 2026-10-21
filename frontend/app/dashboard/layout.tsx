@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 /**
  * Authenticated dashboard shell. The sidebar lives here (persistent across tab
  * transitions — it does not remount when the active segment changes), and the
- * tab content is route-driven via {children}. At or below 760px the sidebar is
+ * tab content is route-driven via {children}. At or below 640px the sidebar is
  * hidden: MobileTopBar carries the brand, plan tier and settings gear,
  * MobileBottomNav carries the tabs (the only phone navigation), and the main
  * column is padded so content clears the fixed bar (PHE-96). ShellTierProvider
@@ -44,7 +44,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <main
             id="main"
             tabIndex={-1}
-            className="min-w-0 flex-1 outline-none [@media(max-width:760px)]:pb-[calc(72px+env(safe-area-inset-bottom,0px))]"
+            className="min-w-0 flex-1 outline-none [@media(max-width:640px)]:pb-[calc(72px+env(safe-area-inset-bottom,0px))]"
           >
             <MobileTopBar />
             {children}

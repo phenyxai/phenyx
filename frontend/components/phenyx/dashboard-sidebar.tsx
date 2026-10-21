@@ -64,7 +64,7 @@ function BrandLink() {
 
 /**
  * Text that folds away on the icon rail: when the sidebar is collapsed
- * (`data-collapsed` on the nav) and always from 761 to 999px, where tablets get
+ * (`data-collapsed` on the nav) and always from 641 to 999px, where tablets get
  * the rail instead of the full sidebar. It stays readable to screen readers.
  */
 function RailLabel({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -134,8 +134,8 @@ function SettingsLink({ active }: { active: boolean }) {
  * Top to bottom: brand (orbit mark + PHENYX + plan tier), the four tabs in
  * DASHBOARD_TABS order with their icons, and settings at the foot, a regular
  * row with a gear (PHE-126), beside the chevron that folds the sidebar to an
- * icon rail (PHE-129). From 761 to 999px it is always the rail. At or below
- * 760px it is display:none and the bottom nav plus MobileTopBar take over. It
+ * icon rail (PHE-129). From 641 to 999px it is always the rail. At or below
+ * 640px it is display:none and the bottom nav plus MobileTopBar take over. It
  * stays mounted there, so the session bounce and tab analytics below still run
  * on phones.
  */
@@ -198,7 +198,7 @@ export function DashboardSidebar() {
     <nav
       aria-label="dashboard"
       data-collapsed={collapsed ? "true" : undefined}
-      className="group/side sticky top-0 h-screen w-[224px] shrink-0 flex-col border-r border-ph-white/[0.055] bg-[var(--ph-black,#080808)] px-5 pt-8 pb-6 data-[collapsed=true]:w-[64px] data-[collapsed=true]:px-2.5 [@media(max-width:760px)]:hidden [@media(min-width:761px)]:flex rail:w-[64px] rail:px-2.5"
+      className="group/side sticky top-0 h-screen w-[224px] shrink-0 flex-col border-r border-ph-white/[0.055] bg-[var(--ph-black,#080808)] px-5 pt-8 pb-6 data-[collapsed=true]:w-[62px] data-[collapsed=true]:px-2.5 [@media(max-width:640px)]:hidden [@media(min-width:641px)]:flex rail:w-[62px] rail:px-2.5"
     >
       <div className="mb-7 flex items-center gap-1 border-b border-ph-white/[0.055] pb-[22px] group-data-[collapsed=true]/side:justify-center rail:justify-center">
         <BrandLink />
@@ -263,13 +263,13 @@ export function DashboardSidebar() {
 /**
  * Phone-width top bar: the brand linking home, the plan tier beside it, and
  * the settings gear (phones have no drawer, so this is how settings stays
- * reachable). Rendered at the top of the main column; hidden above 760px,
+ * reachable). Rendered at the top of the main column; hidden above 640px,
  * where the sidebar is in view.
  */
 export function MobileTopBar() {
   const segment = useSelectedLayoutSegment();
   return (
-    <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-ph-white/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden">
+    <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-ph-white/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:640px)]:flex [@media(min-width:641px)]:hidden">
       <BrandLink />
       <TierBadge />
       <SettingsLink active={segmentTab(segment) === "settings"} />

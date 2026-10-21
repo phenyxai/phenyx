@@ -3,7 +3,7 @@
 // ----------------------------------------------------------------------------
 // The one source for the signed-in app's tabs. The desktop sidebar and the
 // phone bottom nav both render DASHBOARD_TABS in array order, never sorted:
-// constellation, discover, polaris, insights (spec doc 1). Constellation is the
+// constellation, polaris, discover, insights (PHE-129 rebuild doc). Constellation is the
 // home route. Settings is reached from the sidebar foot (desktop) or the top bar
 // gear (phones), not from a tab.
 //
@@ -13,8 +13,8 @@
 
 export const DASHBOARD_TABS = [
   { id: "constellation", label: "constellation", href: "/dashboard/constellation" },
-  { id: "discover", label: "discover", href: "/dashboard/discover" },
   { id: "polaris", label: "polaris", href: "/dashboard/polaris" },
+  { id: "discover", label: "discover", href: "/dashboard/discover" },
   { id: "insights", label: "insights", href: "/dashboard/insights" },
 ] as const;
 
