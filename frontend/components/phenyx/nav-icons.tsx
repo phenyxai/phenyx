@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { DashboardTabId } from "@/lib/dashboard-nav";
 
-/** Stroke icon paths per tab, from the ph550 demo's nav (insights takes the demo's you icon). */
+/** Stroke icon paths per tab, from the PHE-129 demo's nav: polaris is a small circle, discover a telescope. */
 const PATHS: Record<DashboardTabId, ReactNode> = {
   constellation: (
     <>
@@ -15,12 +15,12 @@ const PATHS: Record<DashboardTabId, ReactNode> = {
   ),
   discover: (
     <>
-      <path d="M7 17l3.1-7.7L18 6l-3.1 7.7L7 17z" />
-      <circle cx="12.5" cy="11.5" r="1.4" />
-      <path d="M4 20h16" />
+      <path d="M5 7.5l8.8 4.4-2.2 4.3L2.8 11.8z" />
+      <path d="M13.8 11.9l3.2-6.3 3.1 1.6-3.2 6.3" />
+      <path d="M10.8 15.7l-2.2 4.1M12.7 16.4l2.2 3.4" />
     </>
   ),
-  polaris: <path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z" />,
+  polaris: <circle cx="12" cy="12" r="5.5" />,
   insights: (
     <>
       <circle cx="12" cy="12" r="7.5" />

@@ -2,6 +2,12 @@
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
+/* Tablets: the dashboard sidebar becomes an icon rail beside the page (PHE-129). */
+@custom-variant rail {
+  @media (min-width: 761px) and (max-width: 999px) {
+    @slot;
+  }
+}
 
 :root {
   --background: var(--ph-black);
