@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ConstellationCanvas } from "@/components/phenyx/constellation-canvas";
 import { ConstellationPanel } from "@/components/phenyx/constellation-panel";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
-import { fetchConstellation, type ConstellationData, type Pillar } from "@/lib/constellation";
+import { ALL_PILLARS, fetchConstellation, type ConstellationData, type Pillar } from "@/lib/constellation";
 
 /** Fade-out time for an in-place panel swap, before the new view floats in. */
 const SWAP_OUT_MS = 180;
@@ -34,6 +34,15 @@ export default function ConstellationTabPage() {
     return () => {
       active = false;
     };
+  }, []);
+
+  // PHE-129: insights' milestones link here with ?point=<pillar>. Read once on
+  // the client and drop it from the address, so a reload starts at the overview.
+  useEffect(() => {
+    const point = new URLSearchParams(window.location.search).get("point");
+    if (!point) return;
+    if ((ALL_PILLARS as readonly string[]).includes(point)) setSelectedPillar(point as Pillar);
+    window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
   const openPillar = useCallback((pillar: Pillar) => setSelectedPillar(pillar), []);

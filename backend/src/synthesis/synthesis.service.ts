@@ -13,6 +13,7 @@ import {
   INSIGHTS_INSTRUCTIONS,
   normalizeInsights,
   type InsightsReading,
+  polarisUsageLine,
 } from "./insights";
 
 // Model IDs are exact — do not append date suffixes or downgrade.
@@ -24,6 +25,7 @@ const ANTHROPIC_VERSION = "2023-06-01";
 
 /** Dated moments sent to the insights prompt, oldest first. */
 const INSIGHTS_MOMENT_LIMIT = 40;
+const INSIGHTS_CONVERSATION_LIMIT = 60;
 
 /** The four active pillars at onboarding. The other three stay locked (null). */
 const ACTIVE_PILLARS = [
@@ -483,13 +485,22 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
     if (!summary) return null;
 
     const supabase = this.supabaseService.getClient();
-    const { data: moments } = await supabase
-      .from("observations")
-      .select("pillar, body, span_start, span_end, source_platforms")
-      .eq("user_id", userId)
-      .not("body", "is", null)
-      .order("span_start", { ascending: true, nullsFirst: false })
-      .limit(INSIGHTS_MOMENT_LIMIT);
+    const [{ data: moments }, { data: conversations }] = await Promise.all([
+      supabase
+        .from("observations")
+        .select("pillar, body, span_start, span_end, source_platforms")
+        .eq("user_id", userId)
+        .not("body", "is", null)
+        .order("span_start", { ascending: true, nullsFirst: false })
+        .limit(INSIGHTS_MOMENT_LIMIT),
+      // Modes and dates only: the questions themselves stay encrypted in polaris.
+      supabase
+        .from("polaris_conversations")
+        .select("mode, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(INSIGHTS_CONVERSATION_LIMIT),
+    ]);
     const dated = (moments ?? [])
       .map((m) => {
         const from = (m.span_start as string | null)?.slice(0, 7) ?? "undated";
@@ -506,7 +517,9 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
         effort: "medium",
         maxTokens: 2000,
         taskInstructions: INSIGHTS_INSTRUCTIONS,
-        userMessage: `${summary}\n\ndated moments:\n${dated || "none yet"}`,
+        userMessage: `${summary}\n\ndated moments:\n${dated || "none yet"}\n\npolaris use: ${polarisUsageLine(
+          (conversations ?? []) as { mode: string | null; created_at: string }[]
+        )}`,
         tool: EMIT_INSIGHTS_TOOL,
       });
       insights = normalizeInsights(
