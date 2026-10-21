@@ -90,15 +90,15 @@ function Story({ story }: { story: InsightsReading["story"] | undefined }) {
                 <Link
                   href={`/dashboard/constellation?point=${m.pillar}`}
                   aria-label={`explore milestone: ${m.date}, ${m.title}`}
-                  className="group relative block [@media(max-width:640px)]:grid [@media(max-width:640px)]:grid-cols-[9px_1fr] [@media(max-width:640px)]:gap-x-3.5"
+                  className="group relative [@media(min-width:641px)]:block [@media(max-width:640px)]:grid [@media(max-width:640px)]:grid-cols-[9px_1fr] [@media(max-width:640px)]:gap-x-3.5"
                 >
                   <span
                     aria-hidden="true"
                     className="block h-[9px] w-[9px] rounded-full bg-[var(--ph-accent)] shadow-[0_0_0_3px_var(--ph-black)] [@media(max-width:640px)]:row-span-2 [@media(max-width:640px)]:mt-[4px]"
                     style={{ opacity: 0.55 + (0.45 * (i + 1)) / story.milestones.length }}
                   />
-                  <time className="mt-4 block text-[12px] font-light text-ph-white/78 [@media(max-width:640px)]:mt-0">{m.date}</time>
-                  <b className="mt-2 block [@media(max-width:640px)]:mt-1 text-[15px] font-medium leading-[1.45] text-ph-white/90 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+                  <time className="block text-[12px] font-light text-ph-white/78 [@media(min-width:641px)]:mt-4">{m.date}</time>
+                  <b className="block text-[15px] [@media(min-width:641px)]:mt-2 [@media(max-width:640px)]:mt-1 font-medium leading-[1.45] text-ph-white/90 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
                     {m.title}
                   </b>
                 </Link>
