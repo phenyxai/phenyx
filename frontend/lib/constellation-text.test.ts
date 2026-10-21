@@ -4,12 +4,14 @@ import {
   constellationAge,
   firstSentence,
   momentTitle,
+  momentTopic,
   momentYear,
   newObservationCount,
   pointMetaLine,
   pointMoments,
   storyLine,
   synthesisLine,
+  threadAreas,
 } from "./constellation-text.ts";
 import type {
   Cluster,
@@ -26,6 +28,8 @@ function observation(over: Partial<ClusterObservation> = {}): ClusterObservation
     span: over.span ?? null,
     surfaced_at: over.surfaced_at ?? "",
     is_new: over.is_new ?? false,
+    area: over.area,
+    platform: over.platform,
   };
 }
 
@@ -240,4 +244,25 @@ test("momentTitle falls back to the body's first sentence, momentYear to empty",
   assert.equal(momentTitle({ title: null, body: "you start a board. it grows." } as any), "you start a board");
   assert.equal(momentYear({ occurred_at: "2013-05-02" } as any), "2013");
   assert.equal(momentYear({ occurred_at: null } as any), "");
+});
+
+test("momentTopic filters by the part of life, falling back to the platform", () => {
+  assert.equal(momentTopic(observation({ area: " home ", platform: "pinterest" })), "home");
+  assert.equal(momentTopic(observation({ area: null, platform: "spotify" })), "spotify");
+  assert.equal(momentTopic(observation()), "");
+});
+
+test("threadAreas keeps the earliest point each followed part of life was followed on", () => {
+  const point = (pillar: Pillar, observations: ClusterObservation[]) =>
+    ({ pillar, clusters: [cluster(pillar, observations)] }) as unknown as PillarDetail;
+  const data = {
+    pillars: {
+      origin: point("origin", [observation({ id: "a", area: "home" })]),
+      emergence: point("emergence", [observation({ id: "b", area: "home" }), observation({ id: "c", area: "friends" })]),
+      convergence: point("convergence", [observation({ id: "d", platform: "spotify" })]),
+    },
+  } as unknown as ConstellationData;
+  const followed = new Set(["b", "c", "d"]);
+  const threads = threadAreas(data, ["origin", "emergence", "convergence"], (id) => followed.has(id));
+  assert.deepEqual([...threads], [["home", 1], ["friends", 1]]);
 });

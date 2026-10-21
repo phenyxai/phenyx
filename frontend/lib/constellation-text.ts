@@ -199,6 +199,32 @@ export function pointMoments(detail: PillarDetail): ClusterObservation[] {
   return [...dated, ...undated];
 }
 
+/** What an opened point filters a moment by: its part of life, else its platform (older rows). */
+export function momentTopic(moment: ClusterObservation): string {
+  return moment.area?.trim() || moment.platform?.trim() || "";
+}
+
+/**
+ * The threads the person follows: each followed moment's part of life, with
+ * the earliest point (story order) it was followed on. A later moment that
+ * shares the part of life reads "from your thread". Platforms never make a
+ * thread; only a real area does.
+ */
+export function threadAreas(
+  data: ConstellationData,
+  order: readonly Pillar[],
+  following: (id: string) => boolean,
+): Map<string, number> {
+  const threads = new Map<string, number>();
+  order.forEach((pillar, index) => {
+    for (const moment of pointMoments(data.pillars[pillar])) {
+      const area = moment.area?.trim();
+      if (area && following(moment.id) && !threads.has(area)) threads.set(area, index);
+    }
+  });
+  return threads;
+}
+
 /** A moment's one line: its own title, else the first sentence of its body. */
 export function momentTitle(moment: ClusterObservation): string {
   return moment.title?.trim() || firstSentence(moment.body).replace(/[.?!]+$/, "");

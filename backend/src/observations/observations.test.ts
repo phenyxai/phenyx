@@ -754,8 +754,9 @@ test("buildInsertRows carries the PHE-122 moment fields and keeps only a real da
         why_it_matters: "the light you saved returns.",
         what_connects: "",
         occurred_at: "2013-05-02T10:00:00Z",
+        area: " Home ",
       }),
-      cand({ signal_key: "moment-b", occurred_at: "sometime in 2013" }),
+      cand({ signal_key: "moment-b", occurred_at: "sometime in 2013", area: "the rooms you kept saving" }),
     ],
     true
   );
@@ -765,4 +766,6 @@ test("buildInsertRows carries the PHE-122 moment fields and keeps only a real da
   assert.equal(withMoment.occurred_at, "2013-05-02");
   assert.equal(withoutDate.title, null);
   assert.equal(withoutDate.occurred_at, null);
+  assert.equal(withMoment.area, "home");
+  assert.equal(withoutDate.area, null);
 });

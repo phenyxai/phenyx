@@ -142,7 +142,7 @@ export class ConstellationService {
       supabase
         .from("observations")
         .select(
-          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at,area_id,points,signal_type,evidence_n,evidence_span,span_start,span_end,record_count,sources,title,what_happened,why_it_matters,what_connects,occurred_at"
+          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at,area_id,points,signal_type,evidence_n,evidence_span,span_start,span_end,record_count,sources,title,what_happened,why_it_matters,what_connects,occurred_at,area"
         )
         .eq("user_id", userId)
         .order("surfaced_at", { ascending: false }),

@@ -40,6 +40,8 @@ export interface ClusterObservationInput {
   why_it_matters?: string | null;
   what_connects?: string | null;
   occurred_at?: string | null;
+  /** PHE-129: the part of life the moment sits in; null on older rows. */
+  area?: string | null;
   /** The person's reaction to this moment, when there is one. */
   feedback?: MomentFeedback | null;
 }
@@ -68,6 +70,8 @@ export interface ClusterObservation {
   what_connects: string | null;
   /** When it happened: the moment's own date, else the start of its window. */
   occurred_at: string | null;
+  /** The topic an opened point filters by. */
+  area: string | null;
   /** The platform it came from (the first of its sources). */
   platform: string | null;
   feedback: MomentFeedback | null;
@@ -128,6 +132,7 @@ function serveObservation(
     why_it_matters: row.why_it_matters ?? null,
     what_connects: row.what_connects ?? null,
     occurred_at: row.occurred_at ?? row.span_start?.slice(0, 10) ?? null,
+    area: row.area ?? null,
     platform: row.source_platforms?.[0] ?? null,
     feedback: row.feedback ?? null,
   };
