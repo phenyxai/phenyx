@@ -191,6 +191,17 @@ export function pointMetaLine(detail: PillarDetail): string {
     .join(" · ");
 }
 
+/**
+ * PHE-129: an opened point's era in the person's own terms, the season of life
+ * and its place, "childhood · los angeles". Never years or an age.
+ */
+export function eraLine(detail: PillarDetail): string {
+  return [POINT_ERA[detail.pillar], detail.point?.place]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+
 /** Every moment under a point, oldest first; undated ones follow, newest surfaced first. */
 export function pointMoments(detail: PillarDetail): ClusterObservation[] {
   const all = detail.clusters.flatMap((cluster) => cluster.observations);

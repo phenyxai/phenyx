@@ -15,10 +15,11 @@
 // moment". The signal's moments carry a lit dot until one of them is opened.
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Popup, useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
+import { Popup } from "@/components/phenyx/settings-modals/modal-host";
 import { Arrow } from "@/components/phenyx/nav-icons";
 import {
   ALL_PILLARS,
+  eraLine,
   markSignalSeen,
   momentTitle,
   momentTopic,
@@ -39,6 +40,8 @@ export interface ConstellationPanelProps {
   data: ConstellationData;
   selectedPillar: Pillar | null;
   onSelectPillar: (pillar: Pillar) => void;
+  /** A moment to open on arrival (insights' milestones link here). */
+  openMomentId?: string | null;
 }
 
 const NO_FEEDBACK: MomentFeedback = { verdict: null, following: false };
@@ -52,7 +55,7 @@ function initialFeedback(data: ConstellationData): Record<string, MomentFeedback
   return out;
 }
 
-export function ConstellationPanel({ data, selectedPillar, onSelectPillar }: ConstellationPanelProps) {
+export function ConstellationPanel({ data, selectedPillar, onSelectPillar, openMomentId = null }: ConstellationPanelProps) {
   const [feedback, setFeedback] = useState(() => initialFeedback(data));
   const [signalSeen, setSignalSeen] = useState(false);
   const signal = signalSeen ? null : data.signal;
@@ -88,6 +91,7 @@ export function ConstellationPanel({ data, selectedPillar, onSelectPillar }: Con
         onSeeSignal={seeSignal}
         onReact={react}
         onSelectPillar={onSelectPillar}
+        openMomentId={openMomentId}
       />
     );
   }
@@ -198,6 +202,7 @@ function PointView({
   onSeeSignal,
   onReact,
   onSelectPillar,
+  openMomentId,
 }: {
   data: ConstellationData;
   detail: PillarDetail;
@@ -206,12 +211,16 @@ function PointView({
   onSeeSignal: () => void;
   onReact: (id: string, next: MomentFeedback, patch: Parameters<typeof sendMomentFeedback>[1]) => void;
   onSelectPillar: (pillar: Pillar) => void;
+  openMomentId: string | null;
 }) {
   const index = ALL_PILLARS.indexOf(detail.pillar);
   const moments = pointMoments(detail);
   const topics = [...new Set(moments.map(momentTopic).filter(Boolean))];
   const [topic, setTopic] = useState(ALL_TOPICS);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(() =>
+    openMomentId && moments.some((m) => m.id === openMomentId) ? openMomentId : null,
+  );
+  const era = eraLine(detail);
   const [trail, setTrail] = useState<ClusterObservation | null>(null);
   const shown = topic === ALL_TOPICS ? moments : moments.filter((m) => momentTopic(m) === topic);
   const threads = threadAreas(data, ALL_PILLARS, (id) => !!feedback[id]?.following);
@@ -233,6 +242,8 @@ function PointView({
           <StepButton to={ALL_PILLARS[index + 1]} direction="next" onSelect={onSelectPillar} />
         </div>
       </div>
+      {/* The era in the person's own terms, "childhood · los angeles": never years or an age. */}
+      {era && <p className="mt-1 text-[12.5px] font-light text-ph-white/52">{era}</p>}
 
       <p className="mt-[19px] text-[15px] font-light leading-[1.65] text-ph-white/78">{storyLine(detail)}</p>
 
@@ -422,7 +433,11 @@ function Reactions({
     const next = state.verdict === v ? null : v;
     onChange({ ...state, verdict: next }, { verdict: next });
   };
-  const follow = () => onChange({ ...state, following: !state.following }, { following: !state.following });
+  // Tapping follow closes the note it explains (rebuild doc, section 7).
+  const follow = () => {
+    setNote(false);
+    onChange({ ...state, following: !state.following }, { following: !state.following });
+  };
 
   return (
     <section className="mt-2">
@@ -489,11 +504,9 @@ function ReactionPill({ on, onClick, children }: { on: boolean; onClick: () => v
 
 /**
  * "behind this moment": the date, the moment, each dated source entry on an
- * accent bar, and why it matters. On free the entries are held back and the
- * upgrade opens instead (the evidence chain never ships).
+ * accent bar, and why it matters (full). Both plans see the sources (PHE-129).
  */
 function SourceTrail({ moment, onClose }: { moment: ClusterObservation; onClose: () => void }) {
-  const { openModal } = useSettingsModals();
   const entries = moment.evidence?.entries ?? [];
   const year = momentYear(moment);
   const fallback = [year, moment.platform].filter(Boolean).join(" · ");
@@ -509,28 +522,17 @@ function SourceTrail({ moment, onClose }: { moment: ClusterObservation; onClose:
           </p>
         )}
 
-        {moment.locked ? (
-          <div className="mt-5 rounded-lg border border-ph-white/10 p-4">
-            <p className="text-[13px] font-light leading-[1.6] text-ph-white/65">
-              the dated sources behind each moment come with full.
-            </p>
-            <button type="button" onClick={() => openModal("upgrade")} className="mt-2 text-[13px] text-[var(--ph-accent)]">
-              see full
-            </button>
-          </div>
-        ) : (
-          <ol className="mt-5 flex flex-col gap-3">
-            {(entries.length ? entries : fallback ? [{ t: fallback, s: "", w: "" }] : []).map((entry, i) => (
-              <li
-                key={`${entry.t}-${i}`}
-                className="rounded-r-lg border-l-2 border-[var(--ph-accent)] bg-[rgba(var(--ph-accent-rgb),0.04)] px-4 py-3"
-              >
-                <p className="text-[12.5px] text-[rgba(var(--ph-accent-rgb),0.9)]">{[entry.t, entry.s].filter(Boolean).join(" · ")}</p>
-                {entry.w && <p className="mt-1 text-[13px] font-light leading-[1.6] text-ph-white/70">{entry.w}</p>}
-              </li>
-            ))}
-          </ol>
-        )}
+        <ol className="mt-5 flex flex-col gap-3">
+          {(entries.length ? entries : fallback ? [{ t: fallback, s: "", w: "" }] : []).map((entry, i) => (
+            <li
+              key={`${entry.t}-${i}`}
+              className="rounded-r-lg border-l-2 border-[var(--ph-accent)] bg-[rgba(var(--ph-accent-rgb),0.04)] px-4 py-3"
+            >
+              <p className="text-[12.5px] text-[rgba(var(--ph-accent-rgb),0.9)]">{[entry.t, entry.s].filter(Boolean).join(" · ")}</p>
+              {entry.w && <p className="mt-1 text-[13px] font-light leading-[1.6] text-ph-white/70">{entry.w}</p>}
+            </li>
+          ))}
+        </ol>
 
         {moment.why_it_matters && (
           <section className="mt-5">

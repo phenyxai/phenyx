@@ -30,6 +30,7 @@ export type { Pillar, Vec3 } from "./constellation-shape";
 // node for unit tests; they are re-exported here so the app has one import path.
 export {
   constellationAge,
+  eraLine,
   firstSentence,
   momentTitle,
   momentTopic,
@@ -94,6 +95,8 @@ export interface ClusterObservation {
   what_connects?: string | null;
   occurred_at?: string | null;
   platform?: string | null;
+  /** PHE-129: why it matters and what connects are held back on free. */
+  reading_locked?: boolean;
   /** PHE-129: the part of life the moment sits in (home, friends…); null on older rows. */
   area?: string | null;
   feedback?: MomentFeedback | null;
@@ -283,6 +286,7 @@ function normalizeCluster(raw: any): Cluster | null {
         occurred_at: o.occurred_at ?? null,
         platform: o.platform ?? null,
         area: typeof o.area === "string" && o.area.trim() ? o.area.trim() : null,
+        reading_locked: o.reading_locked === true,
         feedback: o.feedback ?? null,
       }))
     : [];

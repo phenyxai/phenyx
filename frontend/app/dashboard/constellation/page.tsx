@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ConstellationCanvas } from "@/components/phenyx/constellation-canvas";
 import { ConstellationPanel } from "@/components/phenyx/constellation-panel";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
-import { ALL_PILLARS, fetchConstellation, type ConstellationData, type Pillar } from "@/lib/constellation";
+import { ALL_PILLARS, fetchConstellation, pointMoments, type ConstellationData, type Pillar } from "@/lib/constellation";
 
 /** Fade-out time for an in-place panel swap, before the new view floats in. */
 const SWAP_OUT_MS = 180;
@@ -36,14 +36,25 @@ export default function ConstellationTabPage() {
     };
   }, []);
 
-  // PHE-129: insights' milestones link here with ?point=<pillar>. Read once on
-  // the client and drop it from the address, so a reload starts at the overview.
+  // PHE-129: insights' milestones link here with ?moment=<id> (or ?point=<pillar>).
+  // Read once on the client and drop it from the address, so a reload starts at
+  // the overview; the moment opens its point with that moment expanded.
+  const [linked, setLinked] = useState<{ point: string | null; moment: string | null } | null>(null);
   useEffect(() => {
-    const point = new URLSearchParams(window.location.search).get("point");
-    if (!point) return;
-    if ((ALL_PILLARS as readonly string[]).includes(point)) setSelectedPillar(point as Pillar);
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("point") && !params.get("moment")) return;
+    setLinked({ point: params.get("point"), moment: params.get("moment") });
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
+  useEffect(() => {
+    if (!linked || !data) return;
+    const owner = linked.moment
+      ? ALL_PILLARS.find((p) => pointMoments(data.pillars[p]).some((m) => m.id === linked.moment))
+      : (ALL_PILLARS as readonly string[]).includes(linked.point ?? "")
+        ? (linked.point as Pillar)
+        : undefined;
+    if (owner) setSelectedPillar(owner);
+  }, [linked, data]);
 
   const openPillar = useCallback((pillar: Pillar) => setSelectedPillar(pillar), []);
   const closePoint = useCallback(() => setSelectedPillar(null), []);
@@ -124,6 +135,7 @@ export default function ConstellationTabPage() {
               data={data}
               selectedPillar={shown}
               onSelectPillar={openPillar}
+              openMomentId={linked?.moment ?? null}
             />
           ) : (
             <p className="text-[13px] font-light lowercase text-ph-white/30">

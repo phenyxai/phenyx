@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   constellationAge,
+  eraLine,
   firstSentence,
   momentTitle,
   momentTopic,
@@ -265,4 +266,11 @@ test("threadAreas keeps the earliest point each followed part of life was follow
   const followed = new Set(["b", "c", "d"]);
   const threads = threadAreas(data, ["origin", "emergence", "convergence"], (id) => followed.has(id));
   assert.deepEqual([...threads], [["home", 1], ["friends", 1]]);
+});
+
+test("eraLine pairs the season of life with its place, never years", () => {
+  const detail = (pillar: Pillar, place: string) =>
+    ({ pillar, point: { story: "", years: "2006 – 2012", place }, clusters: [] }) as unknown as PillarDetail;
+  assert.equal(eraLine(detail("origin", "los angeles")), "childhood · los angeles");
+  assert.equal(eraLine(detail("recognition", "")), "today");
 });
