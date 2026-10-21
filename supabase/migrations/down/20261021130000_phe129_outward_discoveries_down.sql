@@ -5,11 +5,18 @@
 delete from public.discoveries;
 
 drop index if exists public.discoveries_user_saved_idx;
+drop index if exists public.discoveries_user_revealed_idx;
+
+drop policy if exists discoveries_select_own on public.discoveries;
+create policy discoveries_select_own on public.discoveries
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
 
 alter table public.discoveries
   drop constraint if exists discoveries_type_check,
   drop constraint if exists discoveries_headline_check,
   drop column if exists saved_at,
+  drop column if exists revealed_at,
   drop column if exists story,
   drop column if exists question,
   drop column if exists reason,

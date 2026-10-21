@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   dedupeDiscoveries,
+  discoveryWeek,
+  safeTimeZone,
   selectSet,
   validateDiscovery,
   type Discovery,
@@ -20,8 +22,8 @@ function candidate(overrides: Partial<DiscoveryCandidate> = {}): DiscoveryCandid
     question: "why might a listening room feel so natural to me",
     story: { label: "jazz kissa", title: "rooms for listening", detail: "japanese cafés built around a record collection." },
     trail: [
-      { platform: "youtube", date: "2016-03", detail: "saved a film score playlist" },
-      { platform: "spotify", date: "2024-09", detail: "the same scores in morning plays" },
+      { platform: "youtube", date: "2016-03", title: "a board", detail: "saved a film score playlist" },
+      { platform: "spotify", date: "2024-09", title: "a board", detail: "the same scores in morning plays" },
     ],
     confidence: 0.8,
     ...overrides,
@@ -69,10 +71,10 @@ test("validateDiscovery drops undated or unconnected sources and rejects a card 
   const valid = validateDiscovery(
     candidate({
       trail: [
-        { platform: "spotify", date: "2024-09", detail: "morning plays" },
-        { platform: "linkedin", date: "2020", detail: "not connected" },
-        { platform: "youtube", date: "sometime", detail: "no date" },
-        { platform: "youtube", date: "2018-13", detail: "no such month" },
+        { platform: "spotify", date: "2024-09", title: "a board", detail: "morning plays" },
+        { platform: "linkedin", date: "2020", title: "a board", detail: "not connected" },
+        { platform: "youtube", date: "sometime", title: "a board", detail: "no date" },
+        { platform: "youtube", date: "2018-13", title: "a board", detail: "no such month" },
       ],
     }),
     CONNECTED,
@@ -80,7 +82,7 @@ test("validateDiscovery drops undated or unconnected sources and rejects a card 
   assert.ok(valid);
   assert.deepEqual(valid.trail.map((entry) => entry.platform), ["spotify"]);
 
-  const none = candidate({ trail: [{ platform: "linkedin", date: "2020", detail: "not connected" }] });
+  const none = candidate({ trail: [{ platform: "linkedin", date: "2020", title: "a board", detail: "not connected" }] });
   assert.equal(validateDiscovery(none, CONNECTED), null);
 });
 
@@ -94,15 +96,15 @@ test("merge rule: two cards on the same dated source keep the better supported o
     pillar: "origin",
     headline: "stronger",
     trail: [
-      { platform: "youtube", date: "2016-03", detail: "a" },
-      { platform: "spotify", date: "2024-09", detail: "b" },
+      { platform: "youtube", date: "2016-03", title: "a board", detail: "a" },
+      { platform: "spotify", date: "2024-09", title: "a board", detail: "b" },
     ],
     confidence: 0.6,
   });
   const weaker = card({
     pillar: "becoming",
     headline: "weaker",
-    trail: [{ platform: "spotify", date: "2024-09", detail: "b" }],
+    trail: [{ platform: "spotify", date: "2024-09", title: "a board", detail: "b" }],
     confidence: 0.95,
   });
   assert.deepEqual(dedupeDiscoveries([weaker, stronger]).map((c) => c.headline), ["stronger"]);
@@ -110,29 +112,52 @@ test("merge rule: two cards on the same dated source keep the better supported o
 
 test("merge rule: two cards naming the same public thing keep the stronger", () => {
   const eno = { label: "Brian Eno", title: "music for a place", detail: "ambient records." };
-  const stronger = card({ headline: "stronger", story: eno, trail: [{ platform: "spotify", date: "2024", detail: "a" }, { platform: "youtube", date: "2016", detail: "b" }] });
-  const weaker = card({ headline: "weaker", story: { ...eno, label: "brian eno" }, trail: [{ platform: "pinterest", date: "2019", detail: "c" }] });
+  const stronger = card({ headline: "stronger", story: eno, trail: [{ platform: "spotify", date: "2024", title: "a board", detail: "a" }, { platform: "youtube", date: "2016", title: "a board", detail: "b" }] });
+  const weaker = card({ headline: "weaker", story: { ...eno, label: "brian eno" }, trail: [{ platform: "pinterest", date: "2019", title: "a board", detail: "c" }] });
   assert.deepEqual(dedupeDiscoveries([weaker, stronger]).map((c) => c.headline), ["stronger"]);
 });
 
 test("merge rule: picks on one point over the same years both stay", () => {
-  const place = card({ pillar: "origin", headline: "a", story: null, trail: [{ platform: "youtube", date: "2012", detail: "a" }] });
-  const person = card({ pillar: "origin", headline: "b", story: null, trail: [{ platform: "spotify", date: "2012-05", detail: "b" }] });
+  const place = card({ pillar: "origin", headline: "a", story: null, trail: [{ platform: "youtube", date: "2012", title: "a board", detail: "a" }] });
+  const person = card({ pillar: "origin", headline: "b", story: null, trail: [{ platform: "spotify", date: "2012-05", title: "a board", detail: "b" }] });
   assert.equal(dedupeDiscoveries([place, person]).length, 2);
 });
 
-test("selectSet takes one per point in point order, then the strongest of the rest, seven at most", () => {
-  const pillars = ["becoming", "origin", "origin", "convergence"];
-  const cards = pillars.map((pillar, i) =>
-    card({ pillar, headline: `${pillar} ${i}`, confidence: i / 10 }),
-  );
-  assert.deepEqual(
-    selectSet(cards).map((c) => c.headline),
-    ["origin 2", "convergence 3", "becoming 0", "origin 1"],
-  );
+test("selectSet takes the strongest of each kind first, then the strongest of the rest, seven at most", () => {
+  const types = ["place", "place", "person", "try", "detail", "medium", "field", "place"];
+  const cards = types.map((type, i) => card({ type: type as Discovery["type"], headline: `${type} ${i}`, confidence: i / 10 }));
+  const set = selectSet(cards);
+  assert.equal(set.length, 7);
+  assert.deepEqual(set.slice(0, 6).map((c) => c.headline), ["place 7", "person 2", "try 3", "detail 4", "medium 5", "field 6"]);
+  assert.ok(new Set(set.map((c) => c.type)).size >= 5);
 
-  const many = Array.from({ length: 10 }, (_, i) =>
-    card({ pillar: "origin", headline: `o${i}`, confidence: i / 10 }),
-  );
+  const many = Array.from({ length: 10 }, (_, i) => card({ headline: `o${i}`, confidence: i / 10 }));
   assert.equal(selectSet(many).length, 7);
+});
+
+test("validateDiscovery keeps each source’s title", () => {
+  const valid = validateDiscovery(candidate(), CONNECTED);
+  assert.equal(valid?.trail[0].title, "a board");
+});
+
+test("discoveryWeek opens monday at 9am in the person’s time zone", () => {
+  // Monday oct 19 2026, 8:30am in new york is still the week of oct 12.
+  assert.deepEqual(discoveryWeek(new Date("2026-10-19T12:30:00Z"), "America/New_York"), {
+    week: "2026-10-12",
+    opened: "2026-10-12T13:00:00.000Z",
+    resets: "2026-10-19T13:00:00.000Z",
+  });
+  // At 9am it opens.
+  assert.equal(discoveryWeek(new Date("2026-10-19T13:00:00Z"), "America/New_York").week, "2026-10-19");
+  // Sunday night in los angeles is already monday in tokyo.
+  assert.equal(discoveryWeek(new Date("2026-10-19T03:00:00Z"), "Asia/Tokyo").week, "2026-10-19");
+  assert.equal(discoveryWeek(new Date("2026-10-19T03:00:00Z"), "America/Los_Angeles").week, "2026-10-12");
+  // The week after clocks change (nov 1 2026 in new york) still opens at 9am local.
+  assert.equal(discoveryWeek(new Date("2026-10-28T12:00:00Z"), "America/New_York").resets, "2026-11-02T14:00:00.000Z");
+});
+
+test("safeTimeZone falls back to utc", () => {
+  assert.equal(safeTimeZone("Europe/London"), "Europe/London");
+  assert.equal(safeTimeZone("Mars/Olympus"), "UTC");
+  assert.equal(safeTimeZone(undefined), "UTC");
 });

@@ -5,6 +5,8 @@ export interface TrailEntry {
   platform: string;
   /** yyyy, yyyy-mm or yyyy-mm-dd. */
   date: string;
+  /** What the source is, in a few words. Empty on cards from before titles. */
+  title?: string;
   detail: string;
 }
 
@@ -28,6 +30,25 @@ export interface Discovery {
   sources: string[];
   trail: TrailEntry[];
   saved: boolean;
+  /** Joined the deck since this week opened: the "new" tag. */
+  is_new: boolean;
+}
+
+/** The week's discoveries, as `GET /discover` serves them (PHE-129). */
+export interface DiscoveryAllowance {
+  /** The monday the week opened. */
+  week: string;
+  /** When the next week opens, an ISO instant (monday 9am local). */
+  resets: string;
+  /** New discoveries a week by plan (1 free / 10 full). */
+  limit: number;
+  used: number;
+  weekly_left: number;
+  /** Bought discoveries still available. */
+  purchased: number;
+  /** How many can be added now. */
+  available: number;
+  full: boolean;
 }
 
 /** What each kind reads as on its card. */
@@ -38,6 +59,7 @@ const KIND_LABELS: Record<string, string> = {
   history: "from your history",
   detail: "a detail",
   medium: "a medium",
+  field: "a field",
 };
 
 /** A card's label, e.g. `try` → "something to try". */
@@ -70,4 +92,27 @@ export function trailDate(date: string): string {
   const name = month ? MONTHS[Number(month) - 1] : undefined;
   if (!name) return year;
   return day ? `${Number(day)} ${name} ${year}` : `${name} ${year}`;
+}
+
+/** "1 discovery", "3 discoveries". */
+export function discoveriesLabel(n: number): string {
+  return `${n} ${n === 1 ? "discovery" : "discoveries"}`;
+}
+
+/** When the next week opens, in the person's own time: "mon oct 26 at 9am". */
+export function refreshLabel(iso: string, timeZone?: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "monday at 9am";
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+      .formatToParts(d)
+      .map((p) => [p.type, p.value]),
+  );
+  const minutes = parts.minute === "00" ? "" : `:${parts.minute}`;
+  return `${parts.weekday} ${parts.month} ${parts.day} at ${parts.hour}${minutes}${parts.dayPeriod}`.toLowerCase();
+}
+
+/** A source line in "behind this discovery": "mar 2016 · pinterest · lamp-lit rooms board". */
+export function trailLine(entry: TrailEntry): string {
+  return [trailDate(entry.date), entry.platform, entry.title].filter(Boolean).join(" · ");
 }

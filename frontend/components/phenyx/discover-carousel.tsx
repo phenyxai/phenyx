@@ -10,13 +10,18 @@ import { kindLabel, loopOffset, type Discovery } from "@/lib/discover";
 // one a short accent bar), arrow keys and swipe. On wider screens the
 // neighbours sit 70px either side, dimmed but legible, with a lit edge facing
 // the main card (clicking one brings it forward). Phones show the main card
-// alone and swap it in place. Each card: its kind, the ★ save, the headline,
-// what it is, the personal reason in the accent, then "see the sources" and
-// "ask polaris". Layout and the lit edge live in globals.css (.discover-*);
-// this file owns state.
+// alone and swap it in place. Each card: its kind (and "new" once it joins
+// the deck this week), the ★ save, the headline, what it is, the personal
+// reason in the accent, then "see the sources" and "ask polaris". Every card
+// keeps one rhythm: the headline holds two lines, the detail three, the
+// reason two, so each part starts at the same height. A long deck counts
+// instead of drawing a dot per card. Layout and the lit edge live in
+// globals.css (.discover-*); this file owns state.
 // ============================================================================
 
 const SWAP_OUT_MS = 180;
+/** Past this many cards the dots give way to "3 of 24". */
+const DOTS_MAX = 12;
 const SWIPE_PX = 40;
 
 const onPhone = () => window.matchMedia("(max-width: 640px)").matches;
@@ -151,6 +156,11 @@ export function DiscoverCarousel({
       {count > 1 && (
         <div className="mt-8 flex items-center justify-center gap-[18px]">
           <StepButton label="previous discovery" onClick={() => go(index - 1)} d="M19 12H5M11 6l-6 6 6 6" />
+          {count > DOTS_MAX ? (
+            <p aria-live="polite" className="min-w-[64px] text-center text-[12.5px] tabular-nums text-ph-white/62">
+              {index + 1} of {count}
+            </p>
+          ) : (
           <div className="flex items-center" aria-live="polite">
             {discoveries.map((discovery, i) => (
               <button
@@ -169,6 +179,7 @@ export function DiscoverCarousel({
               </button>
             ))}
           </div>
+          )}
           <StepButton label="next discovery" onClick={() => go(index + 1)} d="M5 12h14M13 6l6 6-6 6" />
         </div>
       )}
@@ -210,7 +221,14 @@ function DiscoverCard({
       className="discover-card__face flex h-full flex-col rounded-[20px] border bg-ph-white/[0.016] p-6"
     >
       <div className="flex items-start justify-between gap-4">
-        <span className="discover-type pt-[11px] text-[10.5px] font-medium text-[var(--ph-accent)]">{kindLabel(d.type)}</span>
+        <span className="flex items-center gap-2 pt-[11px]">
+          <span className="discover-type text-[10.5px] font-medium text-[var(--ph-accent)]">{kindLabel(d.type)}</span>
+          {d.is_new && (
+            <span className="rounded-full bg-[rgba(var(--ph-accent-rgb),0.14)] px-2 py-[1px] text-[10px] font-medium text-[var(--ph-accent)]">
+              new
+            </span>
+          )}
+        </span>
         <button
           type="button"
           onClick={onSave}
@@ -221,9 +239,13 @@ function DiscoverCard({
           <StarIcon filled={d.saved} />
         </button>
       </div>
-      <h2 className="mt-2 text-[21px] font-normal leading-[1.35] text-ph-white/95 max-[640px]:text-[19px]">{d.headline}</h2>
-      <p className="mt-3 text-[14px] leading-[1.6] text-ph-white/80">{d.detail}</p>
-      <p className="mt-3 text-[13px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">{d.reason}</p>
+      <h2 className="mt-2 line-clamp-2 min-h-[2.7em] text-[21px] font-normal leading-[1.35] text-ph-white/95 max-[640px]:text-[19px]">
+        {d.headline}
+      </h2>
+      <p className="mt-3 line-clamp-3 min-h-[4.8em] text-[14px] leading-[1.6] text-ph-white/80">{d.detail}</p>
+      <p className="mt-3 line-clamp-2 min-h-[3.1em] text-[13px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">
+        {d.reason}
+      </p>
       <div className="mt-auto flex flex-wrap gap-2 pt-3">
         <CardLink onClick={onSources}>see the sources</CardLink>
         <CardLink onClick={onAsk}>ask polaris</CardLink>
