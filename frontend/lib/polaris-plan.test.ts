@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parsePlan, weekResetLabel } from "./polaris-plan.ts";
+import { parsePlan, resetLabel } from "./polaris-plan.ts";
 
 test("parsePlan reads a named plan with timed steps and the question after it", () => {
   const plan = parsePlan(
@@ -22,9 +22,8 @@ test("parsePlan needs two numbered lines, and names an unnamed plan", () => {
   assert.equal(plan?.before, "");
 });
 
-test("weekResetLabel is a week after the allowance week starts", () => {
-  assert.equal(weekResetLabel("2026-10-12"), "oct 19");
-  assert.equal(weekResetLabel("2026-12-28"), "jan 4");
-  // No week yet: the coming monday.
-  assert.equal(weekResetLabel(null, new Date("2026-10-21T15:00:00Z")), "oct 26");
+test("resetLabel reads the reset date, else the first of next month", () => {
+  assert.equal(resetLabel("2026-11-01"), "nov 1");
+  assert.equal(resetLabel(null, new Date("2026-12-21T15:00:00Z")), "jan 1");
+  assert.equal(resetLabel("garbage", new Date("2026-10-21T15:00:00Z")), "nov 1");
 });

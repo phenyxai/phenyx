@@ -189,7 +189,7 @@ export class ConstellationService {
 
     const tier = (profileRes.data?.tier as string | null) ?? "free";
     const capabilities = this.billing.capabilitiesFor(tier);
-    const tracesUnlocked = capabilities.clusterEntries === Infinity;
+    const tracesUnlocked = capabilities.evidenceTracesPerDay === Infinity;
     const state = (stateRes.data ?? null) as Record<string, unknown> | null;
     const createdAt = (profileRes.data?.created_at as string | null) ?? null;
     const years = tenureYears(createdAt);
@@ -244,7 +244,8 @@ export class ConstellationService {
       areas,
       syntheses,
       capabilities.clusterEntries,
-      tracesUnlocked
+      tracesUnlocked,
+      capabilities.momentReading
     );
 
     const engineRecord = this.readEngineRecord(state);
@@ -292,7 +293,8 @@ export class ConstellationService {
     areas: AreaRow[],
     syntheses: Map<string, string>,
     clusterEntries: number,
-    tracesUnlocked: boolean
+    tracesUnlocked: boolean,
+    readingUnlocked: boolean
   ): ConstellationPillar[] {
     return PILLARS.map((pillar) => {
       const clusters = buildClustersForPillar(
@@ -301,7 +303,8 @@ export class ConstellationService {
         areas,
         syntheses,
         clusterEntries,
-        tracesUnlocked
+        tracesUnlocked,
+        readingUnlocked
       );
       const observationCount = clusters.reduce(
         (n, c) => n + c.observation_count,

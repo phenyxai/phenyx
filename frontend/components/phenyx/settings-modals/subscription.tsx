@@ -15,9 +15,7 @@ import {
 
 type PlanId = 'free' | 'monthly' | 'yearly'
 
-const SAVED = Math.round(V67_PRICING.monthly * 12 - V67_PRICING.yearly)
-
-/** PHE-129: three cards, few words (Oct 20 demo), in this system's own terms. */
+/** PHE-129: three cards in the company overview's terms (section 17). */
 const PLANS: { id: PlanId; name: string; price: string; per: string; lines: string[] }[] = [
   {
     id: 'free',
@@ -25,10 +23,10 @@ const PLANS: { id: PlanId; name: string; price: string; per: string; lines: stri
     price: '$0',
     per: '',
     lines: [
-      'every moment on your constellation',
-      'your insights',
-      'a new set of discoveries each week',
-      `${V67_PRICING.polarisWeeklyQuestions.free} polaris questions a week`,
+      'every point and moment, with what happened and its sources',
+      'the whole insights page',
+      `${V67_PRICING.weeklyDiscoveries.free} new discovery a week`,
+      `${V67_PRICING.polarisMonthlyPoints.free} polaris points a month and past conversations`,
     ],
   },
   {
@@ -37,17 +35,18 @@ const PLANS: { id: PlanId; name: string; price: string; per: string; lines: stri
     price: `$${V67_PRICING.monthly}`,
     per: 'a month',
     lines: [
-      'the dated sources behind each moment',
-      'everything in free',
-      `${V67_PRICING.polarisWeeklyQuestions.full} polaris questions a week`,
+      'why each moment matters and what it connects to',
+      `${V67_PRICING.weeklyDiscoveries.full} new discoveries a week`,
+      `${V67_PRICING.polarisMonthlyPoints.full} polaris points a month`,
+      'questions to return to',
     ],
   },
   {
     id: 'yearly',
     name: 'full · annual',
-    price: `$${V67_PRICING.yearly}`,
+    price: `$${V67_PRICING.yearly.toFixed(2)}`,
     per: 'a year',
-    lines: ['everything in full', 'billed once a year', `about $${SAVED} saved`],
+    lines: ['everything in full', 'billed once a year', `${V67_PRICING.annualDiscountPercent}% off`],
   },
 ]
 

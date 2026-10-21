@@ -1,4 +1,4 @@
-// PHE-129 — polaris plan cards and the usage reset line. Dependency free so it
+// PHE-129 — polaris plan cards and the points reset line. Dependency free so it
 // runs under `node --test`.
 
 export interface PlanStep {
@@ -56,13 +56,10 @@ export function parsePlan(body: string): ParsedPlan | null {
 
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
-/** The allowance week starts on a monday (UTC); it resets a week later: "2026-10-12" → "oct 19". */
-export function weekResetLabel(week: string | null | undefined, now: Date = new Date()): string {
-  const start = week ? new Date(`${week}T00:00:00Z`) : null;
-  const base =
-    start && !Number.isNaN(start.getTime())
-      ? start
-      : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7)));
-  const reset = new Date(base.getTime() + 7 * 86_400_000);
-  return `${MONTHS[reset.getUTCMonth()]} ${reset.getUTCDate()}`;
+/** "2026-11-01" → "nov 1". With no date yet, the first of next month (UTC), when monthly points come back. */
+export function resetLabel(date: string | null | undefined, now: Date = new Date()): string {
+  const parsed = date ? new Date(`${date}T00:00:00Z`) : null;
+  const d =
+    parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }

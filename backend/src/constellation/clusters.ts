@@ -75,6 +75,8 @@ export interface ClusterObservation {
   /** The platform it came from (the first of its sources). */
   platform: string | null;
   feedback: MomentFeedback | null;
+  /** PHE-129: why it matters and what connects are held back (free). What happened and the sources still ship. */
+  reading_locked: boolean;
 }
 
 export interface Cluster {
@@ -108,7 +110,8 @@ function clusterPreview(
 
 function serveObservation(
   row: ClusterObservationInput,
-  tracesUnlocked: boolean
+  tracesUnlocked: boolean,
+  readingUnlocked: boolean
 ): ClusterObservation {
   const points = asStringArray(row.points);
   const sources = (row.sources?.length ? row.sources : row.source_platforms) ?? [];
@@ -129,12 +132,13 @@ function serveObservation(
     evidence,
     title: row.title ?? null,
     what_happened: row.what_happened ?? null,
-    why_it_matters: row.why_it_matters ?? null,
-    what_connects: row.what_connects ?? null,
+    why_it_matters: readingUnlocked ? (row.why_it_matters ?? null) : null,
+    what_connects: readingUnlocked ? (row.what_connects ?? null) : null,
     occurred_at: row.occurred_at ?? row.span_start?.slice(0, 10) ?? null,
     area: row.area ?? null,
     platform: row.source_platforms?.[0] ?? null,
     feedback: row.feedback ?? null,
+    reading_locked: !readingUnlocked,
   };
 }
 
@@ -152,7 +156,8 @@ function collectSources(rows: ClusterObservationInput[]): string[] {
 /**
  * Group a pillar's observations into clusters, then slice each cluster to
  * `clusterEntries`. Infinity means keep all. Traces unlock on served rows
- * when `tracesUnlocked` is true (Pro); free keeps `{ sig, recs }` stubs.
+ * when `tracesUnlocked` is true (both plans since PHE-129). A moment's reading
+ * (why it matters, what connects) ships only when `readingUnlocked` (full).
  */
 export function buildClustersForPillar(
   pillar: Pillar,
@@ -160,7 +165,8 @@ export function buildClustersForPillar(
   areas: AreaRow[],
   syntheses: Map<string, string>,
   clusterEntries: number,
-  tracesUnlocked: boolean
+  tracesUnlocked: boolean,
+  readingUnlocked = true
 ): Cluster[] {
   const pillarObs = observations.filter((o) => o.pillar === pillar);
   const pillarAreas = areas
@@ -190,7 +196,7 @@ export function buildClustersForPillar(
     if (rows.length === 0) return;
     const cap = Number.isFinite(clusterEntries) ? clusterEntries : rows.length;
     const servedRows = rows.slice(0, Math.max(0, cap));
-    const served = servedRows.map((row) => serveObservation(row, tracesUnlocked));
+    const served = servedRows.map((row) => serveObservation(row, tracesUnlocked, readingUnlocked));
     clusters.push({
       id,
       label,

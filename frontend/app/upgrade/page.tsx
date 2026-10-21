@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { apiFetch } from "@/lib/api-client";
+import { V67_PRICING } from "@/lib/billing";
 
 type BillingPeriod = "monthly" | "yearly";
 
@@ -193,10 +194,10 @@ export default function UpgradePage() {
             </div>
             <ul className="space-y-3 mb-6">
               {[
-                "every observation of the day",
-                "your seven-point constellation",
-                "three polaris questions each week",
-                "the span of time behind each observation",
+                "every point and moment, with what happened and its sources",
+                "the whole insights page",
+                "1 new discovery a week",
+                "30 polaris points a month and past conversations",
               ].map((feature, i) => (
                 <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "rgba(255,253,253,0.53)" }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,253,253,0.33)" strokeWidth="2">
@@ -237,7 +238,7 @@ export default function UpgradePage() {
             <div style={{ fontSize: "32px", fontWeight: 300, marginBottom: "24px" }}>
               {billingPeriod === "yearly" ? (
                 <>
-                  $99
+                  ${V67_PRICING.yearly.toFixed(2)}
                   <span style={{ fontSize: "12px", color: "rgba(255,253,253,0.33)" }}>/year</span>
                 </>
               ) : (
@@ -245,16 +246,17 @@ export default function UpgradePage() {
                   $12.99
                   <span style={{ fontSize: "12px", color: "rgba(255,253,253,0.33)" }}>/month</span>
                   <span style={{ fontSize: "11px", color: "rgba(255,253,253,0.33)", display: "block", marginTop: "4px" }}>
-                    or $99/year
+                    or ${V67_PRICING.yearly.toFixed(2)}/year, {V67_PRICING.annualDiscountPercent}% off
                   </span>
                 </>
               )}
             </div>
             <ul className="space-y-3 mb-6">
               {[
-                "more polaris room each week",
-                "a weekly look at what shifted",
-                "a yearly look across your timeline",
+                "why each moment matters and what it connects to",
+                "10 new discoveries a week",
+                "300 polaris points a month",
+                "questions to return to",
               ].map((feature, i) => (
                 <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "var(--ph-white)" }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2">
@@ -294,7 +296,7 @@ export default function UpgradePage() {
                 {isLoading
                   ? "loading..."
                   : billingPeriod === "yearly"
-                    ? "continue with full, $99/year"
+                    ? `continue with full, $${V67_PRICING.yearly.toFixed(2)}/year`
                     : "continue with full, $12.99/month"}
               </button>
             )}

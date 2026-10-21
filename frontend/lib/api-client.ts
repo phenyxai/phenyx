@@ -154,19 +154,26 @@ export interface PolarisUsage {
 }
 
 /**
- * Weekly Polaris allowance snapshot (PHE-27 / PHE-94), returned alongside each
- * ask. Counted in QUESTIONS: one completed ask is one unit.
+ * PHE-129: Polaris points this month, returned alongside each ask and on
+ * polaris home. 30 free / 300 full, refreshing on the first of the month; bought
+ * points are spent once the month's run out.
  */
 export interface PolarisAllowance {
-  /** ISO week start (Monday) in UTC — the polaris_token_usage.week key. */
-  week: string
-  /** Questions asked this week so far. */
-  used: number
-  /** Tier-derived weekly question limit (3 free / 40 full). */
+  /** First of the month (UTC), YYYY-MM-01. */
+  month: string
+  /** When the monthly points come back, YYYY-MM-DD. */
+  resets: string
+  /** The month's points by plan. */
   limit: number
-  /** max(0, limit - used). */
+  /** The month's points used so far. */
+  used: number
+  monthly_left: number
+  /** Bought points still available. */
+  purchased: number
+  /** monthly_left + purchased. */
   remaining: number
   limit_reached: boolean
+  full: boolean
 }
 
 /** PHE-123: the three ways polaris helps (spec doc 4). */
@@ -176,18 +183,19 @@ export interface PolarisAnswer {
   /** null when limit_reached is true (no Claude call was made). */
   answer: string | null
   pillar_tag: string | null
-  thread_id: string
-  /** The conversation's mode (fixed when it was opened). */
-  mode?: PolarisMode
+  /** null when limit_reached opened no conversation. */
+  thread_id: string | null
+  /** The conversation's mode: a starting point's, or null for a typed question. */
+  mode?: PolarisMode | null
   message_id: string | null
   usage: PolarisUsage
   sparse?: boolean
+  /** True when the points left could not cover this turn: no Claude call, no debit. */
   limit_reached?: boolean
-  /** Verbatim at-limit copy on the over-budget short-circuit (PHE-27). */
+  /** The out-of-points note on that short-circuit. */
   message?: string
-  /** True on the over-budget short-circuit — surface the upgrade CTA (PHE-27). */
-  upgrade_cta?: boolean
-  /** Remaining weekly allowance for display (PHE-27). */
+  /** What the turn cost, or would have. */
+  cost?: number
   allowance?: PolarisAllowance
   is_crisis?: boolean
   resources?: { us: string; text: string; international: string }
@@ -196,20 +204,25 @@ export interface PolarisAnswer {
 /**
  * Ask Polaris a question. Pass `threadId` to continue an existing conversation;
  * omit it to start a new one (the returned `thread_id` is the id to reuse), with
- * the mode and, from a moment or a discovery, the context it opens with. Throws
- * on a non-2xx response so callers can surface a retry affordance.
+ * a starting point's mode (a typed question sends none, and polaris reads it
+ * from the phrasing) and, from a moment or a discovery, the context it opens
+ * with. `followUp` marks one of the follow-up chips. Throws on a non-2xx
+ * response so callers can surface a retry.
  */
 export async function askPolaris(
   question: string,
   threadId?: string,
-  open?: { mode: PolarisMode; context?: string | null },
+  open?: { mode: PolarisMode | null; context?: string | null },
+  followUp = false,
 ): Promise<PolarisAnswer> {
   const res = await apiFetch("/api/polaris/ask", {
     method: "POST",
     body: JSON.stringify({
       question,
       ...(threadId ? { thread_id: threadId } : {}),
-      ...(!threadId && open ? { mode: open.mode, ...(open.context ? { context: open.context } : {}) } : {}),
+      ...(!threadId && open?.mode ? { mode: open.mode } : {}),
+      ...(!threadId && open?.context ? { context: open.context } : {}),
+      ...(followUp ? { follow_up: true } : {}),
     }),
   })
   if (!res.ok) {
@@ -257,12 +270,23 @@ export interface PolarisSavedPlan extends PolarisPlanState {
   saved_at: string
 }
 
+/** PHE-129: an open question polaris left in a conversation ("questions to return to", full). */
+export interface PolarisReturnQuestion {
+  thread_id: string
+  /** What the conversation was about. */
+  title: string
+  /** The question polaris asked last. */
+  line: string
+}
+
 export interface PolarisThreadsResponse {
   threads: PolarisThreadSummary[]
   starters: PolarisStarter[]
-  /** Live weekly question allowance for the usage pop-up. */
+  /** This month's points for the usage pop-up. */
   allowance?: PolarisAllowance
   plans?: PolarisSavedPlan[]
+  /** At most three on full; null on free. */
+  returns?: PolarisReturnQuestion[] | null
 }
 
 /** A single reloaded turn; `body` is decrypted server-side, rendered plain-text. */
@@ -314,4 +338,19 @@ export async function setPolarisPlan(
   })
   if (!res.ok) throw new Error("could not save the plan")
   return (await res.json()) as PolarisPlanState
+}
+
+/**
+ * PHE-129: buy polaris points (100 to 2,000 in steps of 100) or a discovery
+ * pack (1, 3 or 10). Sends the browser to checkout; throws when checkout could
+ * not start.
+ */
+export async function startPurchase(kind: "points" | "discoveries", amount: number): Promise<void> {
+  const res = await apiFetch("/stripe/purchase", {
+    method: "POST",
+    body: JSON.stringify({ kind, amount }),
+  })
+  const { url } = res.ok ? ((await res.json()) as { url?: string | null }) : { url: null }
+  if (!url) throw new Error("checkout could not be started. please try again.")
+  window.location.assign(url)
 }

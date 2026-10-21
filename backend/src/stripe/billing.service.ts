@@ -12,16 +12,17 @@ export type PaidAccessTier = "pro" | "gifted";
  * A tier change takes effect on the NEXT gated read: capabilities are resolved
  * per-request from the freshly-read tier, never cached.
  *
- * v244 commercial model (PHE-92, PHE-94; v67 gave free two traces a day and
- * no Polaris):
- * - Free sees every observation of the day, every body, and the time span each
- *   one rests on. The evidence trace is never served to free: the door is shown
- *   on every card and opens none. Underneath, daily focus, weekly synthesis,
- *   and yearly recap are full-only.
- * - Polaris is open on both tiers and metered by QUESTIONS, not tokens: 3 a
- *   week on free, 40 a week on full. Free hits the upgrade modal at the limit;
- *   full is offered the $4.99 top-up.
- * - Full (`pro` in the DB) is $12.99/month or $99/year. The person only ever
+ * PHE-129 commercial model (Oct 21 rebuild doc and company overview): "free
+ * covers the moment, full covers the whole view".
+ * - Free sees every point and every moment, with what happened and its dated
+ *   sources, and the whole insights page. Full adds the reading under each
+ *   moment (why it matters, what connects).
+ * - Polaris runs on points per calendar month: 30 on free, 300 on full. Points
+ *   bought on either plan are a separate balance that never expires; see
+ *   {@link ../polaris/token-budget.service.ts}.
+ * - New discoveries: 1 a week on free, 10 on full, refreshing Monday 9am in the
+ *   person's local time; bought discoveries stay until used.
+ * - Full (`pro` in the DB) is $12.99/month or $132.50/year. The person only ever
  *   reads "full"; "pro" is the enum value, never product copy.
  * - Grandfathered `gifted` rows resolve identically to pro. The word "gifted"
  *   is never product copy.
@@ -29,35 +30,27 @@ export type PaidAccessTier = "pro" | "gifted";
 export interface TierCapabilities {
   /**
    * Whether this is a paid tier (pro or gifted). The single binary free/full
-   * split — {@link BillingService.hasFullAccess} derives from it, so a
-   * capability that free also has (Polaris access, since v244) never doubles
-   * as the paid flag.
+   * split — {@link BillingService.hasFullAccess} derives from it.
    */
   paid: boolean;
   /**
-   * How many observation *bodies* are served. v67: Infinity for every tier —
-   * free reads the full daily feed. `Infinity` (not a magic large number) so a
-   * read gate can express "all" as `index < observationsUnlocked`.
+   * How many observation *bodies* are served. Infinity for every tier: free
+   * reads every moment. `Infinity` (not a magic large number) so a read gate can
+   * express "all" as `index < observationsUnlocked`.
    */
   observationsUnlocked: number;
   /**
-   * How many evidence traces (`what this rests on` / citations / provenance)
-   * leave the server. Free: 0 (v244: the trace is wholly behind full; a served
-   * free row keeps `{ sig, recs }` and its time span so the door has a name).
-   * Pro: Infinity. The gate indexes the all-time `surfaced_at DESC` list, so a
-   * finite budget means "the N freshest rows", not N fresh ones each day.
+   * How many evidence traces (the dated sources behind a moment) leave the
+   * server. Infinity on both tiers since PHE-129: free sees the sources too.
    */
   evidenceTracesPerDay: number;
-  /**
-   * Weekly Polaris QUESTION allowance (PHE-94). Free: 3. Pro: 40. One completed
-   * ask debits one question regardless of its token cost; see
-   * {@link ../polaris/token-budget.service.ts}.
-   */
-  polarisWeeklyQuestions: number;
-  /**
-   * Whether Polaris is usable at all (composer, threads, ask). True on every
-   * tier since v244 — the weekly question allowance is the only gate.
-   */
+  /** Whether a moment's reading (why it matters, what connects) is served. Full only. */
+  momentReading: boolean;
+  /** Polaris points per calendar month (PHE-129). Free: 30. Pro: 300. */
+  polarisMonthlyPoints: number;
+  /** New discoveries per week, refreshing Monday 9am local (PHE-129). Free: 1. Pro: 10. */
+  weeklyDiscoveries: number;
+  /** Whether Polaris is usable at all (composer, threads, ask). True on every tier. */
   polarisAccess: boolean;
   /** Whether served observation payloads include `source_platforms` citations. */
   crossPlatformCitations: boolean;
@@ -73,17 +66,17 @@ export interface TierCapabilities {
   weeklySynthesis: boolean;
   /** Pro + one-year tenure yearly recap. Capability flag only; tenure is separate. */
   yearlyRecap: boolean;
-  /** Max observation entries per constellation cluster. Free: 2. Pro: Infinity. */
+  /** Max observation entries per constellation cluster. Infinity on both tiers: every moment shows. */
   clusterEntries: number;
-  /** Whether the $4.99 weekly question top-up is offered (full only). */
-  tokenTopupEnabled: boolean;
 }
 
 const PRO_CAPABILITIES: TierCapabilities = {
   paid: true,
   observationsUnlocked: Infinity,
   evidenceTracesPerDay: Infinity,
-  polarisWeeklyQuestions: 40,
+  momentReading: true,
+  polarisMonthlyPoints: 300,
+  weeklyDiscoveries: 10,
   polarisAccess: true,
   crossPlatformCitations: true,
   trackingOverTime: true,
@@ -93,32 +86,32 @@ const PRO_CAPABILITIES: TierCapabilities = {
   weeklySynthesis: true,
   yearlyRecap: true,
   clusterEntries: Infinity,
-  tokenTopupEnabled: true,
 };
 
 const FREE_CAPABILITIES: TierCapabilities = {
   paid: false,
   observationsUnlocked: Infinity,
-  evidenceTracesPerDay: 0,
-  polarisWeeklyQuestions: 3,
+  evidenceTracesPerDay: Infinity,
+  momentReading: false,
+  polarisMonthlyPoints: 30,
+  weeklyDiscoveries: 1,
   polarisAccess: true,
-  crossPlatformCitations: false,
+  crossPlatformCitations: true,
   trackingOverTime: false,
   fullProvenance: false,
   underneath: false,
   dailyFocus: false,
   weeklySynthesis: false,
   yearlyRecap: false,
-  clusterEntries: 2,
-  tokenTopupEnabled: false,
+  clusterEntries: Infinity,
 };
 
 @Injectable()
 export class BillingService {
   /**
    * Resolve the capability set for a tier. This is the read-side counterpart to
-   * the generation-time `locked_for_free` flag: the two MUST agree that free
-   * never withholds observation bodies, only the evidence trace behind them.
+   * the generation-time `locked_for_free` flag: free never withholds a moment's
+   * body or its sources, only the reading under it (PHE-129).
    */
   capabilitiesFor(tier: string | null | undefined): TierCapabilities {
     const paid = tier === "pro" || tier === "gifted";
@@ -128,8 +121,7 @@ export class BillingService {
   /**
    * Thin wrapper kept for remaining binary callers. Derived from
    * {@link capabilitiesFor}'s `paid` flag so there is a single source of truth
-   * for the free/full split. Gifted is pro-equivalent. (Before PHE-94 this read
-   * `polarisAccess`, which is now true on free too.)
+   * for the free/full split. Gifted is pro-equivalent.
    */
   hasFullAccess(tier: string | null | undefined): boolean {
     return this.capabilitiesFor(tier).paid;

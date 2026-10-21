@@ -36,12 +36,12 @@ const areas = [
   { id: "area-b", pillar: "origin", label: "the late window", ordinal: 2 },
 ];
 
-test("free clusterEntries is 2 and pro is Infinity", () => {
-  assert.equal(FREE, 2);
+test("PHE-129: both plans serve every moment", () => {
+  assert.equal(FREE, Infinity);
   assert.equal(PRO, Infinity);
 });
 
-test("free: each cluster keeps at most 2 observations and omits the rest", () => {
+test("a finite cap keeps at most that many observations per cluster and omits the rest", () => {
   const rows = [
     obs("a1", "area-a"),
     obs("a2", "area-a"),
@@ -58,7 +58,7 @@ test("free: each cluster keeps at most 2 observations and omits the rest", () =>
     rows,
     areas,
     new Map(),
-    FREE,
+    2,
     false
   );
   assert.equal(clusters.length, 3);
@@ -185,4 +185,22 @@ test("source spans use the spaced en dash, including legacy hyphenated spans", (
   assert.equal(evidence.span, "2018 – 2025");
 
   assert.equal(sanitizeProse("you kept returning to it 2016—2026."), "you kept returning to it 2016 – 2026.");
+});
+
+test("PHE-129: free keeps what happened and the sources; why it matters and what connects are full only", () => {
+  const row = {
+    ...obs("m1", null),
+    what_happened: "you start a pinterest board.",
+    why_it_matters: "the light you saved returns.",
+    what_connects: "it shapes your films.",
+  };
+  const [free] = buildClustersForPillar("origin", [row], [], new Map(), Infinity, true, false);
+  assert.equal(free.observations[0].what_happened, "you start a pinterest board.");
+  assert.equal(free.observations[0].why_it_matters, null);
+  assert.equal(free.observations[0].what_connects, null);
+  assert.equal(free.observations[0].reading_locked, true);
+  assert.equal(free.observations[0].locked, false);
+  const [full] = buildClustersForPillar("origin", [row], [], new Map(), Infinity, true, true);
+  assert.equal(full.observations[0].why_it_matters, "the light you saved returns.");
+  assert.equal(full.observations[0].reading_locked, false);
 });
