@@ -142,7 +142,7 @@ export class ConstellationService {
       supabase
         .from("observations")
         .select(
-          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at,area_id,points,signal_type,evidence_n,evidence_span,span_start,span_end,record_count,sources,title,what_happened,why_it_matters,what_connects,occurred_at"
+          "id,pillar,body,source_platforms,meta_label,is_new,locked_for_free,surfaced_at,area_id,points,signal_type,evidence_n,evidence_span,span_start,span_end,record_count,sources,title,what_happened,why_it_matters,what_connects,occurred_at,area"
         )
         .eq("user_id", userId)
         .order("surfaced_at", { ascending: false }),
@@ -189,7 +189,7 @@ export class ConstellationService {
 
     const tier = (profileRes.data?.tier as string | null) ?? "free";
     const capabilities = this.billing.capabilitiesFor(tier);
-    const tracesUnlocked = capabilities.clusterEntries === Infinity;
+    const tracesUnlocked = capabilities.evidenceTracesPerDay === Infinity;
     const state = (stateRes.data ?? null) as Record<string, unknown> | null;
     const createdAt = (profileRes.data?.created_at as string | null) ?? null;
     const years = tenureYears(createdAt);
@@ -244,7 +244,8 @@ export class ConstellationService {
       areas,
       syntheses,
       capabilities.clusterEntries,
-      tracesUnlocked
+      tracesUnlocked,
+      capabilities.momentReading
     );
 
     const engineRecord = this.readEngineRecord(state);
@@ -292,7 +293,8 @@ export class ConstellationService {
     areas: AreaRow[],
     syntheses: Map<string, string>,
     clusterEntries: number,
-    tracesUnlocked: boolean
+    tracesUnlocked: boolean,
+    readingUnlocked: boolean
   ): ConstellationPillar[] {
     return PILLARS.map((pillar) => {
       const clusters = buildClustersForPillar(
@@ -301,7 +303,8 @@ export class ConstellationService {
         areas,
         syntheses,
         clusterEntries,
-        tracesUnlocked
+        tracesUnlocked,
+        readingUnlocked
       );
       const observationCount = clusters.reduce(
         (n, c) => n + c.observation_count,

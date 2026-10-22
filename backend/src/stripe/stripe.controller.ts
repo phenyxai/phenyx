@@ -7,11 +7,14 @@ import {
   Logger,
   Post,
   Req,
+  UseGuards,
 } from "@nestjs/common";
 import type { Request } from "express";
 import { ConfigService } from "@nestjs/config";
 import { StripeService } from "./stripe.service";
 import { SupabaseService } from "../supabase/supabase.service";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
+import { purchaseLine } from "./purchases";
 import type { Stripe } from "stripe/cjs/stripe.core.js";
 
 type CheckoutKind = "pro" | "gift";
@@ -162,6 +165,51 @@ export class StripeController {
   }
 
   /**
+   * PHE-129 — POST /stripe/purchase
+   * Body: { kind: "points" | "discoveries", amount: number }
+   * Polaris points or a discovery pack, on either plan. The person comes from
+   * the session, never the body; the price is set here, inline.
+   */
+  @Post("purchase")
+  @UseGuards(SupabaseAuthGuard)
+  async purchase(
+    @Req() req: Request,
+    @Body() body: { kind?: unknown; amount?: unknown },
+    @Headers("origin") origin: string | undefined
+  ) {
+    const user = (req as any).user as { id: string };
+    const line = purchaseLine(body?.kind, body?.amount);
+    if (!line) {
+      throw new HttpException({ error: "Unknown purchase" }, 400);
+    }
+    const back = `${origin || "http://localhost:3000"}/dashboard/${body.kind === "points" ? "polaris" : "discover"}`;
+    try {
+      const session = await this.stripeService.getClient().checkout.sessions.create({
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            quantity: line.quantity,
+            price_data: {
+              currency: "usd",
+              unit_amount: line.unitAmount,
+              product_data: { name: line.name },
+            },
+          },
+        ],
+        success_url: back,
+        cancel_url: back,
+        client_reference_id: user.id,
+        metadata: { userId: user.id, purchase: String(body.kind), amount: String(line.amount) },
+      });
+      return { url: session.url ?? null };
+    } catch (err) {
+      this.logger.error({ msg: "purchase_checkout_failed", err: String(err) });
+      throw new HttpException({ error: "Failed to create checkout session" }, 500);
+    }
+  }
+
+  /**
    * POST /stripe/webhook
    * Stripe-signed; raw body is mounted in main.ts via express.raw().
    */
@@ -256,6 +304,38 @@ export class StripeController {
             break;
           }
 
+          // PHE-129: points and discovery packs credit the bought balance,
+          // once per session, and never touch the tier.
+          const purchase = session.metadata?.purchase;
+          if (session.mode === "payment" && purchase) {
+            const line = purchaseLine(purchase, session.metadata?.amount);
+            if (!line || session.payment_status !== "paid") {
+              this.logger.error({
+                msg: "webhook_purchase_not_credited",
+                event_id: event.id,
+                user_id: userId,
+                purchase,
+                payment_status: session.payment_status,
+              });
+              break;
+            }
+            const { data: credited, error } = await supabaseAdmin.rpc("credit_purchase", {
+              p_session: session.id,
+              p_user: userId,
+              p_kind: purchase,
+              p_amount: line.amount,
+            });
+            if (error) throw error;
+            this.logger.log({
+              msg: credited ? "webhook_purchase_credited" : "webhook_purchase_already_credited",
+              event_id: event.id,
+              user_id: userId,
+              purchase,
+              amount: line.amount,
+            });
+            break;
+          }
+
           if (session.mode === "payment") {
             const expanded = await stripe.checkout.sessions.retrieve(session.id, {
               expand: ["line_items.data.price"],
@@ -263,19 +343,6 @@ export class StripeController {
             const line = expanded.line_items?.data[0];
             const priceId = line?.price?.id;
             const giftId = giftPriceId();
-            const topupId = this.config.get<string>("STRIPE_POLARIS_TOPUP_PRICE_ID");
-
-            // One-time Polaris top-ups must not touch `user_profiles.tier`.
-            // Unknown prices used to fall through to `free` and wipe Pro.
-            if (topupId && priceId === topupId) {
-              this.logger.log({
-                msg: "webhook_checkout_topup_no_tier_change",
-                event_id: event.id,
-                user_id: userId,
-                price_id: priceId,
-              });
-              break;
-            }
 
             let tier: "pro" | "gifted" | "free" | null = null;
             if (giftId && priceId === giftId) {

@@ -59,14 +59,20 @@ export interface ProfileSnapshotItem {
 /** How full is paid for; null when there is no billing (free, gifted). */
 export type BillingPeriod = "monthly" | "yearly"
 
-/** PHE-124 insights reading (backend `InsightsReading`). */
+/** PHE-124 / PHE-129 insights reading (backend `InsightsReading`). Each line and item names the moments it rests on. */
 export interface InsightsReading {
   version: number
   generated_at: string
-  becoming_clearer: { line: string; support: string } | null
-  needs_shape: { line: string; support: string } | null
-  matters: { title: string; body: string }[]
-  eras: { title: string; years: string; place: string | null; line: string }[]
+  /** "your story so far": one line and five milestones on real moments, in date order. */
+  story?: {
+    line: string
+    milestones: { moment_id: string; label: string; date: string; pillar: string }[]
+  } | null
+  becoming_clearer: { line: string; support: string; moment_ids: string[] } | null
+  needs_shape: { line: string; support: string; moment_ids: string[] } | null
+  matters: { title: string; body: string; moment_ids: string[] }[]
+  /** "how you find your way". */
+  patterns?: { title: string; body: string; moment_ids: string[] }[]
 }
 
 /** Shape of `GET /profile/overview` (backend `ProfileOverviewResponse`). */
@@ -148,19 +154,26 @@ export interface PolarisUsage {
 }
 
 /**
- * Weekly Polaris allowance snapshot (PHE-27 / PHE-94), returned alongside each
- * ask. Counted in QUESTIONS: one completed ask is one unit.
+ * PHE-129: Polaris points this month, returned alongside each ask and on
+ * polaris home. 30 free / 300 full, refreshing on the first of the month; bought
+ * points are spent once the month's run out.
  */
 export interface PolarisAllowance {
-  /** ISO week start (Monday) in UTC — the polaris_token_usage.week key. */
-  week: string
-  /** Questions asked this week so far. */
-  used: number
-  /** Tier-derived weekly question limit (3 free / 40 full). */
+  /** First of the month (UTC), YYYY-MM-01. */
+  month: string
+  /** When the monthly points come back, YYYY-MM-DD. */
+  resets: string
+  /** The month's points by plan. */
   limit: number
-  /** max(0, limit - used). */
+  /** The month's points used so far. */
+  used: number
+  monthly_left: number
+  /** Bought points still available. */
+  purchased: number
+  /** monthly_left + purchased. */
   remaining: number
   limit_reached: boolean
+  full: boolean
 }
 
 /** PHE-123: the three ways polaris helps (spec doc 4). */
@@ -170,18 +183,19 @@ export interface PolarisAnswer {
   /** null when limit_reached is true (no Claude call was made). */
   answer: string | null
   pillar_tag: string | null
-  thread_id: string
-  /** The conversation's mode (fixed when it was opened). */
-  mode?: PolarisMode
+  /** null when limit_reached opened no conversation. */
+  thread_id: string | null
+  /** The conversation's mode: a starting point's, or null for a typed question. */
+  mode?: PolarisMode | null
   message_id: string | null
   usage: PolarisUsage
   sparse?: boolean
+  /** True when the points left could not cover this turn: no Claude call, no debit. */
   limit_reached?: boolean
-  /** Verbatim at-limit copy on the over-budget short-circuit (PHE-27). */
+  /** The out-of-points note on that short-circuit. */
   message?: string
-  /** True on the over-budget short-circuit — surface the upgrade CTA (PHE-27). */
-  upgrade_cta?: boolean
-  /** Remaining weekly allowance for display (PHE-27). */
+  /** What the turn cost, or would have. */
+  cost?: number
   allowance?: PolarisAllowance
   is_crisis?: boolean
   resources?: { us: string; text: string; international: string }
@@ -190,20 +204,25 @@ export interface PolarisAnswer {
 /**
  * Ask Polaris a question. Pass `threadId` to continue an existing conversation;
  * omit it to start a new one (the returned `thread_id` is the id to reuse), with
- * the mode and, from a moment or a discovery, the context it opens with. Throws
- * on a non-2xx response so callers can surface a retry affordance.
+ * a starting point's mode (a typed question sends none, and polaris reads it
+ * from the phrasing) and, from a moment or a discovery, the context it opens
+ * with. `followUp` marks one of the follow-up chips. Throws on a non-2xx
+ * response so callers can surface a retry.
  */
 export async function askPolaris(
   question: string,
   threadId?: string,
-  open?: { mode: PolarisMode; context?: string | null },
+  open?: { mode: PolarisMode | null; context?: string | null },
+  followUp = false,
 ): Promise<PolarisAnswer> {
   const res = await apiFetch("/api/polaris/ask", {
     method: "POST",
     body: JSON.stringify({
       question,
       ...(threadId ? { thread_id: threadId } : {}),
-      ...(!threadId && open ? { mode: open.mode, ...(open.context ? { context: open.context } : {}) } : {}),
+      ...(!threadId && open?.mode ? { mode: open.mode } : {}),
+      ...(!threadId && open?.context ? { context: open.context } : {}),
+      ...(followUp ? { follow_up: true } : {}),
     }),
   })
   if (!res.ok) {
@@ -237,11 +256,37 @@ export interface PolarisThreadSummary {
   updated_at: string
 }
 
+/** PHE-129: a plan card's state, keyed by the polaris reply it came from. */
+export interface PolarisPlanState {
+  message_id: string
+  done: number[]
+  saved: boolean
+}
+
+/** A saved plan; `body` is its decrypted reply, parsed into steps on the client. */
+export interface PolarisSavedPlan extends PolarisPlanState {
+  thread_id: string
+  body: string
+  saved_at: string
+}
+
+/** PHE-129: an open question polaris left in a conversation ("questions to return to", full). */
+export interface PolarisReturnQuestion {
+  thread_id: string
+  /** What the conversation was about. */
+  title: string
+  /** The question polaris asked last. */
+  line: string
+}
+
 export interface PolarisThreadsResponse {
   threads: PolarisThreadSummary[]
   starters: PolarisStarter[]
-  /** Live weekly question allowance for the idle/chat allowance badge. */
+  /** This month's points for the usage pop-up. */
   allowance?: PolarisAllowance
+  plans?: PolarisSavedPlan[]
+  /** At most three on full; null on free. */
+  returns?: PolarisReturnQuestion[] | null
 }
 
 /** A single reloaded turn; `body` is decrypted server-side, rendered plain-text. */
@@ -257,6 +302,7 @@ export interface PolarisThreadDetail {
   thread_id: string
   mode: PolarisMode | null
   messages: PolarisMessageView[]
+  plans?: PolarisPlanState[]
 }
 
 /**
@@ -281,115 +327,30 @@ export async function getPolarisThread(id: string): Promise<PolarisThreadDetail>
   return (await res.json()) as PolarisThreadDetail
 }
 
-export interface SignupStartResult {
-  draft_id: string
-  maskedEmail: string
-}
-
-/**
- * Stage a pending signup (name + email; PHE-97: there is no passphrase).
- * Pre-auth — no bearer is attached. On success the backend sends an email OTP
- * and returns the draft id + masked email.
- */
-export async function signupStart(input: {
-  name: string
-  email: string
-}): Promise<SignupStartResult> {
-  const res = await fetch(`${API_BASE}/auth/signup/start`, {
+/** Check a plan's steps (`done` replaces them) or save it. Throws on a non-2xx. */
+export async function setPolarisPlan(
+  messageId: string,
+  patch: { done?: number[]; saved?: boolean },
+): Promise<PolarisPlanState> {
+  const res = await apiFetch(`/api/polaris/plans/${messageId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+    body: JSON.stringify(patch),
   })
-  if (!res.ok) {
-    let message = "something went wrong. please try again."
-    try {
-      const body = await res.json()
-      // Nest ValidationPipe returns { message: string | string[] }.
-      if (Array.isArray(body?.message)) message = body.message[0]
-      else if (typeof body?.message === "string") message = body.message
-    } catch {
-      // non-JSON error body — keep the generic message
-    }
-    throw new Error(message)
-  }
-  return res.json()
-}
-
-// ---------------------------------------------------------------------------
-// Email OTP (PHE-9). Shared by the /join signup s2 step and the email-code
-// sign-in. Both endpoints are pre-auth (no bearer); on a successful verify the
-// backend returns a session the caller adopts via supabase-browser.
-// ---------------------------------------------------------------------------
-
-export type OtpPurpose = "signup" | "signin"
-
-/** Tokens returned on a successful verify; fed to supabase.auth.setSession. */
-export interface OtpSession {
-  access_token: string
-  refresh_token: string
+  if (!res.ok) throw new Error("could not save the plan")
+  return (await res.json()) as PolarisPlanState
 }
 
 /**
- * `status` mirrors the backend outcome so callers can render the exact copy.
- * `no_account` comes only after a correct sign-in code for an email with no
- * account. On `ok`, `is_new` says whether this verify created the profile
- * (route to welcome) or found an existing one (route to the constellation).
+ * PHE-129: buy polaris points (100 to 2,000 in steps of 100) or a discovery
+ * pack (1, 3 or 10). Sends the browser to checkout; throws when checkout could
+ * not start.
  */
-export interface OtpVerifyResult {
-  status: "ok" | "invalid" | "expired" | "no_account"
-  session?: OtpSession
-  is_new?: boolean
-}
-
-/**
- * Send (or resend) an email OTP. Pass `draftId` for signup or `email` for signin.
- * Always resolves to a masked email on well-formed input — never reveals whether
- * an account exists. Throws only on transport / 4xx validation errors.
- */
-export async function otpSend(input: {
-  purpose: OtpPurpose
-  draftId?: string
-  email?: string
-}): Promise<{ maskedEmail: string }> {
-  const res = await fetch(`${API_BASE}/auth/otp/send`, {
+export async function startPurchase(kind: "points" | "discoveries", amount: number): Promise<void> {
+  const res = await apiFetch("/stripe/purchase", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      purpose: input.purpose,
-      ...(input.draftId ? { draft_id: input.draftId } : {}),
-      ...(input.email ? { email: input.email } : {}),
-    }),
+    body: JSON.stringify({ kind, amount }),
   })
-  if (!res.ok) throw new Error("could not send a code. please try again.")
-  return res.json()
-}
-
-/**
- * Verify a submitted OTP. Returns a discriminated result: `ok` carries the
- * session; `invalid` / `expired` drive the verbatim wrong/expired copy. The
- * endpoint answers 200 for all three, so a non-ok HTTP status is a transport
- * failure and is normalized to `invalid`.
- */
-export async function otpVerify(input: {
-  code: string
-  draftId?: string
-  email?: string
-  purpose?: OtpPurpose
-}): Promise<OtpVerifyResult> {
-  try {
-    const res = await fetch(`${API_BASE}/auth/otp/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        code: input.code,
-        ...(input.draftId ? { draft_id: input.draftId } : {}),
-        ...(input.email ? { email: input.email } : {}),
-        ...(input.purpose ? { purpose: input.purpose } : {}),
-      }),
-    })
-    if (!res.ok) return { status: "invalid" }
-    return (await res.json()) as OtpVerifyResult
-  } catch {
-    return { status: "invalid" }
-  }
+  const { url } = res.ok ? ((await res.json()) as { url?: string | null }) : { url: null }
+  if (!url) throw new Error("checkout could not be started. please try again.")
+  window.location.assign(url)
 }

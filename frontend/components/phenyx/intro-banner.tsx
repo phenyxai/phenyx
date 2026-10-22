@@ -18,7 +18,7 @@ export const INTRO_COPY: Record<DashboardTab, string> = {
   constellation:
     "each point is a part of your story. open one to see the moments it was built from.",
   discover:
-    "each card is one connection found across your platforms, with the dated sources behind it.",
+    "each card is something worth exploring next, chosen from what your platforms show, with the dated sources behind it.",
   polaris:
     "polaris answers what you ask, using only what your constellation has already shown.",
   insights: "insights steps back from single moments to what is becoming clearer across your history.",

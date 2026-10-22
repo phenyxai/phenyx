@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeStarters, parseMode } from "./polaris.service";
+import { closingQuestion, computeStarters, openingMode, outOfPointsLine, parseMode, planSteps } from "./polaris.service";
 
 test("computeStarters gives one starter per mode from the default pillars when empty", () => {
   const starters = computeStarters(null);
@@ -36,4 +36,31 @@ test("parseMode keeps a known mode and falls back to clarify", () => {
   assert.equal(parseMode("understand"), "understand");
   assert.equal(parseMode("anything"), "clarify");
   assert.equal(parseMode(undefined), "clarify");
+});
+
+test("planSteps keeps whole step indexes in range, once each, in order", () => {
+  assert.deepEqual(planSteps([3, 1, 1, -1, 2.5, 40, "2", 0]), [0, 1, 3]);
+  assert.deepEqual(planSteps("1,2"), []);
+  assert.deepEqual(planSteps(undefined), []);
+});
+
+test("openingMode keeps a starting point's mode and leaves a typed question's to polaris", () => {
+  assert.equal(openingMode("decide"), "decide");
+  assert.equal(openingMode(undefined), null);
+  assert.equal(openingMode("anything"), null);
+});
+
+test("outOfPointsLine names the day the monthly points come back", () => {
+  assert.equal(
+    outOfPointsLine("2026-11-01"),
+    "you need more points to continue. your monthly points refresh nov 1, or you can purchase more points.",
+  );
+});
+
+test("closingQuestion keeps the reply's last question, and only when it ends on one", () => {
+  assert.equal(
+    closingQuestion("you kept returning to film. what part of making films do you want more room for?"),
+    "what part of making films do you want more room for?",
+  );
+  assert.equal(closingQuestion("you kept returning to film."), null);
 });

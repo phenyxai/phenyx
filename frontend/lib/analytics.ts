@@ -40,7 +40,7 @@ export type EventType =
 export type EmptyProps = Record<string, never>;
 
 export interface EventPropsMap {
-  /** `tab` is the dashboard segment: constellation, discover, polaris, insights, settings. */
+  /** `tab` is the dashboard segment: constellation, polaris, discover, insights, settings. */
   tab_visit: { tab: DashboardSegment; previous: DashboardSegment | null };
   tab_duration: { tab: DashboardSegment; seconds: number };
   days_since_last_visit: { days: number };

@@ -8,9 +8,9 @@ import { TraitProfileService } from "../synthesis/trait-profile.service";
 import type { Pillar } from "../types/database";
 import { inferPillarFromKeywords } from "./pillar-keyword.map";
 import {
-  AT_LIMIT_MESSAGE,
   TokenBudgetService,
-  type WeeklyAllowance,
+  turnCost,
+  type PointsAllowance,
 } from "./token-budget.service";
 import { HONEST_LIMITS_OPENER, SPARSE_NUDGE } from "./polaris-copy";
 
@@ -29,6 +29,21 @@ export type PolarisMode = (typeof POLARIS_MODES)[number];
 /** A known mode, or clarify when the client sent none (or something else). */
 export function parseMode(value: unknown): PolarisMode {
   return POLARIS_MODES.includes(value as PolarisMode) ? (value as PolarisMode) : "clarify";
+}
+
+/**
+ * PHE-129: the mode a conversation opens in. A starting point carries its own;
+ * a typed question carries none, and polaris reads it from how it was asked.
+ */
+export function openingMode(value: unknown): PolarisMode | null {
+  return POLARIS_MODES.includes(value as PolarisMode) ? (value as PolarisMode) : null;
+}
+
+/** The out-of-points note inside the thread (rebuild doc, section 8); the date fills in. */
+export function outOfPointsLine(resets: string): string {
+  const d = new Date(`${resets}T00:00:00Z`);
+  const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  return `you need more points to continue. your monthly points refresh ${months[d.getUTCMonth()]} ${d.getUTCDate()}, or you can purchase more points.`;
 }
 
 
@@ -69,12 +84,15 @@ interface AskBody {
   mode?: string;
   /** What the conversation was opened from (a moment or a discovery). */
   context?: string;
+  /** PHE-129: a follow-up chip ("where did this begin?"…), priced and answered as a follow-up. */
+  follow_up?: boolean;
 }
 
 /** The conversation an ask belongs to, with the mode and context it was opened with. */
 interface Conversation {
   id: string;
-  mode: PolarisMode;
+  /** Null when polaris chose the mode from how a typed question was asked. */
+  mode: PolarisMode | null;
   context: string | null;
 }
 
@@ -102,6 +120,52 @@ export interface PolarisStarter {
   mode: PolarisMode;
   text: string;
   pillar_tag: Pillar;
+}
+
+/** PHE-129: a plan card's state, keyed by the reply it came from: the checked steps and the save. */
+export interface PolarisPlanState {
+  message_id: string;
+  done: number[];
+  saved: boolean;
+}
+
+/** A saved plan for "your conversations": its reply decrypted, for the client to parse into steps. */
+export interface PolarisSavedPlan extends PolarisPlanState {
+  thread_id: string;
+  body: string;
+  saved_at: string;
+}
+
+/** ponytail: plans have at most a handful of steps; indexes past this are dropped. */
+const PLAN_STEPS_MAX = 12;
+const SAVED_PLANS_MAX = 20;
+
+/** Checked step indexes from a request: whole numbers in range, once each, in order. */
+export function planSteps(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  const steps = value.filter((n): n is number => Number.isInteger(n) && n >= 0 && n < PLAN_STEPS_MAX);
+  return [...new Set(steps)].sort((a, b) => a - b);
+}
+
+/** PHE-129: an open question polaris left in a conversation, for "questions to return to" (full). */
+export interface PolarisReturnQuestion {
+  thread_id: string;
+  /** What the conversation was about: its title, else its opening question. */
+  title: string;
+  /** The question polaris asked last. */
+  line: string;
+}
+
+const RETURN_QUESTIONS_MAX = 3;
+/** How many recent conversations are checked for an open question. */
+const RETURN_SCAN = 10;
+
+/** The last question in a reply, when the reply ends on one; else null. */
+export function closingQuestion(reply: string): string | null {
+  const text = reply.trim();
+  if (!text.endsWith("?")) return null;
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  return sentences[sentences.length - 1]?.trim() || null;
 }
 
 /** A single turn returned when a thread is reloaded (body decrypted for render). */
@@ -167,23 +231,25 @@ export class PolarisService {
       };
     }
 
-    // (2) Allowance gate (PHE-27 / PHE-94) — short-circuit once the week's question
-    // allowance is used up (no Claude call, no debit). The limit (3 free / 40 full)
-    // is derived from the live tier at check time; there is no separate free
-    // lock-out — free simply has a smaller allowance.
+    // (2) Points gate (PHE-129) — a turn costs points by its kind (an opening
+    // question by its mode, any later turn in the thread as a follow-up). When
+    // the month's points plus any bought ones can't cover it, short-circuit with
+    // no Claude call and no debit, and open no conversation: the person keeps
+    // their question and sees the out-of-points note in the thread.
+    const followUp = !!body.thread_id || body.follow_up === true;
+    const cost = turnCost(followUp, openingMode(body.mode));
     const allowance = await this.tokenBudget.check(userId);
-    if (allowance.limit_reached) {
-      const { id: threadId, mode } = await this.resolveConversation(userId, body);
+    if (allowance.remaining < cost) {
       return {
         answer: null,
         pillar_tag: null,
-        thread_id: threadId,
-        mode,
+        thread_id: body.thread_id ?? null,
+        mode: openingMode(body.mode),
         message_id: null,
         usage: this.emptyUsage(),
         limit_reached: true,
-        message: AT_LIMIT_MESSAGE,
-        upgrade_cta: true,
+        message: outOfPointsLine(allowance.resets),
+        cost,
         allowance,
       };
     }
@@ -264,7 +330,8 @@ export class PolarisService {
       POLARIS_TASK_INSTRUCTIONS
     );
     // The mode block is one of three fixed texts, so it stays in the cached prefix.
-    systemBlocks.push({ type: "text", text: MODE_INSTRUCTIONS[conversation.mode] });
+    systemBlocks.push({ type: "text", text: conversation.mode ? MODE_INSTRUCTIONS[conversation.mode] : CHOOSE_MODE_INSTRUCTIONS });
+    if (followUp) systemBlocks.push({ type: "text", text: FOLLOW_UP_INSTRUCTIONS });
     systemBlocks.push({
       type: "text",
       text: groundingBlock,
@@ -343,11 +410,8 @@ export class PolarisService {
       usage.output_tokens
     );
     await this.touchConversation(threadId);
-    const debited = await this.tokenBudget.debit(
-      userId,
-      allowance.week,
-      allowance.limit
-    );
+    // Debited only now that the reply succeeded: a failed one costs nothing.
+    const debited = await this.tokenBudget.debit(userId, allowance, cost);
 
     return {
       answer,
@@ -375,11 +439,14 @@ export class PolarisService {
   ): Promise<{
     threads: PolarisThreadSummary[];
     starters: PolarisStarter[];
-    allowance: WeeklyAllowance;
+    allowance: PointsAllowance;
+    plans: PolarisSavedPlan[];
+    /** Questions to return to: up to three on full, null on free (the page shows the upgrade line). */
+    returns: PolarisReturnQuestion[] | null;
   }> {
     const supabase = this.supabaseService.getClient();
 
-    const [{ data: conversations }, { data: constellation }, allowance] =
+    const [{ data: conversations }, { data: constellation }, allowance, plans] =
       await Promise.all([
         supabase
           .from("polaris_conversations")
@@ -393,6 +460,7 @@ export class PolarisService {
           .eq("user_id", userId)
           .maybeSingle(),
         this.tokenBudget.check(userId),
+        this.savedPlans(userId),
       ]);
 
     const rows = conversations ?? [];
@@ -411,7 +479,112 @@ export class PolarisService {
       threads,
       starters: computeStarters(constellation),
       allowance,
+      plans,
+      returns: allowance.full ? await this.questionsToReturnTo(userId, threads.slice(0, RETURN_SCAN)) : null,
     };
+  }
+
+  /**
+   * Conversations polaris left on a question the person has not answered yet,
+   * newest first, at most three: the last message is polaris's and ends in "?".
+   */
+  private async questionsToReturnTo(
+    userId: string,
+    threads: PolarisThreadSummary[]
+  ): Promise<PolarisReturnQuestion[]> {
+    const supabase = this.supabaseService.getClient();
+    const found: PolarisReturnQuestion[] = [];
+    for (const thread of threads) {
+      if (found.length >= RETURN_QUESTIONS_MAX) break;
+      const { data } = await supabase
+        .from("polaris_messages")
+        .select("role, body")
+        .eq("conversation_id", thread.id)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!data || data.role !== "assistant") continue;
+      const line = closingQuestion(this.encryption.decrypt(data.body as string));
+      if (line) found.push({ thread_id: thread.id, title: thread.title ?? thread.preview ?? "a conversation", line });
+    }
+    return found;
+  }
+
+  /**
+   * PHE-129: check a plan's steps or save it. The plan is keyed by the polaris
+   * reply it came from, which must be the caller's; `done` replaces the checked
+   * steps and `saved` sets or clears the save, each only when sent.
+   */
+  async setPlan(
+    userId: string,
+    messageId: string,
+    patch: { done?: unknown; saved?: unknown }
+  ): Promise<PolarisPlanState> {
+    const supabase = this.supabaseService.getClient();
+    const { data: message } = await supabase
+      .from("polaris_messages")
+      .select("id, user_id, role")
+      .eq("id", messageId)
+      .maybeSingle();
+    if (!message || message.user_id !== userId || message.role !== "assistant") {
+      throw new HttpException({ error: "plan not found" }, 404);
+    }
+    const { data: existing } = await supabase
+      .from("polaris_plans")
+      .select("done, saved_at")
+      .eq("message_id", messageId)
+      .maybeSingle();
+    const done = patch.done === undefined ? planSteps(existing?.done) : planSteps(patch.done);
+    const savedAt =
+      typeof patch.saved !== "boolean"
+        ? ((existing?.saved_at as string | null) ?? null)
+        : patch.saved
+          ? ((existing?.saved_at as string | null) ?? new Date().toISOString())
+          : null;
+    const { error } = await supabase.from("polaris_plans").upsert({
+      message_id: messageId,
+      user_id: userId,
+      done,
+      saved_at: savedAt,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw new HttpException({ error: "could not save the plan" }, 500);
+    return { message_id: messageId, done, saved: savedAt !== null };
+  }
+
+  /** Saved plans, newest first, each with its reply decrypted. */
+  private async savedPlans(userId: string): Promise<PolarisSavedPlan[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data: plans } = await supabase
+      .from("polaris_plans")
+      .select("message_id, done, saved_at")
+      .eq("user_id", userId)
+      .not("saved_at", "is", null)
+      .order("saved_at", { ascending: false })
+      .limit(SAVED_PLANS_MAX);
+    if (!plans?.length) return [];
+    const { data: messages } = await supabase
+      .from("polaris_messages")
+      .select("id, conversation_id, body")
+      .eq("user_id", userId)
+      .in("id", plans.map((p) => p.message_id as string));
+    const byId = new Map((messages ?? []).map((m) => [m.id as string, m]));
+    return plans.flatMap((p) => {
+      const m = byId.get(p.message_id as string);
+      return m
+        ? [
+            {
+              message_id: p.message_id as string,
+              thread_id: m.conversation_id as string,
+              body: this.encryption.decrypt(m.body as string),
+              done: planSteps(p.done),
+              saved: true,
+              saved_at: p.saved_at as string,
+            },
+          ]
+        : [];
+    });
   }
 
   /**
@@ -427,6 +600,7 @@ export class PolarisService {
     thread_id: string;
     mode: PolarisMode | null;
     messages: PolarisMessageView[];
+    plans: PolarisPlanState[];
   }> {
     const supabase = this.supabaseService.getClient();
 
@@ -453,10 +627,24 @@ export class PolarisService {
       created_at: m.created_at as string,
     }));
 
+    const replies = messages.filter((m) => m.role === "assistant").map((m) => m.id);
+    const { data: planRows } = replies.length
+      ? await supabase
+          .from("polaris_plans")
+          .select("message_id, done, saved_at")
+          .eq("user_id", userId)
+          .in("message_id", replies)
+      : { data: [] };
+
     return {
       thread_id: threadId,
       mode: (conversation.mode as PolarisMode | null) ?? null,
       messages,
+      plans: (planRows ?? []).map((p) => ({
+        message_id: p.message_id as string,
+        done: planSteps(p.done),
+        saved: p.saved_at !== null,
+      })),
     };
   }
 
@@ -501,12 +689,12 @@ export class PolarisService {
       if (data && data.user_id === userId) {
         return {
           id: data.id as string,
-          mode: parseMode(data.mode),
+          mode: openingMode(data.mode),
           context: data.context ? this.encryption.decrypt(data.context as string) : null,
         };
       }
     }
-    const mode = parseMode(body.mode);
+    const mode = openingMode(body.mode);
     const context = body.context?.trim().slice(0, CONTEXT_LIMIT) || null;
     const { data, error } = await supabase
       .from("polaris_conversations")
@@ -696,10 +884,16 @@ rules, never break these:
 - never ask who the person is. you already have their constellation, so start from the grounding and skip introductions.`;
 
 /** One block per mode, after the task instructions. Fixed text, so each caches. */
+/** PHE-129: a typed question carries no mode; polaris chooses and never names it. */
+const CHOOSE_MODE_INSTRUCTIONS = `mode: not given. the person typed this question. read how they asked and answer the way the fitting mode asks, never naming it: clarify (name the tension you can see and end with one question that helps them say it precisely), understand (follow the pattern to where it began, what kept it going and where it shows now, naming dates and platforms, then one question), or decide (weigh the options against when they do their best work and what they keep returning to, with at most four numbered steps, the first small enough to start this week, then one question).`;
+
+/** PHE-129: a follow-up chip or a reply in an open thread. */
+const FOLLOW_UP_INSTRUCTIONS = `this is a follow-up in an open conversation: continue the same thread with the same evidence in one or two short paragraphs.`;
+
 const MODE_INSTRUCTIONS: Record<PolarisMode, string> = {
   clarify: `mode: clarify. the person wants to untangle a question. help them see what they are really asking: name the tension you can see in their grounding, in two or three sentences, then end with one short question that helps them say it more precisely.`,
   understand: `mode: understand. the person wants to explore a recurring pattern. follow it to its source in the grounding: where it began, what keeps reinforcing it and where it shows now, naming the dates and platforms you were given. keep it to a few sentences and end with one short question back to them.`,
-  decide: `mode: decide. the person wants to choose a direction and shape next steps. weigh the options against what their grounding shows about when they do their best work and what they keep returning to. you may lay out a numbered plan of at most three short steps, each on its own line. end with one short question back to them.`,
+  decide: `mode: decide. the person wants to choose a direction and shape next steps. weigh the options against what their grounding shows about when they do their best work and what they keep returning to. you may lay out a numbered plan of at most four short steps, each on its own line, introduced by one short line that names it and ends in a colon (for example "a four-week shape:"). a step may open with when it happens and a colon, such as "week one: choose one room and one sound to work with.". end with one short question back to them.`,
 };
 
 /** Build the per-user grounding block that anchors the Claude call. Byte-stable for a

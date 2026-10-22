@@ -8,14 +8,15 @@ export const metadata: Metadata = {
   title: "Polaris",
 };
 
-/** Polaris tab (PHE-73, modes from PHE-123). Home + conversation live in the
- * client `PolarisTab`. Deep-link `?q=&mode=&context=` is consumed inside it.
- * The panel is a definite-height flex column (never display:block) so the
- * composer stays pinned to the foot in chat. */
+/** Polaris tab (PHE-73, modes from PHE-123, PHE-129). Home + conversation live
+ * in the client `PolarisTab`. Deep-link `?q=&mode=&context=` is consumed inside
+ * it. The panel is a definite-height flex column (never display:block) that
+ * scrolls inside itself, so the composer stays pinned to its foot in chat. On
+ * phones the height leaves out the top bar and the bottom nav. */
 export default function PolarisTabPage() {
   return (
     <section
-      className="flex h-screen flex-col"
+      className="flex h-screen flex-col [@media(max-width:640px)]:h-[calc(100svh-124px-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]"
       style={{ display: "flex" }}
     >
       <IntroBanner

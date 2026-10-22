@@ -28,7 +28,6 @@ import {
 import { NotificationsModal } from './notifications'
 import { ConnectionsModal } from './connections'
 import { DataManagementModal } from './data-management'
-import { AccountModal } from './account'
 import { CloseAccountModal } from './close-account'
 import { EditProfileModal } from './edit-profile'
 import { FeedbackModal } from './feedback'
@@ -49,7 +48,6 @@ export type SettingsModalId =
   | 'notifications'
   | 'my-connections'
   | 'data-management'
-  | 'account'
   | 'close-account'
   | 'edit-profile'
   | 'feedback'
@@ -105,7 +103,6 @@ export function SettingsModalsProvider({
         {openId === 'notifications' && <NotificationsModal />}
         {openId === 'my-connections' && <ConnectionsModal />}
         {openId === 'data-management' && <DataManagementModal />}
-        {openId === 'account' && <AccountModal />}
         {openId === 'close-account' && <CloseAccountModal />}
         {openId === 'edit-profile' && <EditProfileModal />}
         {openId === 'feedback' && <FeedbackModal />}
@@ -140,7 +137,7 @@ const contentBaseClassName = cn(
   'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
   'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
   'motion-reduce:animate-none motion-reduce:transition-none',
-  'fixed top-[50%] left-[50%] z-50 grid w-[min(440px,calc(100vw-40px))] max-w-none',
+  'fixed top-[50%] left-[50%] z-50 grid grid-cols-[minmax(0,1fr)] w-[min(440px,calc(100vw-40px))] max-w-none',
   'max-h-[calc(100dvh-4rem)] translate-x-[-50%] translate-y-[-50%] gap-4',
   'overflow-y-auto rounded-2xl border p-6 duration-200',
 )
@@ -188,7 +185,10 @@ export function SettingsDialogContent({
   )
 }
 
-/** Title + optional verbatim subtitle for a modal header. */
+/**
+ * Title + optional verbatim subtitle for a modal header. Every pop-up title
+ * opens with a small lit dot in the accent (PHE-129), the demo's one mark.
+ */
 export function ModalHeading({
   title,
   subtitle,
@@ -198,7 +198,8 @@ export function ModalHeading({
 }) {
   return (
     <div className="flex flex-col gap-2 pr-6">
-      <DialogTitle className="text-base leading-none font-medium lowercase text-ph-white">
+      <DialogTitle className="flex items-center gap-2.5 text-[18px] leading-tight font-normal lowercase text-ph-white">
+        <AccentDot />
         {title}
       </DialogTitle>
       {subtitle && (
@@ -207,6 +208,63 @@ export function ModalHeading({
         </DialogDescription>
       )}
     </div>
+  )
+}
+
+/** The small glowing accent dot that marks pop-up titles and thinking states. */
+export function AccentDot({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'inline-block h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--ph-accent)] shadow-[0_0_10px_rgba(var(--ph-accent-rgb),0.75)]',
+        className,
+      )}
+    />
+  )
+}
+
+/**
+ * A pop-up outside the settings ids (source trails, saved discoveries, polaris
+ * usage and conversations): the same Radix dialog, surface and heading, opened
+ * by rendering it and closed through `onClose`. It portals to the body, so a
+ * transformed parent never traps it.
+ */
+export function Popup({
+  title,
+  onClose,
+  className,
+  children,
+}: {
+  title: string
+  onClose: () => void
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <Dialog open onOpenChange={(next) => !next && onClose()}>
+      <SettingsDialogContent aria-describedby={undefined} className={className}>
+        <ModalHeading title={title} />
+        {children}
+      </SettingsDialogContent>
+    </Dialog>
+  )
+}
+
+/** A pop-up's quiet alternative, 12px under its main action. */
+export function QuietAction({
+  className,
+  ...props
+}: React.ComponentProps<'button'>) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        '-mt-1 self-center text-[13px] text-ph-white/60 transition-colors duration-200 hover:text-[var(--ph-accent)]',
+        className,
+      )}
+      {...props}
+    />
   )
 }
 
@@ -228,9 +286,8 @@ export function GhostButton({
 }
 
 /**
- * Accent-tinted button — the primary call to action (e.g. upgrade). v244
- * (`.modal-btn-main`): a 10% stellar fill inside a 38% stellar border, white
- * text, medium weight.
+ * The primary call to action (e.g. upgrade). PHE-129: framed, never filled,
+ * spanning the content width, in the accent; the hover adds a faint fill.
  */
 export function PrimaryButton({
   className,
@@ -240,7 +297,7 @@ export function PrimaryButton({
     <button
       type="button"
       className={cn(
-        'w-full rounded-[10px] border border-[rgba(var(--stellar-rgb),0.38)] bg-[rgba(var(--stellar-rgb),0.10)] px-6 py-3 text-xs font-medium text-ph-white hover:bg-[rgba(var(--stellar-rgb),0.18)] disabled:cursor-not-allowed disabled:opacity-50',
+        'h-[46px] w-full rounded-full border border-[rgba(var(--stellar-rgb),0.5)] bg-transparent px-6 text-[14px] text-[var(--stellar)] transition-colors duration-200 hover:bg-[rgba(var(--stellar-rgb),0.08)] disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}

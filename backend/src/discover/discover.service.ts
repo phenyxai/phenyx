@@ -4,47 +4,96 @@ import { ConfigService } from "@nestjs/config";
 import { Cron } from "@nestjs/schedule";
 import { SupabaseService } from "../supabase/supabase.service";
 import { VoiceStandardService } from "../voice-standard/voice-standard.service";
+import { BillingService } from "../stripe/billing.service";
 import { PILLAR_ORDER } from "../observations/gating";
 import {
   DISCOVERY_TYPES,
   HEADLINE_MAX,
+  QUESTION_MAX,
   SET_SIZE,
-  TIME_CONTEXT_MAX,
   dedupeDiscoveries,
+  discoveryWeek,
+  safeTimeZone,
   selectSet,
   validateDiscovery,
   type Discovery,
   type DiscoveryCandidate,
+  type PublicStory,
   type TrailEntry,
 } from "./discover.rules";
 
 /**
- * PHE-103 — the discover tab: seven single connections across a person's
- * platforms, one card each.
+ * PHE-103 / PHE-129 — the discover tab: outward picks (a place, a person,
+ * something to try, a detail, a medium, a field, or something from the
+ * person's own history), each with one personal reason from a dated source.
  *
- * `GET /discover` serves the latest set. When there is none it generates one
- * first (one run per person at a time; a second request waits on the first).
+ * The deck is every card the person has revealed; a new card joins it and
+ * never replaces one. Generation writes sets of seven that wait unrevealed;
+ * the weekly allowance (1 free, 10 full, opening monday 9am in the person's
+ * time) and bought discoveries reveal them. `GET /discover` serves the deck,
+ * the saved cards and the allowance; on the first visit it generates a set
+ * and reveals it at once as the starting deck. `POST /discover/reveal` adds
+ * cards, generating more first when too few are waiting, and charges nothing
+ * when nothing new could be found ("all caught up").
+ *
  * Generation grounds on the constellation, the dated observations and the
  * connected platforms, asks Claude for up to ten cards through the strict
  * `emit_discoveries` tool, then runs them through `discover.rules.ts`: limits,
- * dedup, one per point. Cards that break a limit get one regeneration. Only
- * the latest set is kept. A weekly cron refreshes sets for people who have one.
+ * dedup, at least five kinds. Cards that break a limit get one regeneration
+ * (one run per person at a time; a second request waits on the first). A
+ * weekly cron tops up the waiting cards before the week opens.
  */
 
 const CLAUDE_MODEL = "claude-opus-5-5";
 /** A run that found nothing isn't repeated for this long. */
 const EMPTY_COOLDOWN_MS = 60 * 60 * 1000;
 
+/** The week's discoveries, surfaced to the client. */
+export interface DiscoveryAllowance {
+  /** The monday the week opened (local date): the discovery_usage key. */
+  week: string;
+  /** When the next week opens, an ISO instant (monday 9am local). */
+  resets: string;
+  /** New discoveries a week by plan (1 free / 10 full). */
+  limit: number;
+  used: number;
+  weekly_left: number;
+  /** Bought discoveries still available. */
+  purchased: number;
+  /** weekly_left + purchased: how many can be added now. */
+  available: number;
+  full: boolean;
+}
+
 export interface ServedDiscovery {
   id: string;
   type: string;
   pillar: string;
-  time_context: string;
   headline: string;
-  what_surfaced: string;
-  why_now: string;
+  detail: string;
+  reason: string;
+  question: string;
+  story: PublicStory | null;
   sources: string[];
   trail: TrailEntry[];
+  saved: boolean;
+  /** Revealed since this week opened: the card's "new" tag. */
+  is_new: boolean;
+}
+
+const SERVED_COLUMNS = "id,type,pillar,headline,detail,reason,question,story,sources,trail,saved_at,revealed_at";
+/** ponytail: the deck and the saved list are capped; page them when someone keeps more than this. */
+const DECK_MAX = 100;
+const SAVED_MAX = 60;
+/** Most cards one reveal can add: a full week. */
+export const REVEAL_MAX = 10;
+/** Headlines the writer is told not to repeat (rebuild doc 11.4). */
+const SEEN_DAYS = 60;
+
+type DiscoveryRow = Omit<ServedDiscovery, "saved" | "is_new"> & { saved_at: string | null; revealed_at: string | null };
+
+function served({ saved_at, revealed_at, ...card }: DiscoveryRow, weekOpened: string): ServedDiscovery {
+  return { ...card, saved: saved_at !== null, is_new: revealed_at !== null && revealed_at >= weekOpened };
 }
 
 interface DiscoverContext {
@@ -76,16 +125,153 @@ export class DiscoverService {
     private readonly config: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly voiceStandard: VoiceStandardService,
+    private readonly billing: BillingService,
   ) {}
 
-  async getSet(userId: string): Promise<{ discoveries: ServedDiscovery[] }> {
-    let discoveries = await this.readLatestSet(userId);
+  /** The deck, the saved cards and the week's allowance. The first visit generates the starting deck. */
+  async getDeck(
+    userId: string,
+    timeZone: unknown,
+  ): Promise<{ deck: ServedDiscovery[]; saved: ServedDiscovery[]; allowance: DiscoveryAllowance }> {
+    const week = discoveryWeek(new Date(), safeTimeZone(timeZone));
+    let deck = await this.readDeck(userId, week.opened);
     const emptyAt = this.emptyAt.get(userId) ?? 0;
-    if (discoveries.length === 0 && Date.now() - emptyAt > EMPTY_COOLDOWN_MS) {
-      await this.generate(userId);
-      discoveries = await this.readLatestSet(userId);
+    if (deck.length === 0 && Date.now() - emptyAt > EMPTY_COOLDOWN_MS) {
+      if ((await this.waiting(userId)) === 0) await this.generate(userId);
+      // The starting deck is revealed at once, outside the allowance.
+      await this.supabaseService
+        .getClient()
+        .from("discoveries")
+        .update({ revealed_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .is("revealed_at", null);
+      deck = await this.readDeck(userId, week.opened);
     }
-    return { discoveries };
+    const [saved, allowance] = await Promise.all([this.readSaved(userId, week.opened), this.allowance(userId, week)]);
+    return { deck, saved, allowance };
+  }
+
+  /**
+   * Add `count` cards to the deck: from the week's allowance first, then bought
+   * ones. Generates more first when too few are waiting. Nothing is charged
+   * when nothing new turned up (`caught_up`), or when `count` is more than the
+   * allowance covers (`short`).
+   */
+  // ponytail: read-then-write charge, like polaris points; two reveals at once can under-count. Move to an RPC if that shows up.
+  async reveal(
+    userId: string,
+    count: number,
+    timeZone: unknown,
+  ): Promise<{ added: ServedDiscovery[]; caught_up: boolean; short: boolean; allowance: DiscoveryAllowance }> {
+    const week = discoveryWeek(new Date(), safeTimeZone(timeZone));
+    const before = await this.allowance(userId, week);
+    if (count > before.available) return { added: [], caught_up: false, short: true, allowance: before };
+
+    if ((await this.waiting(userId)) < count) await this.generate(userId);
+    const supabase = this.supabaseService.getClient();
+    const { data: waiting } = await supabase
+      .from("discoveries")
+      .select("id")
+      .eq("user_id", userId)
+      .is("revealed_at", null)
+      .order("created_at", { ascending: true })
+      .order("position", { ascending: true })
+      .limit(count);
+    const ids = ((waiting ?? []) as { id: string }[]).map((r) => r.id);
+    if (ids.length === 0) return { added: [], caught_up: true, short: false, allowance: before };
+
+    const { data, error } = await supabase
+      .from("discoveries")
+      .update({ revealed_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .in("id", ids)
+      .is("revealed_at", null)
+      .select(SERVED_COLUMNS);
+    if (error) throw error;
+    const added = ((data ?? []) as unknown as DiscoveryRow[]).map((row) => served(row, week.opened));
+    return { added, caught_up: false, short: false, allowance: await this.charge(userId, before, added.length) };
+  }
+
+  /** Save a card (the ★) or take it out of saved. Owner-scoped and deck-only; false when it isn't theirs. */
+  async setSaved(userId: string, id: string, saved: boolean): Promise<boolean> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from("discoveries")
+      .update({ saved_at: saved ? new Date().toISOString() : null })
+      .eq("user_id", userId)
+      .eq("id", id)
+      .not("revealed_at", "is", null)
+      .select("id");
+    if (error) throw error;
+    return (data ?? []).length > 0;
+  }
+
+  /** The week's allowance: the plan's count less what was used this week, plus bought discoveries. Unknown tier reads as free. */
+  private async allowance(userId: string, week: { week: string; resets: string }): Promise<DiscoveryAllowance> {
+    const supabase = this.supabaseService.getClient();
+    const [{ data: profile }, { data: usage }, { data: balance }] = await Promise.all([
+      supabase.from("user_profiles").select("tier").eq("id", userId).maybeSingle(),
+      supabase.from("discovery_usage").select("used").eq("user_id", userId).eq("week", week.week).maybeSingle(),
+      supabase.from("purchased_balances").select("discoveries").eq("user_id", userId).maybeSingle(),
+    ]);
+    const caps = this.billing.capabilitiesFor(profile?.tier as string | null | undefined);
+    return this.snapshot(
+      week,
+      caps.weeklyDiscoveries,
+      Number(usage?.used ?? 0),
+      Math.max(0, Number(balance?.discoveries ?? 0)),
+      caps.paid,
+    );
+  }
+
+  /** Spend `n`: the week's discoveries first, then bought ones. One count per person per week, whatever the plan. */
+  private async charge(userId: string, before: DiscoveryAllowance, n: number): Promise<DiscoveryAllowance> {
+    const fromWeek = Math.min(n, before.weekly_left);
+    const fromPurchased = Math.min(before.purchased, n - fromWeek);
+    const supabase = this.supabaseService.getClient();
+    const used = before.used + fromWeek;
+    const purchased = before.purchased - fromPurchased;
+    const now = new Date().toISOString();
+    if (fromWeek > 0) {
+      await supabase
+        .from("discovery_usage")
+        .upsert({ user_id: userId, week: before.week, used, updated_at: now }, { onConflict: "user_id,week" });
+    }
+    if (fromPurchased > 0) {
+      await supabase.from("purchased_balances").update({ discoveries: purchased, updated_at: now }).eq("user_id", userId);
+    }
+    return this.snapshot(before, before.limit, used, purchased, before.full);
+  }
+
+  private snapshot(
+    week: { week: string; resets: string },
+    limit: number,
+    used: number,
+    purchased: number,
+    full: boolean,
+  ): DiscoveryAllowance {
+    const weekly_left = Math.max(0, limit - used);
+    return {
+      week: week.week,
+      resets: week.resets,
+      limit,
+      used,
+      weekly_left,
+      purchased,
+      available: weekly_left + purchased,
+      full,
+    };
+  }
+
+  /** How many generated cards are waiting to be revealed. */
+  private async waiting(userId: string): Promise<number> {
+    const { count } = await this.supabaseService
+      .getClient()
+      .from("discoveries")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .is("revealed_at", null);
+    return count ?? 0;
   }
 
   generate(userId: string): Promise<void> {
@@ -96,36 +282,55 @@ export class DiscoverService {
     return run;
   }
 
-  /** Sunday 01:00 UTC, an hour after the weekly observations, which discover grounds on. */
+  /**
+   * Sunday 01:00 UTC, an hour after the weekly observations, which discover
+   * grounds on, and before the week opens anywhere: tops up the waiting cards
+   * for people with a deck, so monday's reveal is instant.
+   */
   @Cron("0 1 * * 0", { name: "weekly-discover", timeZone: "UTC" })
   async refreshWeekly(): Promise<void> {
-    // ponytail: one PostgREST page (1,000 people); page through when discover outgrows it.
+    // ponytail: one PostgREST page (1,000 rows); page through when discover outgrows it.
     const { data } = await this.supabaseService
       .getClient()
       .from("discoveries")
       .select("user_id")
-      .eq("position", 0);
-    for (const { user_id } of (data ?? []) as { user_id: string }[]) {
+      .eq("position", 0)
+      .not("revealed_at", "is", null);
+    const people = new Set(((data ?? []) as { user_id: string }[]).map((r) => r.user_id));
+    for (const user_id of people) {
       try {
-        await this.generate(user_id);
+        if ((await this.waiting(user_id)) < SET_SIZE) await this.generate(user_id);
       } catch (e) {
         this.logger.error(`weekly discover failed for ${user_id}: ${(e as Error).message}`);
       }
     }
   }
 
-  private async readLatestSet(userId: string): Promise<ServedDiscovery[]> {
+  /** The deck: every revealed card, newest first, then by its place in its set. */
+  private async readDeck(userId: string, weekOpened: string): Promise<ServedDiscovery[]> {
     const { data } = await this.supabaseService
       .getClient()
       .from("discoveries")
-      .select("id,set_id,type,pillar,time_context,headline,what_surfaced,why_now,sources,trail")
+      .select(SERVED_COLUMNS)
       .eq("user_id", userId)
-      .order("created_at", { ascending: false })
+      .not("revealed_at", "is", null)
+      .order("revealed_at", { ascending: false })
       .order("position", { ascending: true })
-      .limit(SET_SIZE * 2);
-    const rows = (data ?? []) as (ServedDiscovery & { set_id: string })[];
-    const latest = rows[0]?.set_id;
-    return rows.filter((row) => row.set_id === latest).map(({ set_id: _set, ...card }) => card);
+      .limit(DECK_MAX);
+    return ((data ?? []) as unknown as DiscoveryRow[]).map((row) => served(row, weekOpened));
+  }
+
+  /** Saved cards, newest save first. */
+  private async readSaved(userId: string, weekOpened: string): Promise<ServedDiscovery[]> {
+    const { data } = await this.supabaseService
+      .getClient()
+      .from("discoveries")
+      .select(SERVED_COLUMNS)
+      .eq("user_id", userId)
+      .not("saved_at", "is", null)
+      .order("saved_at", { ascending: false })
+      .limit(SAVED_MAX);
+    return ((data ?? []) as unknown as DiscoveryRow[]).map((row) => served(row, weekOpened));
   }
 
   private async runGeneration(userId: string): Promise<void> {
@@ -161,10 +366,11 @@ export class DiscoverService {
         position,
         type: card.type,
         pillar: card.pillar,
-        time_context: card.time_context,
         headline: card.headline,
-        what_surfaced: card.what_surfaced,
-        why_now: card.why_now,
+        detail: card.detail,
+        reason: card.reason,
+        question: card.question,
+        story: card.story,
         sources: card.sources,
         trail: card.trail,
       })),
@@ -173,7 +379,6 @@ export class DiscoverService {
       this.logger.error(`discover insert failed for ${userId}: ${error.message}`);
       throw error;
     }
-    await supabase.from("discoveries").delete().eq("user_id", userId).neq("set_id", setId);
     this.emptyAt.delete(userId);
   }
 
@@ -204,7 +409,11 @@ export class DiscoverService {
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(30),
-      supabase.from("discoveries").select("headline").eq("user_id", userId),
+      supabase
+        .from("discoveries")
+        .select("headline")
+        .eq("user_id", userId)
+        .gte("created_at", new Date(Date.now() - SEEN_DAYS * 86_400_000).toISOString()),
     ]);
 
     if (profile.data?.frozen === true) return null;
@@ -277,7 +486,7 @@ export class DiscoverService {
     }
     return emitted.filter(
       (d: any): d is DiscoveryCandidate =>
-        d && typeof d.headline === "string" && Array.isArray(d.trail),
+        d && typeof d.headline === "string" && typeof d.detail === "string" && Array.isArray(d.trail),
     );
   }
 }
@@ -334,7 +543,7 @@ ${observations || "none yet"}
 GROUNDED TRAITS
 ${traits || "none"}
 
-THE LAST SET OF DISCOVERIES (find new ones)
+DISCOVERIES FROM THE LAST ${SEEN_DAYS} DAYS (never repeat a headline)
 ${lines(context.previousHeadlines) || "none, this is the first set"}
 ${
   chosen.length
@@ -346,31 +555,30 @@ Return the discoveries through emit_discoveries.`;
 
 const TASK_INSTRUCTIONS = `you are the discover engine for PHENYX.
 
-your task: read the person’s constellation, their dated observations and their connected platforms, then find discoveries. a discovery is one connection across their platforms that is worth noticing now. where the constellation tells the whole story, a discovery points at a single thread.
+your task: suggest discoveries for the person, things to explore that could open a new part of them. read their constellation, their dated observations and their connected platforms. start from what they already love and reach past what it is usually called, so someone who saves lamp-lit rooms meets a listening café rather than another film fact.
 
-each discovery has exactly one type:
-- resurfaced: something from years ago reappearing in recent work
-- connection: the same people or ideas showing up across two parts of life
-- pattern: the same behaviour repeating across contexts
-- rhythm: when and under what conditions the person does their best work
-- unfinished thread: an idea that keeps returning without being acted on
-- memory: a marker tied to a transition
-- taste: a preference that has held for years
-- possibility: interests that are starting to combine
-- health: how rest and energy shape depth
-- language: wording that changes before behaviour does
-- network: older connections becoming relevant to newer work
+each discovery has exactly one kind:
+- place: somewhere to go that holds what they love, e.g. jazz kissa, listening cafés with warm lamps and records
+- person: someone public whose path rhymes with theirs, e.g. brian eno writing music for a place
+- try: one small, doable activity, e.g. a sound walk through the neighborhood
+- detail: a fun fact that gives their taste a name, e.g. warm lamplight sits around 2700 kelvin
+- history: a goal or idea they set down on their own platforms, e.g. a pottery class saved three times in 2019 (no public story)
+- medium: a new form that joins two of their sides, e.g. a game told entirely through one house
+- field: a craft next to theirs, e.g. production design, rooms that tell you who lives there
+
+write up to ten discoveries using at least five kinds. no more than two may stay inside the person’s main craft; the rest reach into neighboring worlds. two discoveries never rest on the same dated source or point at the same thing.
+
+only name places, people and works that are well documented in public history, and only state facts about them you are certain of. when you are unsure of a fact, leave the card out. never invent a person, a work, a place or a number.
 
 each field has a strict limit, and a card that breaks one is thrown away:
-- headline: one idea in about 50 characters and never more than ${HEADLINE_MAX}, with no full stop at the end.
-- time_context: a short phrase for the time the discovery spans, such as "8 years apart" or "visible across 14 months", under ${TIME_CONTEXT_MAX} characters.
-- what_surfaced: one sentence naming the observed facts with their dates and platforms.
-- why_now: one sentence naming what in recent data brought it back.
-- pillar: the constellation point the discovery belongs to.
-- trail: the dated sources behind it, earliest first. each entry names a platform from the connected platforms, a date copied from the grounding as yyyy, yyyy-mm or yyyy-mm-dd, and a short detail of what is there. never invent a date or a platform, since a card with no dated source is thrown away.
-- confidence: from 0 to 1, how well the trail supports the discovery.
-
-write up to ten discoveries, one for each constellation point first and then further ones where a point holds more than one thread. two discoveries never rest on the same dated source, and two on the same point never cover the same stretch of time.
+- headline: one idea in one sentence that makes them curious, about 55 characters and never more than ${HEADLINE_MAX}, e.g. "japan’s jazz kissa are rooms built for listening.".
+- detail: one or two sentences on what the thing is, in plain words, e.g. "small cafés with one great sound system, warm lamps and walls of records, where people listen together."
+- reason: one sentence about their life now, grounded in their dated sources and never about PHENYX, e.g. "you keep saving rooms and replaying albums, and a kissa is both at once."
+- question: the question the person would ask polaris about it, in their own voice, under ${QUESTION_MAX} characters, e.g. "why might a listening room feel like such a natural place for me?"
+- story: the public side, for every kind except history: label (the name it goes by), title (a few words) and detail (one sentence). for history, leave all three empty.
+- pillar: the constellation point the reason grows from.
+- trail: the person’s dated sources behind the reason, earliest first. each entry names a platform from the connected platforms, a date copied from the grounding as yyyy, yyyy-mm or yyyy-mm-dd, a title of a few words for what the source is (e.g. "lamp-lit rooms board"), and one line on what is there. never invent a date or a platform, since a card with no dated source is thrown away.
+- confidence: from 0 to 1, how well the trail supports the reason.
 
 write to the person as "you" and reflect what the data suggests, since the person decides who they are and the copy never declares it.
 
@@ -398,21 +606,32 @@ const EMIT_DISCOVERIES_TOOL = {
           properties: {
             type: { type: "string", enum: [...DISCOVERY_TYPES] },
             pillar: { type: "string", enum: [...PILLAR_ORDER] },
-            time_context: {
-              type: "string",
-              description: `Short time phrase under ${TIME_CONTEXT_MAX} characters, e.g. "8 years apart".`,
-            },
             headline: {
               type: "string",
-              description: `One idea, about 50 characters, never more than ${HEADLINE_MAX}.`,
+              description: `One idea in one sentence, about 55 characters, never more than ${HEADLINE_MAX}.`,
             },
-            what_surfaced: {
+            detail: {
               type: "string",
-              description: "One sentence: the observed facts with dates and platforms.",
+              description: "One or two sentences: what the thing is, in plain words.",
             },
-            why_now: {
+            reason: {
               type: "string",
-              description: "One sentence: what in recent data brought it back.",
+              description: "One sentence: why it fits this person, from their dated sources.",
+            },
+            question: {
+              type: "string",
+              description: `What the person would ask polaris about it, in their voice, under ${QUESTION_MAX} characters.`,
+            },
+            story: {
+              type: "object",
+              additionalProperties: false,
+              description: "The public side. All three empty for history.",
+              properties: {
+                label: { type: "string", description: "The name it goes by, e.g. 'brian eno'." },
+                title: { type: "string", description: "A few words, e.g. 'music for a place'." },
+                detail: { type: "string", description: "One sentence on it." },
+              },
+              required: ["label", "title", "detail"],
             },
             trail: {
               type: "array",
@@ -425,9 +644,10 @@ const EMIT_DISCOVERIES_TOOL = {
                     type: "string",
                     description: "yyyy, yyyy-mm or yyyy-mm-dd, copied from the grounding.",
                   },
-                  detail: { type: "string", description: "A few words on what is there." },
+                  title: { type: "string", description: "A few words for what the source is." },
+                  detail: { type: "string", description: "One line on what is there." },
                 },
-                required: ["platform", "date", "detail"],
+                required: ["platform", "date", "title", "detail"],
               },
             },
             confidence: { type: "number" },
@@ -435,10 +655,11 @@ const EMIT_DISCOVERIES_TOOL = {
           required: [
             "type",
             "pillar",
-            "time_context",
             "headline",
-            "what_surfaced",
-            "why_now",
+            "detail",
+            "reason",
+            "question",
+            "story",
             "trail",
             "confidence",
           ],

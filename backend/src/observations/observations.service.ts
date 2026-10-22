@@ -764,6 +764,7 @@ strict prohibitions, never break these:
           why_it_matters: this.momentText(o.why_it_matters),
           what_connects: this.momentText(o.what_connects),
           occurred_at: typeof o.occurred_at === "string" ? o.occurred_at : null,
+          area: typeof o.area === "string" ? o.area : "",
         };
       })
       .filter((c): c is ObservationCandidate => c !== null);
@@ -863,6 +864,11 @@ strict prohibitions, never break these:
                   description:
                     "ISO-8601 date (YYYY-MM-DD) the moment happened, from its earliest supporting record; an empty string when unknown.",
                 },
+                area: {
+                  type: "string",
+                  description:
+                    "One or two lowercase words for the part of life this moment belongs to, e.g. 'home', 'friends', 'places', 'film'. Moments on the same pillar that share a part of life share the word.",
+                },
               },
               required: [
                 "pillar",
@@ -880,6 +886,7 @@ strict prohibitions, never break these:
                 "why_it_matters",
                 "what_connects",
                 "occurred_at",
+                "area",
               ],
             },
           },
@@ -901,7 +908,7 @@ new-signal diffing is the core rule: only surface genuinely novel patterns. you 
 
 for each observation choose a stable signal_key that identifies the underlying pattern (not the prose), so the same pattern always produces the same key. prefer cross-platform reads (source_platforms with 2+ platforms), since they are the strongest signals.
 
-each observation is also a moment on the person’s constellation, so give it a title (one short line of about eight words, no full stop), what_happened (one sentence on the observed fact, naming the platform), why_it_matters (one sentence on what it suggests), what_connects (one sentence on how it leads to a later moment, or empty when nothing does yet) and occurred_at (the date it happened, from its earliest supporting record).
+each observation is also a moment on the person’s constellation, so give it a title (one short line of about eight words, no full stop), what_happened (one sentence on the observed fact, naming the platform), why_it_matters (one sentence on what it suggests), what_connects (one sentence on how it leads to a later moment, or empty when nothing does yet), occurred_at (the date it happened, from its earliest supporting record) and area (one or two lowercase words for the part of life it belongs to, such as home, friends or places; moments on one pillar that share a part of life share the word, so the person can filter a point by it).
 
 also return the concrete supporting_points, exact source_record_keys copied from the grounding, and the inclusive ISO-8601 window_start/window_end. a bare platform name is not a source record key. do not emit two angles on the same pillar that share a source record or overlap the same time window; keep the one with more supporting points.
 

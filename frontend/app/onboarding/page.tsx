@@ -1383,10 +1383,12 @@ type RevealBlock = {
   text?: string;
   // "rail": chapter name + its one-line description.
   items?: ReadonlyArray<{ title: string; body: string }>;
-  // "example": the sample card's title, body and quiet source line.
+  // "example": the sample card's title, body and quiet source line, and
+  // the card's own actions when it has them (PHE-129: discover's save · ask polaris).
   q?: string;
   a?: string;
   src?: string;
+  acts?: readonly string[];
 };
 
 const MANIFESTO_BLOCKS: RevealBlock[] = [
@@ -1454,6 +1456,7 @@ const DISCOVER_BLOCKS: RevealBlock[] = [
     q: "acoustic ecology",
     a: "the study of how sound shapes the places we live. it sits right between the music you keep saving and the spaces you keep pinning.",
     src: "spotify, pinterest · this week",
+    acts: ["save", "ask polaris"],
   },
   { kind: "cta", text: "continue" },
   { kind: "back", text: "back" },
@@ -1576,6 +1579,14 @@ function WalkthroughScreen({
                 >
                   {block.src}
                 </p>
+                {block.acts && (
+                  <p
+                    aria-hidden="true"
+                    style={{ fontSize: "12px", color: "rgba(255,253,253,0.6)", margin: "12px 0 0" }}
+                  >
+                    {block.acts.join(" · ")}
+                  </p>
+                )}
               </div>
             );
 

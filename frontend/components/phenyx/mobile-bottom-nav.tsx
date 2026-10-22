@@ -8,8 +8,8 @@ import { NavIcon } from "@/components/phenyx/nav-icons";
 // ============================================================================
 // Mobile bottom nav (PHE-91 / v244, PHE-96)
 // ----------------------------------------------------------------------------
-// At or below 760px this fixed bar is the only navigation: constellation,
-// discover, polaris, insights, in DASHBOARD_TABS order (the sidebar's order).
+// At or below 640px this fixed bar is the only navigation: constellation,
+// polaris, discover, insights, in DASHBOARD_TABS order (the sidebar's order).
 // There is no drawer; settings sits in MobileTopBar. The active item mirrors
 // the route segment, the same way the sidebar does, and carries
 // aria-current="page" + data-active. Rendered once from the dashboard layout.
@@ -18,7 +18,7 @@ import { NavIcon } from "@/components/phenyx/nav-icons";
 // (.flex, .hidden, .fixed, .block, ...) and loads after globals.css, so a bare
 // utility beats our responsive variant for the same property. Anything that
 // changes between phone and desktop sets BOTH sides with a media variant
-// ([@media(max-width:760px)]: and [@media(min-width:761px)]:) and never pairs
+// ([@media(max-width:640px)]: and [@media(min-width:641px)]:) and never pairs
 // a bare utility with one.
 // ============================================================================
 
@@ -34,7 +34,7 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label="sections"
-      className="fixed inset-x-0 bottom-0 z-[120] items-stretch justify-around border-t border-ph-white/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] backdrop-blur-[14px] [@media(max-width:760px)]:flex [@media(min-width:761px)]:hidden"
+      className="fixed inset-x-0 bottom-0 z-[120] items-stretch justify-around border-t border-ph-white/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] backdrop-blur-[14px] [@media(max-width:640px)]:flex [@media(min-width:641px)]:hidden"
     >
       {DASHBOARD_TABS.map((tab) => {
         const isActive = active === tab.id;

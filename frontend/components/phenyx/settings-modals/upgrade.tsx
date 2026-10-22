@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 
 import { apiFetch } from '@/lib/api-client'
+import { V67_PRICING } from '@/lib/billing'
 import { supabaseBrowser as supabase } from '@/lib/supabase-browser'
 import {
   ModalHeading,
@@ -12,13 +13,13 @@ import {
   StatusLine,
 } from './modal-host'
 
-/** Verbatim from the v244 prototype (`MODAL_CONTENT.pro`, PHE-92). */
+/** What full adds (company overview, section 17; PHE-129). */
 const FEATURES = [
-  'where every observation came from, traced back to the day it happened',
-  'what sits under it, set against what you say about yourself',
-  'your seven points read together rather than one at a time',
-  'polaris, to ask about any of it in your own words',
-  'a weekly look at what shifted, and a yearly look back',
+  'why each moment matters and what it connects to',
+  `${V67_PRICING.weeklyDiscoveries.full} new discoveries a week`,
+  `${V67_PRICING.polarisMonthlyPoints.full} polaris points a month`,
+  'questions to return to that polaris keeps for you',
+  'early access to new features',
 ]
 
 /**
@@ -92,7 +93,7 @@ export function UpgradeModal() {
           {loading ? 'loading…' : 'continue with full, $12.99/month'}
         </PrimaryButton>
         <p className="text-center text-[11.5px] text-ph-white/55">
-          or $99/year. cancel any time.
+          or ${V67_PRICING.yearly.toFixed(2)}/year, {V67_PRICING.annualDiscountPercent}% off. cancel any time.
         </p>
         {error && <StatusLine message={error} tone="error" />}
       </div>

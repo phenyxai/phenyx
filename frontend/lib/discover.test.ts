@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { loopOffset, trailDate } from "./discover.ts";
+import { kindLabel, loopOffset, trailDate, trailYears, discoveriesLabel, refreshLabel, trailLine } from "./discover.ts";
 
 test("loopOffset puts the neighbours either side and wraps both ways", () => {
   assert.deepEqual(
@@ -17,4 +17,38 @@ test("trailDate reads year, month and day precision", () => {
   assert.equal(trailDate("2016"), "2016");
   assert.equal(trailDate("2016-03"), "mar 2016");
   assert.equal(trailDate("2016-03-05"), "5 mar 2016");
+});
+
+test("kindLabel reads each kind the way its card names it", () => {
+  assert.equal(kindLabel("try"), "something to try");
+  assert.equal(kindLabel("history"), "from your history");
+  assert.equal(kindLabel("unknown"), "unknown");
+});
+
+test("trailYears spans the trail, shortening a shared century", () => {
+  const at = (...dates: string[]) => dates.map((date) => ({ platform: "spotify", date, detail: "" }));
+  assert.equal(trailYears(at("2024-09", "2026")), "2024–26");
+  assert.equal(trailYears(at("1998", "2021-04")), "1998–2021");
+  assert.equal(trailYears(at("2019", "2019-05")), "2019");
+  assert.equal(trailYears([]), "");
+});
+
+test("a field reads as one", () => {
+  assert.equal(kindLabel("field"), "a field");
+});
+
+test("discoveriesLabel counts one or many", () => {
+  assert.equal(discoveriesLabel(1), "1 discovery");
+  assert.equal(discoveriesLabel(3), "3 discoveries");
+});
+
+test("refreshLabel reads the next monday 9am in the person’s time", () => {
+  assert.equal(refreshLabel("2026-10-26T13:00:00.000Z", "America/New_York"), "mon oct 26 at 9am");
+  assert.equal(refreshLabel("2026-10-26T13:30:00.000Z", "America/New_York"), "mon oct 26 at 9:30am");
+  assert.equal(refreshLabel("garbage"), "monday at 9am");
+});
+
+test("trailLine reads date, platform and title", () => {
+  assert.equal(trailLine({ platform: "pinterest", date: "2016-03", title: "lamp-lit rooms board", detail: "x" }), "mar 2016 · pinterest · lamp-lit rooms board");
+  assert.equal(trailLine({ platform: "spotify", date: "2024", detail: "x" }), "2024 · spotify");
 });

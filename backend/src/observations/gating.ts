@@ -61,6 +61,8 @@ export interface ObservationCandidate {
   why_it_matters?: string;
   what_connects?: string;
   occurred_at?: string | null;
+  /** PHE-129: one or two words for the part of life the moment sits in; the point's filters. */
+  area?: string;
   /** 0..1, used only for deterministic ordering; not persisted (no column). */
   confidence: number;
 }
@@ -203,12 +205,19 @@ export interface ObservationInsert {
   why_it_matters?: string | null;
   what_connects?: string | null;
   occurred_at?: string | null;
+  area?: string | null;
 }
 
 /** "2013-05-02" or "2013-05-02T…" → "2013-05-02"; anything else → null. */
 export function momentDate(value: string | null | undefined): string | null {
   const m = value?.trim().match(/^(\d{4}-\d{2}-\d{2})/);
   return m && !Number.isNaN(Date.parse(m[1])) ? m[1] : null;
+}
+
+/** " Home " → "home". A topic is a word or two, so anything longer is dropped. */
+export function momentArea(value: string | null | undefined): string | null {
+  const area = value?.trim().toLowerCase().replace(/\s+/g, " ");
+  return area && area.length <= 24 && area.split(" ").length <= 2 ? area : null;
 }
 
 /**
@@ -249,6 +258,7 @@ export function buildInsertRows(
       why_it_matters: c.why_it_matters?.trim() || null,
       what_connects: c.what_connects?.trim() || null,
       occurred_at: momentDate(c.occurred_at),
+      area: momentArea(c.area),
     });
   }
   return rows;

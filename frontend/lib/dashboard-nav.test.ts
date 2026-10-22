@@ -21,14 +21,14 @@ import {
 
 const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-test("tabs run constellation, discover, polaris, insights", () => {
+test("tabs run constellation, polaris, discover, insights", () => {
   assert.deepEqual(
     DASHBOARD_TABS.map((t) => t.id),
-    ["constellation", "discover", "polaris", "insights"],
+    ["constellation", "polaris", "discover", "insights"],
   );
   assert.deepEqual(
     DASHBOARD_TABS.map((t) => t.label),
-    ["constellation", "discover", "polaris", "insights"],
+    ["constellation", "polaris", "discover", "insights"],
   );
   for (const tab of DASHBOARD_TABS) {
     assert.equal(tab.href, `/dashboard/${tab.id}`);
@@ -103,13 +103,14 @@ test("tabTransition: a clock running backwards never yields negative seconds", (
   assert.deepEqual(t.duration, { tab: "insights", seconds: 0 });
 });
 
-test("legacy routes redirect: daily to constellation, you and profile to insights", () => {
+test("legacy routes redirect: daily to constellation, you and profile to insights, join to sign-in", () => {
   const map = Object.fromEntries(LEGACY_REDIRECTS.map((r) => [r.source, r.destination]));
   assert.deepEqual(map, {
     "/dashboard/daily": "/dashboard/constellation",
     "/dashboard/you": "/dashboard/insights",
     "/dashboard/profile": "/dashboard/insights",
     "/daily": "/dashboard/constellation",
+    "/join": "/signin",
   });
 });
 

@@ -14,7 +14,6 @@
 import { apiFetch } from "@/lib/api-client";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { STELLAR_DEFAULT } from "@/lib/stellar";
-import type { Evidence } from "@/components/phenyx/evidence-trace";
 import { ALL_PILLARS, NODE_LAYOUT, type Pillar, type Vec3 } from "./constellation-shape";
 
 // ---------------------------------------------------------------------------
@@ -26,13 +25,14 @@ import { ALL_PILLARS, NODE_LAYOUT, type Pillar, type Vec3 } from "./constellatio
 export { ALL_PILLARS, EDGES, NODE_LAYOUT } from "./constellation-shape";
 export type { Pillar, Vec3 } from "./constellation-shape";
 
-// Pure text helpers (the pillar label, the age line, the synthesis line, the
+// Pure text helpers (the pillar label, the synthesis line, the
 // overview story rows) live in `./constellation-text` so they run under plain
 // node for unit tests; they are re-exported here so the app has one import path.
 export {
-  constellationAge,
+  eraLine,
   firstSentence,
   momentTitle,
+  momentTopic,
   momentYear,
   newObservationCount,
   pillarLabel,
@@ -42,12 +42,33 @@ export {
   pointMoments,
   storyLine,
   synthesisLine,
+  threadAreas,
 } from "./constellation-text";
-export type { ConstellationAge, SynthesisLine } from "./constellation-text";
+export type { SynthesisLine } from "./constellation-text";
 
 // ---------------------------------------------------------------------------
 // Normalized shapes consumed by the canvas + panel
 // ---------------------------------------------------------------------------
+
+/** One dated source behind a moment: when, which platform, what it shows. */
+export interface EvidenceEntry {
+  t: string;
+  s: string;
+  w: string;
+  l: string;
+}
+
+/** The evidence chain behind an observation; free gets it without `entries`. */
+export interface Evidence {
+  sig: string;
+  recs: number;
+  sources?: string[];
+  span?: string;
+  certainty?: string;
+  chart?: unknown;
+  entries?: EvidenceEntry[];
+  closer?: string;
+}
 
 /** The person's reaction to a moment: "this feels true" is `new`, "not quite" is `reading`. */
 export interface MomentFeedback {
@@ -73,6 +94,10 @@ export interface ClusterObservation {
   what_connects?: string | null;
   occurred_at?: string | null;
   platform?: string | null;
+  /** PHE-129: why it matters and what connects are held back on free. */
+  reading_locked?: boolean;
+  /** PHE-129: the part of life the moment sits in (home, friends…); null on older rows. */
+  area?: string | null;
   feedback?: MomentFeedback | null;
 }
 
@@ -259,6 +284,8 @@ function normalizeCluster(raw: any): Cluster | null {
         what_connects: o.what_connects ?? null,
         occurred_at: o.occurred_at ?? null,
         platform: o.platform ?? null,
+        area: typeof o.area === "string" && o.area.trim() ? o.area.trim() : null,
+        reading_locked: o.reading_locked === true,
         feedback: o.feedback ?? null,
       }))
     : [];

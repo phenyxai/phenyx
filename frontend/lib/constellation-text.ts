@@ -17,52 +17,7 @@ export function pillarLabel(pillar: Pillar): string {
 
 // Exactly four digits, so a fractional-second run in an ISO timestamp is never
 // read as a year.
-const FIRST_YEAR = /(?<!\d)\d{4}(?!\d)/;
 const EVERY_YEAR = /(?<!\d)\d{4}(?!\d)/g;
-
-function firstYear(text: string | null | undefined): number | null {
-  if (!text) return null;
-  const match = FIRST_YEAR.exec(text);
-  return match ? Number(match[0]) : null;
-}
-
-// ---------------------------------------------------------------------------
-// Age line
-// ---------------------------------------------------------------------------
-
-export interface ConstellationAge {
-  /** The calendar year the constellation starts in. */
-  from: number;
-  /** "12 years, 9 months": months omitted when zero, singular at one. */
-  label: string;
-}
-
-/**
- * How much of a life the constellation covers. The start year is the first
- * four-digit year in `timeline.span`, else the year of `tenure.since`; months
- * are counted from january of that year to `now`. Null when neither source
- * carries a year, so the caller renders nothing.
- */
-export function constellationAge(
-  data: ConstellationData,
-  now: Date = new Date(),
-): ConstellationAge | null {
-  let from: number | null = null;
-  for (const entry of data.timeline.span) {
-    from = firstYear(entry);
-    if (from != null) break;
-  }
-  if (from == null) from = firstYear(data.tenure.since);
-  if (from == null) return null;
-
-  const months = Math.max(1, (now.getFullYear() - from) * 12 + now.getMonth() + 1);
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  const parts: string[] = [];
-  if (years) parts.push(`${years} ${years === 1 ? "year" : "years"}`);
-  if (rest) parts.push(`${rest} ${rest === 1 ? "month" : "months"}`);
-  return { from, label: parts.join(", ") };
-}
 
 // ---------------------------------------------------------------------------
 // Synthesis line
@@ -191,12 +146,49 @@ export function pointMetaLine(detail: PillarDetail): string {
     .join(" · ");
 }
 
+/**
+ * PHE-129: an opened point's era in the person's own terms, the season of life
+ * and its place, "childhood · los angeles". Never years or an age.
+ */
+export function eraLine(detail: PillarDetail): string {
+  return [POINT_ERA[detail.pillar], detail.point?.place]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+
 /** Every moment under a point, oldest first; undated ones follow, newest surfaced first. */
 export function pointMoments(detail: PillarDetail): ClusterObservation[] {
   const all = detail.clusters.flatMap((cluster) => cluster.observations);
   const dated = all.filter((m) => m.occurred_at).sort((a, b) => a.occurred_at!.localeCompare(b.occurred_at!));
   const undated = all.filter((m) => !m.occurred_at).sort((a, b) => b.surfaced_at.localeCompare(a.surfaced_at));
   return [...dated, ...undated];
+}
+
+/** What an opened point filters a moment by: its part of life, else its platform (older rows). */
+export function momentTopic(moment: ClusterObservation): string {
+  return moment.area?.trim() || moment.platform?.trim() || "";
+}
+
+/**
+ * The threads the person follows: each followed moment's part of life, with
+ * the earliest point (story order) it was followed on. A later moment that
+ * shares the part of life reads "from your thread". Platforms never make a
+ * thread; only a real area does.
+ */
+export function threadAreas(
+  data: ConstellationData,
+  order: readonly Pillar[],
+  following: (id: string) => boolean,
+): Map<string, number> {
+  const threads = new Map<string, number>();
+  order.forEach((pillar, index) => {
+    for (const moment of pointMoments(data.pillars[pillar])) {
+      const area = moment.area?.trim();
+      if (area && following(moment.id) && !threads.has(area)) threads.set(area, index);
+    }
+  });
+  return threads;
 }
 
 /** A moment's one line: its own title, else the first sentence of its body. */

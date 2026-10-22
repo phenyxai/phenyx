@@ -22,7 +22,7 @@ import { closeAccountClientError } from './validation'
  */
 export function CloseAccountModal() {
   const router = useRouter()
-  const { openModal } = useSettingsModals()
+  const { openModal, closeModal } = useSettingsModals()
   const [code, setCode] = React.useState('')
   const [phrase, setPhrase] = React.useState('')
   const [saving, setSaving] = React.useState(false)
@@ -123,7 +123,7 @@ export function CloseAccountModal() {
       </button>
       <button
         type="button"
-        onClick={() => openModal('account')}
+        onClick={closeModal}
         className="mt-2 w-full rounded-md border border-ph-white/[0.12] bg-transparent px-4 py-3 text-[11px] text-ph-white/60"
       >
         keep my account

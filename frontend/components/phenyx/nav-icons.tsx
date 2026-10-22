@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { DashboardTabId } from "@/lib/dashboard-nav";
 
-/** Stroke icon paths per tab, from the ph550 demo's nav (insights takes the demo's you icon). */
+/** Stroke icon paths per tab, from the PHE-129 demo's nav: polaris is a small circle, discover a telescope. */
 const PATHS: Record<DashboardTabId, ReactNode> = {
   constellation: (
     <>
@@ -15,12 +15,12 @@ const PATHS: Record<DashboardTabId, ReactNode> = {
   ),
   discover: (
     <>
-      <path d="M7 17l3.1-7.7L18 6l-3.1 7.7L7 17z" />
-      <circle cx="12.5" cy="11.5" r="1.4" />
-      <path d="M4 20h16" />
+      <path d="M5 7.5l8.8 4.4-2.2 4.3L2.8 11.8z" />
+      <path d="M13.8 11.9l3.2-6.3 3.1 1.6-3.2 6.3" />
+      <path d="M10.8 15.7l-2.2 4.1M12.7 16.4l2.2 3.4" />
     </>
   ),
-  polaris: <path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z" />,
+  polaris: <circle cx="12" cy="12" r="5.5" />,
   insights: (
     <>
       <circle cx="12" cy="12" r="7.5" />
@@ -64,6 +64,15 @@ export function GearIcon({ size = 16 }: { size?: number }) {
     >
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
+/** One arrow shape everywhere: the step arrows, "see the sources" and list rows. */
+export function Arrow({ direction = "right", size = 14 }: { direction?: "left" | "right"; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={direction === "right" ? "M5 12h14M13 6l6 6-6 6" : "M19 12H5M11 6l-6 6 6 6"} />
     </svg>
   );
 }

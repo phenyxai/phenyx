@@ -1,15 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  constellationAge,
+  eraLine,
   firstSentence,
   momentTitle,
+  momentTopic,
   momentYear,
   newObservationCount,
   pointMetaLine,
   pointMoments,
   storyLine,
   synthesisLine,
+  threadAreas,
 } from "./constellation-text.ts";
 import type {
   Cluster,
@@ -26,6 +28,8 @@ function observation(over: Partial<ClusterObservation> = {}): ClusterObservation
     span: over.span ?? null,
     surfaced_at: over.surfaced_at ?? "",
     is_new: over.is_new ?? false,
+    area: over.area,
+    platform: over.platform,
   };
 }
 
@@ -54,52 +58,6 @@ function detail(pillar: Pillar, clusters: Cluster[]): PillarDetail {
     clusters,
   };
 }
-
-function data(span: string[], since: string | null): ConstellationData {
-  return {
-    timeline: { span, note: null, eras: [], breaks: [], return_line: null, card: null, empty: true },
-    tenure: { years: 0, since },
-  } as unknown as ConstellationData;
-}
-
-const sept2026 = new Date(2026, 8, 7);
-
-test("constellationAge reads the first year in the timeline span and counts from january", () => {
-  assert.deepEqual(constellationAge(data(["2014", "2026"], null), sept2026), {
-    from: 2014,
-    label: "12 years, 9 months",
-  });
-});
-
-test("constellationAge skips span entries without a year", () => {
-  assert.deepEqual(constellationAge(data(["now", "since 2020"], null), sept2026), {
-    from: 2020,
-    label: "6 years, 9 months",
-  });
-});
-
-test("constellationAge falls back to the tenure year and uses the singular", () => {
-  assert.deepEqual(constellationAge(data([], "2025-09-01T00:00:00Z"), sept2026), {
-    from: 2025,
-    label: "1 year, 9 months",
-  });
-  assert.deepEqual(constellationAge(data([], "2026-05-20T00:00:00Z"), new Date(2026, 0, 15)), {
-    from: 2026,
-    label: "1 month",
-  });
-});
-
-test("constellationAge omits the months part when it is zero", () => {
-  assert.deepEqual(constellationAge(data(["2025"], null), new Date(2025, 11, 31)), {
-    from: 2025,
-    label: "1 year",
-  });
-});
-
-test("constellationAge is null when neither source carries a year", () => {
-  assert.equal(constellationAge(data([], null), sept2026), null);
-  assert.equal(constellationAge(data(["soon"], "not a date"), sept2026), null);
-});
 
 test("synthesisLine needs two named areas; core signals do not count as named", () => {
   const one = detail("origin", [
@@ -240,4 +198,32 @@ test("momentTitle falls back to the body's first sentence, momentYear to empty",
   assert.equal(momentTitle({ title: null, body: "you start a board. it grows." } as any), "you start a board");
   assert.equal(momentYear({ occurred_at: "2013-05-02" } as any), "2013");
   assert.equal(momentYear({ occurred_at: null } as any), "");
+});
+
+test("momentTopic filters by the part of life, falling back to the platform", () => {
+  assert.equal(momentTopic(observation({ area: " home ", platform: "pinterest" })), "home");
+  assert.equal(momentTopic(observation({ area: null, platform: "spotify" })), "spotify");
+  assert.equal(momentTopic(observation()), "");
+});
+
+test("threadAreas keeps the earliest point each followed part of life was followed on", () => {
+  const point = (pillar: Pillar, observations: ClusterObservation[]) =>
+    ({ pillar, clusters: [cluster(pillar, observations)] }) as unknown as PillarDetail;
+  const data = {
+    pillars: {
+      origin: point("origin", [observation({ id: "a", area: "home" })]),
+      emergence: point("emergence", [observation({ id: "b", area: "home" }), observation({ id: "c", area: "friends" })]),
+      convergence: point("convergence", [observation({ id: "d", platform: "spotify" })]),
+    },
+  } as unknown as ConstellationData;
+  const followed = new Set(["b", "c", "d"]);
+  const threads = threadAreas(data, ["origin", "emergence", "convergence"], (id) => followed.has(id));
+  assert.deepEqual([...threads], [["home", 1], ["friends", 1]]);
+});
+
+test("eraLine pairs the season of life with its place, never years", () => {
+  const detail = (pillar: Pillar, place: string) =>
+    ({ pillar, point: { story: "", years: "2006 – 2012", place }, clusters: [] }) as unknown as PillarDetail;
+  assert.equal(eraLine(detail("origin", "los angeles")), "childhood · los angeles");
+  assert.equal(eraLine(detail("recognition", "")), "today");
 });

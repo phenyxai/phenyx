@@ -2,7 +2,8 @@
 
 // PHE-74 / PHE-93 — Constellation tab.
 //
-// Header (eyebrow + age line), then the sky and the reading panel. PHE-100:
+// The sky and the reading panel, with no page header (PHE-129: the panel's
+// "explore what shaped you." is the tab's one line). PHE-100:
 // below 1024px the sky takes the top ~65% of the viewport (never full height)
 // with the panel under it; from 1024px the Big Dipper sits in a sticky
 // column beside a 440px panel, so a point and its reading are seen together.
@@ -15,13 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ConstellationCanvas } from "@/components/phenyx/constellation-canvas";
 import { ConstellationPanel } from "@/components/phenyx/constellation-panel";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
-import { NewSignalBanner } from "@/components/phenyx/new-signal-banner";
-import {
-  constellationAge,
-  fetchConstellation,
-  type ConstellationData,
-  type Pillar,
-} from "@/lib/constellation";
+import { ALL_PILLARS, fetchConstellation, pointMoments, type ConstellationData, type Pillar } from "@/lib/constellation";
 
 /** Fade-out time for an in-place panel swap, before the new view floats in. */
 const SWAP_OUT_MS = 180;
@@ -40,6 +35,26 @@ export default function ConstellationTabPage() {
       active = false;
     };
   }, []);
+
+  // PHE-129: insights' milestones link here with ?moment=<id> (or ?point=<pillar>).
+  // Read once on the client and drop it from the address, so a reload starts at
+  // the overview; the moment opens its point with that moment expanded.
+  const [linked, setLinked] = useState<{ point: string | null; moment: string | null } | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("point") && !params.get("moment")) return;
+    setLinked({ point: params.get("point"), moment: params.get("moment") });
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+  useEffect(() => {
+    if (!linked || !data) return;
+    const owner = linked.moment
+      ? ALL_PILLARS.find((p) => pointMoments(data.pillars[p]).some((m) => m.id === linked.moment))
+      : (ALL_PILLARS as readonly string[]).includes(linked.point ?? "")
+        ? (linked.point as Pillar)
+        : undefined;
+    if (owner) setSelectedPillar(owner);
+  }, [linked, data]);
 
   const openPillar = useCallback((pillar: Pillar) => setSelectedPillar(pillar), []);
   const closePoint = useCallback(() => setSelectedPillar(null), []);
@@ -84,8 +99,6 @@ export default function ConstellationTabPage() {
     return () => window.clearTimeout(timer);
   }, [selectedPillar, shown]);
 
-  const age = data ? constellationAge(data) : null;
-
   return (
     <div className="flex min-h-screen flex-col">
       <IntroBanner
@@ -94,31 +107,13 @@ export default function ConstellationTabPage() {
         className="mx-6 mt-6 shrink-0 lg:mx-10"
       />
 
-      <header className="px-6 pb-5 pt-8 lg:px-10">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[rgba(var(--ph-accent-rgb),0.9)]">
-          your constellation
-        </p>
-        {age && (
-          <p className="mt-2 text-[13px] font-light lowercase text-ph-white/45">
-            {age.label} of your life, from {age.from} to now.
-          </p>
-        )}
-      </header>
-
-      {/* PHE-102: only while an unseen signal exists; collapsed until opened. */}
-      {data?.signal && (
-        <div className="px-6 pb-5 lg:px-10">
-          <NewSignalBanner data={data} />
-        </div>
-      )}
-
       {/* The 1024px split lives in globals.css (.constellation-split), not in
           lg: classes, so the onairos SDK's stylesheet cannot override it. */}
-      <div className="constellation-split flex flex-col items-center gap-[22px] px-6 pb-10 lg:px-10">
+      <div className="constellation-split flex flex-col items-center gap-[22px] px-6 pt-8 pb-10 lg:px-10">
         {/* Phones (with the dashboard's top bar and 72px bottom nav): the map
             leaves room under it for the opened point's name and the start of
             its story, about 65% of the space between the two bars. */}
-        <div className="constellation-sky relative h-[clamp(320px,65svh,760px)] w-full [@media(max-width:760px)]:h-[clamp(300px,calc(100svh-370px),620px)]">
+        <div className="constellation-sky relative h-[clamp(320px,65svh,760px)] w-full [@media(max-width:640px)]:h-[clamp(300px,calc(100svh-370px),620px)]">
           {data && (
             <ConstellationCanvas
               data={data}
@@ -140,7 +135,7 @@ export default function ConstellationTabPage() {
               data={data}
               selectedPillar={shown}
               onSelectPillar={openPillar}
-              onBack={closePoint}
+              openMomentId={linked?.moment ?? null}
             />
           ) : (
             <p className="text-[13px] font-light lowercase text-ph-white/30">

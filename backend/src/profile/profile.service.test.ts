@@ -266,11 +266,13 @@ test("getOverview leaves a current insights reading alone", async () => {
   const { stripe } = makeStripe(async () => ({}));
   const { synthesis, queued } = makeSynthesis();
   const service = new ProfileService(
-    makeSupabase({ tier: "free", prompt_times: {} }, { version: 3, insights: { version: 3 } }),
+    makeSupabase({ tier: "free", prompt_times: {} }, { version: 3, insights: { version: 3, patterns: [], arc: "quest" } }),
     fakeConfirmCode,
     stripe,
     synthesis
   );
-  await service.getOverview("user-1");
+  const overview = await service.getOverview("user-1");
   assert.deepEqual(queued, []);
+  // The arc is stored for tone only and never served.
+  assert.deepEqual(overview.insights, { version: 3, patterns: [] });
 });

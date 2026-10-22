@@ -1,181 +1,99 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import {
   useSettingsModals,
   type SettingsModalId,
 } from "@/components/phenyx/settings-modals/modal-host";
-import { PanelHeader } from "@/components/phenyx/panel-header";
-
-const CONTACT_EMAIL = "contact@phenyxai.com";
+import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
 type SettingsRow = {
-  id: SettingsModalId;
   label: string;
   sub: string;
-};
+} & ({ modal: SettingsModalId } | { href: string });
 
 type SettingsGroup = {
   label: string;
   rows: SettingsRow[];
 };
 
-/** Rows under "account & plan" after the subscription row. */
-const ACCOUNT_ROWS: SettingsRow[] = [
-  {
-    id: "account",
-    label: "account",
-    sub: "edit your details, or close your account",
-  },
-];
-
+/** The Oct 20 demo's sections, with notifications kept under your data. */
 const GROUPS: SettingsGroup[] = [
   {
-    label: "access",
+    label: "account",
     rows: [
-      {
-        id: "my-connections",
-        label: "connected platforms",
-        sub: "add or disconnect platforms",
-      },
-      {
-        id: "notifications",
-        label: "notifications",
-        sub: "choose what PHENYX sends you",
-      },
+      { modal: "edit-profile", label: "profile & sign-in", sub: "your name and how you sign in" },
+      { modal: "subscription", label: "membership", sub: "plan and billing" },
+      { modal: "close-account", label: "deactivate or delete", sub: "manage account access and removal" },
     ],
   },
   {
-    label: "what’s yours",
+    label: "your data",
     rows: [
-      {
-        id: "data-management",
-        label: "your information",
-        sub: "export a copy, or delete everything",
-      },
+      { modal: "my-connections", label: "connections", sub: "review your connected platforms" },
+      { modal: "notifications", label: "notifications", sub: "choose what PHENYX sends you" },
+      { modal: "data-management", label: "export your data", sub: "download your PHENYX context" },
+    ],
+  },
+  {
+    label: "help & legal",
+    rows: [
+      { modal: "feedback", label: "contact us", sub: "get help or share feedback" },
+      { href: "/privacy-policy", label: "privacy policy", sub: "how your data is handled" },
+      { href: "/terms", label: "terms", sub: "terms for using PHENYX" },
     ],
   },
 ];
 
-/** Section labels are lowercase in source; the uppercase treatment is styling. */
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <h2 className="mb-5 text-[11px] font-semibold tracking-[0.15em] text-[rgba(var(--ph-accent-rgb),0.85)] uppercase">
-      {children}
-    </h2>
-  );
-}
-
-function GroupLabel({
-  children,
-  first = false,
-}: {
-  children: string;
-  first?: boolean;
-}) {
-  return (
-    <p
-      className={`mb-0.5 text-[10.5px] font-semibold tracking-[0.14em] text-[rgba(var(--ph-accent-rgb),0.7)] uppercase ${
-        first ? "" : "mt-[26px]"
-      }`}
-    >
-      {children}
-    </p>
-  );
-}
-
 /**
- * Settings panel (PHE-91 / PHE-95, v244). Not a tab: reached from the sidebar
- * foot (desktop) and the top bar gear (phones) at /dashboard/settings. Three groups of rows
- * that each open a modal by id, then "get in touch". The subscription row opens
- * the subscription modal, which owns the billing-portal and checkout calls. It
- * shows only an arrow: the tier already sits beside the logo (PHE-126).
- * Gifted is never shown; freeze/pause does not exist.
+ * Settings panel (PHE-91 / PHE-95, v244, PHE-129). Not a tab: reached from the
+ * sidebar foot (desktop) and the top bar gear (phones) at /dashboard/settings.
+ * Three sections of rows (account, your data, help & legal) whose names sit in
+ * the accent; a row opens a modal by id or a legal page. Membership opens the
+ * plans, which own the billing-portal and checkout calls. Log out sits once, at
+ * the very bottom, and returns to sign-in. Gifted is never shown; freeze/pause
+ * does not exist.
  */
 export default function SettingsPage() {
+  const router = useRouter();
   const { openModal } = useSettingsModals();
 
+  const logOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/signin");
+  };
+
   return (
-    <section className="flex flex-col px-10 pt-10 pb-10">
-      <div className="w-full max-w-[820px]">
-        <PanelHeader
-          eyebrow="settings"
-          title="your account and controls"
-          sub="the machinery behind PHENYX. what you connect, what it keeps, and how you sign in, all yours to change."
-        />
-
-        <div className="mb-[52px] flex flex-col">
-          <GroupLabel first>account &amp; plan</GroupLabel>
-          <SettingsRowButton
-            label="subscription"
-            sub="your plan, billing, and what’s included"
-            onClick={() => openModal("subscription")}
-          />
-          {ACCOUNT_ROWS.map((row) => (
-            <SettingsRowButton
-              key={row.id}
-              label={row.label}
-              sub={row.sub}
-              onClick={() => openModal(row.id)}
-            />
-          ))}
-
-          {GROUPS.map((group) => (
-            <div key={group.label} className="flex flex-col">
-              <GroupLabel>{group.label}</GroupLabel>
-              {group.rows.map((row) => (
-                <SettingsRowButton
-                  key={row.id}
-                  label={row.label}
-                  sub={row.sub}
-                  onClick={() => openModal(row.id)}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-
-        <div className="pb-10">
-          <SectionLabel>get in touch</SectionLabel>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <a
-              href={`mailto:${CONTACT_EMAIL}`}
-              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-ph-white/62 no-underline transition-colors"
-            >
-              {CONTACT_EMAIL}
-            </a>
-            <span className="text-[11.5px] text-ph-white/50">·</span>
-            <button
-              type="button"
-              onClick={() => openModal("feedback")}
-              className="inline-block border-0 bg-transparent py-1.5 text-[11px] tracking-[0.02em] text-ph-white/62 transition-colors"
-            >
-              share feedback
-            </button>
-            <span className="text-[11.5px] text-ph-white/50">·</span>
-            <a
-              href="/privacy-policy"
-              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-ph-white/62 no-underline transition-colors"
-            >
-              privacy policy
-            </a>
-            <span className="text-[11.5px] text-ph-white/50">·</span>
-            <a
-              href="/terms"
-              className="inline-block py-1.5 text-[11px] tracking-[0.02em] text-ph-white/62 no-underline transition-colors"
-            >
-              terms
-            </a>
+    <section className="flex flex-col pt-14 pb-10 [@media(max-width:640px)]:px-5 [@media(min-width:641px)]:px-10">
+      <div className="w-full max-w-[760px]">
+        {GROUPS.map((group, i) => (
+          <div key={group.label} className={i > 0 ? "mt-6 border-t border-ph-white/[0.08] pt-6" : ""}>
+            <h2 className="mb-1.5 text-[13.5px] text-[var(--ph-accent)]">{group.label}</h2>
+            {group.rows.map((row) => (
+              <SettingsRowButton
+                key={row.label}
+                label={row.label}
+                sub={row.sub}
+                onClick={() => ("modal" in row ? openModal(row.modal) : router.push(row.href))}
+              />
+            ))}
           </div>
-        </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={logOut}
+          className="mt-10 mb-6 text-[13.5px] text-ph-white/55 transition-colors duration-200 hover:text-[var(--ph-accent)]"
+        >
+          log out
+        </button>
       </div>
     </section>
   );
 }
 
-/**
- * One settings row: label + sub on the left, then the arrow sitting 24px past
- * the text rather than at the far edge of the column.
- */
+/** One settings row: label over its line, and a quiet chevron at the edge. */
 function SettingsRowButton({
   label,
   sub,
@@ -189,20 +107,28 @@ function SettingsRowButton({
     <button
       type="button"
       onClick={onClick}
-      className="ps-row group relative flex w-full cursor-pointer items-center border-0 border-b border-[rgba(255,253,253,0.045)] bg-transparent py-[15px] text-left font-[inherit] text-[14px] text-ph-white/85 transition-colors duration-200 after:pointer-events-none after:absolute after:right-0 after:-bottom-px after:left-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(var(--ph-accent-rgb),0.55)_18%,rgba(var(--ph-accent-rgb),0.55)_82%,transparent)] after:opacity-0 after:transition-opacity after:duration-[450ms] before:pointer-events-none before:absolute before:right-0 before:-bottom-[7px] before:left-0 before:h-[13px] before:bg-[radial-gradient(ellipse_at_center,rgba(var(--ph-accent-rgb),0.20),transparent_72%)] before:opacity-0 before:blur-[3px] before:transition-opacity before:duration-500 last:border-b-0 hover:after:opacity-100 hover:before:opacity-100 [@media(pointer:coarse)]:py-[22px]"
+      className="group flex w-full items-center gap-4 py-3 text-left [@media(pointer:coarse)]:py-4"
     >
-      <span className="ps-label flex min-w-0 flex-col gap-[3px] text-left">
-        <span>{label}</span>
-        <span className="ps-sub text-[11.5px] font-light tracking-normal text-ph-white/45">
-          {sub}
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-[14.5px] text-ph-white/90 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+          {label}
         </span>
+        <span className="text-[12px] font-light text-ph-white/60">{sub}</span>
       </span>
-      <span
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         aria-hidden="true"
-        className="ps-arrow ml-6 shrink-0 text-[11px] text-ph-white/50 transition-[color,transform] duration-[350ms] ease-[cubic-bezier(.22,.61,.36,1)] group-hover:translate-x-[3px] group-hover:text-[var(--ph-accent)]"
+        className="shrink-0 text-ph-white/55 transition-[color,transform] duration-200 group-hover:translate-x-[2px] group-hover:text-[var(--ph-accent)]"
       >
-        →
-      </span>
+        <path d="M9.5 6l6 6-6 6" />
+      </svg>
     </button>
   );
 }
