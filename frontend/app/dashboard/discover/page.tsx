@@ -141,10 +141,10 @@ export default function DiscoverTabPage() {
   };
 
   return (
-    <section className="flex min-h-screen flex-col px-6 pb-20 pt-6 lg:px-10">
-      <IntroBanner tab="discover" copy={INTRO_COPY.discover} className="mb-2 shrink-0" />
+    <section className="flex min-h-screen flex-col pb-20 [@media(max-width:640px)]:px-6 [@media(max-width:640px)]:pt-6 [@media(min-width:641px)]:pt-16">
+      <IntroBanner tab="discover" copy={INTRO_COPY.discover} className="shrink-0 [@media(max-width:640px)]:mb-2 [@media(min-width:641px)]:mb-6" />
 
-      <header className="float-in pt-8">
+      <header className="float-in [@media(max-width:640px)]:pt-8">
         <PanelHeader title="discover what’s next.">
           {allowance && (
             <HeaderChip

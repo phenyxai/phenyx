@@ -499,8 +499,9 @@ function HomeView({
   onUsage: () => void;
 }) {
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-10">
-      <div className="mx-auto w-full max-w-[780px]">
+    <div className="min-h-0 flex-1 overflow-y-auto [@media(max-width:640px)]:px-6 [@media(max-width:640px)]:pt-8 [@media(max-width:640px)]:pb-10 [@media(min-width:641px)]:pb-16">
+      {/* From 641px the question and its starting points sit in the middle of the screen, under the chips. */}
+      <div className="mx-auto flex min-h-full w-full max-w-[780px] flex-col">
         <div className="flex items-center justify-between gap-3">
           <HeaderChip onClick={onConversations} className="text-ph-white/62">
             <HistoryIcon />
@@ -512,52 +513,54 @@ function HomeView({
           </HeaderChip>
         </div>
 
-        <div className="mt-9 flex flex-col items-center gap-5 text-center">
-          <span
-            aria-hidden="true"
-            className="h-[18px] w-[18px] rounded-full shadow-[0_0_14px_2px_rgba(var(--ph-accent-rgb),0.32)]"
-            style={{
-              background:
-                "radial-gradient(circle at 50% 50%, #fffaf2 0%, var(--ph-accent) 38%, color-mix(in srgb, var(--ph-accent) 40%, transparent) 70%, transparent 100%)",
-            }}
-          />
-          <h1 className="text-[20px] font-normal leading-[1.35] text-ph-white/80">where would you like to begin?</h1>
-        </div>
-
-        <div className="mt-[30px]">
-          <Composer
-            value={input}
-            placeholder={HOME_PLACEHOLDER}
-            disabled={sending}
-            inputRef={inputRef}
-            onChange={onInputChange}
-            onSubmit={onSubmit}
-          />
-        </div>
-
-        {starters.length > 0 && (
-          <div className="mt-[30px]">
-            <p className="mb-2 text-[12.5px] font-semibold text-ph-white/84">starting points</p>
-            <ul className="flex flex-col">
-              {starters.map((s) => (
-                <li key={s.mode}>
-                  <button
-                    type="button"
-                    onClick={() => onStarter(s)}
-                    className="group flex min-h-[46px] w-full items-center gap-4 px-0.5 py-[7px] text-left"
-                  >
-                    <span className="min-w-0 flex-1 text-[14.5px] font-light leading-[1.5] text-ph-white/80 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
-                      {s.text}
-                    </span>
-                    <span className="text-ph-white/76 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
-                      <Arrow size={14} />
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+        <div className="pt-9 [@media(min-width:641px)]:my-auto">
+          <div className="flex flex-col items-center gap-5 text-center">
+            <span
+              aria-hidden="true"
+              className="h-[18px] w-[18px] rounded-full shadow-[0_0_14px_2px_rgba(var(--ph-accent-rgb),0.32)]"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 50%, #fffaf2 0%, var(--ph-accent) 38%, color-mix(in srgb, var(--ph-accent) 40%, transparent) 70%, transparent 100%)",
+              }}
+            />
+            <h1 className="text-[20px] font-normal leading-[1.35] text-ph-white/80">where would you like to begin?</h1>
           </div>
-        )}
+
+          <div className="mt-[30px]">
+            <Composer
+              value={input}
+              placeholder={HOME_PLACEHOLDER}
+              disabled={sending}
+              inputRef={inputRef}
+              onChange={onInputChange}
+              onSubmit={onSubmit}
+            />
+          </div>
+
+          {starters.length > 0 && (
+            <div className="mt-[30px]">
+              <p className="mb-2 text-[12.5px] font-semibold text-ph-white/84">starting points</p>
+              <ul className="flex flex-col">
+                {starters.map((s) => (
+                  <li key={s.mode}>
+                    <button
+                      type="button"
+                      onClick={() => onStarter(s)}
+                      className="group flex min-h-[46px] w-full items-center gap-4 px-0.5 py-[7px] text-left"
+                    >
+                      <span className="min-w-0 flex-1 text-[14.5px] font-light leading-[1.5] text-ph-white/80 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+                        {s.text}
+                      </span>
+                      <span className="text-ph-white/76 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+                        <Arrow size={14} />
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -693,9 +696,9 @@ function ChatView({
   }, []);
 
   return (
-    <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto px-6">
-      <div className="mx-auto flex min-h-full w-full max-w-[900px] flex-col pt-8">
-        <header ref={headRef} className="flex items-start gap-4 border-b border-ph-white/[0.08] pt-[3px] pb-5">
+    <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto [@media(max-width:640px)]:px-6">
+      <div className="mx-auto flex min-h-full w-full max-w-[900px] flex-col [@media(max-width:640px)]:pt-8">
+        <header ref={headRef} className="flex items-start gap-4 pt-[3px] pb-5">
           <div className="min-w-0 flex-1">
             {title && (
               <h2 className="text-[22px] font-medium leading-[1.38] text-ph-white/95 [text-wrap:pretty]">{title}</h2>
@@ -711,7 +714,7 @@ function ChatView({
           </button>
         </header>
 
-        <div className="flex flex-1 flex-col gap-3 pt-8 pb-6">
+        <div className="flex flex-1 flex-col gap-3 pt-2 pb-6">
           {shown.map((m, i) => (
             <MessageBubble
               key={m.id}

@@ -100,16 +100,17 @@ export default function ConstellationTabPage() {
   }, [selectedPillar, shown]);
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col [@media(min-width:641px)]:py-16">
       <IntroBanner
         tab="constellation"
         copy={INTRO_COPY.constellation}
-        className="mx-6 mt-4 shrink-0 lg:mx-10"
+        className="shrink-0 [@media(max-width:640px)]:mx-6 [@media(max-width:640px)]:mt-4 [@media(min-width:641px)]:mb-6"
       />
 
       {/* The 1024px split lives in globals.css (.constellation-split), not in
-          lg: classes, so the onairos SDK's stylesheet cannot override it. */}
-      <div className="constellation-split flex flex-col items-center gap-[22px] px-6 pt-4 pb-10 lg:px-10">
+          lg: classes, so the onairos SDK's stylesheet cannot override it. It
+          fills the screen's height so the sky and the names can center in it. */}
+      <div className="constellation-split flex flex-1 flex-col items-center gap-[22px] [@media(max-width:640px)]:px-6 [@media(max-width:640px)]:pt-4 [@media(max-width:640px)]:pb-10">
         {/* Phones (with the dashboard's top bar and 72px bottom nav): the map
             leaves room under it for the opened point's name and the start of
             its story, about 65% of the space between the two bars. */}
@@ -136,6 +137,7 @@ export default function ConstellationTabPage() {
               data={data}
               selectedPillar={shown}
               onSelectPillar={openPillar}
+              onClosePoint={closePoint}
               openMomentId={linked?.moment ?? null}
             />
           ) : (

@@ -47,7 +47,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             className="min-w-0 flex-1 outline-none [@media(max-width:640px)]:pb-[calc(72px+env(safe-area-inset-bottom,0px))]"
           >
             <MobileTopBar />
-            {children}
+            {/* One centered column on every tab from 641px (globals.css). */}
+            <div className="dash-frame">{children}</div>
           </main>
         </div>
       </ShellTierProvider>

@@ -216,13 +216,12 @@ export default function InsightsTabPage() {
 
   return (
     <>
-      <IntroBanner tab="insights" copy={INTRO_COPY.insights} className="mt-6 [@media(max-width:640px)]:mx-5 [@media(min-width:641px)]:mx-10" />
-
-      <section className="flex flex-col pt-8 pb-10 [@media(max-width:640px)]:px-5 [@media(min-width:641px)]:px-10">
-        <div className="w-full max-w-[1040px]">
+      <section className="flex flex-col pb-10 [@media(max-width:640px)]:px-5 [@media(max-width:640px)]:pt-6 [@media(min-width:641px)]:pt-16">
+        <IntroBanner tab="insights" copy={INTRO_COPY.insights} className="[@media(max-width:640px)]:mb-8 [@media(min-width:641px)]:mb-6" />
+        <div className="w-full">
           <header className="mb-7 flex flex-wrap items-start justify-between gap-x-10 gap-y-5">
             <div className="min-w-0">
-              {name && <h1 className="text-[17px] font-medium text-ph-white/92">{name}</h1>}
+              {name && <h1 className="text-[17px] font-medium lowercase text-ph-white/92">{name}</h1>}
               <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-ph-white/78">
                 <span
                   aria-hidden="true"

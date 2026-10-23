@@ -202,7 +202,9 @@ export function DashboardSidebar() {
     >
       <div className="mb-7 flex items-center gap-1 border-b border-ph-white/[0.055] pb-[22px] group-data-[collapsed=true]/side:justify-center rail:justify-center">
         <BrandLink />
-        <RailLabel>
+        {/* flex, so the badge gets its own line box and sits level with PHENYX
+            instead of on the baseline of a 16px line. */}
+        <RailLabel className="flex">
           <TierBadge />
         </RailLabel>
       </div>
