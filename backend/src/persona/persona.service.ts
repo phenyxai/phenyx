@@ -5,6 +5,8 @@ import { OnairosSnapshotService } from "./onairos-snapshot.service";
 import { VoiceStandardService } from "../voice-standard/voice-standard.service";
 import { PILLARS } from "../constellation/layout";
 import { normalizeDateSpan } from "../voice-standard/sanitize-prose";
+import { SynthesisService } from "../synthesis/synthesis.service";
+import { ObservationsService } from "../observations/observations.service";
 
 // Task-specific instructions only — voice/tone rules come from the shared Voice
 // Standard block (PHE-20), composed at call time via buildSystemBlocks().
@@ -83,7 +85,9 @@ export class PersonaService {
     private readonly config: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly onairosSnapshot: OnairosSnapshotService,
-    private readonly voiceStandard: VoiceStandardService
+    private readonly voiceStandard: VoiceStandardService,
+    private readonly synthesisService: SynthesisService,
+    private readonly observations: ObservationsService
   ) {}
 
   async generatePrompts(body: GeneratePromptsBody) {
@@ -195,6 +199,17 @@ export class PersonaService {
         // eslint-disable-next-line no-console
         console.error("Failed to upsert constellation_state:", upsertError);
         // Don't fail the request - synthesis was successful
+      } else {
+        // Queue the new version's moments, then its insights reading (which
+        // cites the moments), so a new user is not left waiting on the weekly
+        // moments cron or a visit to the insights tab. Never blocks the caller.
+        void this.observations
+          .generate(userId, { trigger: "signal" })
+          .catch((e) => {
+            // eslint-disable-next-line no-console
+            console.error(`moments generation failed for ${userId}:`, e);
+          })
+          .then(() => this.synthesisService.queueInsights(userId, newVersion));
       }
 
       const { error: profileErr } = await supabase
