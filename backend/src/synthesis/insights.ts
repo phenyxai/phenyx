@@ -11,7 +11,7 @@
 // tone only and stripped before the reading is served. Pure helpers only here,
 // so they run under plain `node --test`.
 
-import { PILLAR_ORDER, type Pillar } from "../observations/gating";
+import { PILLAR_ORDER, pillarPriority, type Pillar } from "../observations/gating";
 
 const LIST_LIMIT = 4;
 const MILESTONES_MIN = 2;
@@ -48,15 +48,15 @@ export interface InsightsItem {
 export interface InsightsMilestone {
   moment_id: string;
   label: string;
-  /** "2008" or "mar 2026", from the moment's own date. */
-  date: string;
+  /** "2008" or "mar 2026", from the moment's own date; null when the moment has none. */
+  date: string | null;
   /** The point the moment sits on, from the moment itself. */
   pillar: Pillar;
 }
 
 export interface InsightsStory {
   line: string;
-  /** Date order. */
+  /** Date order when every milestone is dated, else point order (origin first). */
   milestones: InsightsMilestone[];
 }
 
@@ -138,7 +138,7 @@ return:
 - needs_shape: line is one sentence on what is still unresolved. support is one short sentence that holds it open without settling it. moment_ids as above.
 - matters: three or four values that keep recurring. each has a title of two to five words, a body of one or two sentences pointing to where it shows up, and its moment_ids.
 - patterns: three or four patterns in how they decide, work and return to things, for "how you find your way". each has a title of two to five words, a body of one or two sentences, and its moment_ids.
-- story: line is one plain sentence on how their life has moved, from what came first to what they are making room for now, for example "film began as an early interest. now you are making room for it alongside product design." never name a story arc or type. milestones are exactly five, in date order, each a moment_id and a label of three to eight words on what that moment marks ("early interest in film").
+- story: line is one plain sentence on how their life has moved, from what came first to what they are making room for now, for example "film began as an early interest. now you are making room for it alongside product design." never name a story arc or type. milestones are exactly five, in date order (in the order of points_order when the moments are undated), each a moment_id and a label of three to eight words on what that moment marks ("early interest in film").
 - arc: which of the seven story shapes their moments most resemble so far: quest, voyage_and_return, comedy, rags_to_riches, overcoming_the_monster, tragedy or rebirth. read it from the moments, never from the person's job or age. it is stored for tone only and must never appear in any line you write, including the story line.
 
 rules:
@@ -204,24 +204,24 @@ function readStory(value: unknown, clean: (s: string) => string, moments: Moment
       const id = text(item.moment_id);
       const moment = moments.get(id);
       const label = clean(text(item.label)).replace(/[.!?]+$/, "");
-      if (!moment?.date || !label || seen.has(id)) return [];
-      const date = milestoneDate(moment.date, now);
-      if (!date) return [];
+      if (!moment || !label || seen.has(id)) return [];
       seen.add(id);
-      return [{ moment_id: id, label, date, pillar: moment.pillar, sort: moment.date }];
-    })
-    .sort((a, b) => a.sort.localeCompare(b.sort))
-    .slice(0, MILESTONES_MAX)
-    .map(({ sort: _sort, ...m }) => m);
-  return line && milestones.length >= MILESTONES_MIN ? { line, milestones } : null;
+      const date = moment.date ? milestoneDate(moment.date, now) : null;
+      return [{ moment_id: id, label, date, pillar: moment.pillar, sort: date ? moment.date! : "" }];
+    });
+  // Moments written without source records carry no date; their points still read as a story in order.
+  const dated = milestones.every((m) => m.sort);
+  milestones.sort((a, b) => (dated ? a.sort.localeCompare(b.sort) : pillarPriority(a.pillar) - pillarPriority(b.pillar)));
+  const kept = milestones.slice(0, MILESTONES_MAX).map(({ sort: _sort, ...m }) => m);
+  return line && kept.length >= MILESTONES_MIN ? { line, milestones: kept } : null;
 }
 
 /**
  * Turn the model's tool input into the stored reading: every prose string goes
  * through `clean` (the voice sanitizer), ids that name no given moment drop
  * out (and a value or pattern left with none drops out), milestones take their
- * date and point from their moment and sit in date order, and the lists are
- * capped. A story with fewer than two milestones is left out.
+ * date and point from their moment and sit in date order (point order when any
+ * is undated), and the lists are capped. A story with fewer than two milestones is left out.
  */
 export function normalizeInsights(
   raw: unknown,

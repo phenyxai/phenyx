@@ -63,10 +63,10 @@ export type BillingPeriod = "monthly" | "yearly"
 export interface InsightsReading {
   version: number
   generated_at: string
-  /** "your story so far": one line and five milestones on real moments, in date order. */
+  /** "your story so far": one line and five milestones on real moments, in date order (point order when any is undated). */
   story?: {
     line: string
-    milestones: { moment_id: string; label: string; date: string; pillar: string }[]
+    milestones: { moment_id: string; label: string; date: string | null; pillar: string }[]
   } | null
   becoming_clearer: { line: string; support: string; moment_ids: string[] } | null
   needs_shape: { line: string; support: string; moment_ids: string[] } | null
