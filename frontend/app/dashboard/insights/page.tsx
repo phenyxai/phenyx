@@ -9,7 +9,7 @@ import { colorName, resolveAccent } from "@/lib/stellar";
 import { fetchConstellation, relativeTime, type ConstellationData } from "@/lib/constellation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
-import { buildInsightsStats, momentFacts } from "./stats";
+import { buildInsightsStats, momentFacts, nameFromMetadata } from "./stats";
 
 type Header = { name: string; color: string | null; platforms: string[]; insights: InsightsReading | null };
 
@@ -145,6 +145,13 @@ export default function InsightsTabPage() {
   const [header, setHeader] = useState<Header | null>(null);
   const [constellation, setConstellation] = useState<ConstellationData | null>(null);
 
+  // PHE-148: an account whose profile row has no name still has the name its
+  // Google profile carries; the header shows that, never a placeholder.
+  const [profileName, setProfileName] = useState("");
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setProfileName(nameFromMetadata(data.user?.user_metadata)));
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const res = await apiFetch("/profile/overview");
@@ -182,41 +189,40 @@ export default function InsightsTabPage() {
     void load();
   }, [load]);
 
+  const loadConstellation = useCallback(() => fetchConstellation().then(setConstellation), []);
   useEffect(() => {
-    let active = true;
-    fetchConstellation().then((result) => {
-      if (active) setConstellation(result);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+    void loadConstellation();
+  }, [loadConstellation]);
 
   // A settings modal (edit profile, connections) can change what the header
-  // shows; re-read when one closes.
+  // shows, platforms included (PHE-149); re-read both when one closes.
   const prevOpen = useRef(openId);
   useEffect(() => {
-    if (prevOpen.current !== null && openId === null) void load();
+    if (prevOpen.current !== null && openId === null) {
+      void load();
+      void loadConstellation();
+    }
     prevOpen.current = openId;
-  }, [openId, load]);
+  }, [openId, load, loadConstellation]);
 
   const reading = header?.insights ?? null;
+  const name = header?.name || profileName;
   const swatch = resolveAccent(header?.color || stellarColor);
   const updated = reading?.generated_at ?? constellation?.generated_at ?? null;
-  // Connected platforms count the connections plus every platform the moments draw on.
+  // Connected platforms count the connections plus every platform the constellation draws on.
   const facts = momentFacts(constellation);
   const platforms = new Set([...(header?.platforms ?? []).map((p) => p.trim().toLowerCase()), ...facts.platforms]);
   const stats = buildInsightsStats(platforms.size, facts.firstYear, constellation?.tenure.since ?? null);
 
   return (
     <>
-      <IntroBanner tab="insights" copy={INTRO_COPY.insights} className="mt-10 [@media(max-width:640px)]:mx-5 [@media(min-width:641px)]:mx-10" />
+      <IntroBanner tab="insights" copy={INTRO_COPY.insights} className="mt-6 [@media(max-width:640px)]:mx-5 [@media(min-width:641px)]:mx-10" />
 
       <section className="flex flex-col pt-8 pb-10 [@media(max-width:640px)]:px-5 [@media(min-width:641px)]:px-10">
         <div className="w-full max-w-[1040px]">
           <header className="mb-7 flex flex-wrap items-start justify-between gap-x-10 gap-y-5">
             <div className="min-w-0">
-              <h1 className="text-[17px] font-medium text-ph-white/92">{header?.name || "your reading"}</h1>
+              {name && <h1 className="text-[17px] font-medium text-ph-white/92">{name}</h1>}
               <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-ph-white/78">
                 <span
                   aria-hidden="true"
@@ -227,13 +233,15 @@ export default function InsightsTabPage() {
                 {updated && <span className="text-ph-white/45">· updated {relativeTime(updated)}</span>}
               </p>
             </div>
+            {/* As in the demo: one row 40px apart, each stat at least 86px wide;
+                phones keep the three on one row as equal columns. */}
             {stats.length > 0 && (
-              <div className="flex flex-wrap gap-x-10 gap-y-4">
+              <div className="[@media(min-width:641px)]:flex [@media(min-width:641px)]:flex-wrap [@media(min-width:641px)]:gap-x-10 [@media(min-width:641px)]:gap-y-4 [@media(max-width:640px)]:grid [@media(max-width:640px)]:w-full [@media(max-width:640px)]:grid-cols-3 [@media(max-width:640px)]:gap-3">
                 {stats.map((stat) => {
                   const body = (
                     <>
                       <span className="text-[13.5px] text-ph-white/94">{stat.value}</span>
-                      <span className="mt-1 flex items-center gap-1 text-[11.5px] text-ph-white/82">
+                      <span className="mt-1 flex items-center gap-[3px] text-[11.5px] tracking-[0.01em] text-ph-white/82">
                         {stat.label}
                         {stat.key === "platforms" && (
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -249,12 +257,12 @@ export default function InsightsTabPage() {
                       type="button"
                       onClick={() => openModal("my-connections")}
                       aria-label={`${stat.value} ${stat.label}, see your connected platforms`}
-                      className="flex flex-col text-left transition-colors duration-200 hover:text-[var(--ph-accent)]"
+                      className="flex [@media(max-width:640px)]:min-w-0 [@media(min-width:641px)]:min-w-[86px] flex-col text-left transition-colors duration-200 hover:text-[var(--ph-accent)]"
                     >
                       {body}
                     </button>
                   ) : (
-                    <p key={stat.key} className="flex flex-col">
+                    <p key={stat.key} className="flex [@media(max-width:640px)]:min-w-0 [@media(min-width:641px)]:min-w-[86px] flex-col">
                       {body}
                     </p>
                   );

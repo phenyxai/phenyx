@@ -1,13 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  eraLine,
   firstSentence,
   momentTitle,
   momentTopic,
   momentYear,
   newObservationCount,
-  pointMetaLine,
   pointMoments,
   storyLine,
   synthesisLine,
@@ -173,15 +171,6 @@ test("newObservationCount counts is_new across every area under the point", () =
   assert.equal(newObservationCount(detail("origin", [])), 0);
 });
 
-test("pointMetaLine reads years, era and place, leaving out what is unknown", () => {
-  const detail = (point: unknown) => ({ pillar: "emergence", point }) as any;
-  assert.equal(
-    pointMetaLine(detail({ story: "", years: "2013 – 2017", place: "los angeles" })),
-    "2013 – 2017 · teenage years · los angeles",
-  );
-  assert.equal(pointMetaLine(detail(null)), "teenage years");
-});
-
 test("pointMoments lists a point's moments oldest first, undated last", () => {
   const m = (id: string, occurred_at: string | null, surfaced_at = "2026-01-01") => ({ id, occurred_at, surfaced_at }) as any;
   const detail = {
@@ -219,11 +208,4 @@ test("threadAreas keeps the earliest point each followed part of life was follow
   const followed = new Set(["b", "c", "d"]);
   const threads = threadAreas(data, ["origin", "emergence", "convergence"], (id) => followed.has(id));
   assert.deepEqual([...threads], [["home", 1], ["friends", 1]]);
-});
-
-test("eraLine pairs the season of life with its place, never years", () => {
-  const detail = (pillar: Pillar, place: string) =>
-    ({ pillar, point: { story: "", years: "2006 – 2012", place }, clusters: [] }) as unknown as PillarDetail;
-  assert.equal(eraLine(detail("origin", "los angeles")), "childhood · los angeles");
-  assert.equal(eraLine(detail("recognition", "")), "today");
 });

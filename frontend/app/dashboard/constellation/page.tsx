@@ -104,12 +104,12 @@ export default function ConstellationTabPage() {
       <IntroBanner
         tab="constellation"
         copy={INTRO_COPY.constellation}
-        className="mx-6 mt-6 shrink-0 lg:mx-10"
+        className="mx-6 mt-4 shrink-0 lg:mx-10"
       />
 
       {/* The 1024px split lives in globals.css (.constellation-split), not in
           lg: classes, so the onairos SDK's stylesheet cannot override it. */}
-      <div className="constellation-split flex flex-col items-center gap-[22px] px-6 pt-8 pb-10 lg:px-10">
+      <div className="constellation-split flex flex-col items-center gap-[22px] px-6 pt-4 pb-10 lg:px-10">
         {/* Phones (with the dashboard's top bar and 72px bottom nav): the map
             leaves room under it for the opened point's name and the start of
             its story, about 65% of the space between the two bars. */}
@@ -126,6 +126,7 @@ export default function ConstellationTabPage() {
 
         <aside
           ref={panelRef}
+          data-view={shown ? "point" : "overview"}
           className={`w-full min-w-0 max-w-[640px] transition-[opacity,transform,filter] duration-200 ease-out motion-reduce:transition-none ${
             swapping ? "translate-y-1 opacity-0 blur-[2px]" : "translate-y-0 opacity-100 blur-0"
           }`}

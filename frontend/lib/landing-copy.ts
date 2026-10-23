@@ -354,11 +354,3 @@ export const footerCopy = {
   copyright: "© 2026 PHENYX INC.",
   contactEmail: "contact@phenyxai.com",
 } as const;
-
-export const entryModalCopy = {
-  title: "come in",
-  subtitle: "return to your view, or look around before you connect anything.",
-  returning: { primary: "i have been here", secondary: "return to the view you already built", href: "/signin" },
-  newcomer: { primary: "this is my first time", secondary: "nothing connects until you choose it", href: "/join" },
-  closeLabel: "close",
-} as const;
