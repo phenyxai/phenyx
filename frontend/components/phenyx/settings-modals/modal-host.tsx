@@ -173,9 +173,12 @@ export function SettingsDialogContent({
         {...props}
       >
         {children}
+        {/* PHE-147: only the x, never a box. Radix focuses it when a pop-up
+            opens, so the old focus ring drew a frame around it on every open;
+            keyboard focus now shows as the accent instead. */}
         <DialogPrimitive.Close
           aria-label="close"
-          className="absolute top-4 right-4 rounded-sm text-ph-white/55 opacity-80 hover:opacity-100 focus:ring-2 focus:ring-[var(--stellar)] focus:outline-hidden [&_svg]:size-4"
+          className="absolute top-4 right-4 border-0 bg-transparent p-0 text-ph-white/55 opacity-80 shadow-none outline-none hover:opacity-100 focus-visible:text-[var(--ph-accent)] focus-visible:opacity-100 [&_svg]:size-4"
         >
           <XIcon />
           <span className="sr-only">close</span>

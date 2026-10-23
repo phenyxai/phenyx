@@ -127,36 +127,6 @@ export function newObservationCount(detail: PillarDetail): number {
 // Points and moments (PHE-122)
 // ---------------------------------------------------------------------------
 
-/** The part of a life each point covers (Oct 3 guidelines), shown beside its years. */
-export const POINT_ERA: Record<Pillar, string> = {
-  origin: "childhood",
-  emergence: "teenage years",
-  self_creation: "leaving home",
-  convergence: "a turning point",
-  becoming: "finding your voice",
-  recognition: "today",
-  transcendence: "what’s next",
-};
-
-/** "2013 – 2017 · teenage years · los angeles", leaving out what is unknown. */
-export function pointMetaLine(detail: PillarDetail): string {
-  return [detail.point?.years, POINT_ERA[detail.pillar], detail.point?.place]
-    .map((part) => part?.trim())
-    .filter(Boolean)
-    .join(" · ");
-}
-
-/**
- * PHE-129: an opened point's era in the person's own terms, the season of life
- * and its place, "childhood · los angeles". Never years or an age.
- */
-export function eraLine(detail: PillarDetail): string {
-  return [POINT_ERA[detail.pillar], detail.point?.place]
-    .map((part) => part?.trim())
-    .filter(Boolean)
-    .join(" · ");
-}
-
 /** Every moment under a point, oldest first; undated ones follow, newest surfaced first. */
 export function pointMoments(detail: PillarDetail): ClusterObservation[] {
   const all = detail.clusters.flatMap((cluster) => cluster.observations);

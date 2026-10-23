@@ -6,7 +6,7 @@
 // Overview: "explore what shaped you." and the seven names, one row each, with
 // a quiet "new signal" note beside the point a fresh signal belongs to.
 // Point (spec doc 2, Oct 20 demo): the name with previous/next arrows on one
-// row, a one-sentence story, "moments" with filters by the part of life each
+// row and nothing under it (PHE-146), a one-sentence story, "moments" with filters by the part of life each
 // moment sits in (or its platform on older rows), then the moments. Each opens
 // in place as one column: what happened, why it matters, what connects from
 // here, "see the sources →", "does this feel like you?" and "follow this
@@ -19,7 +19,6 @@ import { Popup } from "@/components/phenyx/settings-modals/modal-host";
 import { Arrow } from "@/components/phenyx/nav-icons";
 import {
   ALL_PILLARS,
-  eraLine,
   markSignalSeen,
   momentTitle,
   momentTopic,
@@ -220,7 +219,6 @@ function PointView({
   const [openId, setOpenId] = useState<string | null>(() =>
     openMomentId && moments.some((m) => m.id === openMomentId) ? openMomentId : null,
   );
-  const era = eraLine(detail);
   const [trail, setTrail] = useState<ClusterObservation | null>(null);
   const shown = topic === ALL_TOPICS ? moments : moments.filter((m) => momentTopic(m) === topic);
   const threads = threadAreas(data, ALL_PILLARS, (id) => !!feedback[id]?.following);
@@ -242,8 +240,6 @@ function PointView({
           <StepButton to={ALL_PILLARS[index + 1]} direction="next" onSelect={onSelectPillar} />
         </div>
       </div>
-      {/* The era in the person's own terms, "childhood · los angeles": never years or an age. */}
-      {era && <p className="mt-1 text-[12.5px] font-light text-ph-white/52">{era}</p>}
 
       <p className="mt-[19px] text-[15px] font-light leading-[1.65] text-ph-white/78">{storyLine(detail)}</p>
 

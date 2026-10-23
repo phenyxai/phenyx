@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildInsightsStats, momentFacts } from "./stats.ts";
+import { buildInsightsStats, momentFacts, nameFromMetadata } from "./stats.ts";
 
 const NOW = new Date(2026, 9, 16); // 16 october 2026
 
@@ -30,4 +30,29 @@ test("momentFacts reads the moments' platforms and earliest dated year", () => {
   } as unknown as Parameters<typeof momentFacts>[0];
   assert.deepEqual(momentFacts(data), { platforms: ["youtube", "pinterest", "spotify"], firstYear: 2008 });
   assert.deepEqual(momentFacts(null), { platforms: [], firstYear: null });
+});
+
+test("momentFacts also counts area, point and signal platforms, and dates from point years or the record", () => {
+  const data = {
+    pillars: {
+      origin: {
+        source_platforms: ["Spotify"],
+        point: { years: "2011 – 2014", place: "" },
+        clusters: [{ source_platforms: ["instagram"], observations: [{ platform: null, occurred_at: null }] }],
+      },
+    },
+    signal: { sources: [{ observation_id: "a", platform: "LinkedIn", span: null }] },
+    timeline: { span: ["2009", "2026"] },
+  } as unknown as Parameters<typeof momentFacts>[0];
+  assert.deepEqual(momentFacts(data), { platforms: ["spotify", "instagram", "linkedin"], firstYear: 2009 });
+
+  const undated = { pillars: { origin: { clusters: [] } }, timeline: { span: [] } } as unknown as Parameters<typeof momentFacts>[0];
+  assert.equal(momentFacts(undated).firstYear, null);
+});
+
+test("nameFromMetadata reads the google profile name, never the email", () => {
+  assert.equal(nameFromMetadata({ full_name: " Mara  Sola ", email: "m@x.com" }), "Mara Sola");
+  assert.equal(nameFromMetadata({ given_name: "Mara", family_name: "Sola" }), "Mara Sola");
+  assert.equal(nameFromMetadata({ email: "m@x.com" }), "");
+  assert.equal(nameFromMetadata(null), "");
 });

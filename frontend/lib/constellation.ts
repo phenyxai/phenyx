@@ -29,7 +29,6 @@ export type { Pillar, Vec3 } from "./constellation-shape";
 // overview story rows) live in `./constellation-text` so they run under plain
 // node for unit tests; they are re-exported here so the app has one import path.
 export {
-  eraLine,
   firstSentence,
   momentTitle,
   momentTopic,
@@ -37,8 +36,6 @@ export {
   newObservationCount,
   pillarLabel,
   PILLAR_LENS,
-  POINT_ERA,
-  pointMetaLine,
   pointMoments,
   storyLine,
   synthesisLine,

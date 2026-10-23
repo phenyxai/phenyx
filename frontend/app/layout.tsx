@@ -64,11 +64,13 @@ export const metadata: Metadata = {
   verification: {
     google: 'add-your-google-search-console-verification-code-here',
   },
+  // PHE-151: the orbit mark from the Oct 21 demo, hollow ring and glowing star.
+  // The SVG is the tab icon wherever it is supported; the PNG covers Safari.
+  // The larger sizes live in site.webmanifest so they never win the tab.
   icons: {
     icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml', sizes: 'any' },
       { url: '/favicon.png', type: 'image/png', sizes: '32x32' },
-      { url: '/icon.png', type: 'image/png', sizes: '192x192' },
-      { url: '/phenyx-logo.png', type: 'image/png', sizes: '512x512' },
     ],
     shortcut: '/favicon.png',
     apple: '/apple-icon.png',

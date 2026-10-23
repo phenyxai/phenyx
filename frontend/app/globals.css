@@ -1088,16 +1088,6 @@ nav li > [aria-current="page"] {
 @keyframes phxStarForm { 0% { opacity: 0; transform: scale(0.3); } 60% { opacity: 1; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
 @keyframes phxStarGlow { 0% { opacity: 0; } 45% { opacity: 1; } 100% { opacity: 0.6; } }
 
-.landing-vnext__modal-layer { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.landing-vnext__modal-overlay { position: absolute; inset: 0; background: rgba(4, 5, 8, 0.78); backdrop-filter: blur(6px); }
-.landing-vnext__modal { position: relative; z-index: 1; width: min(380px, 100%); padding: 36px 32px; border: 1px solid rgba(255, 253, 253, 0.1); border-radius: 16px; background: #0c0c0c; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-.landing-vnext__modal-close { position: absolute; top: 10px; right: 10px; min-width: 44px; min-height: 44px; border: 0; background: none; color: #888; font: inherit; font-size: 18px; }
-.landing-vnext__modal h2 { margin: 0 0 6px; color: var(--landing-text); font-size: 19px; font-weight: 400; }
-.landing-vnext__modal > p { margin: 0 0 24px; color: var(--landing-body); font-size: 13px; line-height: 1.65; }
-.landing-vnext__modal-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; margin-bottom: 10px; padding: 16px 18px; border: 1px solid rgba(255, 253, 253, 0.1); border-radius: 10px; background: transparent; color: var(--landing-text); font: inherit; font-size: 14px; text-align: left; transition: border-color 200ms ease, background 200ms ease; }
-.landing-vnext__modal-choice:hover { border-color: rgba(175, 198, 242, 0.38); background: rgba(175, 198, 242, 0.045); }
-.landing-vnext__modal-choice small { color: rgba(255, 253, 253, 0.58); font-size: 11.5px; }
-
 @media (prefers-reduced-motion: reduce) {
   .landing-vnext *,
   .landing-vnext *::before,
@@ -1784,11 +1774,16 @@ nav li > [aria-current="page"] {
   }
   .constellation-split > .constellation-sky {
     position: sticky;
-    top: 20px;
+    top: 16px;
     height: clamp(420px, 65svh, 760px);
   }
   .constellation-split > aside {
     max-width: none;
+  }
+  /* PHE-145: the seven names sit level with the sky, centered beside it. An
+     opened point starts at the top, since its reading can run past the sky. */
+  .constellation-split > aside[data-view="overview"] {
+    align-self: center;
   }
 }
 

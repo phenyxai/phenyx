@@ -7,14 +7,16 @@
 // uses) because this surface needs a requestAnimationFrame pulse loop, DPR-aware
 // backing-store scaling, and pixel hit-testing that the static SVG map does not.
 //
-// - PHE-100: all seven points fill/glow in the user's stellar color, joined by
-//   the seven lines in `constellation-shape`: the Big Dipper, from real star
-//   positions, scaled uniformly (never stretched) and sized by each star's real
-//   brightness. A faint dotted pointer continues past self-creation (Dubhe)
-//   along the line from origin (Merak), toward polaris. A thin point (no
-//   synthesis and no observations yet) is drawn quietly with a softer core and
-//   halo, never dropped. A point carrying a new observation pulses and shows a
-//   dot.
+// - PHE-100: the seven points are joined by the seven lines in
+//   `constellation-shape`: the Big Dipper, from real star positions, scaled
+//   uniformly (never stretched). A faint dotted pointer continues past
+//   self-creation (Dubhe) along the line from origin (Merak), toward polaris. A
+//   thin point (no synthesis and no observations yet) is drawn quietly, never
+//   dropped. A point carrying a new observation pulses.
+// - Oct 21 demo glow: every point is a small cream core inside an accent halo
+//   of one fixed size, the lines are the accent at low strength, and a faint
+//   accent wash sits behind the whole sky. The opened point becomes a tighter,
+//   brighter star, its own lines brighten, and the rest step back.
 // - Points carry no names on the map; the name heads the panel once a point is
 //   opened. Screen readers get the name from each overlay button.
 // - The RAF loop pauses when the document is hidden (visibilitychange) and is
@@ -34,6 +36,25 @@ import {
 
 const PADDING = 28; // keeps edge nodes and their glow off the canvas border
 const HIT_SLOP = 14;
+
+// The demo's star, in CSS pixels (its `--constellation-*` values).
+const CORE_RADIUS = 2.384;
+/** The core is the accent mixed into warm white at this share. */
+const CORE_TINT = 0.24;
+const CORE_BASE: [number, number, number] = [255, 246, 231]; // #fff6e7
+const HALO_RADIUS = 17.44;
+/** Halo alpha at its center (core color), 18% out and 58% out (accent); clear at the edge. */
+const HALO_CENTER = 0.84;
+const HALO_INNER = 0.72;
+const HALO_OUTER = 0.17;
+/** The opened point: a #fff5e9 core to 2.5px, accent .78 at 3px, .23 at 8px, clear by 13px. */
+const OPEN_RADIUS = 13;
+const OPEN_CORE = "255, 245, 233";
+const LINE_ALPHA = 0.32;
+const LINE_NEAR_ALPHA = 0.46;
+/** With a point open, the other points and lines step back to these opacities. */
+const DIM_POINT = 0.55;
+const DIM_LINE = 0.45;
 
 interface NodePixel {
   pillar: Pillar;
@@ -103,13 +124,20 @@ export function ConstellationCanvas({
     // value paints neutral), as a real hex for the canvas.
     const stellar = resolveAccent(current.stellar_color);
 
-    // Faint, non-interactive edges.
+    const rgb = hexToRgb(stellar);
+    const open = selectedRef.current;
+    const core = mixCore(stellar);
+
+    // The lines: the accent at low strength. With a point open, its own lines
+    // brighten and the rest step back.
     ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgba(255,253,253,0.16)";
     for (const [a, b] of EDGES) {
       const na = pixelByPillar.get(a);
       const nb = pixelByPillar.get(b);
       if (!na || !nb) continue;
+      const near = open !== null && (a === open || b === open);
+      const alpha = near ? LINE_NEAR_ALPHA : open ? LINE_ALPHA * DIM_LINE : LINE_ALPHA;
+      ctx.strokeStyle = `rgba(${rgb}, ${alpha})`;
       ctx.beginPath();
       ctx.moveTo(na.x, na.y);
       ctx.lineTo(nb.x, nb.y);
@@ -137,8 +165,8 @@ export function ConstellationCanvas({
         const sx = to.x + (gx / gap) * (to.r + 6);
         const sy = to.y + (gy / gap) * (to.r + 6);
         const fade = ctx.createLinearGradient(sx, sy, to.x + dx, to.y + dy);
-        fade.addColorStop(0, "rgba(255,253,253,0.16)");
-        fade.addColorStop(1, "rgba(255,253,253,0)");
+        fade.addColorStop(0, `rgba(${rgb}, ${open ? LINE_ALPHA * DIM_LINE : LINE_ALPHA})`);
+        fade.addColorStop(1, `rgba(${rgb}, 0)`);
         ctx.strokeStyle = fade;
         ctx.setLineDash([2, 4]);
         ctx.beginPath();
@@ -154,44 +182,40 @@ export function ConstellationCanvas({
 
     for (const node of nodes) {
       const detail = current.pillars[node.pillar];
-      const isSelected = selectedRef.current === node.pillar;
-
       const thin = detail.observation_count === 0 && !detail.synthesis;
+      // A thin point is drawn at half strength; with a point open, the others step back.
+      ctx.globalAlpha = (thin ? 0.55 : 1) * (open && open !== node.pillar ? DIM_POINT : 1);
 
-      // Stellar glow. Pulse amplitude only when carrying a new observation,
-      // otherwise a steady halo; a thin point keeps the halo low.
-      const pulse = detail.has_new ? 0.45 + phase * 0.55 : thin ? 0.3 : 0.6;
-      const glowRadius = node.r + 8 + (detail.has_new ? phase * 5 : 3);
-
-      const gradient = ctx.createRadialGradient(
-        node.x,
-        node.y,
-        0,
-        node.x,
-        node.y,
-        glowRadius,
-      );
-      gradient.addColorStop(0, withAlpha(stellar, 0.55 * pulse));
-      gradient.addColorStop(1, withAlpha(stellar, 0));
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Core.
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
-      ctx.fillStyle = thin ? withAlpha(stellar, 0.55) : stellar;
-      ctx.fill();
-
-      // Selection ring.
-      if (isSelected) {
+      if (open === node.pillar) {
+        const star = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, OPEN_RADIUS);
+        star.addColorStop(0, `rgb(${OPEN_CORE})`);
+        star.addColorStop(2.5 / OPEN_RADIUS, `rgb(${OPEN_CORE})`);
+        star.addColorStop(3 / OPEN_RADIUS, `rgba(${rgb}, 0.78)`);
+        star.addColorStop(8 / OPEN_RADIUS, `rgba(${rgb}, 0.23)`);
+        star.addColorStop(1, `rgba(${rgb}, 0)`);
+        ctx.fillStyle = star;
         ctx.beginPath();
-        ctx.arc(node.x, node.y, node.r + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = withAlpha(stellar, 0.7);
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        ctx.arc(node.x, node.y, OPEN_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // The halo; a point carrying a new observation breathes.
+        const breath = detail.has_new ? 0.7 + phase * 0.3 : 1;
+        const halo = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, HALO_RADIUS);
+        halo.addColorStop(0, `rgba(${core}, ${HALO_CENTER * breath})`);
+        halo.addColorStop(0.18, `rgba(${rgb}, ${HALO_INNER * breath})`);
+        halo.addColorStop(0.58, `rgba(${rgb}, ${HALO_OUTER * breath})`);
+        halo.addColorStop(1, `rgba(${rgb}, 0)`);
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, HALO_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgb(${core})`;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, CORE_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
       }
+      ctx.globalAlpha = 1;
 
       // PHE-102: "new signal" tag beside the unseen signal's point, flipped
       // to the left when it would run off the right edge.
@@ -200,7 +224,7 @@ export function ConstellationCanvas({
         ctx.font = `500 10px ${getComputedStyle(canvas).fontFamily}`;
         ctx.textBaseline = "middle";
         const width = ctx.measureText(label).width;
-        const gap = node.r + 8;
+        const gap = CORE_RADIUS + 10;
         const right = node.x + gap + width <= w - 4;
         ctx.textAlign = right ? "left" : "right";
         ctx.fillStyle = stellar;
@@ -356,7 +380,7 @@ export function ConstellationCanvas({
   );
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full" style={{ background: skyWash(resolveAccent(data.stellar_color)) }}>
       <canvas
         ref={canvasRef}
         onClick={handlePointer}
@@ -411,7 +435,16 @@ export function ConstellationCanvas({
   );
 }
 
-/** Blend a hex color with an alpha channel, tolerant of malformed input. */
-function withAlpha(hex: string, alpha: number): string {
-  return `rgba(${hexToRgb(hex)}, ${alpha})`;
+/** The star's cream core: the accent mixed into #fff6e7 at CORE_TINT, as "r, g, b". */
+function mixCore(hex: string): string {
+  return hexToRgb(hex)
+    .split(",")
+    .map((c, i) => Math.round(Number(c) * CORE_TINT + CORE_BASE[i] * (1 - CORE_TINT)))
+    .join(", ");
+}
+
+/** The faint accent wash behind the sky, as in the demo's field. */
+function skyWash(hex: string): string {
+  const rgb = hexToRgb(hex);
+  return `radial-gradient(ellipse 49% 46% at 50% 52%, rgba(${rgb}, 0.07) 0%, rgba(${rgb}, 0.048) 30%, rgba(${rgb}, 0.019) 60%, rgba(${rgb}, 0.004) 82%, rgba(${rgb}, 0) 100%) no-repeat`;
 }
