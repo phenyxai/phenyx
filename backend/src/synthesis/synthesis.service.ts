@@ -204,8 +204,8 @@ you must return the line by calling the emit_foresight tool.`;
 @Injectable()
 export class SynthesisService {
   private readonly logger = new Logger(SynthesisService.name);
-  /** user:version pairs with an insights run in flight on this instance. */
-  private readonly insightsInFlight = new Set<string>();
+  /** user:version pairs with an insights run in flight on this instance, true once another call asked for a rerun. */
+  private readonly insightsInFlight = new Map<string, boolean>();
 
   constructor(
     private readonly config: ConfigService,
@@ -563,19 +563,26 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
   }
 
   /**
-   * Generate insights in the background unless a run for this version is
-   * already going on this instance. Called after synthesis and, lazily, when
-   * the insights tab finds no reading for the current version.
+   * Generate insights in the background. Called after synthesis, after a
+   * connect's moments are written, and lazily when the insights tab finds no
+   * reading for the current version. A call while a run for this version is
+   * going on this instance gets one more run once it finishes (calls in between
+   * collapse into that one), so moments that land mid-run are still read.
    */
   // ponytail: per-instance guard; several instances may each run once, add a DB claim if that costs too much.
   queueInsights(userId: string, version: number): void {
     const key = `${userId}:${version}`;
-    if (this.insightsInFlight.has(key)) return;
-    this.insightsInFlight.add(key);
+    if (this.insightsInFlight.has(key)) {
+      this.insightsInFlight.set(key, true);
+      return;
+    }
+    this.insightsInFlight.set(key, false);
     this.enqueue("insights", () =>
-      this.generateInsights(userId, version).finally(() =>
-        this.insightsInFlight.delete(key)
-      )
+      this.generateInsights(userId, version).finally(() => {
+        const rerun = this.insightsInFlight.get(key);
+        this.insightsInFlight.delete(key);
+        if (rerun) this.queueInsights(userId, version);
+      })
     );
   }
 

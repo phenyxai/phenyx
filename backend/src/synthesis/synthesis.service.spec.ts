@@ -76,3 +76,39 @@ test("synthesis strips every token key before model use and durable persist", as
     "no credential-bearing key survives the engine boundary"
   );
 });
+
+test("an insights call during a run gets one more run once it finishes", async () => {
+  const service = new SynthesisService(
+    { get: () => "test-key" } as any,
+    { getClient: () => ({}) } as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    new OnairosSnapshotService()
+  );
+  const runs: string[] = [];
+  let finishFirst!: () => void;
+  (service as any).generateInsights = (userId: string, version: number) => {
+    runs.push(`${userId} v${version}`);
+    return runs.length === 1
+      ? new Promise<null>((resolve) => (finishFirst = () => resolve(null)))
+      : Promise.resolve(null);
+  };
+  const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+  // The insights tab starts a run before the connect's moments are written.
+  service.queueInsights("user-1", 4);
+  await settle();
+  // The moments land (and the tab reloads) while that run is still going.
+  service.queueInsights("user-1", 4);
+  service.queueInsights("user-1", 4);
+  await settle();
+  assert.deepEqual(runs, ["user-1 v4"]);
+
+  finishFirst();
+  await settle();
+  assert.deepEqual(runs, ["user-1 v4", "user-1 v4"], "one rerun, however many calls came in");
+
+  await settle();
+  assert.deepEqual(runs, ["user-1 v4", "user-1 v4"], "a rerun nobody asked again during stops there");
+});
