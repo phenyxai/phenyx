@@ -1765,6 +1765,20 @@ nav li > [aria-current="page"] {
    purpose: the onairos SDK ships a second Tailwind build whose plain
    utilities (flex, relative, ...) land after ours and override lg: variants,
    and unlayered rules win over any layer. */
+/* PHE-152: every dashboard tab sits in one column centered beside the
+   sidebar (Mara prototype, Oct 23): at most 1040px of content, with side
+   gutters of 4vw (30 to 60px). Phones keep each tab's own gutters. */
+@media (min-width: 641px) {
+  .dash-frame {
+    max-width: calc(1040px + 2 * clamp(30px, 4vw, 60px));
+    margin-inline: auto;
+    padding-inline: clamp(30px, 4vw, 60px);
+  }
+}
+
+/* PHE-152: the sky holds the vertical center of the screen (sticky, so it
+   stays there while an opened point's reading scrolls) and the seven names
+   sit level with it. */
 @media (min-width: 1024px) {
   .constellation-split {
     display: grid;
@@ -1774,7 +1788,7 @@ nav li > [aria-current="page"] {
   }
   .constellation-split > .constellation-sky {
     position: sticky;
-    top: 16px;
+    top: max(16px, calc((100svh - clamp(420px, 65svh, 760px)) / 2));
     height: clamp(420px, 65svh, 760px);
   }
   .constellation-split > aside {
@@ -1823,11 +1837,41 @@ nav li > [aria-current="page"] {
   transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.45s ease, filter 0.2s ease;
 }
 .discover-card[data-depth="main"] { z-index: 2; }
-.discover-card__face { border-color: rgba(255, 253, 253, 0.04); }
+.discover-card__face { border-color: rgba(255, 253, 253, 0.04); padding: 20px; row-gap: 18px; }
 .discover-card[data-depth="main"] .discover-card__face { border-color: rgba(var(--ph-accent-rgb), 0.22); }
 .discover-card[data-depth="far"] { opacity: 0; pointer-events: none; }
 /* Neighbours stay legible: their text sits near 25%. */
-.discover-card[data-depth="back"] .discover-card__face { opacity: 0.28; transform: scale(0.94); }
+.discover-card[data-depth="back"] .discover-card__face { opacity: 0.28; }
+/* PHE-152 (Mara prototype): from 641px a taller card, 32px in, with larger
+   type. The label and headline stay together, then two flexible gaps share
+   the extra height, so the discovery, the reason and the actions read as
+   three beats. Phones keep the card to its content, 18px between parts. */
+@media (min-width: 641px) {
+  .discover-card__face {
+    display: grid;
+    padding: 32px;
+    row-gap: 0;
+    grid-template-rows: auto 18px auto minmax(24px, 1fr) auto minmax(28px, 1fr) auto 20px auto;
+  }
+  .discover-card__head { grid-row: 1; }
+  .discover-card__headline { grid-row: 3; font-size: 24px; line-height: 1.4; min-height: 2.8em; }
+  .discover-card__detail { grid-row: 5; font-size: 15px; line-height: 1.7; min-height: 5.1em; -webkit-line-clamp: 4; }
+  .discover-card__reason { grid-row: 7; align-self: end; font-size: 14px; line-height: 1.65; min-height: 3.3em; }
+  .discover-card__foot { grid-row: 9; }
+}
+@media (min-width: 641px) and (min-height: 601px) {
+  .discover-card__face { min-height: clamp(420px, 58dvh, 580px); }
+}
+/* The two actions stay on one row on phones, 44px tall; under 360px they stack. */
+@media (max-width: 640px) {
+  .discover-card__foot { flex-wrap: nowrap; }
+  .discover-card__foot > button { height: 44px; padding: 0 11px; font-size: 11.5px; white-space: nowrap; }
+}
+@media (max-width: 359px) {
+  .discover-card__face { padding: 18px; row-gap: 16px; }
+  .discover-card__foot { display: grid; grid-template-columns: 1fr; }
+  .discover-card__foot > button { width: 100%; }
+}
 .discover-card[data-swapping="true"] { opacity: 0; transform: translateY(4px); filter: blur(2px); }
 .discover-card__face { transition: opacity 0.45s ease, transform 0.45s ease, border-color 0.45s ease; }
 .discover-card__go {

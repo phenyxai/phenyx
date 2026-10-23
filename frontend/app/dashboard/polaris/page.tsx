@@ -16,13 +16,13 @@ export const metadata: Metadata = {
 export default function PolarisTabPage() {
   return (
     <section
-      className="flex h-screen flex-col [@media(max-width:640px)]:h-[calc(100svh-124px-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]"
+      className="flex h-screen flex-col [@media(max-width:640px)]:h-[calc(100svh-124px-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] [@media(min-width:641px)]:pt-16"
       style={{ display: "flex" }}
     >
       <IntroBanner
         tab="polaris"
         copy="polaris answers what you ask, using only what your constellation has already shown."
-        className="mx-6 mt-6 shrink-0"
+        className="shrink-0 [@media(max-width:640px)]:mx-6 [@media(max-width:640px)]:mt-6 [@media(min-width:641px)]:mb-6"
       />
       <div
         className="min-h-0 flex-1"

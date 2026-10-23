@@ -39,6 +39,8 @@ export interface ConstellationPanelProps {
   data: ConstellationData;
   selectedPillar: Pillar | null;
   onSelectPillar: (pillar: Pillar) => void;
+  /** Back to the seven names (the map's empty sky and esc do the same). */
+  onClosePoint: () => void;
   /** A moment to open on arrival (insights' milestones link here). */
   openMomentId?: string | null;
 }
@@ -54,7 +56,7 @@ function initialFeedback(data: ConstellationData): Record<string, MomentFeedback
   return out;
 }
 
-export function ConstellationPanel({ data, selectedPillar, onSelectPillar, openMomentId = null }: ConstellationPanelProps) {
+export function ConstellationPanel({ data, selectedPillar, onSelectPillar, onClosePoint, openMomentId = null }: ConstellationPanelProps) {
   const [feedback, setFeedback] = useState(() => initialFeedback(data));
   const [signalSeen, setSignalSeen] = useState(false);
   const signal = signalSeen ? null : data.signal;
@@ -90,6 +92,7 @@ export function ConstellationPanel({ data, selectedPillar, onSelectPillar, openM
         onSeeSignal={seeSignal}
         onReact={react}
         onSelectPillar={onSelectPillar}
+        onClose={onClosePoint}
         openMomentId={openMomentId}
       />
     );
@@ -201,6 +204,7 @@ function PointView({
   onSeeSignal,
   onReact,
   onSelectPillar,
+  onClose,
   openMomentId,
 }: {
   data: ConstellationData;
@@ -210,6 +214,7 @@ function PointView({
   onSeeSignal: () => void;
   onReact: (id: string, next: MomentFeedback, patch: Parameters<typeof sendMomentFeedback>[1]) => void;
   onSelectPillar: (pillar: Pillar) => void;
+  onClose: () => void;
   openMomentId: string | null;
 }) {
   const index = ALL_PILLARS.indexOf(detail.pillar);
@@ -221,6 +226,8 @@ function PointView({
   );
   const [trail, setTrail] = useState<ClusterObservation | null>(null);
   const shown = topic === ALL_TOPICS ? moments : moments.filter((m) => momentTopic(m) === topic);
+  // Undated moments (older imports) leave the year column out rather than fill it with a mark.
+  const dated = shown.some((m) => momentYear(m));
   const threads = threadAreas(data, ALL_PILLARS, (id) => !!feedback[id]?.following);
 
   const toggle = (moment: ClusterObservation) => {
@@ -230,7 +237,7 @@ function PointView({
 
   return (
     <div className="flex flex-col">
-      {/* The name and the step arrows share one row; the map is the way back. */}
+      {/* The name, the step arrows and the way back to the seven names share one row. */}
       <div className="flex items-center gap-3">
         <h2 className="min-w-0 flex-1 text-[18px] font-medium tracking-[-0.012em] text-ph-white/94">
           {pillarLabel(detail.pillar)}
@@ -238,6 +245,16 @@ function PointView({
         <div className="flex items-center gap-1.5">
           <StepButton to={ALL_PILLARS[index - 1]} direction="previous" onSelect={onSelectPillar} />
           <StepButton to={ALL_PILLARS[index + 1]} direction="next" onSelect={onSelectPillar} />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="close, back to all points"
+            className="relative ml-2 flex h-[26px] w-[26px] items-center justify-center text-ph-white/65 transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] hover:text-[var(--ph-accent)]"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -276,6 +293,7 @@ function PointView({
               <MomentRow
                 key={moment.id}
                 moment={moment}
+                dated={dated}
                 open={openId === moment.id}
                 lit={reaction.following || !!signalIds?.has(moment.id)}
                 signal={!!signalIds?.has(moment.id)}
@@ -304,6 +322,7 @@ function PointView({
 
 function MomentRow({
   moment,
+  dated,
   open,
   lit,
   signal,
@@ -313,6 +332,8 @@ function MomentRow({
   children,
 }: {
   moment: ClusterObservation;
+  /** Whether the list shows a year column. */
+  dated: boolean;
   open: boolean;
   lit: boolean;
   signal: boolean;
@@ -333,11 +354,13 @@ function MomentRow({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={bodyId}
-        aria-label={signal ? `new signal: ${year} ${title}` : undefined}
-        className="group grid w-full grid-cols-[7px_66px_1fr_15px] items-start gap-x-3.5 py-3.5 pr-4 pl-2.5 text-left"
+        aria-label={signal ? `new signal: ${[year, title].filter(Boolean).join(" ")}` : undefined}
+        className={`group grid w-full items-start gap-x-3.5 py-3.5 pr-4 pl-2.5 text-left ${
+          dated ? "grid-cols-[7px_66px_1fr_15px]" : "grid-cols-[7px_1fr_15px]"
+        }`}
       >
         <ListDot on={open || lit} />
-        <span className="pt-px text-[12px] font-medium tabular-nums text-ph-white/74">{year || "·"}</span>
+        {dated && <span className="pt-px text-[12px] font-medium tabular-nums text-ph-white/74">{year}</span>}
         <span>
           <span
             className={`block text-[15px] font-medium leading-[1.5] transition-colors duration-200 group-hover:text-[var(--ph-accent)] ${
@@ -374,7 +397,9 @@ function MomentRow({
       {open && (
         <div
           id={bodyId}
-          className="flex flex-col gap-3 pb-4 pl-[111px] pr-6 motion-safe:animate-fade-in-up [@media(max-width:640px)]:pl-[34px]"
+          className={`flex flex-col gap-3 pb-4 pr-6 motion-safe:animate-fade-in-up [@media(max-width:640px)]:pl-[34px] ${
+            dated ? "[@media(min-width:641px)]:pl-[111px]" : "[@media(min-width:641px)]:pl-[31px]"
+          }`}
         >
           {happened && (
             <section>

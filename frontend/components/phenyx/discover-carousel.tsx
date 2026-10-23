@@ -13,10 +13,10 @@ import { kindLabel, loopOffset, type Discovery } from "@/lib/discover";
 // alone and swap it in place. Each card: its kind (and "new" once it joins
 // the deck this week), the ★ save, the headline, what it is, the personal
 // reason in the accent, then "see the sources" and "ask polaris". Every card
-// keeps one rhythm: the headline holds two lines, the detail three, the
-// reason two, so each part starts at the same height. A long deck counts
-// instead of drawing a dot per card. Layout and the lit edge live in
-// globals.css (.discover-*); this file owns state.
+// keeps one rhythm: the headline holds two lines, the detail three (four from
+// 641px), the reason two, so each part starts at the same height. A long deck
+// counts instead of drawing a dot per card. Layout, spacing, sizes from 641px
+// and the lit edge live in globals.css (.discover-*); this file owns state.
 // ============================================================================
 
 const SWAP_OUT_MS = 180;
@@ -218,9 +218,9 @@ function DiscoverCard({
   return (
     <div
       inert={!active}
-      className="discover-card__face flex h-full flex-col rounded-[20px] border bg-ph-white/[0.016] p-6"
+      className="discover-card__face flex h-full flex-col rounded-[20px] border bg-ph-white/[0.016]"
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="discover-card__head flex items-start justify-between gap-4">
         <span className="flex items-center gap-2 pt-[11px]">
           <span className="discover-type text-[10.5px] font-medium text-[var(--ph-accent)]">{kindLabel(d.type)}</span>
           {d.is_new && (
@@ -239,14 +239,14 @@ function DiscoverCard({
           <StarIcon filled={d.saved} />
         </button>
       </div>
-      <h2 className="mt-2 line-clamp-2 min-h-[2.7em] text-[21px] font-normal leading-[1.35] text-ph-white/95 max-[640px]:text-[19px]">
+      <h2 className="discover-card__headline line-clamp-2 min-h-[2.7em] text-[19px] font-normal leading-[1.35] text-ph-white/95">
         {d.headline}
       </h2>
-      <p className="mt-3 line-clamp-3 min-h-[4.8em] text-[14px] leading-[1.6] text-ph-white/80">{d.detail}</p>
-      <p className="mt-3 line-clamp-2 min-h-[3.1em] text-[13px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">
+      <p className="discover-card__detail line-clamp-3 min-h-[4.8em] text-[14px] leading-[1.6] text-ph-white/80">{d.detail}</p>
+      <p className="discover-card__reason line-clamp-2 min-h-[3.1em] text-[13px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">
         {d.reason}
       </p>
-      <div className="mt-auto flex flex-wrap gap-2 pt-3">
+      <div className="discover-card__foot mt-auto flex flex-wrap gap-2">
         <CardLink onClick={onSources}>see the sources</CardLink>
         <CardLink onClick={onAsk}>ask polaris</CardLink>
       </div>
