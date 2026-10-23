@@ -47,7 +47,6 @@ test("milestones sit on real dated moments, take their date and point from them,
     story([
       { moment_id: "m-2026", label: "your film reaches your product network." },
       { moment_id: "m-2008", label: "Early interest in film" },
-      { moment_id: "m-undated", label: "dropped, no date" },
       { moment_id: "invented", label: "dropped, not given" },
       { moment_id: "m-2008", label: "dropped, already used" },
     ]),
@@ -60,6 +59,30 @@ test("milestones sit on real dated moments, take their date and point from them,
     },
   );
   assert.equal(story([{ moment_id: "m-2008", label: "one" }]), null);
+});
+
+test("when any milestone's moment is undated, milestones sit in point order and undated ones carry no date", () => {
+  const out = normalizeInsights(
+    {
+      story: {
+        line: "Film began early.",
+        milestones: [
+          { moment_id: "m-2026", label: "recognition" },
+          { moment_id: "m-undated", label: "becoming" },
+          { moment_id: "m-2008", label: "origin" },
+        ],
+      },
+    },
+    lower,
+    1,
+    NOW,
+    MOMENTS,
+  ).story;
+  assert.deepEqual(out?.milestones, [
+    { moment_id: "m-2008", label: "origin", date: "2008", pillar: "origin" },
+    { moment_id: "m-undated", label: "becoming", date: null, pillar: "becoming" },
+    { moment_id: "m-2026", label: "recognition", date: "mar 2026", pillar: "recognition" },
+  ]);
 });
 
 test("milestoneDate reads a month and year when recent, else the year", () => {

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { apiFetch, type InsightsReading, type ProfileOverview } from "@/lib/api-client";
 import { colorName, resolveAccent } from "@/lib/stellar";
-import { fetchConstellation, relativeTime, type ConstellationData } from "@/lib/constellation";
+import { fetchConstellation, pillarLabel, relativeTime, type ConstellationData, type Pillar } from "@/lib/constellation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 import { buildInsightsStats, momentFacts, nameFromMetadata } from "./stats";
@@ -87,7 +87,7 @@ function Items({ items }: { items: { title: string; body: string; moment_ids?: s
 /**
  * "your story so far": one line, then five milestones on a line whose dots
  * brighten toward now. Each milestone opens its moment on the constellation.
- * Phones stack them.
+ * An undated moment shows its point in place of the date. Phones stack them.
  */
 function Story({ story }: { story: InsightsReading["story"] | undefined }) {
   return (
@@ -97,28 +97,31 @@ function Story({ story }: { story: InsightsReading["story"] | undefined }) {
         <>
           <p className="mt-2.5 text-[16px] leading-[1.6] text-ph-white/90">{story.line}</p>
           <ol className="relative mt-6 grid gap-x-6 gap-y-5 [@media(max-width:640px)]:grid-cols-1 [@media(min-width:641px)]:grid-flow-col [@media(min-width:641px)]:auto-cols-fr">
-            {story.milestones.map((m, i) => (
-              <li key={m.moment_id} className="relative">
-                {i < story.milestones.length - 1 && (
-                  <span aria-hidden="true" className="absolute top-[4px] left-[9px] h-px w-[calc(100%+24px)] bg-[rgba(var(--ph-accent-rgb),0.45)] [@media(max-width:640px)]:hidden" />
-                )}
-                <Link
-                  href={`/dashboard/constellation?moment=${encodeURIComponent(m.moment_id)}`}
-                  aria-label={`open this moment: ${m.date}, ${m.label}`}
-                  className="group relative [@media(min-width:641px)]:block [@media(max-width:640px)]:grid [@media(max-width:640px)]:grid-cols-[9px_1fr] [@media(max-width:640px)]:gap-x-3.5"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="block h-[9px] w-[9px] rounded-full bg-[var(--ph-accent)] shadow-[0_0_0_3px_var(--ph-black)] [@media(max-width:640px)]:row-span-2 [@media(max-width:640px)]:mt-[4px]"
-                    style={{ opacity: 0.55 + (0.45 * (i + 1)) / story.milestones.length }}
-                  />
-                  <time className="block text-[12px] font-light text-ph-white/78 [@media(min-width:641px)]:mt-4">{m.date}</time>
-                  <b className="block text-[15px] [@media(min-width:641px)]:mt-2 [@media(max-width:640px)]:mt-1 font-medium leading-[1.45] text-ph-white/90 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
-                    {m.label}
-                  </b>
-                </Link>
-              </li>
-            ))}
+            {story.milestones.map((m, i) => {
+              const when = m.date ?? pillarLabel(m.pillar as Pillar);
+              return (
+                <li key={m.moment_id} className="relative">
+                  {i < story.milestones.length - 1 && (
+                    <span aria-hidden="true" className="absolute top-[4px] left-[9px] h-px w-[calc(100%+24px)] bg-[rgba(var(--ph-accent-rgb),0.45)] [@media(max-width:640px)]:hidden" />
+                  )}
+                  <Link
+                    href={`/dashboard/constellation?moment=${encodeURIComponent(m.moment_id)}`}
+                    aria-label={`open this moment: ${when}, ${m.label}`}
+                    className="group relative [@media(min-width:641px)]:block [@media(max-width:640px)]:grid [@media(max-width:640px)]:grid-cols-[9px_1fr] [@media(max-width:640px)]:gap-x-3.5"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="block h-[9px] w-[9px] rounded-full bg-[var(--ph-accent)] shadow-[0_0_0_3px_var(--ph-black)] [@media(max-width:640px)]:row-span-2 [@media(max-width:640px)]:mt-[4px]"
+                      style={{ opacity: 0.55 + (0.45 * (i + 1)) / story.milestones.length }}
+                    />
+                    <span className="block text-[12px] font-light text-ph-white/78 [@media(min-width:641px)]:mt-4">{when}</span>
+                    <b className="block text-[15px] [@media(min-width:641px)]:mt-2 [@media(max-width:640px)]:mt-1 font-medium leading-[1.45] text-ph-white/90 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+                      {m.label}
+                    </b>
+                  </Link>
+                </li>
+              );
+            })}
           </ol>
         </>
       ) : (
