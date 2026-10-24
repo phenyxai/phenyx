@@ -5,24 +5,14 @@ import { OnairosButton } from "onairos";
 import type { OnairosCompleteData } from "onairos";
 import { initializeOnairos, getOnairosApiKey } from "@/lib/onairos";
 
-/**
- * Connector IDs — see vendor/onairos/CONNECTORS.md. Onairos hides spotify,
- * claude and chatgpt unless the developer key's plan entitles them
- * (GET /api/raw-memories/policy), so on the free plan only the first three show.
- */
-export const DEFAULT_ONAIROS_ALLOWED_PLATFORMS = [
-  "instagram",
-  "linkedin",
-  "youtube",
-  "spotify",
-  "claude",
-  "chatgpt",
-] as const;
-
 interface OnairosButtonWrapperProps {
   webpageName: string;
   requestedData: string[];
-  /** Connector IDs (lowercase), e.g. instagram, linkedin, youtube, chatgpt */
+  /**
+   * Connector IDs (lowercase), e.g. instagram, linkedin, youtube, chatgpt.
+   * null (the default) shows every connector in the SDK's picker that the
+   * developer key's plan entitles (GET /api/raw-memories/policy).
+   */
   allowedPlatforms?: string[] | null;
   autoFetch?: boolean;
   onComplete: (result: OnairosCompleteData, error?: Error) => void;
@@ -39,7 +29,7 @@ interface OnairosButtonWrapperProps {
 export function OnairosButtonWrapper({
   webpageName,
   requestedData,
-  allowedPlatforms = [...DEFAULT_ONAIROS_ALLOWED_PLATFORMS],
+  allowedPlatforms = null,
   autoFetch = true,
   onComplete,
   buttonType = "pill",
