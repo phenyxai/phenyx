@@ -243,10 +243,11 @@ export default function InsightsTabPage() {
                   const body = (
                     <>
                       <span className="text-[13.5px] text-ph-white/94">{stat.value}</span>
-                      <span className="mt-1 flex items-center gap-[3px] text-[11.5px] tracking-[0.01em] text-ph-white/82">
+                      {/* Inline, so the arrow follows the last word when the label wraps on phones. */}
+                      <span className="mt-1 text-[11.5px] tracking-[0.01em] text-ph-white/82">
                         {stat.label}
                         {stat.key === "platforms" && (
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="ml-[3px] inline-block align-[-1px]">
                             <path d="M9.5 6l6 6-6 6" />
                           </svg>
                         )}
