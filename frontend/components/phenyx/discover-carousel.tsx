@@ -12,9 +12,9 @@ import { kindLabel, loopOffset, type Discovery } from "@/lib/discover";
 // the main card (clicking one brings it forward). Phones show the main card
 // alone and swap it in place. Each card: its kind (and "new" once it joins
 // the deck this week), the ★ save, the headline, what it is, the personal
-// reason in the accent, then "see the sources" and "ask polaris". Every card
-// keeps one rhythm: the headline holds two lines, the detail three (four from
-// 641px), the reason two, so each part starts at the same height. A long deck
+// reason in the accent, then "see the sources" and "ask polaris". The text
+// sits together as one block (PHE-160): the headline clamps at two lines, the
+// detail at three (four from 641px), the reason at two. A long deck
 // counts instead of drawing a dot per card. Layout, spacing, sizes from 641px
 // and the lit edge live in globals.css (.discover-*); this file owns state.
 // ============================================================================
@@ -239,11 +239,11 @@ function DiscoverCard({
           <StarIcon filled={d.saved} />
         </button>
       </div>
-      <h2 className="discover-card__headline line-clamp-2 min-h-[2.7em] text-[19px] font-normal leading-[1.35] text-ph-white/95">
+      <h2 className="discover-card__headline line-clamp-2 text-[19px] font-normal leading-[1.35] text-ph-white/95">
         {d.headline}
       </h2>
-      <p className="discover-card__detail line-clamp-3 min-h-[4.8em] text-[14px] leading-[1.6] text-ph-white/80">{d.detail}</p>
-      <p className="discover-card__reason line-clamp-2 min-h-[3.1em] text-[13px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">
+      <p className="discover-card__detail line-clamp-3 text-[14px] leading-[1.6] text-ph-white/80">{d.detail}</p>
+      <p className="discover-card__reason line-clamp-2 text-[13px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">
         {d.reason}
       </p>
       <div className="discover-card__foot mt-auto flex flex-wrap gap-2">
