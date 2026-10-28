@@ -16,7 +16,6 @@ import {
 /** What full adds (company overview, section 17; PHE-129). */
 const FEATURES = [
   'why each moment matters and what it connects to',
-  `${V67_PRICING.weeklyDiscoveries.full} new discoveries a week`,
   `${V67_PRICING.polarisMonthlyPoints.full} polaris points a month`,
   'questions to return to that polaris keeps for you',
   'early access to new features',

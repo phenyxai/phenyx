@@ -17,23 +17,21 @@ import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 import { CardLink, DiscoverCarousel, StarIcon } from "@/components/phenyx/discover-carousel";
 import { HeaderChip, PanelHeader } from "@/components/phenyx/panel-header";
 import { Arrow } from "@/components/phenyx/nav-icons";
-import { Popup, PrimaryButton, QuietAction, useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
+import { Popup, PrimaryButton } from "@/components/phenyx/settings-modals/modal-host";
 
 // ============================================================================
 // Discover tab (PHE-103, PHE-129, spec doc 3, rebuild doc 9)
 // ----------------------------------------------------------------------------
-// The deck from `GET /discover`, one card at a time: every card the person has
-// revealed, newest first. The first visit waits while the starting deck is
-// generated, which can take a minute. The read fails soft: any error renders
-// the empty state.
+// The deck from `GET /discover`, one card at a time: this week's cards, newest
+// first. PHE-158: every plan gets a fresh seven each week, from monday 9am
+// local, and the week's first visit can wait a minute while they are written.
+// The read fails soft: any error renders the empty state.
 //
-// New cards come through the week's allowance (1 free, 10 full, opening monday
-// 9am local) and bought discoveries. "n new discoveries" opens "use
+// Bought discoveries add cards on top. "n new discoveries" opens "use
 // discoveries", which adds them (`POST /discover/reveal`) with a brief "added
 // to your deck"; with none left it opens "more discoveries" (packs of 1, 3 or
-// 10, then checkout). A new card joins the deck with a "new" tag and never
-// replaces one; when nothing new turns up the pop-up says "all caught up" and
-// nothing is used.
+// 10, then checkout). When nothing new turns up the pop-up says "all caught
+// up" and nothing is used.
 //
 // The ★ saves a card (`POST /discover/:id/save`) and the ★ pill opens the
 // saved list. "Ask polaris" opens a chat seeded with the card's own question
@@ -54,7 +52,6 @@ function timeZone(): string {
 
 export default function DiscoverTabPage() {
   const router = useRouter();
-  const { openModal } = useSettingsModals();
   const [deck, setDeck] = useState<Discovery[] | null>(null);
   const [saved, setSaved] = useState<Discovery[]>([]);
   const [allowance, setAllowance] = useState<DiscoveryAllowance | null>(null);
@@ -135,10 +132,6 @@ export default function DiscoverTabPage() {
   };
 
   const available = allowance?.available ?? 0;
-  const upgrade = () => {
-    setPopup(null);
-    openModal("subscription");
-  };
 
   return (
     <section className="flex min-h-screen flex-col pb-20 [@media(max-width:640px)]:px-6 [@media(max-width:640px)]:pt-6 [@media(min-width:641px)]:pt-16">
@@ -167,7 +160,7 @@ export default function DiscoverTabPage() {
 
       {deck === null ? (
         <p className="float-in text-[13px] font-light text-ph-white/35" style={delay(0.12)}>
-          looking across your platforms for what could be next. the first set can take a minute.
+          looking across your platforms for what could be next. a new week’s set can take a minute.
         </p>
       ) : deck.length === 0 ? (
         <p className="float-in max-w-[52ch] text-[15px] font-light leading-[1.55] text-ph-white/40" style={delay(0.12)}>
@@ -214,16 +207,16 @@ export default function DiscoverTabPage() {
         <UseDiscoveries allowance={allowance} onUse={reveal} onClose={() => setPopup(null)} />
       )}
       {popup === "more" && allowance && (
-        <MoreDiscoveries allowance={allowance} onUpgrade={upgrade} onClose={() => setPopup(null)} />
+        <MoreDiscoveries allowance={allowance} onClose={() => setPopup(null)} />
       )}
     </section>
   );
 }
 
 /**
- * "use your free weekly discovery" (one from the week) or "use discoveries"
- * with a count: what a discovery is, what this uses and leaves, and when the
- * week refreshes. Nothing is used when nothing new turns up.
+ * "use a discovery" or "use discoveries" with a count: what a discovery is,
+ * what this uses and leaves, and when the week refreshes. Nothing is used when
+ * nothing new turns up.
  */
 function UseDiscoveries({
   allowance,
@@ -237,8 +230,7 @@ function UseDiscoveries({
   const most = Math.min(allowance.available, 10);
   const [count, setCount] = useState(1);
   const [state, setState] = useState<"idle" | "loading" | "caught-up" | "failed">("idle");
-  const weekly = allowance.available === 1 && allowance.weekly_left === 1;
-  const title = most > 1 ? "use discoveries" : weekly ? "use your free weekly discovery" : "use a discovery";
+  const title = most > 1 ? "use discoveries" : "use a discovery";
 
   const use = async () => {
     setState("loading");
@@ -296,16 +288,8 @@ function UseDiscoveries({
   );
 }
 
-/** "more discoveries": what was used, three packs, checkout, and the plan. */
-function MoreDiscoveries({
-  allowance,
-  onUpgrade,
-  onClose,
-}: {
-  allowance: DiscoveryAllowance;
-  onUpgrade: () => void;
-  onClose: () => void;
-}) {
+/** "more discoveries": what was used, three packs and checkout. Every plan gets the same seven a week (PHE-158). */
+function MoreDiscoveries({ allowance, onClose }: { allowance: DiscoveryAllowance; onClose: () => void }) {
   const [pack, setPack] = useState<number>(V67_PRICING.discoveryPacks[0].size);
   const [checkout, setCheckout] = useState<"idle" | "loading" | "failed">("idle");
   const buy = async () => {
@@ -349,9 +333,6 @@ function MoreDiscoveries({
         {checkout === "failed" && (
           <p className="text-[13px] font-light text-ph-white/62">checkout could not be started. please try again.</p>
         )}
-        <QuietAction onClick={onUpgrade} className="self-center">
-          upgrade plan
-        </QuietAction>
       </div>
     </Popup>
   );

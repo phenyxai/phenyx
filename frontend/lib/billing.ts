@@ -11,8 +11,8 @@ export const V67_PRICING = {
   pointsPer100: 4.99,
   pointsStep: 100,
   pointsMax: 2000,
-  /** New discoveries per week by plan. Mirrors the backend authority. */
-  weeklyDiscoveries: { full: 10, free: 1 },
+  /** Discoveries a week, the same on every plan (PHE-158). Mirrors the backend SET_SIZE. */
+  weeklyDiscoveries: 7,
   /** Discovery packs: size → price. */
   discoveryPacks: [
     { size: 1, price: 0.99 },

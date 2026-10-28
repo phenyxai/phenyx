@@ -35,6 +35,16 @@ export function isValidPillar(pillar: string): pillar is Pillar {
   return normalizePillar(pillar) in PILLAR_PRIORITY;
 }
 
+/** PHE-156: how many moments each point of the constellation aims to hold. */
+export const MOMENTS_PER_POINT = { min: 4, max: 6 } as const;
+
+/** The points holding fewer than {@link MOMENTS_PER_POINT}.min moments, in story order. */
+export function pointsToFill(momentPillars: readonly string[]): Pillar[] {
+  const counts = new Map<string, number>();
+  for (const p of momentPillars) counts.set(normalizePillar(p), (counts.get(normalizePillar(p)) ?? 0) + 1);
+  return PILLAR_ORDER.filter((p) => (counts.get(p) ?? 0) < MOMENTS_PER_POINT.min);
+}
+
 /** Lower number = higher priority. Unknown pillars sort last. */
 export function pillarPriority(pillar: string): number {
   const p = PILLAR_PRIORITY[normalizePillar(pillar)];
@@ -89,10 +99,11 @@ export function orderCandidates(
 }
 
 /**
- * Collapse candidate angles that rest on the same underlying same-day window.
- * A duplicate pair must share a normalized pillar and either a source-record
- * key or an overlapping explicit time window. Stronger candidates are compared
- * first, so a weak broad bridge cannot transitively erase distinct windows.
+ * Collapse candidate angles that rest on the same source record. A duplicate
+ * pair must share a normalized pillar and a source-record key. PHE-156: an
+ * overlapping time window alone no longer merges, since a point holds four to
+ * six moments from the same era. Stronger candidates are compared first, so a
+ * weak bridge cannot transitively erase distinct moments.
  */
 export function collapseOverlappingCandidates(
   candidates: ObservationCandidate[],
@@ -128,8 +139,7 @@ function candidatesOverlap(
   if (normalizePillar(left.pillar) !== normalizePillar(right.pillar)) return false;
 
   const leftKeys = new Set(candidateRecordKeys(left));
-  const sharesRecord = candidateRecordKeys(right).some((key) => leftKeys.has(key));
-  return sharesRecord || windowsOverlap(left, right);
+  return candidateRecordKeys(right).some((key) => leftKeys.has(key));
 }
 
 function candidateRecordKeys(candidate: ObservationCandidate): string[] {
@@ -137,20 +147,6 @@ function candidateRecordKeys(candidate: ObservationCandidate): string[] {
   return (candidate.source_record_keys ?? [])
     .map(normalizeSignalKey)
     .filter((key) => key && !platforms.has(key));
-}
-
-function windowsOverlap(
-  left: ObservationCandidate,
-  right: ObservationCandidate,
-): boolean {
-  const leftWindow = candidateWindow(left);
-  const rightWindow = candidateWindow(right);
-  return (
-    leftWindow != null &&
-    rightWindow != null &&
-    leftWindow.start <= rightWindow.end &&
-    rightWindow.start <= leftWindow.end
-  );
 }
 
 function candidateWindow(

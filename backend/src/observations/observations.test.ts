@@ -15,6 +15,8 @@ import {
   groupTimelineByPillar,
   isValidPillar,
   firstSentence,
+  pointsToFill,
+  PILLAR_ORDER,
 } from "./gating";
 import {
   parseFeedbackBody,
@@ -112,7 +114,16 @@ test("orderCandidates sorts by pillar priority, then confidence desc", () => {
   );
 });
 
-test("collapseOverlappingCandidates keeps the better-supported same-pillar window", () => {
+test("pointsToFill lists every point under four moments, in story order", () => {
+  const four = (p: string) => [p, p, p, p];
+  assert.deepEqual(pointsToFill([]), [...PILLAR_ORDER]);
+  assert.deepEqual(
+    pointsToFill([...four("origin"), ...four("emergence"), "Self_Creation", ...four("convergence"), ...four("becoming"), ...four("recognition"), ...four("transcendence"), "transcendence"]),
+    ["self_creation"],
+  );
+});
+
+test("collapseOverlappingCandidates keeps the better-supported of two same-pillar moments on one record", () => {
   const stronger = cand({
     pillar: "origin",
     signal_key: "export-to-release",
@@ -164,13 +175,14 @@ test("collapseOverlappingCandidates keeps the better-supported same-pillar windo
     stronger,
   ]);
 
+  // PHE-156: the weaker angle shares only a window with the stronger, so it stays.
   assert.deepEqual(
     collapsed.map((candidate) => candidate.signal_key).sort(),
-    ["export-to-release", "later-window", "same-window-other-pillar"],
+    ["export-to-release", "later-window", "release-lag", "same-window-other-pillar"],
   );
 });
 
-test("collapseOverlappingCandidates does not transitively merge distinct windows", () => {
+test("collapseOverlappingCandidates keeps moments on one point over the same months", () => {
   const collapsed = collapseOverlappingCandidates([
     cand({
       signal_key: "january",
@@ -194,7 +206,7 @@ test("collapseOverlappingCandidates does not transitively merge distinct windows
 
   assert.deepEqual(
     collapsed.map((candidate) => candidate.signal_key),
-    ["january", "february"],
+    ["january", "broad-weak-bridge", "february"],
   );
 });
 

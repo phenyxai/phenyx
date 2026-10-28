@@ -117,6 +117,13 @@ test("merge rule: two cards naming the same public thing keep the stronger", () 
   assert.deepEqual(dedupeDiscoveries([weaker, stronger]).map((c) => c.headline), ["stronger"]);
 });
 
+test("merge rule: two sources on one platform and day stay apart when their titles differ", () => {
+  const board = card({ headline: "a", story: null, trail: [{ platform: "youtube", date: "2026-10-23", title: "a board", detail: "a" }] });
+  const likes = card({ headline: "b", story: null, trail: [{ platform: "youtube", date: "2026-10-23", title: "liked videos", detail: "b" }] });
+  const again = card({ headline: "c", story: null, trail: [{ platform: "youtube", date: "2026-10-23", title: "A Board", detail: "c" }] });
+  assert.deepEqual(dedupeDiscoveries([board, likes, again]).map((c) => c.headline).sort(), ["a", "b"]);
+});
+
 test("merge rule: picks on one point over the same years both stay", () => {
   const place = card({ pillar: "origin", headline: "a", story: null, trail: [{ platform: "youtube", date: "2012", title: "a board", detail: "a" }] });
   const person = card({ pillar: "origin", headline: "b", story: null, trail: [{ platform: "spotify", date: "2012-05", title: "a board", detail: "b" }] });

@@ -25,7 +25,7 @@ const PLANS: { id: PlanId; name: string; price: string; per: string; lines: stri
     lines: [
       'every point and moment, with what happened and its sources',
       'the whole insights page',
-      `${V67_PRICING.weeklyDiscoveries.free} new discovery a week`,
+      `${V67_PRICING.weeklyDiscoveries} new discoveries a week`,
       `${V67_PRICING.polarisMonthlyPoints.free} polaris points a month and past conversations`,
     ],
   },
@@ -36,7 +36,6 @@ const PLANS: { id: PlanId; name: string; price: string; per: string; lines: stri
     per: 'a month',
     lines: [
       'why each moment matters and what it connects to',
-      `${V67_PRICING.weeklyDiscoveries.full} new discoveries a week`,
       `${V67_PRICING.polarisMonthlyPoints.full} polaris points a month`,
       'questions to return to',
     ],

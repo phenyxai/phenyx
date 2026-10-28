@@ -9,7 +9,9 @@ import {
   ServedObservation,
   TimelineGroup,
   PILLAR_ORDER,
+  MOMENTS_PER_POINT,
   isValidPillar,
+  pointsToFill,
   collapseOverlappingCandidates,
   formatObservationSpan,
   buildInsertRows,
@@ -39,6 +41,7 @@ import {
   type EmittedSignal,
   type InsertedMoment,
 } from "./new-signal";
+import { normalizePillar } from "./signal-hash";
 
 /**
  * PHE-37 — Observation Generation Engine (Lane 6 foundation).
@@ -83,6 +86,17 @@ export interface TimelineResponse {
 }
 
 const CLAUDE_MODEL = "claude-opus-4-8";
+
+/** What each point covers (spec doc 2), for a call that writes one point. */
+const POINT_MEANING: Record<string, string> = {
+  origin: "where they began, from the oldest material",
+  emergence: "what they started caring about on their own",
+  self_creation: "who they became once they were on their own",
+  convergence: "when the separate parts started to meet",
+  becoming: "how they are changing now, from the most recent material",
+  recognition: "what others are starting to see in them",
+  transcendence: "where all of this seems to be leading",
+};
 
 @Injectable()
 export class ObservationsService {
@@ -378,7 +392,21 @@ export class ObservationsService {
     }
 
     const hasFullAccess = this.billing.hasFullAccess(tier);
-    const { candidates, cacheReadTokens } = await this.emitObservations(context);
+    // PHE-156: each point under four moments gets its own call (in parallel)
+    // for four to six; once every point holds four, one call looks for
+    // genuinely new patterns across all seven.
+    // ponytail: every fill call resends the whole grounding; cache the shared user block if the bill shows it.
+    const fill = pointsToFill(context.moments.map((m) => m.pillar));
+    const runs = await Promise.all(
+      fill.length
+        ? fill.map((pillar) => this.emitObservations(context, pillar))
+        : [this.emitObservations(context)]
+    );
+    // A fill call keeps only the moments on its own point.
+    const candidates = runs.flatMap((run, i) =>
+      fill.length ? run.candidates.filter((c) => normalizePillar(c.pillar) === fill[i]) : run.candidates
+    );
+    const cacheReadTokens = runs[0]?.cacheReadTokens;
 
     const valid = candidates.filter(
       (c) => isValidPillar(c.pillar) && c.body.trim().length > 0 && c.signal_key.trim().length > 0
@@ -403,14 +431,15 @@ export class ObservationsService {
       generated = inserted?.length ?? 0;
       // PHE-102: rows that got past signal_hash dedup are patterns that weren't
       // there before. Only a refresh (prior observations exist) makes a signal.
-      if (shouldCreateSignal(context.recent.length > 0, generated)) {
+      // PHE-156: filling thin points is quiet, so the backfill raises no banner.
+      if (!fill.length && shouldCreateSignal(context.recent.length > 0, generated)) {
         await this.createNewSignal(userId, inserted as InsertedMoment[]);
       }
     }
 
     this.markEventProcessed(options.eventId);
     this.logger.log(
-      `generate(${options.trigger ?? "signal"}) user=${userId} candidates=${candidates.length} inserted=${generated} cacheRead=${cacheReadTokens ?? 0}`
+      `generate(${options.trigger ?? "signal"}) user=${userId} filled=${fill.join(",") || "none"} candidates=${candidates.length} inserted=${generated} cacheRead=${cacheReadTokens ?? 0}`
     );
     return { status: "generated", generated, candidates: candidates.length, cacheReadTokens };
   }
@@ -532,7 +561,7 @@ export class ObservationsService {
   private async loadGenerationContext(userId: string): Promise<GenerationContext> {
     const supabase = this.supabaseService.getClient();
 
-    const [stateRes, traitsRes, connectionsRes, recentRes, feedbackSignals] = await Promise.all([
+    const [stateRes, traitsRes, connectionsRes, recentRes, momentsRes, feedbackSignals] = await Promise.all([
       supabase
         .from("constellation_state")
         .select(
@@ -558,7 +587,13 @@ export class ObservationsService {
         .select("pillar, body, meta_label")
         .eq("user_id", userId)
         .order("surfaced_at", { ascending: false })
-        .limit(50),
+        .limit(100),
+      // PHE-156: every moment's point, for the per-point counts and for a fill
+      // call to spread its new moments away from the ones already there.
+      supabase
+        .from("observations")
+        .select("pillar, title, area, source_platforms, occurred_at")
+        .eq("user_id", userId),
       this.loadFeedbackSignals(userId),
     ]);
 
@@ -573,14 +608,16 @@ export class ObservationsService {
       traits: (traitsRes.data ?? []) as GenerationContext["traits"],
       connections,
       recent: (recentRes.data ?? []) as GenerationContext["recent"],
+      moments: (momentsRes.data ?? []) as GenerationContext["moments"],
       feedbackSignals,
       hasSignal: connections.length > 0 || stateRes.data != null,
     };
   }
 
-  /** Call Claude with the strict `emit_observations` tool; return the candidates. */
+  /** Call Claude with the strict `emit_observations` tool; return the candidates. `pillar` asks for that one point's moments. */
   private async emitObservations(
-    context: GenerationContext
+    context: GenerationContext,
+    pillar?: string
   ): Promise<{ candidates: ObservationCandidate[]; cacheReadTokens?: number }> {
     const apiKey = this.config.get<string>("ANTHROPIC_API_KEY");
     if (!apiKey) {
@@ -591,7 +628,7 @@ export class ObservationsService {
     // [Voice Standard] (cached prefix) + [task instructions]; per-user volatile
     // grounding stays in the user message, after the cached prefix (PHE-20).
     const system = await this.voiceStandard.buildSystemBlocks(this.taskInstructions());
-    const userMessage = this.buildUserMessage(context);
+    const userMessage = this.buildUserMessage(context, pillar);
 
     const claude = await this.callClaudeTool(apiKey, system, this.emitObservationsTool(), userMessage);
     if (!claude) return { candidates: [] };
@@ -623,7 +660,7 @@ export class ObservationsService {
         },
         body: JSON.stringify({
           model: CLAUDE_MODEL,
-          max_tokens: 4096,
+          max_tokens: 16000,
           thinking: { type: "adaptive" },
           output_config: { effort: "high" },
           system,
@@ -904,13 +941,15 @@ your task: read the person’s synthesized constellation, grounded trait keyword
 
 each body is two to three sentences written to the person as "you", reflecting what the pattern suggests. the person decides who they are, so never declare it.
 
-new-signal diffing is the core rule: only surface genuinely novel patterns. you will be shown the observations already surfaced to this person, so do not restate them, rephrase them, or emit near-duplicates. if a pattern only confirms something already surfaced, omit it. if nothing genuinely new surfaced, emit an empty observations array.
+never restate what was already surfaced: you will be shown the observations this person already has, so do not repeat them, rephrase them, or emit near-duplicates, and omit a pattern that only confirms one of them. when you are asked to write for one point, write the moments that point’s data supports. otherwise surface only genuinely novel patterns, and if nothing genuinely new surfaced, emit an empty observations array.
 
 for each observation choose a stable signal_key that identifies the underlying pattern (not the prose), so the same pattern always produces the same key. prefer cross-platform reads (source_platforms with 2+ platforms), since they are the strongest signals.
 
 each observation is also a moment on the person’s constellation, so give it a title (one short line of about eight words, no full stop), what_happened (one sentence on the observed fact, naming the platform), why_it_matters (one sentence on what it suggests), what_connects (one sentence on how it leads to a later moment, or empty when nothing does yet), occurred_at (the date it happened, from its earliest supporting record) and area (one or two lowercase words for the part of life it belongs to, such as home, friends or places; moments on one pillar that share a part of life share the word, so the person can filter a point by it).
 
-also return the concrete supporting_points, exact source_record_keys copied from the grounding, and the inclusive ISO-8601 window_start/window_end. a bare platform name is not a source record key. do not emit two angles on the same pillar that share a source record or overlap the same time window; keep the one with more supporting points.
+the seven points read as a timeline, from origin (the oldest material) to transcendence (the newest), so each point’s moments come from its own stretch of time. spread the moments on one point across the connected platforms, so no one platform supplies most of them when others are connected; across parts of life, so they carry different area words; across the years of that point’s era rather than one month; and across kinds of moment, such as a first, a turning point, a habit that held or something others noticed. a point with little data gets only the moments its data supports, and you never invent one to reach a count.
+
+also return the concrete supporting_points, exact source_record_keys copied from the grounding, and the inclusive ISO-8601 window_start/window_end. a bare platform name is not a source record key. two moments on the same pillar never share a source record; keep the one with more supporting points.
 
 you must return your result by calling the emit_observations tool. do not answer in plain text.
 
@@ -920,7 +959,7 @@ strict prohibitions, never break these:
 - no therapeutic advice; these are reflections the person can check against their constellation`;
   }
 
-  private buildUserMessage(context: GenerationContext): string {
+  private buildUserMessage(context: GenerationContext, pillar?: string): string {
     const state = context.state;
     const syntheses = state
       ? [
@@ -998,7 +1037,24 @@ ${trueMoments || "none"}
 THREADS THE PERSON IS FOLLOWING (surface what continues them when it is genuinely new)
 ${followed || "none"}
 
-Surface only genuinely novel observations via emit_observations.`;
+${pillar ? this.fillAsk(context, pillar) : "Surface only genuinely novel observations via emit_observations."}`;
+  }
+
+  /** PHE-156: the ask for one thin point, with the moments it already holds. */
+  private fillAsk(context: GenerationContext, pillar: string): string {
+    const held = context.moments.filter((m) => normalizePillar(m.pillar) === pillar);
+    const list = held
+      .map(
+        (m) =>
+          `- ${m.occurred_at ?? "undated"} · ${(m.source_platforms ?? []).join(", ") || "no platform"} · ${m.area ?? "no area"} · ${m.title ?? "untitled"}`
+      )
+      .join("\n");
+    const { min, max } = MOMENTS_PER_POINT;
+    return `WRITE FOR ONE POINT ONLY: ${pillar} (${POINT_MEANING[pillar] ?? pillar})
+it holds ${held.length} moment${held.length === 1 ? "" : "s"} now:
+${list || "none yet"}
+
+write between ${Math.max(1, min - held.length)} and ${max - held.length} new moments, every one with pillar "${pillar}", spread away from the ones above, and return them via emit_observations.`;
   }
 
   // -------------------------------------------------------------------------
@@ -1123,6 +1179,13 @@ interface GenerationContext {
   traits: { keyword_tags: string[] | null; insight: string | null; derived_from: string[] | null }[];
   connections: { platform: string; redacted_snapshot: Record<string, unknown> | null }[];
   recent: { pillar: string; body: string; meta_label: string | null }[];
+  moments: {
+    pillar: string;
+    title: string | null;
+    area: string | null;
+    source_platforms: string[] | null;
+    occurred_at: string | null;
+  }[];
   feedbackSignals: FeedbackSignal[];
   hasSignal: boolean;
 }
