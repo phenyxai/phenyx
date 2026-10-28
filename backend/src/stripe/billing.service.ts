@@ -20,8 +20,8 @@ export type PaidAccessTier = "pro" | "gifted";
  * - Polaris runs on points per calendar month: 30 on free, 300 on full. Points
  *   bought on either plan are a separate balance that never expires; see
  *   {@link ../polaris/token-budget.service.ts}.
- * - New discoveries: 1 a week on free, 10 on full, refreshing Monday 9am in the
- *   person's local time; bought discoveries stay until used.
+ * - Discover is the same on both plans (PHE-158): a fresh seven every week,
+ *   from Monday 9am in the person's local time; bought discoveries stay until used.
  * - Full (`pro` in the DB) is $12.99/month or $132.50/year. The person only ever
  *   reads "full"; "pro" is the enum value, never product copy.
  * - Grandfathered `gifted` rows resolve identically to pro. The word "gifted"
@@ -48,8 +48,6 @@ export interface TierCapabilities {
   momentReading: boolean;
   /** Polaris points per calendar month (PHE-129). Free: 30. Pro: 300. */
   polarisMonthlyPoints: number;
-  /** New discoveries per week, refreshing Monday 9am local (PHE-129). Free: 1. Pro: 10. */
-  weeklyDiscoveries: number;
   /** Whether Polaris is usable at all (composer, threads, ask). True on every tier. */
   polarisAccess: boolean;
   /** Whether served observation payloads include `source_platforms` citations. */
@@ -76,7 +74,6 @@ const PRO_CAPABILITIES: TierCapabilities = {
   evidenceTracesPerDay: Infinity,
   momentReading: true,
   polarisMonthlyPoints: 300,
-  weeklyDiscoveries: 10,
   polarisAccess: true,
   crossPlatformCitations: true,
   trackingOverTime: true,
@@ -94,7 +91,6 @@ const FREE_CAPABILITIES: TierCapabilities = {
   evidenceTracesPerDay: Infinity,
   momentReading: false,
   polarisMonthlyPoints: 30,
-  weeklyDiscoveries: 1,
   polarisAccess: true,
   crossPlatformCitations: true,
   trackingOverTime: false,

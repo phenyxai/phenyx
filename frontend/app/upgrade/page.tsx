@@ -196,7 +196,7 @@ export default function UpgradePage() {
               {[
                 "every point and moment, with what happened and its sources",
                 "the whole insights page",
-                "1 new discovery a week",
+                "7 new discoveries a week",
                 "30 polaris points a month and past conversations",
               ].map((feature, i) => (
                 <li key={i} className="flex items-center gap-2" style={{ fontSize: "12px", color: "rgba(255,253,253,0.53)" }}>
@@ -254,7 +254,6 @@ export default function UpgradePage() {
             <ul className="space-y-3 mb-6">
               {[
                 "why each moment matters and what it connects to",
-                "10 new discoveries a week",
                 "300 polaris points a month",
                 "questions to return to",
               ].map((feature, i) => (

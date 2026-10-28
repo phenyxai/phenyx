@@ -10,8 +10,7 @@ import { kindLabel, loopOffset, type Discovery } from "@/lib/discover";
 // one a short accent bar), arrow keys and swipe. On wider screens the
 // neighbours sit 70px either side, dimmed but legible, with a lit edge facing
 // the main card (clicking one brings it forward). Phones show the main card
-// alone and swap it in place. Each card: its kind (and "new" once it joins
-// the deck this week), the ★ save, the headline, what it is, the personal
+// alone and swap it in place. Each card: its kind, the ★ save, the headline, what it is, the personal
 // reason in the accent, then "see the sources" and "ask polaris". The text
 // sits together as one block (PHE-160): the headline clamps at two lines, the
 // detail at three (four from 641px), the reason at two. A long deck
@@ -221,14 +220,7 @@ function DiscoverCard({
       className="discover-card__face flex h-full flex-col rounded-[20px] border bg-ph-white/[0.016]"
     >
       <div className="discover-card__head flex items-start justify-between gap-4">
-        <span className="flex items-center gap-2 pt-[11px]">
-          <span className="discover-type text-[10.5px] font-medium text-[var(--ph-accent)]">{kindLabel(d.type)}</span>
-          {d.is_new && (
-            <span className="rounded-full bg-[rgba(var(--ph-accent-rgb),0.14)] px-2 py-[1px] text-[10px] font-medium text-[var(--ph-accent)]">
-              new
-            </span>
-          )}
-        </span>
+        <span className="discover-type pt-[11px] text-[10.5px] font-medium text-[var(--ph-accent)]">{kindLabel(d.type)}</span>
         <button
           type="button"
           onClick={onSave}

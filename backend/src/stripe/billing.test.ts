@@ -8,7 +8,7 @@ const billing = new BillingService();
 // capabilitiesFor — the single tier resolver (PHE-69 / v67, PHE-129)
 // ---------------------------------------------------------------------------
 
-test("capabilitiesFor(free): every moment with its sources, no reading, 30 points, 1 discovery a week", () => {
+test("capabilitiesFor(free): every moment with its sources, no reading, 30 points", () => {
   const caps = billing.capabilitiesFor("free");
   assert.equal(caps.paid, false);
   assert.equal(caps.observationsUnlocked, Infinity);
@@ -16,21 +16,19 @@ test("capabilitiesFor(free): every moment with its sources, no reading, 30 point
   assert.equal(caps.clusterEntries, Infinity);
   assert.equal(caps.momentReading, false);
   assert.equal(caps.polarisMonthlyPoints, 30);
-  assert.equal(caps.weeklyDiscoveries, 1);
   assert.equal(caps.polarisAccess, true);
   assert.equal(caps.trackingOverTime, false);
   assert.equal(caps.underneath, false);
   assert.equal(caps.yearlyRecap, false);
 });
 
-test("capabilitiesFor(pro): the reading, 300 points, 10 discoveries a week", () => {
+test("capabilitiesFor(pro): the reading, 300 points", () => {
   const caps = billing.capabilitiesFor("pro");
   assert.equal(caps.paid, true);
   assert.equal(caps.evidenceTracesPerDay, Infinity);
   assert.equal(caps.clusterEntries, Infinity);
   assert.equal(caps.momentReading, true);
   assert.equal(caps.polarisMonthlyPoints, 300);
-  assert.equal(caps.weeklyDiscoveries, 10);
   assert.equal(caps.trackingOverTime, true);
   assert.equal(caps.yearlyRecap, true);
 });

@@ -4,7 +4,6 @@ import { ConfigService } from "@nestjs/config";
 import { Cron } from "@nestjs/schedule";
 import { SupabaseService } from "../supabase/supabase.service";
 import { VoiceStandardService } from "../voice-standard/voice-standard.service";
-import { BillingService } from "../stripe/billing.service";
 import { PILLAR_ORDER } from "../observations/gating";
 import {
   DISCOVERY_TYPES,
@@ -27,19 +26,19 @@ import {
  * something to try, a detail, a medium, a field, or something from the
  * person's own history), each with one personal reason from a dated source.
  *
- * The deck is every card the person has revealed; a new card joins it and
- * never replaces one. Generation writes sets of seven that wait unrevealed;
- * the weekly allowance (1 free, 10 full, opening monday 9am in the person's
- * time) and bought discoveries reveal them. `GET /discover` serves the deck,
- * the saved cards and the allowance; on the first visit it generates a set
- * and reveals it at once as the starting deck. `POST /discover/reveal` adds
- * cards, generating more first when too few are waiting, and charges nothing
- * when nothing new could be found ("all caught up").
+ * PHE-158: the deck is this week's cards. Every person gets seven a week on
+ * either plan, and the week opens monday 9am in their own time. Generation
+ * writes sets of seven that wait unrevealed; the first `GET /discover` of a
+ * week reveals the week's seven (generating first when too few are waiting)
+ * and serves the deck, the saved cards and the allowance. Last week's cards
+ * leave the deck, and saved ones stay in saved. Bought discoveries add cards
+ * on top through `POST /discover/reveal`, which charges nothing when nothing
+ * new could be found ("all caught up").
  *
  * Generation grounds on the constellation, the dated observations and the
  * connected platforms, asks Claude for up to ten cards through the strict
  * `emit_discoveries` tool, then runs them through `discover.rules.ts`: limits,
- * dedup, at least five kinds. Cards that break a limit get one regeneration
+ * dedup, at least five kinds. A set short of seven gets up to two more passes
  * (one run per person at a time; a second request waits on the first). A
  * weekly cron tops up the waiting cards before the week opens.
  */
@@ -47,6 +46,8 @@ import {
 const CLAUDE_MODEL = "claude-opus-5-5";
 /** A run that found nothing isn't repeated for this long. */
 const EMPTY_COOLDOWN_MS = 60 * 60 * 1000;
+/** Claude calls one generation may make to fill a set of seven. */
+const MAX_PASSES = 3;
 
 /** The week's discoveries, surfaced to the client. */
 export interface DiscoveryAllowance {
@@ -54,7 +55,7 @@ export interface DiscoveryAllowance {
   week: string;
   /** When the next week opens, an ISO instant (monday 9am local). */
   resets: string;
-  /** New discoveries a week by plan (1 free / 10 full). */
+  /** The week's discoveries: seven on every plan (PHE-158). */
   limit: number;
   used: number;
   weekly_left: number;
@@ -62,7 +63,6 @@ export interface DiscoveryAllowance {
   purchased: number;
   /** weekly_left + purchased: how many can be added now. */
   available: number;
-  full: boolean;
 }
 
 export interface ServedDiscovery {
@@ -77,23 +77,21 @@ export interface ServedDiscovery {
   sources: string[];
   trail: TrailEntry[];
   saved: boolean;
-  /** Revealed since this week opened: the card's "new" tag. */
-  is_new: boolean;
 }
 
-const SERVED_COLUMNS = "id,type,pillar,headline,detail,reason,question,story,sources,trail,saved_at,revealed_at";
+const SERVED_COLUMNS = "id,type,pillar,headline,detail,reason,question,story,sources,trail,saved_at";
 /** ponytail: the deck and the saved list are capped; page them when someone keeps more than this. */
 const DECK_MAX = 100;
 const SAVED_MAX = 60;
-/** Most cards one reveal can add: a full week. */
+/** Most cards one reveal can add: the largest pack. */
 export const REVEAL_MAX = 10;
 /** Headlines the writer is told not to repeat (rebuild doc 11.4). */
 const SEEN_DAYS = 60;
 
-type DiscoveryRow = Omit<ServedDiscovery, "saved" | "is_new"> & { saved_at: string | null; revealed_at: string | null };
+type DiscoveryRow = Omit<ServedDiscovery, "saved"> & { saved_at: string | null };
 
-function served({ saved_at, revealed_at, ...card }: DiscoveryRow, weekOpened: string): ServedDiscovery {
-  return { ...card, saved: saved_at !== null, is_new: revealed_at !== null && revealed_at >= weekOpened };
+function served({ saved_at, ...card }: DiscoveryRow): ServedDiscovery {
+  return { ...card, saved: saved_at !== null };
 }
 
 interface DiscoverContext {
@@ -125,29 +123,20 @@ export class DiscoverService {
     private readonly config: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly voiceStandard: VoiceStandardService,
-    private readonly billing: BillingService,
   ) {}
 
-  /** The deck, the saved cards and the week's allowance. The first visit generates the starting deck. */
+  /** The deck, the saved cards and the week's allowance. The week's first visit reveals its seven. */
   async getDeck(
     userId: string,
     timeZone: unknown,
   ): Promise<{ deck: ServedDiscovery[]; saved: ServedDiscovery[]; allowance: DiscoveryAllowance }> {
     const week = discoveryWeek(new Date(), safeTimeZone(timeZone));
-    let deck = await this.readDeck(userId, week.opened);
+    let allowance = await this.allowance(userId, week);
     const emptyAt = this.emptyAt.get(userId) ?? 0;
-    if (deck.length === 0 && Date.now() - emptyAt > EMPTY_COOLDOWN_MS) {
-      if ((await this.waiting(userId)) === 0) await this.generate(userId);
-      // The starting deck is revealed at once, outside the allowance.
-      await this.supabaseService
-        .getClient()
-        .from("discoveries")
-        .update({ revealed_at: new Date().toISOString() })
-        .eq("user_id", userId)
-        .is("revealed_at", null);
-      deck = await this.readDeck(userId, week.opened);
+    if (allowance.weekly_left > 0 && Date.now() - emptyAt > EMPTY_COOLDOWN_MS) {
+      allowance = (await this.revealWaiting(userId, allowance.weekly_left, allowance)).allowance;
     }
-    const [saved, allowance] = await Promise.all([this.readSaved(userId, week.opened), this.allowance(userId, week)]);
+    const [deck, saved] = await Promise.all([this.readDeck(userId, week.opened), this.readSaved(userId)]);
     return { deck, saved, allowance };
   }
 
@@ -166,7 +155,16 @@ export class DiscoverService {
     const week = discoveryWeek(new Date(), safeTimeZone(timeZone));
     const before = await this.allowance(userId, week);
     if (count > before.available) return { added: [], caught_up: false, short: true, allowance: before };
+    const { added, allowance } = await this.revealWaiting(userId, count, before);
+    return { added, caught_up: added.length === 0, short: false, allowance };
+  }
 
+  /** Reveal up to `count` waiting cards, oldest set first, generating first when too few wait, and charge them. */
+  private async revealWaiting(
+    userId: string,
+    count: number,
+    before: DiscoveryAllowance,
+  ): Promise<{ added: ServedDiscovery[]; allowance: DiscoveryAllowance }> {
     if ((await this.waiting(userId)) < count) await this.generate(userId);
     const supabase = this.supabaseService.getClient();
     const { data: waiting } = await supabase
@@ -178,7 +176,7 @@ export class DiscoverService {
       .order("position", { ascending: true })
       .limit(count);
     const ids = ((waiting ?? []) as { id: string }[]).map((r) => r.id);
-    if (ids.length === 0) return { added: [], caught_up: true, short: false, allowance: before };
+    if (ids.length === 0) return { added: [], allowance: before };
 
     const { data, error } = await supabase
       .from("discoveries")
@@ -188,8 +186,8 @@ export class DiscoverService {
       .is("revealed_at", null)
       .select(SERVED_COLUMNS);
     if (error) throw error;
-    const added = ((data ?? []) as unknown as DiscoveryRow[]).map((row) => served(row, week.opened));
-    return { added, caught_up: false, short: false, allowance: await this.charge(userId, before, added.length) };
+    const added = ((data ?? []) as unknown as DiscoveryRow[]).map(served);
+    return { added, allowance: await this.charge(userId, before, added.length) };
   }
 
   /** Save a card (the ★) or take it out of saved. Owner-scoped and deck-only; false when it isn't theirs. */
@@ -206,25 +204,17 @@ export class DiscoverService {
     return (data ?? []).length > 0;
   }
 
-  /** The week's allowance: the plan's count less what was used this week, plus bought discoveries. Unknown tier reads as free. */
+  /** The week's allowance: seven less what was revealed this week, plus bought discoveries. */
   private async allowance(userId: string, week: { week: string; resets: string }): Promise<DiscoveryAllowance> {
     const supabase = this.supabaseService.getClient();
-    const [{ data: profile }, { data: usage }, { data: balance }] = await Promise.all([
-      supabase.from("user_profiles").select("tier").eq("id", userId).maybeSingle(),
+    const [{ data: usage }, { data: balance }] = await Promise.all([
       supabase.from("discovery_usage").select("used").eq("user_id", userId).eq("week", week.week).maybeSingle(),
       supabase.from("purchased_balances").select("discoveries").eq("user_id", userId).maybeSingle(),
     ]);
-    const caps = this.billing.capabilitiesFor(profile?.tier as string | null | undefined);
-    return this.snapshot(
-      week,
-      caps.weeklyDiscoveries,
-      Number(usage?.used ?? 0),
-      Math.max(0, Number(balance?.discoveries ?? 0)),
-      caps.paid,
-    );
+    return this.snapshot(week, Number(usage?.used ?? 0), Math.max(0, Number(balance?.discoveries ?? 0)));
   }
 
-  /** Spend `n`: the week's discoveries first, then bought ones. One count per person per week, whatever the plan. */
+  /** Spend `n`: the week's discoveries first, then bought ones. One count per person per week. */
   private async charge(userId: string, before: DiscoveryAllowance, n: number): Promise<DiscoveryAllowance> {
     const fromWeek = Math.min(n, before.weekly_left);
     const fromPurchased = Math.min(before.purchased, n - fromWeek);
@@ -240,26 +230,19 @@ export class DiscoverService {
     if (fromPurchased > 0) {
       await supabase.from("purchased_balances").update({ discoveries: purchased, updated_at: now }).eq("user_id", userId);
     }
-    return this.snapshot(before, before.limit, used, purchased, before.full);
+    return this.snapshot(before, used, purchased);
   }
 
-  private snapshot(
-    week: { week: string; resets: string },
-    limit: number,
-    used: number,
-    purchased: number,
-    full: boolean,
-  ): DiscoveryAllowance {
-    const weekly_left = Math.max(0, limit - used);
+  private snapshot(week: { week: string; resets: string }, used: number, purchased: number): DiscoveryAllowance {
+    const weekly_left = Math.max(0, SET_SIZE - used);
     return {
       week: week.week,
       resets: week.resets,
-      limit,
+      limit: SET_SIZE,
       used,
       weekly_left,
       purchased,
       available: weekly_left + purchased,
-      full,
     };
   }
 
@@ -285,7 +268,7 @@ export class DiscoverService {
   /**
    * Sunday 01:00 UTC, an hour after the weekly observations, which discover
    * grounds on, and before the week opens anywhere: tops up the waiting cards
-   * for people with a deck, so monday's reveal is instant.
+   * for everyone who has had a deck, so monday's seven arrive at once.
    */
   @Cron("0 1 * * 0", { name: "weekly-discover", timeZone: "UTC" })
   async refreshWeekly(): Promise<void> {
@@ -306,22 +289,22 @@ export class DiscoverService {
     }
   }
 
-  /** The deck: every revealed card, newest first, then by its place in its set. */
+  /** The deck: every card revealed since the week opened, newest first, then by its place in its set. */
   private async readDeck(userId: string, weekOpened: string): Promise<ServedDiscovery[]> {
     const { data } = await this.supabaseService
       .getClient()
       .from("discoveries")
       .select(SERVED_COLUMNS)
       .eq("user_id", userId)
-      .not("revealed_at", "is", null)
+      .gte("revealed_at", weekOpened)
       .order("revealed_at", { ascending: false })
       .order("position", { ascending: true })
       .limit(DECK_MAX);
-    return ((data ?? []) as unknown as DiscoveryRow[]).map((row) => served(row, weekOpened));
+    return ((data ?? []) as unknown as DiscoveryRow[]).map(served);
   }
 
-  /** Saved cards, newest save first. */
-  private async readSaved(userId: string, weekOpened: string): Promise<ServedDiscovery[]> {
+  /** Saved cards from any week, newest save first. */
+  private async readSaved(userId: string): Promise<ServedDiscovery[]> {
     const { data } = await this.supabaseService
       .getClient()
       .from("discoveries")
@@ -330,7 +313,7 @@ export class DiscoverService {
       .not("saved_at", "is", null)
       .order("saved_at", { ascending: false })
       .limit(SAVED_MAX);
-    return ((data ?? []) as unknown as DiscoveryRow[]).map((row) => served(row, weekOpened));
+    return ((data ?? []) as unknown as DiscoveryRow[]).map(served);
   }
 
   private async runGeneration(userId: string): Promise<void> {
@@ -343,15 +326,17 @@ export class DiscoverService {
         .map((c) => validateDiscovery(c, platforms))
         .filter((card): card is Discovery => card !== null);
 
-    const first = await this.emitDiscoveries(context, []);
-    const firstValid = check(first);
-    let set = selectSet(dedupeDiscoveries(firstValid));
-    // A card that broke a limit is regenerated once; the rest of the set stays.
-    if (set.length < SET_SIZE && firstValid.length < first.length) {
-      const more = await this.emitDiscoveries(context, set);
-      set = selectSet(dedupeDiscoveries([...set, ...check(more)]));
+    // PHE-158: a set short of seven asks again for the rest; the chosen cards stay.
+    let set: Discovery[] = [];
+    let candidates = 0;
+    for (let pass = 0; pass < MAX_PASSES && set.length < SET_SIZE; pass++) {
+      const emitted = await this.emitDiscoveries(context, set);
+      candidates += emitted.length;
+      const valid = check(emitted);
+      if (valid.length === 0) break;
+      set = selectSet(dedupeDiscoveries([...set, ...valid]));
     }
-    this.logger.log(`discover user=${userId} candidates=${first.length} shown=${set.length}`);
+    this.logger.log(`discover user=${userId} candidates=${candidates} shown=${set.length}`);
     if (set.length === 0) {
       this.emptyAt.set(userId, Date.now());
       return;
@@ -566,7 +551,7 @@ each discovery has exactly one kind:
 - medium: a new form that joins two of their sides, e.g. a game told entirely through one house
 - field: a craft next to theirs, e.g. production design, rooms that tell you who lives there
 
-write up to ten discoveries using at least five kinds. no more than two may stay inside the person’s main craft; the rest reach into neighboring worlds. two discoveries never rest on the same dated source or point at the same thing.
+write ten discoveries using at least five kinds. no more than two may stay inside the person’s main craft; the rest reach into neighboring worlds. two discoveries never rest on the same source entry (the same platform, date and title) or point at the same thing.
 
 only name places, people and works that are well documented in public history, and only state facts about them you are certain of. when you are unsure of a fact, leave the card out. never invent a person, a work, a place or a number.
 

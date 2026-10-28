@@ -10,8 +10,8 @@ import { normalizePillar } from "../observations/signal-hash";
  * outward. It names a real place, person, thing to try, detail, medium or
  * field (or something from the person's own history worth returning to), says
  * what it is, and gives one personal reason grounded in a dated source on a
- * connected platform. New ones arrive through a weekly allowance that opens
- * every monday at 9am in the person's own time ({@link discoveryWeek}).
+ * connected platform. PHE-158: a fresh set of seven arrives every week, on
+ * every plan, opening monday at 9am in the person's own time ({@link discoveryWeek}).
  *
  * Order in the service: {@link validateDiscovery} each candidate (limits,
  * trims, dated trail), {@link dedupeDiscoveries} the survivors (PHE-83 carry
@@ -172,13 +172,15 @@ export function discoveryStrength(card: Discovery): number {
 
 /**
  * Two cards say the same thing when they rest on the same dated source (a
- * shared platform and date in their trails) or point at the same thing (the
- * same public name). Several outward picks may share a point and a stretch of
- * time, since a place and a person can grow from the same years.
+ * shared platform, date and source title in their trails) or point at the
+ * same thing (the same public name). Several outward picks may share a point,
+ * a platform and a date, since a place and a person can grow from the same
+ * years, and a platform's only date is often the day it was connected (PHE-158).
  */
 export function discoveriesOverlap(a: Discovery, b: Discovery): boolean {
-  const cited = new Set(a.trail.map((entry) => `${entry.platform}@${entry.date}`));
-  if (b.trail.some((entry) => cited.has(`${entry.platform}@${entry.date}`))) return true;
+  const source = (entry: TrailEntry) => `${entry.platform}@${entry.date}@${entry.title.toLowerCase()}`;
+  const cited = new Set(a.trail.map(source));
+  if (b.trail.some((entry) => cited.has(source(entry)))) return true;
   return !!a.story && !!b.story && a.story.label.toLowerCase() === b.story.label.toLowerCase();
 }
 

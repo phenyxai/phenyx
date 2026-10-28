@@ -30,8 +30,6 @@ export interface Discovery {
   sources: string[];
   trail: TrailEntry[];
   saved: boolean;
-  /** Joined the deck since this week opened: the "new" tag. */
-  is_new: boolean;
 }
 
 /** The week's discoveries, as `GET /discover` serves them (PHE-129). */
@@ -40,7 +38,7 @@ export interface DiscoveryAllowance {
   week: string;
   /** When the next week opens, an ISO instant (monday 9am local). */
   resets: string;
-  /** New discoveries a week by plan (1 free / 10 full). */
+  /** The week's discoveries: seven on every plan (PHE-158). */
   limit: number;
   used: number;
   weekly_left: number;
@@ -48,7 +46,6 @@ export interface DiscoveryAllowance {
   purchased: number;
   /** How many can be added now. */
   available: number;
-  full: boolean;
 }
 
 /** What each kind reads as on its card. */
