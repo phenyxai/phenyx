@@ -32,9 +32,7 @@ export interface Vec3 {
 
 /**
  * The star each pillar sits on: ICRS J2000 position in degrees and V
- * magnitude, from SIMBAD (checked 2026-10-05; Mizar is Mizar A). Merak and
- * Dubhe are the pointer stars: the line from origin through self-creation
- * leads to Polaris.
+ * magnitude, from SIMBAD (checked 2026-10-05; Mizar is Mizar A).
  */
 export const STARS: Record<Pillar, { star: string; ra: number; dec: number; mag: number }> = {
   origin: { star: "merak", ra: 165.4603, dec: 56.3824, mag: 2.37 },
@@ -56,9 +54,6 @@ export const EDGES: readonly [Pillar, Pillar][] = [
   ["becoming", "recognition"],
   ["recognition", "transcendence"],
 ];
-
-/** The pointer stars: a faint guide continues past the second, toward polaris. */
-export const POINTER: readonly [Pillar, Pillar] = ["origin", "self_creation"];
 
 /**
  * Clockwise turn, in degrees, from the north-up sky view (east to the left).
