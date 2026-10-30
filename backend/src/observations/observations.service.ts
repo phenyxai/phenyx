@@ -85,7 +85,10 @@ export interface TimelineResponse {
   pillars: TimelineGroup[];
 }
 
-const CLAUDE_MODEL = "claude-opus-4-8";
+/** Thin-point fills write most of a new person's first run, so they run on Sonnet to keep it under 50 cents. */
+const FILL_CALL = { model: "claude-sonnet-5-5", effort: "medium" } as const;
+/** The weekly novel-patterns call and the new-signal summary. */
+const CLAUDE_CALL = { model: "claude-opus-5-5", effort: "high" } as const;
 
 /** What each point covers (spec doc 2), for a call that writes one point. */
 const POINT_MEANING: Record<string, string> = {
@@ -392,21 +395,18 @@ export class ObservationsService {
     }
 
     const hasFullAccess = this.billing.hasFullAccess(tier);
-    // PHE-156: each point under four moments gets its own call (in parallel)
-    // for four to six; once every point holds four, one call looks for
-    // genuinely new patterns across all seven.
-    // ponytail: every fill call resends the whole grounding; cache the shared user block if the bill shows it.
+    // PHE-156: each point under four moments gets its own call for four to six;
+    // once every point holds four, one call looks for genuinely new patterns
+    // across all seven. The first fill runs alone so the rest read its cached
+    // grounding at a tenth of the price, then they run in parallel.
     const fill = pointsToFill(context.moments.map((m) => m.pillar));
-    const runs = await Promise.all(
-      fill.length
-        ? fill.map((pillar) => this.emitObservations(context, pillar))
-        : [this.emitObservations(context)]
-    );
+    const first = await this.emitObservations(context, fill[0]);
+    const runs = [first, ...(await Promise.all(fill.slice(1).map((pillar) => this.emitObservations(context, pillar))))];
     // A fill call keeps only the moments on its own point.
     const candidates = runs.flatMap((run, i) =>
       fill.length ? run.candidates.filter((c) => normalizePillar(c.pillar) === fill[i]) : run.candidates
     );
-    const cacheReadTokens = runs[0]?.cacheReadTokens;
+    const cacheReadTokens = runs.reduce((sum, run) => sum + (run.cacheReadTokens ?? 0), 0);
 
     const valid = candidates.filter(
       (c) => isValidPillar(c.pillar) && c.body.trim().length > 0 && c.signal_key.trim().length > 0
@@ -625,12 +625,33 @@ export class ObservationsService {
       return { candidates: [] };
     }
 
-    // [Voice Standard] (cached prefix) + [task instructions]; per-user volatile
-    // grounding stays in the user message, after the cached prefix (PHE-20).
+    // [Voice Standard] + [task instructions], cached through the instructions;
+    // per-user volatile grounding stays in the user message (PHE-20). A fill's
+    // grounding is the same for every point, so it is cached too, and only the
+    // ask after it changes.
     const system = await this.voiceStandard.buildSystemBlocks(this.taskInstructions());
-    const userMessage = this.buildUserMessage(context, pillar);
+    system[system.length - 1].cache_control = { type: "ephemeral" };
+    const content = [
+      {
+        type: "text",
+        text: this.buildUserMessage(context),
+        ...(pillar ? { cache_control: { type: "ephemeral" } } : {}),
+      },
+      {
+        type: "text",
+        text: pillar
+          ? this.fillAsk(context, pillar)
+          : "Surface only genuinely novel observations via emit_observations.",
+      },
+    ];
 
-    const claude = await this.callClaudeTool(apiKey, system, this.emitObservationsTool(), userMessage);
+    const claude = await this.callClaudeTool(
+      apiKey,
+      system,
+      this.emitObservationsTool(),
+      content,
+      pillar ? FILL_CALL : CLAUDE_CALL
+    );
     if (!claude) return { candidates: [] };
 
     const cacheReadTokens: number | undefined = claude?.usage?.cache_read_input_tokens;
@@ -641,14 +662,16 @@ export class ObservationsService {
   /**
    * One Claude call offering a single tool. Adaptive thinking is incompatible
    * with a forced tool_choice, so the tool is offered with tool_choice:auto and
-   * the task prompt instructs the model to always call it. Null on transport
-   * failure; callers read the tool_use block back.
+   * the task prompt instructs the model to always call it. A refusal is routed
+   * to a fallback model server-side. Null on transport failure; callers read
+   * the tool_use block back.
    */
   private async callClaudeTool(
     apiKey: string,
     system: unknown,
     tool: { name: string },
-    userMessage: string
+    content: unknown,
+    call: { model: string; effort: string } = CLAUDE_CALL
   ): Promise<any | null> {
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -657,18 +680,26 @@ export class ObservationsService {
           "Content-Type": "application/json",
           "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
+          "anthropic-beta": "server-side-fallback-2026-07-01",
         },
         body: JSON.stringify({
-          model: CLAUDE_MODEL,
+          model: call.model,
+          fallbacks: "default",
           max_tokens: 16000,
           thinking: { type: "adaptive" },
-          output_config: { effort: "high" },
+          output_config: { effort: call.effort },
           system,
           tools: [tool],
-          messages: [{ role: "user", content: userMessage }],
+          messages: [{ role: "user", content }],
         }),
       });
-      return await res.json();
+      const claude: any = await res.json();
+      if (!res.ok || claude?.stop_reason === "refusal") {
+        this.logger.warn(
+          `Claude ${tool.name} ${res.status}: ${claude?.error?.message ?? claude?.stop_details?.category ?? "refusal"}`
+        );
+      }
+      return claude;
     } catch (e) {
       this.logger.error(`Claude ${tool.name} call failed: ${(e as Error).message}`);
       return null;
@@ -959,7 +990,8 @@ strict prohibitions, never break these:
 - no therapeutic advice; these are reflections the person can check against their constellation`;
   }
 
-  private buildUserMessage(context: GenerationContext, pillar?: string): string {
+  /** The grounding, identical for every call in one run; the ask follows it in its own block. */
+  private buildUserMessage(context: GenerationContext): string {
     const state = context.state;
     const syntheses = state
       ? [
@@ -1035,9 +1067,7 @@ MOMENTS THE PERSON SAID FEEL TRUE (patterns to build on)
 ${trueMoments || "none"}
 
 THREADS THE PERSON IS FOLLOWING (surface what continues them when it is genuinely new)
-${followed || "none"}
-
-${pillar ? this.fillAsk(context, pillar) : "Surface only genuinely novel observations via emit_observations."}`;
+${followed || "none"}`;
   }
 
   /** PHE-156: the ask for one thin point, with the moments it already holds. */

@@ -20,7 +20,8 @@ import type { Pillar } from "../observations/gating";
 
 // Model IDs are exact — do not append date suffixes or downgrade.
 const SYNTHESIS_MODEL = "claude-opus-4-8"; // PHE-34 core synthesis (tool use, high effort)
-const PROSE_MODEL = "claude-sonnet-4-6"; // PHE-36 mantra, PHE-38 foresight, PHE-124 insights
+const PROSE_MODEL = "claude-sonnet-4-6"; // PHE-36 mantra, PHE-38 foresight
+const INSIGHTS_MODEL = "claude-opus-5-5"; // PHE-124 insights, about 10 cents a reading
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -529,9 +530,11 @@ intention: ${intention?.trim() ? intention.trim() : "not provided"}`;
     let insights: InsightsReading;
     try {
       const out = await this.callClaudeTool<unknown>({
-        model: PROSE_MODEL,
+        model: INSIGHTS_MODEL,
         effort: "medium",
-        maxTokens: 4000,
+        // Opus 5.5 always thinks and its thinking counts here; only used tokens are billed.
+        maxTokens: 8000,
+        fallback: true,
         taskInstructions: INSIGHTS_INSTRUCTIONS,
         userMessage: `${summary}\n\n<points>\n${points || "none written yet"}\n</points>\n\n<moments>\n${
           listed || "none yet"
@@ -682,6 +685,8 @@ identity portrait: ${portraitProse}`;
     taskInstructions: string;
     userMessage: string;
     tool: ClaudeTool;
+    /** Route a refusal to a fallback model server-side (5.5-generation models). */
+    fallback?: boolean;
   }): Promise<T> {
     const system = await this.voiceStandard.buildSystemBlocks(
       opts.taskInstructions
@@ -698,9 +703,11 @@ identity portrait: ${portraitProse}`;
         "Content-Type": "application/json",
         "x-api-key": this.config.get<string>("ANTHROPIC_API_KEY") as string,
         "anthropic-version": ANTHROPIC_VERSION,
+        ...(opts.fallback ? { "anthropic-beta": "server-side-fallback-2026-07-01" } : {}),
       },
       body: JSON.stringify({
         model: opts.model,
+        ...(opts.fallback ? { fallbacks: "default" } : {}),
         max_tokens: opts.maxTokens,
         thinking: { type: "adaptive" },
         output_config: { effort: opts.effort },
