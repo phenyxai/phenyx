@@ -779,3 +779,65 @@ test("buildInsertRows carries the PHE-122 moment fields and keeps only a real da
   assert.equal(withMoment.area, "home");
   assert.equal(withoutDate.area, null);
 });
+
+test("PHE-156 cost: fills run on Sonnet, the first alone, the rest reading its cached grounding", async () => {
+  const bodies: any[] = [];
+  const events: string[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (_url: unknown, init: { body: string }) => {
+    const n = bodies.push(JSON.parse(init.body));
+    events.push(`start ${n}`);
+    await new Promise((r) => setTimeout(r, 5));
+    events.push(`end ${n}`);
+    return { ok: true, status: 200, json: async () => ({ content: [], usage: {} }) };
+  }) as any;
+  const service = new ObservationsService(
+    { get: () => "test-key" } as any,
+    { getClient: () => ({}) } as any,
+    {
+      buildSystemBlocks: async (text: string) => [
+        { type: "text", text: "standard", cache_control: { type: "ephemeral" } },
+        { type: "text", text },
+      ],
+    } as any,
+    { hasFullAccess: () => true } as any
+  );
+  let moments: { pillar: string }[] = [];
+  (service as any).getUserTier = async () => "free";
+  (service as any).loadGenerationContext = async () => ({
+    userId: "u",
+    state: null,
+    traits: [],
+    connections: [{ platform: "spotify", redacted_snapshot: null }],
+    recent: [],
+    moments,
+    feedbackSignals: [],
+    hasSignal: true,
+  });
+
+  try {
+    // A new person: seven thin points, seven fill calls.
+    await service.generate("u");
+    assert.equal(bodies.length, 7);
+    assert.deepEqual(events.slice(0, 2), ["start 1", "end 1"]);
+    for (const [i, body] of bodies.entries()) {
+      assert.equal(body.model, "claude-sonnet-5-5");
+      assert.equal(body.output_config.effort, "medium");
+      assert.ok(body.system.at(-1).cache_control);
+      const [grounding, ask] = body.messages[0].content;
+      assert.ok(grounding.cache_control);
+      assert.equal(grounding.text, bodies[0].messages[0].content[0].text);
+      assert.match(ask.text, new RegExp(`WRITE FOR ONE POINT ONLY: ${PILLAR_ORDER[i]}`));
+    }
+
+    // Every point full: one novel-patterns call on Opus, nothing to share.
+    bodies.length = 0;
+    moments = PILLAR_ORDER.flatMap((pillar) => Array.from({ length: 4 }, () => ({ pillar })));
+    await service.generate("u");
+    assert.equal(bodies.length, 1);
+    assert.equal(bodies[0].model, "claude-opus-5-5");
+    assert.equal(bodies[0].messages[0].content[0].cache_control, undefined);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
