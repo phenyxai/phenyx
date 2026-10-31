@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { ChevronDown } from "lucide-react";
-import { useSessionColor } from "@/contexts/session-color-context";
+import { ACCENT } from "@/lib/stellar";
 
 interface WaitlistModalProps {
   isOpen: boolean;
@@ -54,7 +54,6 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
-  const { sessionColor } = useSessionColor();
   
   // Step 0: constellation demo, Step 1: email collection, Step 2: additional info
   const [step, setStep] = useState<0 | 1 | 2>(0);
@@ -413,7 +412,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                       y1={fromNode.y}
                       x2={toNode.x}
                       y2={toNode.y}
-                      stroke={isConnected ? sessionColor : "#FFFDFD"}
+                      stroke={isConnected ? ACCENT : "#FFFDFD"}
                       strokeWidth="0.5"
                       style={{
                         opacity: isConnected ? 0.5 : 0.08,
@@ -444,7 +443,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                             cx={node.x}
                             cy={node.y}
                             r={6}
-                            fill={sessionColor}
+                            fill={ACCENT}
                             style={{ 
                               filter: "blur(4px)",
                               animation: "pulseGlow 2s ease-in-out infinite",
@@ -456,7 +455,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                             cx={node.x}
                             cy={node.y}
                             r={3.5}
-                            fill={sessionColor}
+                            fill={ACCENT}
                             opacity={0.4}
                             style={{ filter: "blur(1.5px)" }}
                           />
@@ -468,7 +467,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                         cx={node.x}
                         cy={node.y}
                         r={isActive ? 2.2 : 1.5}
-                        fill={isActive ? sessionColor : "#FFFDFD"}
+                        fill={isActive ? ACCENT : "#FFFDFD"}
                         opacity={isActive ? 1 : 0.3}
                         style={{ transition: "all 0.4s ease" }}
                       />
@@ -483,7 +482,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
               <p
                 className="uppercase text-sm tracking-wider mb-3"
                 style={{ 
-                  color: sessionColor,
+                  color: ACCENT,
                   opacity: textOpacity,
                   transition: "opacity 0.3s ease-in-out",
                 }}
@@ -507,19 +506,19 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
               onClick={() => setStep(1)}
               className="w-full px-6 py-3 rounded-full text-[13px] lowercase font-medium tracking-wide transition-all"
               style={{ 
-                border: `1px solid ${sessionColor}80`,
+                border: `1px solid ${ACCENT}80`,
                 backgroundColor: "transparent",
                 color: "#FFFDFD",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = sessionColor;
+                e.currentTarget.style.backgroundColor = ACCENT;
                 e.currentTarget.style.color = "#0A0A0A";
-                e.currentTarget.style.borderColor = sessionColor;
+                e.currentTarget.style.borderColor = ACCENT;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";
                 e.currentTarget.style.color = "#FFFDFD";
-                e.currentTarget.style.borderColor = `${sessionColor}80`;
+                e.currentTarget.style.borderColor = `${ACCENT}80`;
               }}
             >
               join the waitlist
@@ -587,13 +586,13 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                 disabled={!isStep1Valid || status === "loading"}
                 className="w-full px-6 py-3 rounded-full text-[13px] lowercase font-medium tracking-wide transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ 
-                  border: `1px solid ${sessionColor}80`,
+                  border: `1px solid ${ACCENT}80`,
                   backgroundColor: "transparent",
                   color: "#FFFDFD",
                 }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled) {
-                    e.currentTarget.style.backgroundColor = sessionColor;
+                    e.currentTarget.style.backgroundColor = ACCENT;
                     e.currentTarget.style.color = "#0A0A0A";
                   }
                 }}
@@ -659,10 +658,10 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                         width: "110px",
                         height: "32px",
                         border: platforms.includes(platform) 
-                          ? `1px solid ${sessionColor}` 
+                          ? `1px solid ${ACCENT}` 
                           : "1px solid rgba(255,253,253,0.25)",
                         backgroundColor: platforms.includes(platform) 
-                          ? `${sessionColor}1F` 
+                          ? `${ACCENT}1F` 
                           : "transparent",
                         color: platforms.includes(platform) 
                           ? "#FFFDFD" 
@@ -702,13 +701,13 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                   disabled={status === "loading"}
                   className="w-full px-6 py-3 rounded-full text-[13px] lowercase font-medium tracking-wide transition-all disabled:opacity-50"
                   style={{ 
-                    border: `1px solid ${sessionColor}80`,
+                    border: `1px solid ${ACCENT}80`,
                     backgroundColor: "transparent",
                     color: "#FFFDFD",
                   }}
                   onMouseEnter={(e) => {
                     if (!e.currentTarget.disabled) {
-                      e.currentTarget.style.backgroundColor = sessionColor;
+                      e.currentTarget.style.backgroundColor = ACCENT;
                       e.currentTarget.style.color = "#0A0A0A";
                     }
                   }}

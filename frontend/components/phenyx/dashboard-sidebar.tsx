@@ -50,13 +50,13 @@ function TierBadge() {
 
 /**
  * Orbit mark + wordmark, linking home. Shared by the sidebar and the phone top
- * bar. The mark is the circular stellar icon in the person's accent. The
+ * bar. The mark is the circular stellar icon in brand blue. The
  * wordmark is a RailLabel, so the icon rail keeps only the mark.
  */
 function BrandLink() {
   return (
     <Link href={DASHBOARD_HOME} aria-label="PHENYX, go to constellation" className="flex items-center gap-2.5 no-underline">
-      <StellarMark revealed />
+      <StellarMark />
       <RailLabel className="text-[11.5px] font-semibold tracking-[0.09em] text-ph-white/90">PHENYX</RailLabel>
     </Link>
   );

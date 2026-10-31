@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
-// PHE-98: the accent comes from SessionColorProvider via --ph-accent.
+// PHE-98: the accent comes from --ph-accent (brand blue since PHE-162).
 const ACCENT = "var(--ph-accent)";
 
 export default function UpgradeSuccessPage() {

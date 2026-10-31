@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import { SessionColorProvider } from '@/contexts/session-color-context'
 import './globals.css'
 import 'onairos/onairos.css'
 
@@ -95,9 +94,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${plusJakartaSans.variable} antialiased bg-ph-black text-ph-white`}
       >
-        <SessionColorProvider>
-          {children}
-        </SessionColorProvider>
+        {children}
         <Analytics />
       </body>
     </html>

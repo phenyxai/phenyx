@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { useSessionColor } from "@/contexts/session-color-context";
+import { ACCENT } from "@/lib/stellar";
 
 // Pillars in display order
 const ACTIVE_PILLARS = ["origin", "emergence", "self_creation", "convergence"] as const;
@@ -40,7 +40,6 @@ const CONNECTIONS: [Pillar, Pillar][] = [
 
 interface UserProfile {
   id: string;
-  stellar_color: string;
   display_name: string | null;
 }
 
@@ -113,7 +112,7 @@ export default function ConstellationPage() {
 
       // Fetch in parallel
       const [profileRes, stateRes, pointsRes] = await Promise.all([
-        supabase.from("user_profiles").select("id, stellar_color, display_name").eq("id", user.id).single(),
+        supabase.from("user_profiles").select("id, display_name").eq("id", user.id).single(),
         supabase.from("constellation_state").select("*").eq("user_id", user.id).single(),
         supabase.from("constellation_points").select("pillar, intensity").eq("user_id", user.id),
       ]);
@@ -138,10 +137,6 @@ export default function ConstellationPage() {
 
     fetchData();
   }, [mounted, router]);
-
-  // PHE-98: the person's accent, from SessionColorProvider (which resolves it
-  // from the profile and keeps stale or off-palette values from painting).
-  const { sessionColor } = useSessionColor();
 
   // Helper to get score for a pillar
   const getScore = (pillar: Pillar): number | null => {
@@ -194,7 +189,7 @@ export default function ConstellationPage() {
       stroke: "none",
       strokeWidth: 0,
       glow: {
-        color: sessionColor,
+        color: ACCENT,
         opacity: glowOpacity,
         radius: glowRadius,
       },
@@ -422,7 +417,7 @@ export default function ConstellationPage() {
                   style={{
                     width: `${score}%`,
                     height: "100%",
-                    background: sessionColor,
+                    background: ACCENT,
                     opacity: 0.6,
                     borderRadius: "999px",
                     animation: "scoreBarFill 800ms ease-out forwards",

@@ -4,14 +4,15 @@ import { createHash } from "crypto";
  * PHE-13 — the curated stellar palette and the deterministic color mapping.
  *
  * This array is the SERVER source of truth and MUST stay byte-identical to the
- * frontend `STELLAR` constant (`frontend/lib/stellar.ts`) and to the SQL array in
- * `stellar_color_for` (redefined by the PHE-98 remap migration,
+ * SQL array in `stellar_color_for` (redefined by the PHE-98 remap migration,
  * 20261009130000_phe98_stellar_palette_remap.sql). A divergence would make a
- * freshly created account's displayed color differ from a backfilled one for the
+ * freshly created account's stored color differ from a backfilled one for the
  * same inputs. Order is significant — the hash maps onto these indices.
- * frontend/lib/stellar.test.ts fails if the three drift apart.
+ * stellar.util.test.ts fails if the two drift apart.
  *
  * PHE-98: the demo's 24 non-blue colors; brand blue is never assignable.
+ * PHE-162: the color is still assigned and stored, but the site no longer shows
+ * it; everyone sees brand blue.
  */
 export const STELLAR = [
   // rose

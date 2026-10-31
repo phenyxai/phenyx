@@ -5,7 +5,6 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { useSessionColor } from '@/contexts/session-color-context'
 import {
   Dialog,
   DialogOverlay,
@@ -61,8 +60,6 @@ interface SettingsModalsContextValue {
   openModal: (id: SettingsModalId) => void
   /** Close whatever modal is open. */
   closeModal: () => void
-  /** The user's stellar accent colour, used across every modal. */
-  stellarColor: string
 }
 
 const SettingsModalsContext =
@@ -79,16 +76,12 @@ export function SettingsModalsProvider({
   children: React.ReactNode
 }) {
   const [openId, setOpenId] = React.useState<SettingsModalId | null>(null)
-  // PHE-98: the accent comes from SessionColorProvider (root layout), which
-  // publishes --ph-accent; --stellar / --stellar-rgb alias it in globals.css.
-  const { sessionColor: stellarColor } = useSessionColor()
-
   const openModal = React.useCallback((id: SettingsModalId) => setOpenId(id), [])
   const closeModal = React.useCallback(() => setOpenId(null), [])
 
   const value = React.useMemo<SettingsModalsContextValue>(
-    () => ({ openId, openModal, closeModal, stellarColor }),
-    [openId, openModal, closeModal, stellarColor],
+    () => ({ openId, openModal, closeModal }),
+    [openId, openModal, closeModal],
   )
 
   return (
@@ -113,7 +106,7 @@ export function SettingsModalsProvider({
   )
 }
 
-/** Access the modal opener/closer + stellar colour from any descendant. */
+/** Access the modal opener/closer from any descendant. */
 export function useSettingsModals(): SettingsModalsContextValue {
   const ctx = React.useContext(SettingsModalsContext)
   if (!ctx) {

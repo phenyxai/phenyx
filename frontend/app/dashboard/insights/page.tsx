@@ -5,13 +5,12 @@ import Link from "next/link";
 
 import { useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
 import { apiFetch, type InsightsReading, type ProfileOverview } from "@/lib/api-client";
-import { colorName, resolveAccent } from "@/lib/stellar";
 import { fetchConstellation, pillarLabel, relativeTime, type ConstellationData, type Pillar } from "@/lib/constellation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { IntroBanner, INTRO_COPY } from "@/components/phenyx/intro-banner";
 import { buildInsightsStats, momentFacts, nameFromMetadata } from "./stats";
 
-type Header = { name: string; color: string | null; platforms: string[]; insights: InsightsReading | null };
+type Header = { name: string; platforms: string[]; insights: InsightsReading | null };
 
 /** Where a reading points: its first moment, opened in the constellation. */
 function momentHref(ids: string[] | undefined): string | null {
@@ -144,7 +143,7 @@ function Story({ story }: { story: InsightsReading["story"] | undefined }) {
  * is the same on every plan. Name and email edits live in settings.
  */
 export default function InsightsTabPage() {
-  const { openId, openModal, stellarColor } = useSettingsModals();
+  const { openId, openModal } = useSettingsModals();
   const [header, setHeader] = useState<Header | null>(null);
   const [constellation, setConstellation] = useState<ConstellationData | null>(null);
 
@@ -162,7 +161,6 @@ export default function InsightsTabPage() {
         const body = (await res.json()) as ProfileOverview;
         setHeader({
           name: body.display_name?.trim() ?? "",
-          color: body.stellar_color,
           platforms: body.connected_platforms ?? [],
           insights: body.insights ?? null,
         });
@@ -177,12 +175,11 @@ export default function InsightsTabPage() {
     if (!user) return;
     const { data: profile } = await supabase
       .from("user_profiles")
-      .select("display_name, stellar_color")
+      .select("display_name")
       .eq("id", user.id)
       .maybeSingle();
     setHeader({
       name: (profile?.display_name as string | null)?.trim() ?? "",
-      color: (profile?.stellar_color as string | null) ?? null,
       platforms: [],
       insights: null,
     });
@@ -210,7 +207,6 @@ export default function InsightsTabPage() {
 
   const reading = header?.insights ?? null;
   const name = header?.name || profileName;
-  const swatch = resolveAccent(header?.color || stellarColor);
   const updated = reading?.generated_at ?? constellation?.generated_at ?? null;
   // Connected platforms count the connections plus every platform the constellation draws on.
   const facts = momentFacts(constellation);
@@ -225,15 +221,7 @@ export default function InsightsTabPage() {
           <header className="mb-7 flex flex-wrap items-start justify-between gap-x-10 gap-y-5">
             <div className="min-w-0">
               {name && <h1 className="text-[17px] font-medium lowercase text-ph-white/92">{name}</h1>}
-              <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-ph-white/78">
-                <span
-                  aria-hidden="true"
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: swatch, boxShadow: `0 0 8px color-mix(in srgb, ${swatch} 50%, transparent)` }}
-                />
-                <span>{colorName(swatch)}</span>
-                {updated && <span className="text-ph-white/45">· updated {relativeTime(updated)}</span>}
-              </p>
+              {updated && <p className="mt-2 text-[12px] text-ph-white/45">updated {relativeTime(updated)}</p>}
             </div>
             {/* As in the demo: one row 40px apart, each stat at least 86px wide;
                 phones keep the three on one row as equal columns. */}

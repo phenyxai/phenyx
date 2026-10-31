@@ -37,19 +37,18 @@
   --color-text: var(--ph-white);
 }
 
-/* PHE-98: color tokens (doc 7). Each person sees black, white and their accent.
-   --ph-accent is the person's stellar_color; SessionColorProvider writes it (and
-   its rgb companion, for rgba()) on <html>. The default is neutral white, the
-   same as STELLAR_DEFAULT in lib/stellar.ts. Brand blue is PHENYX's own: sign-in
-   buttons and the brand, never a person's color. Red, yellow and green are for
+/* PHE-98: color tokens (doc 7). Everyone sees black, white and the accent.
+   PHE-162: the accent is brand blue for every person. The backend still assigns
+   and stores a stellar_color, but nothing on the site paints it. ACCENT in
+   lib/stellar.ts is the same hex, for canvas code. Red, yellow and green are for
    errors, warnings and success only. */
 :root {
   --ph-black: #080808;
   --ph-white: #FFFDFD;
-  --ph-accent: #FFFDFD;
-  --ph-accent-rgb: 255, 253, 253;
   --ph-brand: #B9D5FF;
   --ph-brand-rgb: 185, 213, 255;
+  --ph-accent: var(--ph-brand);
+  --ph-accent-rgb: var(--ph-brand-rgb);
   --ph-red: #E5484D;
   --ph-yellow: #E9C46A;
   --ph-green: #4CC38A;
@@ -1496,10 +1495,9 @@ nav li > [aria-current="page"] {
 
 .auth-form-alt:hover { color: #FFFDFD; }
 
-/* PHE-97: sign-in ("come in."), create account and welcome.
-   The circular stellar icon beside the wordmark is brand blue until the welcome
-   reveal, then the person's accent. Brand blue buttons belong to the sign-in and
-   create-account screens only (docs 6 and 7). */
+/* PHE-97: sign-in ("come in.") and create account. The circular stellar icon
+   beside the wordmark is brand blue everywhere. Brand blue buttons belong to
+   the sign-in and create-account screens only (docs 6 and 7). */
 .ph-stellar-mark {
   position: relative;
   display: inline-block;
@@ -1509,7 +1507,6 @@ nav li > [aria-current="page"] {
   background-color: var(--ph-brand, #B9D5FF);
   -webkit-mask: url("/brand/orbit-mark.png") center / contain no-repeat;
   mask: url("/brand/orbit-mark.png") center / contain no-repeat;
-  transition: background-color 0.9s ease;
 }
 .ph-stellar-mark::after {
   content: "";
@@ -1520,9 +1517,6 @@ nav li > [aria-current="page"] {
   height: 12%;
   border-radius: 50%;
   background: #f6f9ff;
-}
-.ph-stellar-mark[data-revealed="true"] {
-  background-color: var(--ph-accent, var(--s, #5599FF));
 }
 
 .auth-topbar {
