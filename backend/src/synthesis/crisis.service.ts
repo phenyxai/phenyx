@@ -19,8 +19,8 @@ export const CRISIS_RESPONSE = {
   insight:
     "what you shared took courage. if you are in a difficult moment right now, please reach out to someone who can be with you.",
   resources: {
-    us: "988 — call or text, 24 hours",
-    text: "crisis text line — text home to 741741",
+    us: "988: call or text, 24 hours",
+    text: "crisis text line: text home to 741741",
     international: "findahelpline.com",
   },
   isCrisis: true,
@@ -28,13 +28,18 @@ export const CRISIS_RESPONSE = {
 
 // Model IDs are exact — do not append or strip suffixes. Haiku is the fastest
 // model; the pre-flight must add as little latency as possible over the regex.
-const CRISIS_MODEL = "claude-haiku-4-5-20251001";
+const CRISIS_MODEL = "claude-haiku-5-5";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
 
-// The semantic gate must never hold up a user turn. If Haiku has not answered
-// within this budget we abort and fail closed (treat as crisis).
-const CRISIS_TIMEOUT_MS = 1500;
+// Per-attempt budget. The old 1.5s ran out on round trips from Render and
+// failed every polaris turn closed; a slow attempt aborts and fails closed.
+const CRISIS_TIMEOUT_MS = 3000;
+// A timeout, network error, 429 or 5xx gets one more try before failing closed.
+const CRISIS_ATTEMPTS = 2;
+
+type CrisisResult = { triggered: boolean; category?: string };
+type CrisisFailure = { failure: string; retry: boolean };
 
 /** Structured output of the semantic crisis gate. */
 interface FlagCrisisInput {
@@ -70,7 +75,7 @@ const CRISIS_INSTRUCTIONS = `you are a safety pre-flight classifier for PHENYX. 
 
 rules:
 - triggered = true ONLY for acute risk of harm to self or others, or immediate danger. dark, sad, angry, grieving, or otherwise distressing content that is NOT about imminent harm is triggered = false.
-- category: a short lowercase label for the kind of crisis when triggered, otherwise null.
+- category: a short lowercase label for the kind of crisis when triggered, otherwise "none".
 
 you MUST answer by calling the flag_crisis tool. do not answer in plain text.`;
 
@@ -104,13 +109,12 @@ export class CrisisService {
   /**
    * Async crisis gate. Regex fast-path first: on a pattern hit it short-circuits
    * `{ triggered: true }` with NO model call. Otherwise it runs a bounded Haiku
-   * classifier. Fails closed: on timeout / HTTP / parse error it returns
-   * `{ triggered: true }` and logs loudly. Never mutates state and never logs the
-   * raw text — safe to call anywhere a user free-text surface needs pre-flighting.
+   * classifier, retrying once on a transient failure. Fails closed: when no
+   * attempt yields a verdict it returns `{ triggered: true }` and logs the reason.
+   * Never mutates state and never logs the raw text — safe to call anywhere a
+   * user free-text surface needs pre-flighting.
    */
-  async detectCrisis(
-    text: string
-  ): Promise<{ triggered: boolean; category?: string }> {
+  async detectCrisis(text: string): Promise<CrisisResult> {
     if (!text || !text.trim()) return { triggered: false };
 
     // Regex authoritative fast-path — a hit never needs the model.
@@ -120,11 +124,30 @@ export class CrisisService {
     if (!apiKey) {
       // No key configured — fail closed rather than silently letting text through.
       this.logger.error(
-        "crisis gate: ANTHROPIC_API_KEY missing — failing closed (treated as crisis)"
+        "crisis gate: ANTHROPIC_API_KEY missing, failing closed (treated as crisis)"
       );
       return { triggered: true };
     }
 
+    let failure = "";
+    for (let attempt = 1; attempt <= CRISIS_ATTEMPTS; attempt++) {
+      const result = await this.classify(text, apiKey);
+      if (!("failure" in result)) return result;
+      failure = result.failure;
+      if (!result.retry || attempt === CRISIS_ATTEMPTS) break;
+      this.logger.warn(`crisis gate: ${failure}, retrying`);
+    }
+    this.logger.error(
+      `crisis gate: ${failure}, failing closed (treated as crisis)`
+    );
+    return { triggered: true };
+  }
+
+  /** One bounded classifier call: a verdict, or why there is none. */
+  private async classify(
+    text: string,
+    apiKey: string
+  ): Promise<CrisisResult | CrisisFailure> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), CRISIS_TIMEOUT_MS);
     try {
@@ -156,13 +179,22 @@ export class CrisisService {
       });
 
       if (!res.ok) {
-        this.logger.error(
-          `crisis gate: anthropic ${res.status} — failing closed (treated as crisis)`
-        );
-        return { triggered: true };
+        // Anthropic's error body names the cause (e.g. not_found_error for a
+        // retired model) and never echoes the user text.
+        const err: any = await res.json().catch(() => null);
+        return {
+          failure: `anthropic ${res.status} ${err?.error?.type ?? ""}: ${err?.error?.message ?? ""}`,
+          retry: res.status === 429 || res.status >= 500,
+        };
       }
 
       const claude: any = await res.json();
+      if (claude?.stop_reason === "refusal") {
+        return {
+          failure: `model refusal (${claude?.stop_details?.category ?? "no category"})`,
+          retry: false,
+        };
+      }
       const toolUse = Array.isArray(claude?.content)
         ? claude.content.find(
             (b: any) =>
@@ -172,10 +204,10 @@ export class CrisisService {
       const input = toolUse?.input as FlagCrisisInput | undefined;
 
       if (!input || typeof input.triggered !== "boolean") {
-        this.logger.error(
-          "crisis gate: no valid flag_crisis output — failing closed (treated as crisis)"
-        );
-        return { triggered: true };
+        return {
+          failure: `no valid flag_crisis output (stop_reason ${claude?.stop_reason})`,
+          retry: false,
+        };
       }
 
       if (!input.triggered) return { triggered: false };
@@ -184,16 +216,12 @@ export class CrisisService {
       const category = raw && raw.toLowerCase() !== "none" ? raw : undefined;
       return { triggered: true, category };
     } catch (e) {
-      // AbortError (timeout) and any network error land here — fail closed.
-      const reason =
+      // AbortError (timeout) and any network error land here.
+      const failure =
         (e as Error)?.name === "AbortError"
           ? `timeout after ${CRISIS_TIMEOUT_MS}ms`
-          : "request error";
-      this.logger.error(
-        `crisis gate: ${reason} — failing closed (treated as crisis)`,
-        e as Error
-      );
-      return { triggered: true };
+          : `request error: ${(e as Error)?.message}`;
+      return { failure, retry: true };
     } finally {
       clearTimeout(timer);
     }
