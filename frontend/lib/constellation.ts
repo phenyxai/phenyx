@@ -13,7 +13,6 @@
 
 import { apiFetch } from "@/lib/api-client";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { STELLAR_DEFAULT } from "@/lib/stellar";
 import { ALL_PILLARS, NODE_LAYOUT, type Pillar, type Vec3 } from "./constellation-shape";
 
 // ---------------------------------------------------------------------------
@@ -187,7 +186,6 @@ export interface ConstellationTenure {
 }
 
 export interface ConstellationData {
-  stellar_color: string;
   archetype: string | null;
   version: number | null;
   generated_at: string | null;
@@ -229,11 +227,10 @@ function emptyPillar(pillar: Pillar): PillarDetail {
   };
 }
 
-function emptyState(stellarColor: string): ConstellationData {
+function emptyState(): ConstellationData {
   const pillars = {} as Record<Pillar, PillarDetail>;
   for (const pillar of ALL_PILLARS) pillars[pillar] = emptyPillar(pillar);
   return {
-    stellar_color: stellarColor,
     archetype: null,
     version: null,
     generated_at: null,
@@ -245,15 +242,6 @@ function emptyState(stellarColor: string): ConstellationData {
     yearly_recap: null,
     signal: null,
   };
-}
-
-/** Best-effort stellar color for the current surface (payload > cache > default). */
-function cachedStellarColor(): string {
-  if (typeof window !== "undefined") {
-    const stored = localStorage.getItem("phenyx_stellar_color");
-    if (stored) return stored;
-  }
-  return STELLAR_DEFAULT;
 }
 
 /**
@@ -347,8 +335,8 @@ function normalizeTimeline(raw: any): RecordTimeline {
   };
 }
 
-function normalizeEndpoint(raw: any, fallbackColor: string): ConstellationData {
-  const base = emptyState(raw?.stellar_color ?? fallbackColor);
+function normalizeEndpoint(raw: any): ConstellationData {
+  const base = emptyState();
   base.archetype = raw?.archetype ?? null;
   base.version = raw?.version ?? null;
   base.generated_at = raw?.generated_at ?? null;
@@ -496,14 +484,14 @@ const FALLBACK_CLUSTER_CAP = 2;
  * Fallback read straight from Supabase (owner-scoped via RLS). Cluster entries
  * are capped at 2 so a missing endpoint never leaks the rest to free (fail closed).
  */
-async function readFromSupabase(fallbackColor: string): Promise<ConstellationData> {
+async function readFromSupabase(): Promise<ConstellationData> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return emptyState(fallbackColor);
+  if (!user) return emptyState();
 
   const [profileRes, stateRes, obsRes, areasRes] = await Promise.all([
-    supabase.from("user_profiles").select("stellar_color, created_at").eq("id", user.id).maybeSingle(),
+    supabase.from("user_profiles").select("created_at").eq("id", user.id).maybeSingle(),
     supabase.from("constellation_state").select("*").eq("user_id", user.id).maybeSingle(),
     supabase
       .from("observations")
@@ -517,9 +505,7 @@ async function readFromSupabase(fallbackColor: string): Promise<ConstellationDat
       .order("ordinal", { ascending: true }),
   ]);
 
-  const stellarColor =
-    (profileRes.data?.stellar_color as string | null) || fallbackColor;
-  const data = emptyState(stellarColor);
+  const data = emptyState();
   const since = (profileRes.data?.created_at as string | null) ?? null;
   if (since) {
     const years = Math.max(0, (Date.now() - Date.parse(since)) / (365.25 * 24 * 60 * 60 * 1000));
@@ -610,22 +596,20 @@ async function readFromSupabase(fallbackColor: string): Promise<ConstellationDat
  * Never throws — a missing or sparse constellation still renders seven nodes.
  */
 export async function fetchConstellation(): Promise<ConstellationData> {
-  const fallbackColor = cachedStellarColor();
-
   try {
     const res = await apiFetch("/constellation");
     if (res.ok) {
       const raw = await res.json();
-      return normalizeEndpoint(raw, fallbackColor);
+      return normalizeEndpoint(raw);
     }
   } catch {
     // Endpoint not live / transport error — fall through to Supabase.
   }
 
   try {
-    return await readFromSupabase(fallbackColor);
+    return await readFromSupabase();
   } catch {
-    return emptyState(fallbackColor);
+    return emptyState();
   }
 }
 

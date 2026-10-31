@@ -10,7 +10,7 @@ import { V67_PRICING } from "@/lib/billing";
 
 type BillingPeriod = "monthly" | "yearly";
 
-// PHE-98: the accent comes from SessionColorProvider via --ph-accent.
+// PHE-98: the accent comes from --ph-accent (brand blue since PHE-162).
 const ACCENT = "var(--ph-accent)";
 
 export default function UpgradePage() {

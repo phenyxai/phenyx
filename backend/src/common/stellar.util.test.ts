@@ -1,11 +1,40 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "fs";
+import { join } from "path";
 import { STELLAR, stellarColorFor } from "./stellar.util";
 
 // Run with: NODE_OPTIONS='--require ts-node/register' node --test src/common/stellar.util.test.ts
 //
-// Palette parity with the frontend and the SQL function is asserted in
-// frontend/lib/stellar.test.ts; this file pins the assignment itself.
+// This file pins the assignment and its parity with the SQL function
+// stellar_color_for, which backfills the same color for the same inputs.
+
+const hexes = (source: string) => (source.match(/#[0-9A-Fa-f]{6}\b/g) ?? []).map((h) => h.toUpperCase());
+
+// The newest migration that (re)defines stellar_color_for is the live definition.
+function latestSqlDefinition(): { file: string; palette: string[]; modulus: number } {
+  const dir = join(__dirname, "..", "..", "..", "supabase", "migrations");
+  const file = readdirSync(dir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .filter((f) => /create or replace function public\.stellar_color_for/i.test(readFileSync(join(dir, f), "utf8")))
+    .pop();
+  assert.ok(file, "no migration defines stellar_color_for");
+  const src = readFileSync(join(dir, file), "utf8");
+  const fn = /create or replace function public\.stellar_color_for[\s\S]*?\$\$([\s\S]*?)\$\$/i.exec(src);
+  assert.ok(fn, `stellar_color_for body not found in ${file}`);
+  const arr = /array\[([\s\S]*?)\]/i.exec(fn[1]);
+  assert.ok(arr, `palette array not found in ${file}`);
+  const mod = /::bit\(28\)::int\s*%\s*(\d+)/.exec(fn[1]);
+  assert.ok(mod, `modulus not found in ${file}`);
+  return { file, palette: hexes(arr[1]), modulus: Number(mod[1]) };
+}
+
+test("the live SQL stellar_color_for uses the same palette and mods by its length", () => {
+  const { file, palette, modulus } = latestSqlDefinition();
+  assert.deepEqual(palette, [...STELLAR], file);
+  assert.equal(modulus, STELLAR.length, file);
+});
 
 test("the palette has 24 distinct colors and no brand blue", () => {
   assert.equal(STELLAR.length, 24);

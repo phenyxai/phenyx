@@ -15,7 +15,7 @@ import {
 } from "@/lib/onairos-result";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { apiFetch } from "@/lib/api-client";
-import { useSessionColor } from "@/contexts/session-color-context";
+import { ACCENT } from "@/lib/stellar";
 import {
   LINE_DURATION_MS,
   PULL_AT_MS,
@@ -39,9 +39,10 @@ import { ALL_PILLARS, EDGES, STAR_RADIUS, fitShape } from "@/lib/constellation-s
 //   supabase/migrations/20260907000000_onboarding_step_constellation_intro.sql
 //   supabase/migrations/20261016120000_phe125_onboarding_step_discover_intro.sql
 //
-// Flow: welcome (separate /welcome route) → fork → manifesto ("your life so
-//       far") → constellation_intro → polaris_intro → discover_intro (PHE-125)
-//       → connect (s6 Onairos) → synthesizing → reveal → done (→ Constellation).
+// Flow (new accounts arrive here straight from sign-in; PHE-162 removed the
+// /welcome screen): fork → manifesto ("your life so far") → constellation_intro
+//       → polaris_intro → discover_intro (PHE-125) → connect (s6 Onairos)
+//       → synthesizing → reveal → done (→ Constellation).
 //
 // The fork branches: "see how it works" → manifesto; "connect my platforms"
 // jumps straight to s6 (Onairos), bypassing the four explainers. It does NOT
@@ -179,9 +180,6 @@ export default function OnboardingPage() {
 
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<OnboardingStep>("fork");
-  // PHE-98: the person's accent, from SessionColorProvider (which also owns the
-  // CSS vars). Canvas code below needs it as a hex.
-  const { sessionColor: stellarColor } = useSessionColor();
   const [userId, setUserId] = useState<string | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -208,7 +206,7 @@ export default function OnboardingPage() {
   // Init: reduced-motion, user, and resume-on-load.
   // Reads persisted onboarding_step and renders the shell at the saved step.
   // - "done"        → route to /constellation (dashboard); never render shell.
-  // - null/"welcome" → default to "fork" (welcome already completed).
+  // - null/"welcome" → default to "fork" ("welcome" is the old first step).
   // - otherwise     → resume exactly where the user left off.
   // setMounted(true) is deferred until the step is resolved to avoid a flash of
   // the fork screen before resuming at a later step.
@@ -537,7 +535,7 @@ export default function OnboardingPage() {
               className="onb-ey animate-fade-in"
               style={{
                 ...fadeDelay(FORK_DELAYS[0]),
-                color: stellarColor,
+                color: ACCENT,
               }}
             >
               before you begin
@@ -559,8 +557,8 @@ export default function OnboardingPage() {
               style={{
                 ...fadeDelay(FORK_DELAYS[3]),
                 background: "transparent",
-                border: `0.5px solid ${stellarColor}`,
-                color: stellarColor,
+                border: `0.5px solid ${ACCENT}`,
+                color: ACCENT,
                 borderRadius: "8px",
                 padding: "13px 36px",
                 fontSize: "13px",
@@ -571,7 +569,7 @@ export default function OnboardingPage() {
                 width: "100%",
               }}
               onFocus={(e) => {
-                e.currentTarget.style.outline = `2px solid ${stellarColor}`;
+                e.currentTarget.style.outline = `2px solid ${ACCENT}`;
                 e.currentTarget.style.outlineOffset = "2px";
               }}
               onBlur={(e) => {
@@ -600,7 +598,7 @@ export default function OnboardingPage() {
                   width: "100%",
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.outline = `2px solid ${stellarColor}`;
+                  e.currentTarget.style.outline = `2px solid ${ACCENT}`;
                   e.currentTarget.style.outlineOffset = "2px";
                 }}
                 onBlur={(e) => {
@@ -624,7 +622,6 @@ export default function OnboardingPage() {
         {step === "manifesto" && (
           <WalkthroughScreen
             blocks={MANIFESTO_BLOCKS}
-            stellarColor={stellarColor}
             reducedMotion={prefersReducedMotion}
             onContinue={() => void setOnboardingStep("constellation_intro")}
             onBack={goBack}
@@ -639,7 +636,6 @@ export default function OnboardingPage() {
         {step === "constellation_intro" && (
           <WalkthroughScreen
             blocks={CONSTELLATION_BLOCKS}
-            stellarColor={stellarColor}
             reducedMotion={prefersReducedMotion}
             onContinue={() => void setOnboardingStep("polaris_intro")}
             onBack={goBack}
@@ -654,7 +650,6 @@ export default function OnboardingPage() {
         {step === "polaris_intro" && (
           <WalkthroughScreen
             blocks={POLARIS_BLOCKS}
-            stellarColor={stellarColor}
             reducedMotion={prefersReducedMotion}
             onContinue={() => void setOnboardingStep("discover_intro")}
             onBack={goBack}
@@ -663,7 +658,6 @@ export default function OnboardingPage() {
         {step === "discover_intro" && (
           <WalkthroughScreen
             blocks={DISCOVER_BLOCKS}
-            stellarColor={stellarColor}
             reducedMotion={prefersReducedMotion}
             onContinue={() => void setOnboardingStep("connect")}
             onBack={goBack}
@@ -681,7 +675,6 @@ export default function OnboardingPage() {
         {/* ================================================================ */}
         {step === "connect" && (
           <ConnectScreen
-            stellarColor={stellarColor}
             notice={connectNotice}
             onComplete={handleOnairosComplete}
             onBack={goBack}
@@ -721,7 +714,6 @@ export default function OnboardingPage() {
         {/* ================================================================ */}
         {step === "reveal" && (
           <RevealScreen
-            stellarColor={stellarColor}
             reducedMotion={prefersReducedMotion}
             constellationState={constellationState}
             onConfirmMount={() => void setOnboardingStep("reveal")}
@@ -760,7 +752,7 @@ export default function OnboardingPage() {
 // and once the last line has drawn, "your life, taking form." lands and the
 // screen hands off to the constellation, about ten seconds in all.
 //
-// Pillar model (PHE-100, spec doc 2): all seven nodes glow in stellarColor,
+// Pillar model (PHE-100, spec doc 2): all seven nodes glow in the accent,
 // intensity ∝ synthesis score. Node POSITIONS, sizes and the seven lines come
 // from `lib/constellation-shape` (the Big Dipper, from real star positions),
 // shared with the constellation tab, so the shape that forms here is the shape
@@ -823,13 +815,11 @@ interface RevealParticle {
 }
 
 function RevealScreen({
-  stellarColor,
   reducedMotion,
   constellationState,
   onConfirmMount,
   onDone,
 }: {
-  stellarColor: string;
   reducedMotion: boolean;
   constellationState: ConstellationState | null;
   onConfirmMount: () => void;
@@ -874,7 +864,7 @@ function RevealScreen({
     sizeCanvas();
     window.addEventListener("resize", sizeCanvas);
 
-    const [sr, sg, sb] = hexToRgb(stellarColor);
+    const [sr, sg, sb] = hexToRgb(ACCENT);
 
     // Per-pillar glow alpha from synthesis score: 0.30..0.92 by score;
     // null/absent score → neutral fallback (0.6 norm).
@@ -1057,7 +1047,7 @@ function RevealScreen({
         if (fade > 0) {
           const twinkle = 0.48 + 0.52 * (0.5 + 0.5 * Math.sin(now * 0.002 + p.phase));
           ctx.globalAlpha = (0.14 + 0.3 * twinkle) * fade;
-          ctx.fillStyle = stellarColor;
+          ctx.fillStyle = ACCENT;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
           ctx.fill();
@@ -1204,12 +1194,10 @@ function RevealScreen({
 // (no-restricted-syntax) + components/phenyx/CONVENTIONS.md.
 // ============================================================================
 function ConnectScreen({
-  stellarColor,
   notice,
   onComplete,
   onBack,
 }: {
-  stellarColor: string;
   notice: string | null;
   onComplete: (result: OnairosCompleteData, error?: Error) => void;
   onBack: () => void;
@@ -1220,7 +1208,7 @@ function ConnectScreen({
         className="onb-ey animate-fade-in"
         style={{
           ...fadeDelay(CONNECT_DELAYS[0]),
-          color: stellarColor,
+          color: ACCENT,
         }}
       >
         powered by onairos
@@ -1237,7 +1225,7 @@ function ConnectScreen({
           href="/privacy-policy"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: stellarColor, textDecoration: "underline", textUnderlineOffset: "3px" }}
+          style={{ color: ACCENT, textDecoration: "underline", textUnderlineOffset: "3px" }}
         >
           privacy policy
         </Link>
@@ -1286,7 +1274,7 @@ function ConnectScreen({
             width: "100%",
           }}
           onFocus={(e) => {
-            e.currentTarget.style.outline = `2px solid ${stellarColor}`;
+            e.currentTarget.style.outline = `2px solid ${ACCENT}`;
             e.currentTarget.style.outlineOffset = "2px";
           }}
           onBlur={(e) => {
@@ -1464,7 +1452,6 @@ const DISCOVER_BLOCKS: RevealBlock[] = [
 
 type WalkthroughScreenProps = {
   blocks: RevealBlock[];
-  stellarColor: string;
   reducedMotion: boolean;
   onContinue: () => void;
   onBack: () => void;
@@ -1475,7 +1462,6 @@ type WalkthroughScreenProps = {
 // .onb-sub in globals.css, the same on every screen.
 function WalkthroughScreen({
   blocks,
-  stellarColor,
   reducedMotion,
   onContinue,
   onBack,
@@ -1491,7 +1477,7 @@ function WalkthroughScreen({
         switch (block.kind) {
           case "eyebrow":
             return (
-              <p key={i} className="onb-ey" style={{ ...reveal, color: stellarColor }}>
+              <p key={i} className="onb-ey" style={{ ...reveal, color: ACCENT }}>
                 {block.text}
               </p>
             );
@@ -1572,7 +1558,7 @@ function WalkthroughScreen({
                   style={{
                     fontSize: "11px",
                     fontWeight: 300,
-                    color: stellarColor,
+                    color: ACCENT,
                     letterSpacing: "0.04em",
                     margin: 0,
                   }}
@@ -1604,8 +1590,8 @@ function WalkthroughScreen({
                   ...reveal,
                   pointerEvents: shown ? "all" : "none",
                   background: "transparent",
-                  border: `0.5px solid ${stellarColor}`,
-                  color: stellarColor,
+                  border: `0.5px solid ${ACCENT}`,
+                  color: ACCENT,
                   borderRadius: "8px",
                   padding: "13px 36px",
                   fontSize: "13px",
@@ -1616,7 +1602,7 @@ function WalkthroughScreen({
                   transition: `${REVEAL_TRANSITION}, background 0.2s ease, color 0.2s ease, border-color 0.2s ease`,
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.outline = `2px solid ${stellarColor}`;
+                  e.currentTarget.style.outline = `2px solid ${ACCENT}`;
                   e.currentTarget.style.outlineOffset = "2px";
                 }}
                 onBlur={(e) => {
@@ -1648,7 +1634,7 @@ function WalkthroughScreen({
                     transition: `${REVEAL_TRANSITION}, color 0.2s ease`,
                   }}
                   onFocus={(e) => {
-                    e.currentTarget.style.outline = `2px solid ${stellarColor}`;
+                    e.currentTarget.style.outline = `2px solid ${ACCENT}`;
                     e.currentTarget.style.outlineOffset = "2px";
                   }}
                   onBlur={(e) => {

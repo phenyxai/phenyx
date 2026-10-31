@@ -37,19 +37,18 @@
   --color-text: var(--ph-white);
 }
 
-/* PHE-98: color tokens (doc 7). Each person sees black, white and their accent.
-   --ph-accent is the person's stellar_color; SessionColorProvider writes it (and
-   its rgb companion, for rgba()) on <html>. The default is neutral white, the
-   same as STELLAR_DEFAULT in lib/stellar.ts. Brand blue is PHENYX's own: sign-in
-   buttons and the brand, never a person's color. Red, yellow and green are for
+/* PHE-98: color tokens (doc 7). Everyone sees black, white and the accent.
+   PHE-162: the accent is brand blue for every person. The backend still assigns
+   and stores a stellar_color, but nothing on the site paints it. ACCENT in
+   lib/stellar.ts is the same hex, for canvas code. Red, yellow and green are for
    errors, warnings and success only. */
 :root {
   --ph-black: #080808;
   --ph-white: #FFFDFD;
-  --ph-accent: #FFFDFD;
-  --ph-accent-rgb: 255, 253, 253;
   --ph-brand: #B9D5FF;
   --ph-brand-rgb: 185, 213, 255;
+  --ph-accent: var(--ph-brand);
+  --ph-accent-rgb: var(--ph-brand-rgb);
   --ph-red: #E5484D;
   --ph-yellow: #E9C46A;
   --ph-green: #4CC38A;
@@ -1496,10 +1495,9 @@ nav li > [aria-current="page"] {
 
 .auth-form-alt:hover { color: #FFFDFD; }
 
-/* PHE-97: sign-in ("come in."), create account and welcome.
-   The circular stellar icon beside the wordmark is brand blue until the welcome
-   reveal, then the person's accent. Brand blue buttons belong to the sign-in and
-   create-account screens only (docs 6 and 7). */
+/* PHE-97: sign-in ("come in.") and create account. The circular stellar icon
+   beside the wordmark is brand blue everywhere. Brand blue buttons belong to
+   the sign-in and create-account screens only (docs 6 and 7). */
 .ph-stellar-mark {
   position: relative;
   display: inline-block;
@@ -1509,7 +1507,6 @@ nav li > [aria-current="page"] {
   background-color: var(--ph-brand, #B9D5FF);
   -webkit-mask: url("/brand/orbit-mark.png") center / contain no-repeat;
   mask: url("/brand/orbit-mark.png") center / contain no-repeat;
-  transition: background-color 0.9s ease;
 }
 .ph-stellar-mark::after {
   content: "";
@@ -1520,9 +1517,6 @@ nav li > [aria-current="page"] {
   height: 12%;
   border-radius: 50%;
   background: #f6f9ff;
-}
-.ph-stellar-mark[data-revealed="true"] {
-  background-color: var(--ph-accent, var(--s, #5599FF));
 }
 
 .auth-topbar {
@@ -1709,54 +1703,8 @@ nav li > [aria-current="page"] {
   100% { opacity: 1; transform: none; filter: blur(0); }
 }
 
-/* Welcome: the orb carries brand blue until the color line, then the accent.
-   background-color (under a fixed shading layer) is what eases between them. */
-.welcome-orb {
-  width: 76px;
-  height: 76px;
-  border-radius: 50%;
-  background-color: var(--ph-brand, #B9D5FF);
-  background-image: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.38), transparent 52%, rgba(0, 0, 0, 0.28));
-  box-shadow: 0 0 50px color-mix(in srgb, var(--ph-brand, #B9D5FF) 22%, transparent);
-  transition: background-color 0.9s ease, box-shadow 0.9s ease, opacity 0.72s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.72s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-.welcome-orb[data-revealed="true"] {
-  background-color: var(--ph-accent, var(--s, #5599FF));
-  box-shadow: 0 0 50px color-mix(in srgb, var(--ph-accent, var(--s, #5599FF)) 22%, transparent),
-    0 0 100px color-mix(in srgb, var(--ph-accent, var(--s, #5599FF)) 8%, transparent);
-}
-.welcome-orb[data-in="false"] { opacity: 0; transform: scale(0.6); }
-.welcome-step { transition: opacity 0.72s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.72s cubic-bezier(0.22, 0.61, 0.36, 1); }
-.welcome-step[data-in="false"] { opacity: 0; transform: translateY(8px); pointer-events: none; }
-.welcome-color { color: var(--ph-accent, var(--s, #5599FF)); font-weight: 500; }
-.welcome-enter {
-  appearance: none;
-  width: min(282px, 100%);
-  height: 46px;
-  margin-top: 34px;
-  border: 1px solid color-mix(in srgb, var(--ph-accent, var(--s, #5599FF)) 34%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--ph-accent, var(--s, #5599FF)) 2.5%, transparent);
-  color: var(--ph-accent, var(--s, #5599FF));
-  font: inherit;
-  font-size: 13.5px;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-}
-.welcome-enter:hover,
-.welcome-enter:focus-visible {
-  border-color: var(--ph-accent, var(--s, #5599FF));
-  background: color-mix(in srgb, var(--ph-accent, var(--s, #5599FF)) 8%, transparent);
-  outline: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .auth-reveal { animation: none; }
-  .ph-stellar-mark,
-  .welcome-orb,
-  .welcome-step { transition: none; }
-  .welcome-orb[data-in="false"],
-  .welcome-step[data-in="false"] { transform: none; }
 }
 
 /* PHE-100: the constellation tab from 1024px, the sky in a sticky column

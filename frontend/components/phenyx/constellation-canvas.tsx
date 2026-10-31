@@ -24,7 +24,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { pillarLabel, type ConstellationData, type Pillar } from "@/lib/constellation";
-import { hexToRgb, resolveAccent } from "@/lib/stellar";
+import { ACCENT, hexToRgb } from "@/lib/stellar";
 import {
   ALL_PILLARS,
   EDGES,
@@ -118,13 +118,10 @@ export function ConstellationCanvas({
     const current = dataRef.current;
     const nodes = nodePixelsRef.current;
     const pixelByPillar = new Map(nodes.map((n) => [n.pillar, n]));
-    // PHE-98: the same resolved accent as --ph-accent (a stale or off-palette
-    // value paints neutral), as a real hex for the canvas.
-    const stellar = resolveAccent(current.stellar_color);
-
-    const rgb = hexToRgb(stellar);
+    // PHE-162: the accent, brand blue, as a real hex for the canvas.
+    const rgb = hexToRgb(ACCENT);
     const open = selectedRef.current;
-    const core = mixCore(stellar);
+    const core = mixCore(ACCENT);
 
     // The lines: the accent at low strength. With a point open, its own lines
     // brighten and the rest step back.
@@ -192,7 +189,7 @@ export function ConstellationCanvas({
         const gap = CORE_RADIUS + 10;
         const right = node.x + gap + width <= w - 4;
         ctx.textAlign = right ? "left" : "right";
-        ctx.fillStyle = stellar;
+        ctx.fillStyle = ACCENT;
         ctx.fillText(label, right ? node.x + gap : node.x - gap, node.y);
       }
     }
@@ -345,7 +342,7 @@ export function ConstellationCanvas({
   );
 
   return (
-    <div className="relative h-full w-full" style={{ background: skyWash(resolveAccent(data.stellar_color)) }}>
+    <div className="relative h-full w-full" style={{ background: SKY_WASH }}>
       <canvas
         ref={canvasRef}
         onClick={handlePointer}
@@ -409,7 +406,5 @@ function mixCore(hex: string): string {
 }
 
 /** The faint accent wash behind the sky, as in the demo's field. */
-function skyWash(hex: string): string {
-  const rgb = hexToRgb(hex);
-  return `radial-gradient(ellipse 49% 46% at 50% 52%, rgba(${rgb}, 0.07) 0%, rgba(${rgb}, 0.048) 30%, rgba(${rgb}, 0.019) 60%, rgba(${rgb}, 0.004) 82%, rgba(${rgb}, 0) 100%) no-repeat`;
-}
+const SKY_RGB = hexToRgb(ACCENT);
+const SKY_WASH = `radial-gradient(ellipse 49% 46% at 50% 52%, rgba(${SKY_RGB}, 0.07) 0%, rgba(${SKY_RGB}, 0.048) 30%, rgba(${SKY_RGB}, 0.019) 60%, rgba(${SKY_RGB}, 0.004) 82%, rgba(${SKY_RGB}, 0) 100%) no-repeat`;

@@ -2,20 +2,20 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   HOME_ROUTE,
-  WELCOME_ROUTE,
+  ONBOARDING_ROUTE,
   oauthCallbackUrl,
   postAuthDestination,
   safeReturnTo,
 } from "./auth-redirect.ts";
 
-test("home is the constellation and new people start at welcome", () => {
+test("home is the constellation and new people start at onboarding", () => {
   assert.equal(HOME_ROUTE, "/dashboard/constellation");
-  assert.equal(WELCOME_ROUTE, "/welcome");
+  assert.equal(ONBOARDING_ROUTE, "/onboarding");
 });
 
-test("a new person always goes to welcome, even with a deep link", () => {
-  assert.equal(postAuthDestination({ isNew: true }), "/welcome");
-  assert.equal(postAuthDestination({ isNew: true, returnTo: "/dashboard/polaris" }), "/welcome");
+test("a new person always goes to onboarding, even with a deep link", () => {
+  assert.equal(postAuthDestination({ isNew: true }), "/onboarding");
+  assert.equal(postAuthDestination({ isNew: true, returnTo: "/dashboard/polaris" }), "/onboarding");
 });
 
 test("a returning person lands on the constellation", () => {
@@ -46,7 +46,6 @@ test("safeReturnTo never sends someone back into the sign-in screens", () => {
   assert.equal(safeReturnTo("/signin"), null);
   assert.equal(safeReturnTo("/join?x=1"), null);
   assert.equal(safeReturnTo("/auth/callback?code=abc"), null);
-  assert.equal(safeReturnTo("/welcome"), null);
 });
 
 test("oauthCallbackUrl points Google back at the callback, carrying a safe returnTo", () => {

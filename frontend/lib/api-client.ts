@@ -13,31 +13,6 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 }
 
 // ---------------------------------------------------------------------------
-// Session profile (PHE-13). The signed-in user's persisted identity, including
-// the server-assigned, immutable stellar_color. user_profiles is keyed by `id`
-// (= auth.users.id). Returns null when no one is signed in or the row is missing
-// so callers can fall back to an ambient default without throwing.
-// ---------------------------------------------------------------------------
-
-export interface SessionProfile {
-  id: string
-  display_name: string | null
-  stellar_color: string | null
-}
-
-export async function fetchProfile(): Promise<SessionProfile | null> {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data, error } = await supabase
-    .from("user_profiles")
-    .select("id, display_name, stellar_color")
-    .eq("id", user.id)
-    .maybeSingle()
-  if (error || !data) return null
-  return data as SessionProfile
-}
-
-// ---------------------------------------------------------------------------
 // Profile tab overview (PHE-30 surface / PHE-38 engine). Everything the Profile
 // tab renders that is NOT the tier (tier comes from useTier): the display name,
 // connected-platform badges, the 3-item WHAT WE HAVE SEEN behavioral snapshot,
@@ -81,7 +56,6 @@ export interface ProfileOverview {
   email: string | null
   /** "with PHENYX since <month year>", or null when unknown. */
   joined: string | null
-  stellar_color: string | null
   /** Platform slugs for the header badges; empty when nothing is connected. */
   connected_platforms: string[]
   /** "what has stayed with you" constants. */
@@ -125,7 +99,6 @@ export async function fetchProfileOverview(): Promise<ProfileOverview | null> {
     display_name: (profile as { display_name: string | null } | null)?.display_name ?? null,
     email: user.email ?? null,
     joined: null,
-    stellar_color: null,
     connected_platforms:
       (persona as { connected_platforms: string[] | null } | null)?.connected_platforms ?? [],
     held: [],
