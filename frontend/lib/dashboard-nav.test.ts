@@ -103,7 +103,7 @@ test("tabTransition: a clock running backwards never yields negative seconds", (
   assert.deepEqual(t.duration, { tab: "insights", seconds: 0 });
 });
 
-test("legacy routes redirect: daily to constellation, you and profile to insights, join to sign-in", () => {
+test("legacy routes redirect: daily to constellation, you and profile to insights, join to sign-in, welcome to onboarding", () => {
   const map = Object.fromEntries(LEGACY_REDIRECTS.map((r) => [r.source, r.destination]));
   assert.deepEqual(map, {
     "/dashboard/daily": "/dashboard/constellation",
@@ -111,11 +111,12 @@ test("legacy routes redirect: daily to constellation, you and profile to insight
     "/dashboard/profile": "/dashboard/insights",
     "/daily": "/dashboard/constellation",
     "/join": "/signin",
+    "/welcome": "/onboarding",
   });
 });
 
-test("the old daily, you and profile route folders are gone", () => {
-  for (const dir of ["app/dashboard/daily", "app/dashboard/you", "app/dashboard/profile", "app/daily"]) {
+test("the old daily, you, profile and welcome route folders are gone", () => {
+  for (const dir of ["app/dashboard/daily", "app/dashboard/you", "app/dashboard/profile", "app/daily", "app/welcome"]) {
     assert.ok(!existsSync(join(FRONTEND, dir)), `${dir} should not exist`);
   }
 });

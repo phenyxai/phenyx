@@ -1,6 +1,6 @@
 // PHE-97 — where a person lands after signing in, for both doors (Google and
-// the email code). New people meet their color on welcome and go on through
-// onboarding; returning people go straight to their constellation.
+// the email code). New people go straight into onboarding (PHE-162 removed the
+// welcome screen); returning people go straight to their constellation.
 //
 // Dependency-free so it runs under `node --test` and in the OAuth callback
 // route handler alike.
@@ -8,11 +8,11 @@
 /** The signed-in home. Hardcoded here rather than via `/dashboard` (PHE-96 owns that redirect). */
 export const HOME_ROUTE = "/dashboard/constellation";
 
-/** First stop for a brand-new account: name + color reveal, then onboarding. */
-export const WELCOME_ROUTE = "/welcome";
+/** First stop for a brand-new account. */
+export const ONBOARDING_ROUTE = "/onboarding";
 
-/** Screens a deep link must never point back into (sign-in loops, re-running welcome). */
-const AUTH_PATHS = ["/signin", "/join", "/auth", "/welcome"];
+/** Screens a deep link must never point back into (sign-in loops). */
+const AUTH_PATHS = ["/signin", "/join", "/auth"];
 
 /**
  * A `returnTo` value we are willing to redirect to: a same-origin path only.
@@ -34,7 +34,7 @@ export function postAuthDestination({
   isNew: boolean;
   returnTo?: string | null;
 }): string {
-  if (isNew) return WELCOME_ROUTE;
+  if (isNew) return ONBOARDING_ROUTE;
   return safeReturnTo(returnTo) ?? HOME_ROUTE;
 }
 

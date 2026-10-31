@@ -7,7 +7,6 @@ const protectedRoutes = [
   "/onboarding",
   "/constellation",
   "/collective",
-  "/welcome",
   "/settings",
   "/upgrade",
 ]
@@ -84,7 +83,6 @@ export const config = {
     "/onboarding/:path*",
     "/constellation/:path*",
     "/collective/:path*",
-    "/welcome/:path*",
     "/settings/:path*",
     "/upgrade/:path*",
   ],

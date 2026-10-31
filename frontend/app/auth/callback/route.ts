@@ -9,7 +9,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
  * PHE-97 — Google sign-in lands here. Supabase redirects back with `?code=`
  * (PKCE); we exchange it for a session (written to the auth cookies the browser
  * client reads), have the backend idempotently complete the profile, then send
- * new people to welcome and returning people to their constellation.
+ * new people to onboarding and returning people to their constellation.
  *
  * Any failure (Google cancelled, a stale code, the profile could not be
  * completed) returns to /signin with `?error=google`; a half-finished session

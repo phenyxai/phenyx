@@ -39,9 +39,10 @@ import { ALL_PILLARS, EDGES, STAR_RADIUS, fitShape } from "@/lib/constellation-s
 //   supabase/migrations/20260907000000_onboarding_step_constellation_intro.sql
 //   supabase/migrations/20261016120000_phe125_onboarding_step_discover_intro.sql
 //
-// Flow: welcome (separate /welcome route) → fork → manifesto ("your life so
-//       far") → constellation_intro → polaris_intro → discover_intro (PHE-125)
-//       → connect (s6 Onairos) → synthesizing → reveal → done (→ Constellation).
+// Flow (new accounts arrive here straight from sign-in; PHE-162 removed the
+// /welcome screen): fork → manifesto ("your life so far") → constellation_intro
+//       → polaris_intro → discover_intro (PHE-125) → connect (s6 Onairos)
+//       → synthesizing → reveal → done (→ Constellation).
 //
 // The fork branches: "see how it works" → manifesto; "connect my platforms"
 // jumps straight to s6 (Onairos), bypassing the four explainers. It does NOT
@@ -208,7 +209,7 @@ export default function OnboardingPage() {
   // Init: reduced-motion, user, and resume-on-load.
   // Reads persisted onboarding_step and renders the shell at the saved step.
   // - "done"        → route to /constellation (dashboard); never render shell.
-  // - null/"welcome" → default to "fork" (welcome already completed).
+  // - null/"welcome" → default to "fork" ("welcome" is the old first step).
   // - otherwise     → resume exactly where the user left off.
   // setMounted(true) is deferred until the step is resolved to avoid a flash of
   // the fork screen before resuming at a later step.

@@ -2,14 +2,14 @@ import Link from "next/link";
 import { StellarMark } from "@/components/phenyx/stellar-mark";
 
 /**
- * PHE-97 — shared pieces of the sign-in, create-account and welcome screens.
+ * PHE-97 — shared pieces of the sign-in and create-account screens.
  */
 
 /** Stellar icon + PHENYX wordmark. Always returns to the landing page. */
-export function AuthBrand({ revealed = false }: { revealed?: boolean }) {
+export function AuthBrand() {
   return (
     <Link href="/" className="auth-brand" aria-label="PHENYX home">
-      <StellarMark revealed={revealed} />
+      <StellarMark />
       <span>PHENYX</span>
     </Link>
   );
