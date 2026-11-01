@@ -31,7 +31,7 @@ export function HeaderChip({ className = "", ...props }: ComponentProps<"button"
   return (
     <button
       type="button"
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-full border border-ph-white/12 bg-ph-white/[0.02] px-[18px] text-body font-medium text-ph-white transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-ph-white data-[on=true]:border-[rgba(var(--ph-accent-rgb),0.5)] data-[on=true]:text-[var(--ph-accent)] [&_svg]:size-4 ${className}`}
+      className={`ph-optical inline-flex h-10 items-center justify-center gap-2 rounded-full border border-ph-white/12 bg-ph-white/[0.02] px-[18px] text-body font-medium text-ph-white transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-ph-white data-[on=true]:border-[rgba(var(--ph-accent-rgb),0.5)] data-[on=true]:text-[var(--ph-accent)] [&_svg]:size-4 ${className}`}
       {...props}
     />
   );

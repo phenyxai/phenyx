@@ -699,7 +699,7 @@ function ChatView({
           <button
             type="button"
             onClick={onLeave}
-            className="h-10 shrink-0 rounded-full border border-ph-white/24 bg-ph-white/[0.024] px-[18px] text-body font-medium text-ph-white transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
+            className="ph-optical h-10 shrink-0 rounded-full border border-ph-white/24 bg-ph-white/[0.024] px-[18px] text-body font-medium text-ph-white transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
           >
             leave chat
           </button>
@@ -723,7 +723,7 @@ function ChatView({
                   key={f}
                   type="button"
                   onClick={() => onFollowUp(f)}
-                  className="flex h-[34px] items-center rounded-full bg-ph-white/[0.06] px-3.5 text-body text-ph-secondary transition-colors duration-200 hover:bg-[rgba(var(--ph-accent-rgb),0.14)] hover:text-ph-white"
+                  className="ph-optical flex h-[34px] items-center rounded-full bg-ph-white/[0.06] px-3.5 text-body text-ph-secondary transition-colors duration-200 hover:bg-[rgba(var(--ph-accent-rgb),0.14)] hover:text-ph-white"
                 >
                   {f}
                 </button>
@@ -884,7 +884,7 @@ function PlanCard({
           type="button"
           aria-pressed={saved}
           onClick={() => onChange({ saved: !saved })}
-          className={`flex h-[34px] items-center gap-1.5 rounded-full border px-3.5 text-body font-medium transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] ${
+          className={`ph-optical flex h-[34px] items-center gap-1.5 rounded-full border px-3.5 text-body font-medium transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] ${
             saved
               ? "border-[rgba(var(--ph-accent-rgb),0.5)] bg-[rgba(var(--ph-accent-rgb),0.1)] text-[var(--ph-accent)]"
               : "border-ph-white/12 bg-ph-white/[0.02] text-ph-secondary"

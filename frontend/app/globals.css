@@ -181,14 +181,23 @@
   }
 }
 
-/* PHE-163: one button shape, 44px tall with its label centered in the box
-   (pills are 40px and filter chips 34px, set where they're drawn). */
+/* PHE-163: one button shape, 44px tall with its label optically centered
+   (pills are 40px and filter chips 34px, set where they're drawn, and take
+   .ph-optical alone). Plus Jakarta Sans's ascent is far taller than its
+   descent, so a flex-centered lowercase label sits about 0.16em low; 0.33em of
+   bottom padding lifts its x-height to the middle of the box. text-box-trim
+   would do this natively but does not reach a flex button's label. Retune
+   the 0.33em if the typeface changes. */
 @layer components {
+  .ph-optical {
+    padding-bottom: 0.33em;
+  }
   .ph-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     height: 44px;
+    padding-bottom: 0.33em;
   }
 }
 
@@ -665,7 +674,7 @@ nav li > [aria-current="page"] {
 .landing-vnext__hero h1 { margin: 0px 0px 8px; padding: 0px; overflow-wrap: break-word; font-size: clamp(35px, 3.55vw, 49px); font-weight: 600; letter-spacing: 0.06em; line-height: 1; color: var(--ink-1); max-width: 100%; width: 100%; text-wrap-mode: initial; text-wrap-style: balance; }
 .landing-vnext__hero-tagline { margin: 0px 0px 28px; padding: 0px; overflow-wrap: anywhere; font-size: clamp(15px, 1.7vw, 18px); color: rgba(242, 242, 243, 0.78); font-weight: 400; letter-spacing: 0.01em; text-wrap-mode: initial; text-wrap-style: balance; text-transform: lowercase; line-height: 1.35; }
 .landing-vnext__hero-description { margin: 0px 0px 26px; padding: 0px; overflow-wrap: anywhere; font-size: 15px; line-height: 23px; color: rgba(242, 242, 243, 0.72); max-width: 540px; font-weight: 400; font-style: italic; }
-.landing-vnext__hero-description span:first-child { margin: 0px; padding: 0px; display: block; }
+.landing-vnext__hero-description span:first-child { margin: 0px; padding: 0px; display: block; text-wrap: balance; }
 .landing-vnext__hero-description span:last-child { margin: 4px 0px 0px; padding: 0px; white-space: nowrap; display: block; }
 .landing-vnext__hero .landing-vnext__enter-button { font: inherit; margin: 0px; padding: 0px 28px; border-radius: 999px; border: 1px solid rgba(242, 242, 243, 0.18); gap: 0px; transition: all 0.3s; background: none; font-style: inherit; font-weight: 400; font-size: 15px; line-height: inherit; display: inline-flex; align-items: center; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; color: rgba(242, 242, 243, 0.92); letter-spacing: 0.02em; min-height: 46px; justify-content: center; box-shadow: none; min-width: 112px; }
 .landing-vnext__hero-particles { margin: 0px; padding: 0px; position: absolute; top: 6px; right: 0px; bottom: auto; width: 62%; height: calc(-12px + 100vh); max-height: none; z-index: 0; }

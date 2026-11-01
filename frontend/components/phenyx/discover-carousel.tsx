@@ -12,8 +12,9 @@ import { kindLabel, loopOffset, type Discovery } from "@/lib/discover";
 // the main card (clicking one brings it forward). Phones show the main card
 // alone and swap it in place. Each card: its kind, the ★ save, the headline, what it is, the personal
 // reason in the accent, then "ask polaris" at the right (PHE-163). The text
-// sits together as one block (PHE-160): the headline clamps at two lines, the
-// detail at three, the reason never. A long deck
+// sits together as one block (PHE-160): the headline clamps at two lines and
+// the detail at three (three and four on phones, where the display headline
+// wraps sooner), the reason never. A long deck
 // counts instead of drawing a dot per card. Layout, spacing, sizes from 641px
 // and the lit edge live in globals.css (.discover-*); this file owns state.
 // ============================================================================
@@ -68,7 +69,7 @@ export function CardLink(props: ComponentProps<"button">) {
   return (
     <button
       type="button"
-      className="h-10 rounded-full border border-ph-white/20 bg-ph-white/[0.035] px-[18px] text-body font-medium text-ph-white transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
+      className="ph-optical h-10 rounded-full border border-ph-white/20 bg-ph-white/[0.035] px-[18px] text-body font-medium text-ph-white transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
       {...props}
     />
   );
@@ -226,8 +227,8 @@ function DiscoverCard({
           <StarIcon filled={d.saved} />
         </button>
       </div>
-      <h2 className="discover-card__headline line-clamp-2 text-display text-ph-white">{d.headline}</h2>
-      <p className="discover-card__detail line-clamp-3 text-reading text-ph-white">{d.detail}</p>
+      <h2 className="discover-card__headline text-display text-ph-white [@media(max-width:640px)]:line-clamp-3 [@media(min-width:641px)]:line-clamp-2">{d.headline}</h2>
+      <p className="discover-card__detail text-reading text-ph-white [@media(max-width:640px)]:line-clamp-4 [@media(min-width:641px)]:line-clamp-3">{d.detail}</p>
       <p className="discover-card__reason text-reading italic text-[var(--ph-accent)]">{d.reason}</p>
       <div className="discover-card__foot mt-auto flex justify-end">
         <CardLink onClick={onAsk}>ask polaris</CardLink>

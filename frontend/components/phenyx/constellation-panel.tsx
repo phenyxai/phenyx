@@ -266,7 +266,7 @@ function PointView({
               type="button"
               aria-pressed={topic === t}
               onClick={() => setTopic(t)}
-              className={`flex h-[34px] items-center rounded-full border px-3.5 text-body lowercase transition-colors duration-200 ${
+              className={`ph-optical flex h-[34px] items-center rounded-full border px-3.5 text-body lowercase transition-colors duration-200 ${
                 topic === t
                   ? "border-[rgba(var(--ph-accent-rgb),0.5)] bg-[rgba(var(--ph-accent-rgb),0.16)] text-[var(--ph-accent)]"
                   : "border-ph-white/10 text-ph-secondary hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
@@ -477,7 +477,7 @@ function ReactionPill({ on, onClick, children }: { on: boolean; onClick: () => v
       type="button"
       aria-pressed={on}
       onClick={onClick}
-      className={`h-10 rounded-full border px-[18px] text-body transition-colors duration-200 ${
+      className={`ph-optical h-10 rounded-full border px-[18px] text-body transition-colors duration-200 ${
         on
           ? "border-[var(--ph-accent)] bg-[rgba(var(--ph-accent-rgb),0.14)] text-ph-white"
           : "border-ph-white/13 text-ph-secondary hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
