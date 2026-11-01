@@ -6,9 +6,9 @@ import { Resend } from "resend";
 import { SupabaseService } from "../supabase/supabase.service";
 
 /**
- * `confirm` (PHE-97) re-confirms a signed-in person for sensitive settings
- * actions; it is only ever sent to the account's own email (ConfirmCodeService)
- * and the public /auth/otp routes do not accept it.
+ * `confirm` (PHE-97) re-confirmed a signed-in person for sensitive settings
+ * actions; PHE-163 retired it with the settings code steps. The public
+ * /auth/otp routes never accepted it.
  */
 export type OtpPurpose = "signup" | "signin" | "confirm";
 

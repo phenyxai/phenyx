@@ -1,7 +1,6 @@
 import { HttpException, Injectable, Logger } from "@nestjs/common";
 import type { Stripe } from "stripe/cjs/stripe.core.js";
 import { SupabaseService } from "../supabase/supabase.service";
-import { ConfirmCodeService } from "../auth/confirm-code.service";
 import { StripeService } from "../stripe/stripe.service";
 import { pickHeldConstants, type HeldConstant } from "./held";
 import { PILLARS } from "../constellation/layout";
@@ -97,7 +96,6 @@ export class ProfileService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly confirmCode: ConfirmCodeService,
     private readonly stripe: StripeService,
     private readonly synthesis: SynthesisService
   ) {}
@@ -212,17 +210,18 @@ export class ProfileService {
     }
   }
 
+  /**
+   * The name shown across the constellation and insights. PHE-163: email is
+   * the sign-in address and no longer changes here, so a name edit needs only
+   * the session.
+   */
   async updateIdentity(
     userId: string,
-    body: { display_name?: unknown; email?: unknown; code?: unknown }
+    body: { display_name?: unknown }
   ): Promise<{ updated: true }> {
-    // PHE-97: confirmed with a code emailed to the account (no passphrase).
-    await this.confirmCode.assertValid(userId, body.code);
-
     const supabase = this.supabaseService.getClient();
     const name =
       typeof body.display_name === "string" ? body.display_name.trim() : "";
-    const email = typeof body.email === "string" ? body.email.trim() : "";
 
     if (name) {
       const { error } = await supabase
@@ -231,14 +230,6 @@ export class ProfileService {
         .eq("id", userId);
       if (error) {
         this.logger.error(`identity name update failed: ${error.message}`);
-        throw new HttpException({ error: "could not save the change." }, 500);
-      }
-    }
-
-    if (email) {
-      const { error } = await supabase.auth.admin.updateUserById(userId, { email });
-      if (error) {
-        this.logger.error(`identity email update failed: ${error.message}`);
         throw new HttpException({ error: "could not save the change." }, 500);
       }
     }

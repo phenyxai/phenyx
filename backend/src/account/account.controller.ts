@@ -11,7 +11,6 @@ import {
 import type { Request } from "express";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { AccountService } from "./account.service";
-import { ConfirmCodeService } from "../auth/confirm-code.service";
 import type { AccountCloseDto } from "./account.dto";
 
 /**
@@ -24,10 +23,7 @@ import type { AccountCloseDto } from "./account.dto";
 @Controller("account")
 @UseGuards(SupabaseAuthGuard)
 export class AccountController {
-  constructor(
-    private readonly accountService: AccountService,
-    private readonly confirmCode: ConfirmCodeService
-  ) {}
+  constructor(private readonly accountService: AccountService) {}
 
   /** Portable JSON dump of everything observed about the owner. Never any token. */
   @Get("export")
@@ -47,41 +43,18 @@ export class AccountController {
     throw goneFreeze();
   }
 
-  /**
-   * PHE-97: email a one-time code to the account's own address. Close account
-   * and the name/email edit take it in place of the old passphrase.
-   */
-  @Post("confirm-code")
-  async sendConfirmCode(@Req() req: Request) {
-    const user = (req as any).user as { id: string };
-    return this.confirmCode.send(user.id);
-  }
-
-  /**
-   * Two-gate close: the emailed confirm code + typed `delete my account`.
-   * Body: `{ code, confirmation }`.
-   */
+  /** Close, confirmed by the typed `delete my account`. Body: `{ confirmation }`. */
   @Post("close")
   async close(@Req() req: Request, @Body() body: AccountCloseDto) {
     const user = (req as any).user as { id: string };
     return this.accountService.closeAccount(user.id, body);
   }
 
-  /** Same two-gate close as POST /account/close, kept for older clients. */
+  /** Same close as POST /account/close, kept for older clients. */
   @Delete()
   async remove(@Req() req: Request, @Body() body: AccountCloseDto) {
     const user = (req as any).user as { id: string };
     return this.accountService.closeAccount(user.id, body);
-  }
-
-  /**
-   * Remove constellation content while keeping the account. CORS is POST-only,
-   * so this is POST rather than DELETE.
-   */
-  @Post("constellation")
-  async clearConstellation(@Req() req: Request) {
-    const user = (req as any).user as { id: string };
-    return this.accountService.clearConstellation(user.id);
   }
 }
 

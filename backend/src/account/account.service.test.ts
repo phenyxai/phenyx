@@ -88,19 +88,8 @@ const fakeEncryption = {
   decrypt: (payload: string) => payload.replace(/^ENCRYPTED::/, ""),
 } as any;
 
-// Stands in for ConfirmCodeService: "123456" is the live code for the account.
-const fakeConfirmCode = {
-  assertValid: async (_userId: string, code: unknown) => {
-    if (code !== "123456") {
-      const err: any = new Error("bad code");
-      err.getStatus = () => 400;
-      throw err;
-    }
-  },
-} as any;
-
-function makeService(supabase: any, confirmCode: any = fakeConfirmCode) {
-  return new AccountService(supabase, fakeEncryption, confirmCode);
+function makeService(supabase: any) {
+  return new AccountService(supabase, fakeEncryption);
 }
 
 test("exportAccount returns a single bundle with all sections and never a token", async () => {
@@ -137,19 +126,9 @@ test("isDeleteConfirmed requires the typed phrase, lowercased and trimmed", () =
   assert.ok(!isDeleteConfirmed(undefined));
 });
 
-test("closeAccountError runs in fill order: code then phrase", () => {
-  assert.equal(
-    closeAccountError("", ""),
-    "enter the code we sent to your email."
-  );
-  assert.equal(
-    closeAccountError("123456", ""),
-    "type delete my account exactly, to confirm."
-  );
-  assert.equal(
-    closeAccountError("123456", "delete my account"),
-    null
-  );
+test("closeAccountError asks only for the typed phrase", () => {
+  assert.equal(closeAccountError(""), "type delete my account exactly, to confirm.");
+  assert.equal(closeAccountError("delete my account"), null);
 });
 
 function makeDeleteSupabase(deletedIds: string[]) {
@@ -167,49 +146,21 @@ function makeDeleteSupabase(deletedIds: string[]) {
   } as any;
 }
 
-test("closeAccount rejects without a code and never calls admin.deleteUser", async () => {
+test("closeAccount rejects a wrong phrase and never calls admin.deleteUser", async () => {
   const deletedIds: string[] = [];
   await assert.rejects(
     () =>
       makeService(makeDeleteSupabase(deletedIds)).closeAccount("user-1", {
-        confirmation: "delete my account",
-      }),
-    (err: any) => err?.getStatus?.() === 400,
-    "missing code is a 400"
-  );
-  assert.deepEqual(deletedIds, [], "no deletion attempted without a code");
-});
-
-test("closeAccount rejects a wrong code even when the phrase is typed", async () => {
-  const deletedIds: string[] = [];
-  await assert.rejects(
-    () =>
-      makeService(makeDeleteSupabase(deletedIds)).closeAccount("user-1", {
-        code: "000000",
-        confirmation: "delete my account",
-      }),
-    (err: any) => err?.getStatus?.() === 400
-  );
-  assert.deepEqual(deletedIds, []);
-});
-
-test("closeAccount rejects a wrong phrase even when the code is right", async () => {
-  const deletedIds: string[] = [];
-  await assert.rejects(
-    () =>
-      makeService(makeDeleteSupabase(deletedIds)).closeAccount("user-1", {
-        code: "123456",
         confirmation: "please delete",
       }),
     (err: any) => err?.getStatus?.() === 400
   );
-  assert.deepEqual(deletedIds, []);
+  assert.deepEqual(deletedIds, [], "no deletion attempted without the phrase");
 });
 
-test("closeAccount with both gates deletes the auth user", async () => {
+test("closeAccount with the typed phrase deletes the auth user", async () => {
   const deletedIds: string[] = [];
   const res = await makeService(makeDeleteSupabase(deletedIds)).closeAccount("user-1", {
-    code: "123456",
     confirmation: "delete my account",
   });
   assert.deepEqual(res, { deleted: true });
