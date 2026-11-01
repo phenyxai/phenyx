@@ -997,10 +997,10 @@ function ConversationsPopup({
         {returns === null ? (
           <section>
             <SectionLabel>questions to return to</SectionLabel>
-            <p className="text-[13.5px] font-light text-ph-white/62">return to unfinished questions with full</p>
-            <QuietAction onClick={onUpgrade} className="mt-2">
-              upgrade plan
-            </QuietAction>
+            <div className="flex flex-wrap gap-2">
+              <HeaderChip onClick={onUpgrade}>return to unfinished questions with full</HeaderChip>
+              <HeaderChip onClick={onUpgrade}>upgrade plan</HeaderChip>
+            </div>
           </section>
         ) : (
           returns.length > 0 && (
