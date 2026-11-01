@@ -13,7 +13,7 @@ import { kindLabel, loopOffset, type Discovery } from "@/lib/discover";
 // alone and swap it in place. Each card: its kind, the ★ save, the headline, what it is, the personal
 // reason in the accent, then "see the sources" and "ask polaris". The text
 // sits together as one block (PHE-160): the headline clamps at two lines, the
-// detail at three (four from 641px), the reason at two. A long deck
+// detail at three (four from 641px), the reason never. A long deck
 // counts instead of drawing a dot per card. Layout, spacing, sizes from 641px
 // and the lit edge live in globals.css (.discover-*); this file owns state.
 // ============================================================================
@@ -235,7 +235,7 @@ function DiscoverCard({
         {d.headline}
       </h2>
       <p className="discover-card__detail line-clamp-3 text-[14px] leading-[1.6] text-ph-white/80">{d.detail}</p>
-      <p className="discover-card__reason line-clamp-2 text-[13px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">
+      <p className="discover-card__reason text-[13px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">
         {d.reason}
       </p>
       <div className="discover-card__foot mt-auto flex flex-wrap gap-2">
