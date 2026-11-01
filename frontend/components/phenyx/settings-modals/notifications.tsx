@@ -68,7 +68,7 @@ export function NotificationsModal() {
     <SettingsDialogContent>
       <ModalHeading
         title="notifications"
-        subtitle="choose what PHENYX can surface to you."
+        subtitle="choose what you would like to hear about."
       />
       <div className="flex flex-col gap-3">
         {NOTIFICATION_DEFAULTS.map(({ key, label }) => (
@@ -76,7 +76,7 @@ export function NotificationsModal() {
             key={key}
             className="flex cursor-pointer items-center justify-between gap-4"
           >
-            <span className="text-xs text-ph-white/65">{label}</span>
+            <span className="text-reading text-ph-white">{label}</span>
             <Switch
               aria-label={label}
               checked={prefs[key]}

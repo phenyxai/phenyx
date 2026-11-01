@@ -18,12 +18,18 @@ type SettingsGroup = {
   rows: SettingsRow[];
 };
 
-/** The Oct 20 demo's sections, with notifications kept under your data. */
+/**
+ * PHE-163: each section holds one kind of task. Account is who you are and how
+ * PHENYX reaches you, with deactivate or delete last, closest to the profile
+ * it removes; your data is what PHENYX holds of yours; help & legal is where
+ * to get help.
+ */
 const GROUPS: SettingsGroup[] = [
   {
     label: "account",
     rows: [
       { modal: "edit-profile", label: "profile & sign-in", sub: "your name and how you sign in" },
+      { modal: "notifications", label: "notifications", sub: "choose what you hear about" },
       { modal: "close-account", label: "deactivate or delete", sub: "manage account access and removal" },
     ],
   },
@@ -31,8 +37,7 @@ const GROUPS: SettingsGroup[] = [
     label: "your data",
     rows: [
       { modal: "my-connections", label: "connections", sub: "review your connected platforms" },
-      { modal: "notifications", label: "notifications", sub: "choose what PHENYX sends you" },
-      { modal: "data-management", label: "export your data", sub: "download your PHENYX context" },
+      { modal: "data-management", label: "export your data", sub: "a copy of everything in your constellation" },
     ],
   },
   {
@@ -40,7 +45,7 @@ const GROUPS: SettingsGroup[] = [
     rows: [
       { modal: "feedback", label: "contact us", sub: "get help or share feedback" },
       { href: "/privacy-policy", label: "privacy policy", sub: "how your data is handled" },
-      { href: "/terms", label: "terms", sub: "terms for using PHENYX" },
+      { href: "/terms", label: "terms", sub: "the terms you agree to" },
     ],
   },
 ];
@@ -66,7 +71,7 @@ export default function SettingsPage() {
       <div className="w-full max-w-[760px]">
         {GROUPS.map((group, i) => (
           <div key={group.label} className={i > 0 ? "mt-6 border-t border-ph-white/[0.08] pt-6" : ""}>
-            <h2 className="mb-1.5 text-[13.5px] text-[var(--ph-accent)]">{group.label}</h2>
+            <h2 className="mb-2 text-meta font-semibold text-[var(--ph-accent)]">{group.label}</h2>
             {group.rows.map((row) => (
               <SettingsRowButton
                 key={row.label}
@@ -81,7 +86,7 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={logOut}
-          className="mt-10 mb-6 text-[13.5px] text-ph-white/55 transition-colors duration-200 hover:text-[var(--ph-accent)]"
+          className="mt-10 mb-6 text-body text-ph-secondary transition-colors duration-200 hover:text-[var(--ph-accent)]"
         >
           log out
         </button>
@@ -107,10 +112,10 @@ function SettingsRowButton({
       className="group flex w-full items-center gap-4 py-3 text-left [@media(pointer:coarse)]:py-4"
     >
       <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-[14.5px] text-ph-white/90 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+        <span className="text-item text-ph-white transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
           {label}
         </span>
-        <span className="text-[12px] font-light text-ph-white/60">{sub}</span>
+        <span className="text-body text-ph-secondary">{sub}</span>
       </span>
       <svg
         width="12"
@@ -122,7 +127,7 @@ function SettingsRowButton({
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"
-        className="shrink-0 text-ph-white/55 transition-[color,transform] duration-200 group-hover:translate-x-[2px] group-hover:text-[var(--ph-accent)]"
+        className="shrink-0 text-ph-tertiary transition-[color,transform] duration-200 group-hover:translate-x-[2px] group-hover:text-[var(--ph-accent)]"
       >
         <path d="M9.5 6l6 6-6 6" />
       </svg>

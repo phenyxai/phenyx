@@ -6,30 +6,30 @@ import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/api-client'
 import { supabaseBrowser as supabase } from '@/lib/supabase-browser'
 import {
+  DangerButton,
+  GhostButton,
   ModalErr,
   ModalField,
   ModalHeading,
   SettingsDialogContent,
   useSettingsModals,
 } from './modal-host'
-import { ConfirmCodeField } from './confirm-code-field'
 import { closeAccountClientError } from './validation'
 
 /**
- * close your account — own screen with two gates: a code emailed to the
- * account (PHE-97: no passphrase), then type `delete my account`. Checks run in
- * fill order. Never alert.
+ * close your account — one screen (PHE-163): what goes, a way to export it
+ * first, then type `delete my account` and delete. The signed-in session is
+ * the other gate; there is no emailed code. Never alert.
  */
 export function CloseAccountModal() {
   const router = useRouter()
   const { openModal, closeModal } = useSettingsModals()
-  const [code, setCode] = React.useState('')
   const [phrase, setPhrase] = React.useState('')
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState('')
 
   const handleDelete = async () => {
-    const clientError = closeAccountClientError(code, phrase)
+    const clientError = closeAccountClientError(phrase)
     if (clientError) {
       setError(clientError)
       return
@@ -39,10 +39,7 @@ export function CloseAccountModal() {
     try {
       const res = await apiFetch('/account/close', {
         method: 'POST',
-        body: JSON.stringify({
-          code,
-          confirmation: phrase,
-        }),
+        body: JSON.stringify({ confirmation: phrase }),
       })
       const body = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
@@ -62,72 +59,62 @@ export function CloseAccountModal() {
     <SettingsDialogContent>
       <ModalHeading
         title="close your account"
-        subtitle="this is permanent. read it before you type anything."
+        subtitle="this can’t be undone, so read it through first."
       />
 
-      <ul className="m-0 mb-3.5 list-none p-0">
+      <ul className="m-0 list-none p-0">
         {[
           'your constellation, all seven points',
-          'every observation, and the records behind them',
+          'every observation, and what sits behind each one',
           'your whole polaris history',
           'your timeline, what has held, and what moved',
         ].map((item) => (
           <li
             key={item}
-            className="relative py-1.5 pl-4 text-[12.5px] leading-snug text-ph-white/70 before:absolute before:top-[13px] before:left-0 before:h-1 before:w-1 before:rounded-full before:bg-ph-red/70"
+            className="relative py-1 pl-[22px] text-reading text-ph-white before:absolute before:top-[15px] before:left-0 before:h-1 before:w-1 before:rounded-full before:bg-ph-red"
           >
             {item}
           </li>
         ))}
       </ul>
 
-      <p className="mb-4 text-[12.5px] leading-relaxed text-ph-white/55">
+      <p className="text-body text-ph-secondary">
         all of it goes, and none of it comes back. if you want to keep any of
         it,{' '}
         <button
           type="button"
           onClick={() => openModal('data-management')}
-          className="cursor-pointer border-0 border-b border-[rgba(var(--ph-accent-rgb),0.35)] bg-transparent p-0 font-inherit text-[rgba(var(--ph-accent-rgb),0.9)]"
+          className="cursor-pointer border-0 border-b border-[rgba(var(--ph-accent-rgb),0.5)] bg-transparent p-0 font-inherit text-[var(--ph-accent)]"
         >
           export it first
         </button>
         .
       </p>
 
-      <div className="flex flex-col gap-4">
-        <ConfirmCodeField value={code} onChange={setCode} />
-        <ModalField
-          label={
-            <>
-              type <b>delete my account</b> to confirm
-            </>
-          }
-          type="text"
-          autoComplete="off"
-          spellCheck={false}
-          placeholder="delete my account"
-          value={phrase}
-          onChange={setPhrase}
-        />
-      </div>
+      <ModalField
+        label={
+          <>
+            type <b className="font-semibold text-ph-white">delete my account</b> to confirm
+          </>
+        }
+        type="text"
+        autoComplete="off"
+        spellCheck={false}
+        placeholder="delete my account"
+        value={phrase}
+        onChange={setPhrase}
+      />
 
       <ModalErr message={error} />
 
-      <button
-        type="button"
-        onClick={handleDelete}
-        disabled={saving}
-        className="mt-1.5 w-full rounded-md border border-ph-red/30 bg-transparent px-4 py-3 text-[11px] text-ph-red/80 disabled:opacity-50"
-      >
-        {saving ? 'closing…' : 'delete my account'}
-      </button>
-      <button
-        type="button"
-        onClick={closeModal}
-        className="mt-2 w-full rounded-md border border-ph-white/[0.12] bg-transparent px-4 py-3 text-[11px] text-ph-white/60"
-      >
-        keep my account
-      </button>
+      <div className="flex flex-col gap-3">
+        <DangerButton onClick={handleDelete} disabled={saving} className="w-full">
+          {saving ? 'closing…' : 'delete my account'}
+        </DangerButton>
+        <GhostButton onClick={closeModal} className="w-full border-ph-white/[0.14] text-ph-white">
+          keep my account
+        </GhostButton>
+      </div>
     </SettingsDialogContent>
   )
 }

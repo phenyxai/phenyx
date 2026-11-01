@@ -27,10 +27,10 @@ import { useTier } from "@/lib/use-tier";
 // ============================================================================
 // PolarisTab: home + conversation (PHE-73, PHE-94, PHE-123, PHE-129)
 // ----------------------------------------------------------------------------
-// HOME: "past conversations" and "usage" chips, a lit dot, "where would you
+// HOME: "my conversations" and "usage" chips, a lit dot, "where would you
 // like to begin?", the question box, and three starting points (one per mode,
 // from the person's top pillars). Picking one fills the box and its mode.
-// "Your conversations" (saved plans, then past conversations with search) and "polaris usage" (the month's points as a
+// "My conversations" (saved plans, then every conversation with search) and "polaris usage" (the month's points as a
 // ring, when they reset, bought points, and adding more) are pop-ups.
 //
 // CONVERSATION: the question as the title with its topic under it and "leave
@@ -491,7 +491,7 @@ function HomeView({
         <div className="flex items-center justify-between gap-3">
           <HeaderChip onClick={onConversations}>
             <HistoryIcon />
-            past conversations
+            my conversations
           </HeaderChip>
           <HeaderChip onClick={onUsage} aria-label="view polaris usage">
             <ClockIcon />
@@ -509,7 +509,7 @@ function HomeView({
                   "radial-gradient(circle at 50% 50%, #fffaf2 0%, var(--ph-accent) 38%, color-mix(in srgb, var(--ph-accent) 40%, transparent) 70%, transparent 100%)",
               }}
             />
-            <h1 className="text-[20px] font-normal leading-[1.35] text-ph-white/80">where would you like to begin?</h1>
+            <h1 className="text-title text-ph-white">where would you like to begin?</h1>
           </div>
 
           <div className="mt-[30px]">
@@ -529,7 +529,7 @@ function HomeView({
           <div className="mt-[30px] [@media(min-width:641px)]:min-h-[165px]">
             {starters.length > 0 && (
               <div className="float-in">
-                <p className="mb-2 text-[12.5px] font-semibold text-ph-white/84">starting points</p>
+                <p className="mb-2 text-meta font-semibold text-[var(--ph-accent)]">starting points</p>
                 <ul className="flex flex-col">
                   {starters.map((s) => (
                     <li key={s.mode}>
@@ -538,10 +538,10 @@ function HomeView({
                         onClick={() => onStarter(s)}
                         className="group flex min-h-[46px] w-full items-center gap-4 px-0.5 py-[7px] text-left"
                       >
-                        <span className="min-w-0 flex-1 text-[14.5px] font-light leading-[1.5] text-ph-white/80 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+                        <span className="min-w-0 flex-1 text-reading text-ph-secondary transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
                           {s.text}
                         </span>
-                        <span className="text-ph-white/76 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+                        <span className="text-ph-secondary transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
                           <Arrow size={14} />
                         </span>
                       </button>
@@ -600,7 +600,7 @@ function Composer({
         placeholder={placeholder}
         rows={2}
         disabled={disabled}
-        className="ph-bare-field block max-h-[200px] w-full resize-none overflow-y-auto border-0 bg-transparent p-0 text-[15px] font-light leading-6 text-ph-white/92 outline-none placeholder:text-ph-white/52"
+        className="ph-bare-field block max-h-[200px] w-full resize-none overflow-y-auto border-0 bg-transparent p-0 text-reading text-ph-white outline-none placeholder:text-ph-tertiary"
       />
       {typing && (
         <button
@@ -692,14 +692,14 @@ function ChatView({
         <header ref={headRef} className="flex items-start gap-4 pt-[3px] pb-5">
           <div className="min-w-0 flex-1">
             {title && (
-              <h2 className="text-[22px] font-medium leading-[1.38] text-ph-white/95 [text-wrap:pretty]">{title}</h2>
+              <h2 className="text-title text-ph-white [text-wrap:pretty]">{title}</h2>
             )}
-            {topic && <p className="mt-2 text-[12.5px] font-semibold text-[var(--ph-accent)]">{topic}</p>}
+            {topic && <p className="mt-2 text-meta font-semibold text-[var(--ph-accent)]">{topic}</p>}
           </div>
           <button
             type="button"
             onClick={onLeave}
-            className="h-9 shrink-0 rounded-full border border-ph-white/24 bg-ph-white/[0.024] px-[15px] text-[12px] font-medium text-ph-white/84 transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
+            className="h-10 shrink-0 rounded-full border border-ph-white/24 bg-ph-white/[0.024] px-[18px] text-body font-medium text-ph-white transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
           >
             leave chat
           </button>
@@ -723,7 +723,7 @@ function ChatView({
                   key={f}
                   type="button"
                   onClick={() => onFollowUp(f)}
-                  className="rounded-full bg-ph-white/[0.06] px-[13px] py-1.5 text-[12.5px] text-ph-white/82 transition-colors duration-200 hover:bg-[rgba(var(--ph-accent-rgb),0.14)] hover:text-ph-white"
+                  className="flex h-[34px] items-center rounded-full bg-ph-white/[0.06] px-3.5 text-body text-ph-secondary transition-colors duration-200 hover:bg-[rgba(var(--ph-accent-rgb),0.14)] hover:text-ph-white"
                 >
                   {f}
                 </button>
@@ -738,7 +738,7 @@ function ChatView({
           )}
 
           {limitReached && (
-            <p role="status" className="mt-1 text-[14px] font-light leading-[1.6] text-ph-white/70">
+            <p role="status" className="mt-1 text-body text-ph-secondary">
               you need more points to continue. your monthly points refresh {resets}, or you can{" "}
               <button type="button" onClick={onBuyPoints} className="text-[var(--ph-accent)] underline underline-offset-[3px]">
                 purchase more points
@@ -748,7 +748,7 @@ function ChatView({
           )}
 
           {error && (
-            <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13.5px] font-light text-ph-white/70">
+            <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body text-ph-secondary">
               {error}
               {onRetry && (
                 <button
@@ -783,7 +783,7 @@ function ChatView({
           type="button"
           aria-label="back to top"
           onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed right-8 bottom-[140px] z-10 flex h-[34px] w-[34px] items-center justify-center rounded-full border border-ph-white/14 bg-[var(--ph-black)] text-ph-white/70 transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] [@media(max-width:640px)]:bottom-[200px] [@media(max-width:640px)]:right-4"
+          className="fixed right-8 bottom-[140px] z-10 flex h-[34px] w-[34px] items-center justify-center rounded-full border border-ph-white/14 bg-[var(--ph-black)] text-ph-secondary transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] [@media(max-width:640px)]:bottom-[200px] [@media(max-width:640px)]:right-4"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M6 14.5l6-6 6 6" />
@@ -814,15 +814,13 @@ function MessageBubble({
   const parsed = isUser || message.isCrisis ? null : parsePlan(message.body);
   const reply = (body: string) => (
     <div
-      className={`whitespace-pre-wrap rounded-[13px] border px-3.5 py-3 text-[15.5px] font-medium leading-[1.68] ${
-        isUser
-          ? "border-ph-white/[0.08] bg-ph-white/[0.03] text-ph-white/90"
-          : "border-[rgba(var(--ph-accent-rgb),0.22)] text-[#eee9e3]"
+      className={`whitespace-pre-wrap rounded-[13px] border px-3.5 py-3 text-reading text-ph-white ${
+        isUser ? "border-ph-white/[0.08] bg-ph-white/[0.03]" : "border-[rgba(var(--ph-accent-rgb),0.22)]"
       }`}
     >
       {body}
       {message.isCrisis && message.resources && (
-        <span className="mt-2 flex flex-col gap-1 text-[13px] font-light text-ph-white/60">
+        <span className="mt-2 flex flex-col gap-1 text-body text-ph-secondary">
           <span>{message.resources.us}</span>
           <span>{message.resources.text}</span>
           <span>{message.resources.international}</span>
@@ -834,7 +832,7 @@ function MessageBubble({
   return (
     <div className={`flex max-w-[min(642px,92%)] flex-col gap-3 ${isUser ? "self-end" : "self-start"}`}>
       {opensRun && (
-        <p className="ml-0.5 flex items-center gap-2 text-[11.5px] tracking-[0.04em] text-[var(--ph-accent)]">
+        <p className="ml-0.5 flex items-center gap-2 text-meta text-[var(--ph-accent)]">
           <AccentDot className="h-[5px] w-[5px]" /> polaris
         </p>
       )}
@@ -881,22 +879,22 @@ function PlanCard({
   return (
     <div className="w-[min(634px,100%)] rounded-2xl border border-ph-white/10 bg-ph-white/[0.02] px-[22px] py-5">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[11.5px] font-medium text-[var(--ph-accent)]">your plan</span>
+        <span className="text-meta font-semibold text-[var(--ph-accent)]">your plan</span>
         <button
           type="button"
           aria-pressed={saved}
           onClick={() => onChange({ saved: !saved })}
-          className={`flex h-7 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] ${
+          className={`flex h-[34px] items-center gap-1.5 rounded-full border px-3.5 text-body font-medium transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] ${
             saved
               ? "border-[rgba(var(--ph-accent-rgb),0.5)] bg-[rgba(var(--ph-accent-rgb),0.1)] text-[var(--ph-accent)]"
-              : "border-ph-white/12 bg-ph-white/[0.02] text-ph-white/68"
+              : "border-ph-white/12 bg-ph-white/[0.02] text-ph-secondary"
           }`}
         >
           <BookmarkIcon />
           {saved ? "saved" : "save"}
         </button>
       </div>
-      <h4 className="mt-2 text-[17px] font-medium leading-[1.68] text-ph-white/95">{plan.title}</h4>
+      <h4 className="mt-2 text-item text-ph-white">{plan.title}</h4>
       <ol className="mt-1">
         {plan.steps.map((step, i) => (
           <li key={i} className="flex items-start gap-4 border-b border-ph-white/[0.06] py-3.5 last:border-b-0">
@@ -915,8 +913,8 @@ function PlanCard({
               </svg>
             </button>
             <div className="min-w-0">
-              {step.meta && <small className="block text-[11.5px] font-medium text-ph-white/50">{step.meta}</small>}
-              <p className={`text-[14.5px] font-medium leading-[1.55] ${done.has(i) ? "text-ph-white/45 line-through" : "text-ph-white/88"}`}>
+              {step.meta && <small className="block text-meta text-ph-tertiary">{step.meta}</small>}
+              <p className={`text-reading ${done.has(i) ? "text-ph-tertiary line-through" : "text-ph-white"}`}>
                 {step.text}
               </p>
             </div>
@@ -931,7 +929,7 @@ function PlanCard({
 // Pop-ups
 // ---------------------------------------------------------------------------
 
-/** "your conversations": saved plans, then past conversations with search. */
+/** "my conversations" (PHE-163): saved plans, then every conversation with search, separated by space. */
 function ConversationsPopup({
   threads,
   plans,
@@ -964,9 +962,9 @@ function ConversationsPopup({
           <button
             type="button"
             onClick={() => setPlanId(null)}
-            className="flex items-center gap-1.5 self-start text-[12.5px] text-ph-white/60 transition-colors duration-200 hover:text-[var(--ph-accent)]"
+            className="flex items-center gap-1.5 self-start text-meta text-ph-secondary transition-colors duration-200 hover:text-[var(--ph-accent)]"
           >
-            <Arrow direction="left" size={12} /> your conversations
+            <Arrow direction="left" size={12} /> my conversations
           </button>
           <PlanCard plan={open.parsed} state={open} onChange={(patch) => onPlan(open.message_id, patch)} />
           <QuietAction onClick={() => onOpenThread(open.thread_id)} className="self-start">
@@ -978,7 +976,7 @@ function ConversationsPopup({
   }
 
   return (
-    <Popup title="your conversations" onClose={onClose} className="w-[min(680px,calc(100vw-40px))]">
+    <Popup title="my conversations" onClose={onClose} className="w-[min(680px,calc(100vw-40px))]">
       <div className="flex flex-col gap-6">
         {readable.length > 0 && (
           <section>
@@ -993,13 +991,12 @@ function ConversationsPopup({
           </section>
         )}
         <section>
-          <SectionLabel>past conversations</SectionLabel>
           {threads.length === 0 ? (
-            <p className="text-[13.5px] font-light text-ph-white/55">your conversations with polaris will appear here.</p>
+            <p className="text-body text-ph-tertiary">your conversations with polaris will appear here.</p>
           ) : (
             <>
-              <label className="mb-2 flex h-[38px] items-center gap-2.5 rounded-full border border-ph-white/12 px-4 focus-within:border-[rgba(var(--ph-accent-rgb),0.5)]">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true" className="text-ph-white/50">
+              <label className="mb-3 flex h-11 items-center gap-2.5 rounded-full border border-ph-white/12 px-4 focus-within:border-[rgba(var(--ph-accent-rgb),0.5)]">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true" className="text-ph-tertiary">
                   <circle cx="11" cy="11" r="6.5" />
                   <path d="M16 16l4 4" />
                 </svg>
@@ -1009,11 +1006,11 @@ function ConversationsPopup({
                   onChange={(e) => setSearch(e.target.value)}
                   aria-label="search conversations"
                   placeholder="search conversations"
-                  className="ph-bare-field min-w-0 flex-1 border-0 bg-transparent p-0 text-[14px] text-ph-white/90 outline-none placeholder:text-ph-white/45"
+                  className="ph-bare-field min-w-0 flex-1 border-0 bg-transparent p-0 text-reading text-ph-white outline-none placeholder:text-ph-tertiary"
                 />
               </label>
               {shown.length === 0 ? (
-                <p className="py-3 text-[13px] font-light text-ph-white/45">nothing matches that yet.</p>
+                <p className="py-3 text-body text-ph-tertiary">nothing matches that yet.</p>
               ) : (
                 <ul className="flex flex-col">
                   {shown.map((t) => (
@@ -1032,7 +1029,7 @@ function ConversationsPopup({
 }
 
 function SectionLabel({ children }: { children: ReactNode }) {
-  return <p className="mb-2.5 text-[11px] font-semibold tracking-[0.08em] text-[var(--ph-accent)]">{children}</p>;
+  return <p className="mb-2.5 text-meta font-semibold text-[var(--ph-accent)]">{children}</p>;
 }
 
 function ListRow({ onClick, title, meta }: { onClick: () => void; title: string; meta: string }) {
@@ -1040,12 +1037,12 @@ function ListRow({ onClick, title, meta }: { onClick: () => void; title: string;
     <button
       type="button"
       onClick={onClick}
-      className="group flex w-full items-center gap-4 border-b border-ph-white/[0.06] py-3 text-left"
+      className="group flex w-full items-center gap-4 py-2.5 text-left"
     >
-      <span className="min-w-0 flex-1 truncate text-[14.5px] text-ph-white/88 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+      <span className="min-w-0 flex-1 truncate text-reading text-ph-white transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
         {title}
       </span>
-      <span className="max-w-[14rem] shrink-0 truncate text-[12px] text-ph-white/55">{meta}</span>
+      <span className="max-w-[14rem] shrink-0 truncate text-meta text-ph-tertiary">{meta}</span>
     </button>
   );
 }
@@ -1095,7 +1092,7 @@ function UsagePopup({
   return (
     <Popup title="polaris usage" onClose={onClose}>
       <div className="flex flex-col gap-5">
-        <p className="text-[14px] font-light leading-[1.6] text-ph-white/75">polaris runs on points. buy more to keep chatting.</p>
+        <p className="text-body text-ph-secondary">polaris runs on points. buy more to keep chatting.</p>
         <div className="flex items-center gap-6">
           <div className="relative h-24 w-24 shrink-0">
             <svg viewBox="0 0 96 96" className="h-full w-full -rotate-90" aria-hidden="true">
@@ -1112,17 +1109,17 @@ function UsagePopup({
                 strokeDashoffset={limit > 0 ? circumference * (1 - used / limit) : circumference}
               />
             </svg>
-            <span className="absolute inset-0 flex flex-col items-center justify-center text-[20px] leading-none text-ph-white/92">
+            <span className="absolute inset-0 flex flex-col items-center justify-center text-title leading-none text-ph-white">
               {left}
-              <small className="mt-1 text-[11px] text-ph-white/60">left</small>
+              <small className="mt-1 text-meta text-ph-tertiary">left</small>
             </span>
           </div>
           <div>
-            <p className="text-[15.5px] text-ph-white/90">
+            <p className="text-reading text-ph-white">
               {used} of {limit} points used this month
             </p>
-            <p className="mt-1 text-[13px] text-ph-white/52">resets {resetLabel(allowance?.resets)}</p>
-            {purchased > 0 && <p className="mt-1 text-[13px] text-ph-white/52">plus {purchased} purchased points</p>}
+            <p className="mt-1 text-body text-ph-tertiary">resets {resetLabel(allowance?.resets)}</p>
+            {purchased > 0 && <p className="mt-1 text-body text-ph-tertiary">plus {purchased} purchased points</p>}
           </div>
         </div>
         {adding ? (
@@ -1132,7 +1129,7 @@ function UsagePopup({
                 value={points}
                 onChange={(e) => setPoints(Number(e.target.value))}
                 aria-label="how many points"
-                className="ph-bare-field min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent p-0 text-[14px] text-ph-white/90 outline-none"
+                className="ph-bare-field min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent p-0 text-reading text-ph-white outline-none"
               >
                 {POINT_STEPS.map((n) => (
                   <option key={n} value={n} className="bg-[var(--ph-black)]">
@@ -1140,13 +1137,13 @@ function UsagePopup({
                   </option>
                 ))}
               </select>
-              <span className="shrink-0 text-[13px] text-ph-white/62">{pointsPrice(points)}</span>
+              <span className="shrink-0 text-body text-ph-secondary">{pointsPrice(points)}</span>
             </label>
             <PrimaryButton onClick={buy} disabled={checkout === "loading"}>
               continue to checkout
             </PrimaryButton>
             {checkout === "failed" && (
-              <p className="text-[13px] font-light text-ph-white/62">checkout could not be started. please try again.</p>
+              <p className="text-body text-ph-secondary">checkout could not be started. please try again.</p>
             )}
           </div>
         ) : (

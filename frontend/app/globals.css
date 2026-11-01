@@ -181,6 +181,17 @@
   }
 }
 
+/* PHE-163: one button shape, 44px tall with its label centered in the box
+   (pills are 40px and filter chips 34px, set where they're drawn). */
+@layer components {
+  .ph-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+  }
+}
+
 /* PHE-98: one hover rule (doc 7). Anything clickable shifts its text and border
    to the accent over about 0.2s; components don't define their own hover
    color. The base-layer transition yields to a component's own transition
