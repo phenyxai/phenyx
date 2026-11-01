@@ -8,8 +8,8 @@
 // backing-store scaling, and pixel hit-testing that the static SVG map does not.
 //
 // - PHE-100: the seven points are joined by the seven lines in
-//   `constellation-shape`: the Big Dipper, from real star positions, scaled
-//   uniformly (never stretched). A thin point (no synthesis and no
+//   `constellation-shape`: the Big Dipper as drawn in the Oct 31 reference,
+//   scaled uniformly (never stretched). A thin point (no synthesis and no
 //   observations yet) is drawn quietly, never dropped. A point carrying a new
 //   observation pulses.
 // - Oct 21 demo glow: every point is a small cream core inside an accent halo

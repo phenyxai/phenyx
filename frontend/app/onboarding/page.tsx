@@ -754,7 +754,7 @@ export default function OnboardingPage() {
 //
 // Pillar model (PHE-100, spec doc 2): all seven nodes glow in the accent,
 // intensity ∝ synthesis score. Node POSITIONS, sizes and the seven lines come
-// from `lib/constellation-shape` (the Big Dipper, from real star positions),
+// from `lib/constellation-shape` (the Big Dipper, drawn by hand),
 // shared with the constellation tab, so the shape that forms here is the shape
 // the person lands on. Positions never depend on score; only glow intensity
 // does.
