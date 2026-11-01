@@ -3,10 +3,11 @@
 // The seven points and seven lines in spec doc 2 are exactly the Dipper's
 // stick figure: a four-star bowl (origin, emergence, convergence,
 // self-creation) and a three-star handle (becoming, recognition,
-// transcendence) hanging off convergence. Positions come from the real stars,
-// turned 160° so the story climbs from origin at the left to transcendence at
-// the top right, so the shape is the one people can find in the sky. It never depends on
-// what generation returns: a point with no data is drawn thin, never dropped.
+// transcendence) hanging off convergence. The figure is drawn by hand (Oct 31
+// reference): a squared bowl at the left, the handle running out level and
+// lifting at its tip, so the story climbs from origin at the bottom left to
+// transcendence at the top right. It never depends on what generation
+// returns: a point with no data is drawn thin, never dropped.
 //
 // One source for the onboarding formation and the constellation tab. Kept free
 // of imports so it loads under plain `node --test`;
@@ -30,18 +31,15 @@ export interface Vec3 {
   z: number;
 }
 
-/**
- * The star each pillar sits on: ICRS J2000 position in degrees and V
- * magnitude, from SIMBAD (checked 2026-10-05; Mizar is Mizar A).
- */
-export const STARS: Record<Pillar, { star: string; ra: number; dec: number; mag: number }> = {
-  origin: { star: "merak", ra: 165.4603, dec: 56.3824, mag: 2.37 },
-  emergence: { star: "phecda", ra: 178.4577, dec: 53.6948, mag: 2.44 },
-  self_creation: { star: "dubhe", ra: 165.932, dec: 61.751, mag: 1.79 },
-  convergence: { star: "megrez", ra: 183.8565, dec: 57.0326, mag: 3.32 },
-  becoming: { star: "alioth", ra: 193.5073, dec: 55.9598, mag: 1.77 },
-  recognition: { star: "mizar", ra: 200.9814, dec: 54.9254, mag: 2.22 },
-  transcendence: { star: "alkaid", ra: 206.8852, dec: 49.3133, mag: 1.86 },
+/** The star each pillar sits on and its V magnitude (SIMBAD, 2026-10-05). */
+export const STARS: Record<Pillar, { star: string; mag: number }> = {
+  origin: { star: "merak", mag: 2.37 },
+  emergence: { star: "phecda", mag: 2.44 },
+  self_creation: { star: "dubhe", mag: 1.79 },
+  convergence: { star: "megrez", mag: 3.32 },
+  becoming: { star: "alioth", mag: 1.77 },
+  recognition: { star: "mizar", mag: 2.22 },
+  transcendence: { star: "alkaid", mag: 1.86 },
 };
 
 /** The seven lines, in formation draw order (spec doc 2). */
@@ -55,64 +53,32 @@ export const EDGES: readonly [Pillar, Pillar][] = [
   ["recognition", "transcendence"],
 ];
 
-/**
- * Clockwise turn, in degrees, from the north-up sky view (east to the left).
- * 90 stands the handle upright; 160 (picked from the rotation preview,
- * 2026-10-05) lays the figure on a rising diagonal: origin at the left,
- * climbing to transcendence at the top right. A turn is how the real sky moves
- * through a night; the figure is never mirrored.
- */
-export const ROTATION_DEG = 160;
+/** Each point's center in the Oct 31 reference drawing, in its pixels (y down). */
+export const FIGURE: Record<Pillar, [number, number]> = {
+  origin: [97, 370],
+  emergence: [143, 203],
+  self_creation: [289, 366],
+  convergence: [296, 223],
+  becoming: [473, 207],
+  recognition: [619, 171],
+  transcendence: [680, 61],
+};
 
-/**
- * Gnomonic projection about the figure's centre as seen from Earth, turned by
- * ROTATION_DEG. Each axis is normalized to [0,1]; SHAPE_ASPECT keeps the true
- * width/height so drawing never stretches it.
- */
-function project(): { layout: Record<Pillar, Vec3>; aspect: number } {
-  const rad = Math.PI / 180;
-  const unit = (p: Pillar) => {
-    const a = STARS[p].ra * rad;
-    const d = STARS[p].dec * rad;
-    return [Math.cos(d) * Math.cos(a), Math.cos(d) * Math.sin(a), Math.sin(d)];
-  };
-  const sum = ALL_PILLARS.map(unit).reduce((s, v) => s.map((c, i) => c + v[i]));
-  const a0 = Math.atan2(sum[1], sum[0]);
-  const d0 = Math.atan2(sum[2], Math.hypot(sum[0], sum[1]));
-  const cos = Math.cos(ROTATION_DEG * rad);
-  const sin = Math.sin(ROTATION_DEG * rad);
-
-  const raw = ALL_PILLARS.map((p) => {
-    const a = STARS[p].ra * rad;
-    const d = STARS[p].dec * rad;
-    const cosc = Math.sin(d0) * Math.sin(d) + Math.cos(d0) * Math.cos(d) * Math.cos(a - a0);
-    const east = (Math.cos(d) * Math.sin(a - a0)) / cosc;
-    const north =
-      (Math.cos(d0) * Math.sin(d) - Math.sin(d0) * Math.cos(d) * Math.cos(a - a0)) / cosc;
-    // Sky view on screen (y down) is (x, y) = (-east, -north); turn it
-    // clockwise by ROTATION_DEG.
-    const [x, y] = [-east, -north];
-    return { x: x * cos - y * sin, y: x * sin + y * cos };
-  });
-  const xs = raw.map((r) => r.x);
-  const ys = raw.map((r) => r.y);
-  const [minX, spanX] = [Math.min(...xs), Math.max(...xs) - Math.min(...xs)];
-  const [minY, spanY] = [Math.min(...ys), Math.max(...ys) - Math.min(...ys)];
-
-  const layout = {} as Record<Pillar, Vec3>;
-  ALL_PILLARS.forEach((p, i) => {
-    layout[p] = { x: (raw[i].x - minX) / spanX, y: (raw[i].y - minY) / spanY, z: i / 10 };
-  });
-  return { layout, aspect: spanX / spanY };
-}
-
-const projected = project();
+const xs = ALL_PILLARS.map((p) => FIGURE[p][0]);
+const ys = ALL_PILLARS.map((p) => FIGURE[p][1]);
+const [minX, spanX] = [Math.min(...xs), Math.max(...xs) - Math.min(...xs)];
+const [minY, spanY] = [Math.min(...ys), Math.max(...ys) - Math.min(...ys)];
 
 /** Normalized [0,1] centers per axis. `z` is reserved for a future 3D layer. */
-export const NODE_LAYOUT: Record<Pillar, Vec3> = projected.layout;
+export const NODE_LAYOUT = Object.fromEntries(
+  ALL_PILLARS.map((p, i) => [
+    p,
+    { x: (FIGURE[p][0] - minX) / spanX, y: (FIGURE[p][1] - minY) / spanY, z: i / 10 },
+  ])
+) as Record<Pillar, Vec3>;
 
-/** True width / height of the figure at ROTATION_DEG (about 1.1 at 160°). */
-export const SHAPE_ASPECT = projected.aspect;
+/** True width / height of the figure (about 1.9). */
+export const SHAPE_ASPECT = spanX / spanY;
 
 /** Core radius in px from real brightness: brighter stars draw larger. */
 export const STAR_RADIUS: Record<Pillar, number> = Object.fromEntries(

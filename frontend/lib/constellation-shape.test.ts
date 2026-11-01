@@ -3,8 +3,8 @@ import { test } from "node:test";
 import {
   ALL_PILLARS,
   EDGES,
+  FIGURE,
   NODE_LAYOUT,
-  ROTATION_DEG,
   SHAPE_ASPECT,
   STARS,
   fitShape,
@@ -33,38 +33,31 @@ test("the constellation is always seven points and the seven spec lines", () => 
   }
 });
 
-test("the shape is the real Big Dipper, turned 160° and undistorted", () => {
+test("the shape is the reference Big Dipper, undistorted", () => {
   assert.deepEqual(
     ALL_PILLARS.map((p) => STARS[p].star),
     ["merak", "phecda", "dubhe", "megrez", "alioth", "mizar", "alkaid"]
   );
-  // Rising diagonal: origin at the left edge, transcendence at the top right.
-  assert.equal(ROTATION_DEG, 160);
+  // Rising diagonal: origin at the bottom left, transcendence at the top right.
   assert.equal(NODE_LAYOUT.origin.x, 0);
+  assert.equal(NODE_LAYOUT.origin.y, 1);
   assert.equal(NODE_LAYOUT.transcendence.x, 1);
   assert.equal(NODE_LAYOUT.transcendence.y, 0);
-  assert.ok(NODE_LAYOUT.origin.y > NODE_LAYOUT.transcendence.y, "the story climbs");
 
-  // Fitted into any box, on-screen distances keep the real angular ratios
-  // (within the projection's ~3% off-centre error), so the figure is never
-  // stretched. Compare the pointer pair with each handle segment.
-  const rad = Math.PI / 180;
-  const angle = (a: (typeof ALL_PILLARS)[number], b: (typeof ALL_PILLARS)[number]) => {
-    const [p, q] = [STARS[a], STARS[b]];
-    return Math.acos(
-      Math.sin(p.dec * rad) * Math.sin(q.dec * rad) +
-        Math.cos(p.dec * rad) * Math.cos(q.dec * rad) * Math.cos((p.ra - q.ra) * rad)
-    );
-  };
+  // Fitted into any box, on-screen distances keep the drawing's ratios, so
+  // the figure is never stretched. Compare the left side of the bowl with
+  // every line.
+  const ref = (a: (typeof ALL_PILLARS)[number], b: (typeof ALL_PILLARS)[number]) =>
+    Math.hypot(FIGURE[a][0] - FIGURE[b][0], FIGURE[a][1] - FIGURE[b][1]);
   for (const [w, h] of [[327, 527], [1200, 520], [300, 300]]) {
     const px = Object.fromEntries(fitShape(0, 0, w, h).map((n) => [n.pillar, n]));
     const dist = (a: (typeof ALL_PILLARS)[number], b: (typeof ALL_PILLARS)[number]) =>
       Math.hypot(px[a].x - px[b].x, px[a].y - px[b].y);
-    for (const [a, b] of EDGES.slice(4)) {
-      const onScreen = dist("origin", "self_creation") / dist(a, b);
-      const inSky = angle("origin", "self_creation") / angle(a, b);
-      assert.ok(Math.abs(onScreen / inSky - 1) < 0.03, `${a}>${b} distorted in ${w}x${h}`);
+    for (const [a, b] of EDGES) {
+      const onScreen = dist("origin", "emergence") / dist(a, b);
+      const inDrawing = ref("origin", "emergence") / ref(a, b);
+      assert.ok(Math.abs(onScreen / inDrawing - 1) < 1e-9, `${a}>${b} distorted in ${w}x${h}`);
     }
   }
-  assert.ok(SHAPE_ASPECT > 1 && SHAPE_ASPECT < 1.2);
+  assert.ok(SHAPE_ASPECT > 1.8 && SHAPE_ASPECT < 2);
 });

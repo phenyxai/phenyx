@@ -500,7 +500,7 @@ function HomeView({
 }) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto [@media(max-width:640px)]:px-6 [@media(max-width:640px)]:pt-8 [@media(max-width:640px)]:pb-10 [@media(min-width:641px)]:pb-16">
-      {/* From 641px the question and its starting points sit in the middle of the screen, under the chips. */}
+      {/* From 641px the question and its starting points sit just above the middle of the screen, under the chips. */}
       <div className="mx-auto flex min-h-full w-full max-w-[780px] flex-col">
         <div className="flex items-center justify-between gap-3">
           <HeaderChip onClick={onConversations} className="text-ph-white/62">
@@ -513,7 +513,7 @@ function HomeView({
           </HeaderChip>
         </div>
 
-        <div className="pt-9 [@media(min-width:641px)]:my-auto">
+        <div className="pt-9 [@media(min-width:641px)]:my-auto [@media(min-width:641px)]:pb-24">
           <div className="flex flex-col items-center gap-5 text-center">
             <span
               aria-hidden="true"
@@ -997,10 +997,10 @@ function ConversationsPopup({
         {returns === null ? (
           <section>
             <SectionLabel>questions to return to</SectionLabel>
-            <p className="text-[13.5px] font-light text-ph-white/62">return to unfinished questions with full</p>
-            <QuietAction onClick={onUpgrade} className="mt-2">
-              upgrade plan
-            </QuietAction>
+            <div className="flex flex-wrap gap-2">
+              <HeaderChip onClick={onUpgrade}>return to unfinished questions with full</HeaderChip>
+              <HeaderChip onClick={onUpgrade}>upgrade plan</HeaderChip>
+            </div>
           </section>
         ) : (
           returns.length > 0 && (

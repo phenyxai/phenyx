@@ -1732,7 +1732,8 @@ nav li > [aria-current="page"] {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 440px;
     align-items: start;
-    gap: 40px;
+    /* Room between the sky and the reading, narrower at 1024px so the sky keeps its width. */
+    gap: clamp(40px, 5.5vw, 80px);
   }
   .constellation-split > .constellation-sky {
     position: sticky;
@@ -1776,6 +1777,10 @@ nav li > [aria-current="page"] {
   justify-content: center;
   overflow: hidden;
   touch-action: pan-y;
+  /* The neighbours fade out toward the stage's edges instead of being cut off
+     there. The fade stays inside the gutters, so the main card never dims. */
+  --discover-fade: max(0px, calc((100% - 430px) / 4));
+  mask-image: linear-gradient(to right, transparent, #000 var(--discover-fade), #000 calc(100% - var(--discover-fade)), transparent);
 }
 .discover-card {
   grid-area: 1 / 1;
