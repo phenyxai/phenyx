@@ -158,7 +158,7 @@ export default function AdminPage() {
             <h1 className="text-xl font-semibold uppercase tracking-wider mb-2">
               PHENYX ADMIN
             </h1>
-            <p className="text-sm lowercase" style={{ color: "rgba(255,253,253,0.6)" }}>
+            <p className="text-sm lowercase" style={{ color: "rgba(242,242,243,0.6)" }}>
               {filteredEntries.length} members waiting
             </p>
           </div>
@@ -198,13 +198,13 @@ export default function AdminPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-ph-white/20">
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>#</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>name</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>email</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>role</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>platforms</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>why</th>
-                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>date</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(242,242,243,0.5)" }}>#</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(242,242,243,0.5)" }}>name</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(242,242,243,0.5)" }}>email</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(242,242,243,0.5)" }}>role</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(242,242,243,0.5)" }}>platforms</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(242,242,243,0.5)" }}>why</th>
+                  <th className="py-3 px-2 text-xs font-normal lowercase" style={{ color: "rgba(242,242,243,0.5)" }}>date</th>
                 </tr>
               </thead>
               <tbody>
@@ -213,20 +213,20 @@ export default function AdminPage() {
                     key={entry.id} 
                     className="border-b border-ph-white/10 hover:bg-ph-white/5 transition-colors"
                   >
-                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(255,253,253,0.5)" }}>{index + 1}</td>
+                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(242,242,243,0.5)" }}>{index + 1}</td>
                     <td className="py-3 px-2 text-sm">{entry.name}</td>
-                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(255,253,253,0.8)" }}>{entry.email}</td>
-                    <td className="py-3 px-2 text-sm lowercase" style={{ color: "rgba(255,253,253,0.6)" }}>{entry.role || "-"}</td>
-                    <td className="py-3 px-2 text-sm lowercase" style={{ color: "rgba(255,253,253,0.6)" }}>{formatPlatforms(entry.platforms)}</td>
-                    <td className="py-3 px-2 text-sm lowercase max-w-xs truncate" style={{ color: "rgba(255,253,253,0.6)" }}>{entry.why || "-"}</td>
-                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(255,253,253,0.5)" }}>{formatDate(entry.created_at)}</td>
+                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(242,242,243,0.8)" }}>{entry.email}</td>
+                    <td className="py-3 px-2 text-sm lowercase" style={{ color: "rgba(242,242,243,0.6)" }}>{entry.role || "-"}</td>
+                    <td className="py-3 px-2 text-sm lowercase" style={{ color: "rgba(242,242,243,0.6)" }}>{formatPlatforms(entry.platforms)}</td>
+                    <td className="py-3 px-2 text-sm lowercase max-w-xs truncate" style={{ color: "rgba(242,242,243,0.6)" }}>{entry.why || "-"}</td>
+                    <td className="py-3 px-2 text-sm" style={{ color: "rgba(242,242,243,0.5)" }}>{formatDate(entry.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             
             {filteredEntries.length === 0 && (
-              <p className="text-center py-8 lowercase" style={{ color: "rgba(255,253,253,0.5)" }}>
+              <p className="text-center py-8 lowercase" style={{ color: "rgba(242,242,243,0.5)" }}>
                 {searchQuery ? "no results found" : "no entries yet"}
               </p>
             )}

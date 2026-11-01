@@ -139,8 +139,8 @@ export function ConstellationSlide({ active, ready, onHold }: SlideExampleProps)
         <defs>
           <radialGradient id="landing-star-bloom">
             <stop offset="0" stopColor="#cfe0ff" stopOpacity="0.55" />
-            <stop offset="0.35" stopColor="#b9d5ff" stopOpacity="0.2" />
-            <stop offset="1" stopColor="#b9d5ff" stopOpacity="0" />
+            <stop offset="0.35" stopColor="#B4CCF4" stopOpacity="0.2" />
+            <stop offset="1" stopColor="#B4CCF4" stopOpacity="0" />
           </radialGradient>
         </defs>
         <g className="landing-vnext__stage-lines">

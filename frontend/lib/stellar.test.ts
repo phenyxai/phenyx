@@ -8,7 +8,7 @@ const css = readFileSync(join(import.meta.dirname, "..", "app", "globals.css"), 
 const token = (name: string) => new RegExp(`^\\s*${name}:\\s*([^;]+);`, "m").exec(css)?.[1].trim();
 
 test("ACCENT is brand blue, the same hex as --ph-brand", () => {
-  assert.equal(ACCENT, "#B9D5FF");
+  assert.equal(ACCENT, "#B4CCF4");
   assert.equal(token("--ph-brand"), ACCENT);
   assert.equal(token("--ph-brand-rgb"), hexToRgb(ACCENT));
 });
@@ -22,5 +22,5 @@ test("hexToRgb splits channels and falls back to the accent", () => {
   assert.equal(hexToRgb("#E9A65B"), "233, 166, 91");
   assert.equal(hexToRgb("e9a65b"), "233, 166, 91");
   assert.equal(hexToRgb(" #DE9AAE "), "222, 154, 174");
-  assert.equal(hexToRgb("not a color"), "185, 213, 255");
+  assert.equal(hexToRgb("not a color"), "180, 204, 244");
 });

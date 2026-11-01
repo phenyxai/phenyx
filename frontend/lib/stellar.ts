@@ -5,7 +5,7 @@
 // never reads or shows it. CSS takes the accent from --ph-accent (globals.css,
 // an alias of --ph-brand); canvas code that needs a real hex uses ACCENT.
 // lib/stellar.test.ts fails if the two drift apart.
-export const ACCENT = "#B9D5FF";
+export const ACCENT = "#B4CCF4";
 
 /**
  * "#RRGGBB" → "r, g, b" for use in rgba() glows.

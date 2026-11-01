@@ -61,7 +61,7 @@ export function ConfirmCodeField({
         value={value}
         onChange={(next) => onChange(next.replace(/\D/g, '').slice(0, 6))}
       />
-      <p aria-live="polite" className="text-[11.5px] leading-normal text-[#FFFDFD]/50">
+      <p aria-live="polite" className="text-[11.5px] leading-normal text-[#F2F2F3]/50">
         {sends > 0 ? (
           canResend ? (
             <>

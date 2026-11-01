@@ -90,7 +90,7 @@ export function OnairosButtonWrapper({
 
   if (!initialized) {
     return (
-      <div style={{ color: "rgba(255, 253, 253, 0.4)", fontSize: "12px", padding: "12px" }}>
+      <div style={{ color: "rgba(242, 242, 243, 0.4)", fontSize: "12px", padding: "12px" }}>
         initializing onairos...
       </div>
     );

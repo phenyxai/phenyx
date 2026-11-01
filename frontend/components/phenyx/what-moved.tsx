@@ -53,7 +53,7 @@ export function WhatMoved({
               <div key={`${entry.when}-${i}`} className="flex gap-3">
                 <div
                   className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{ background: i === 0 ? "var(--ph-accent)" : "rgba(255,253,253,.25)" }}
+                  style={{ background: i === 0 ? "var(--ph-accent)" : "rgba(242,242,243,.25)" }}
                 />
                 <div>
                   <p className="text-[12px] lowercase text-ph-white/40">{entry.when}</p>

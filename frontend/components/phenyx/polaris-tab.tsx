@@ -1099,7 +1099,7 @@ function UsagePopup({
         <div className="flex items-center gap-6">
           <div className="relative h-24 w-24 shrink-0">
             <svg viewBox="0 0 96 96" className="h-full w-full -rotate-90" aria-hidden="true">
-              <circle cx="48" cy="48" r="42" fill="none" stroke="rgba(255,253,253,0.08)" strokeWidth="6" />
+              <circle cx="48" cy="48" r="42" fill="none" stroke="rgba(242,242,243,0.08)" strokeWidth="6" />
               <circle
                 cx="48"
                 cy="48"

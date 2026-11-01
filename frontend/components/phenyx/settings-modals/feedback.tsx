@@ -65,7 +65,7 @@ export function FeedbackModal() {
             aria-label={`${star} ${star === 1 ? 'star' : 'stars'}`}
             onClick={() => setRating(star)}
             className="text-2xl leading-none transition-colors"
-            style={{ color: star <= rating ? 'var(--ph-accent)' : 'rgba(255,253,253,0.2)' }}
+            style={{ color: star <= rating ? 'var(--ph-accent)' : 'rgba(242,242,243,0.2)' }}
           >
             {star <= rating ? '★' : '☆'}
           </button>

@@ -590,7 +590,7 @@ export default function OnboardingPage() {
                   ...fadeDelay(FORK_DELAYS[4]),
                   background: "none",
                   border: "none",
-                  color: "rgba(255,253,253,0.33)",
+                  color: "rgba(242,242,243,0.33)",
                   fontSize: "12px",
                   cursor: "pointer",
                   fontFamily: "inherit",
@@ -914,7 +914,7 @@ function RevealScreen({
       ctx.arc(x, y, baseR, 0, Math.PI * 2);
       ctx.fill();
       // Bright center dot.
-      ctx.fillStyle = `rgba(255,253,253,${Math.min(1, 0.5 + a * 0.5)})`;
+      ctx.fillStyle = `rgba(242,242,243,${Math.min(1, 0.5 + a * 0.5)})`;
       ctx.beginPath();
       ctx.arc(x, y, baseR * 0.42, 0, Math.PI * 2);
       ctx.fill();
@@ -1144,7 +1144,7 @@ function RevealScreen({
           fontSize: "13px",
           fontWeight: 300,
           letterSpacing: "0.04em",
-          color: "rgba(255,253,253,0.58)",
+          color: "rgba(242,242,243,0.58)",
           opacity: loadFade || !loadVisible ? 0 : 1,
           transition: `opacity ${loadFade ? LOAD_FADE_MS : LABEL_FADE_MS}ms ease`,
         }}
@@ -1266,7 +1266,7 @@ function ConnectScreen({
           style={{
             background: "none",
             border: "none",
-            color: "rgba(255,253,253,0.33)",
+            color: "rgba(242,242,243,0.33)",
             fontSize: "12px",
             cursor: "pointer",
             fontFamily: "inherit",
@@ -1527,16 +1527,16 @@ function WalkthroughScreen({
                   marginRight: "auto",
                   padding: "20px 22px",
                   textAlign: "left",
-                  border: "0.5px solid rgba(255,253,253,0.12)",
+                  border: "0.5px solid rgba(242,242,243,0.12)",
                   borderRadius: "12px",
-                  background: "rgba(255,253,253,0.02)",
+                  background: "rgba(242,242,243,0.02)",
                 }}
               >
                 <p
                   style={{
                     fontSize: "14px",
                     fontWeight: 400,
-                    color: "rgba(255,253,253,0.8)",
+                    color: "rgba(242,242,243,0.8)",
                     lineHeight: 1.5,
                     marginBottom: "10px",
                   }}
@@ -1547,7 +1547,7 @@ function WalkthroughScreen({
                   style={{
                     fontSize: "14px",
                     fontWeight: 300,
-                    color: "rgba(255,253,253,0.53)",
+                    color: "rgba(242,242,243,0.53)",
                     lineHeight: 1.6,
                     marginBottom: "10px",
                   }}
@@ -1568,7 +1568,7 @@ function WalkthroughScreen({
                 {block.acts && (
                   <p
                     aria-hidden="true"
-                    style={{ fontSize: "12px", color: "rgba(255,253,253,0.6)", margin: "12px 0 0" }}
+                    style={{ fontSize: "12px", color: "rgba(242,242,243,0.6)", margin: "12px 0 0" }}
                   >
                     {block.acts.join(" · ")}
                   </p>
@@ -1626,7 +1626,7 @@ function WalkthroughScreen({
                     pointerEvents: shown ? "all" : "none",
                     background: "none",
                     border: "none",
-                    color: "rgba(255,253,253,0.33)",
+                    color: "rgba(242,242,243,0.33)",
                     fontSize: "12px",
                     cursor: shown ? "pointer" : "default",
                     fontFamily: "inherit",

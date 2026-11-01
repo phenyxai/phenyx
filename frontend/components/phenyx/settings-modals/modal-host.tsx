@@ -133,7 +133,7 @@ const contentBaseClassName = cn(
 const MODAL_SURFACE_STYLE: React.CSSProperties = {
   background: 'var(--ph-black)',
   borderColor: 'rgba(var(--ph-accent-rgb),0.20)',
-  boxShadow: '0 0 0 1px rgba(255,253,253,0.03), 0 30px 80px -20px rgba(0,0,0,0.75)',
+  boxShadow: '0 0 0 1px rgba(242,242,243,0.03), 0 30px 80px -20px rgba(0,0,0,0.75)',
   color: 'var(--ph-white)',
 }
 
@@ -193,7 +193,7 @@ export function ModalHeading({
         {title}
       </DialogTitle>
       {subtitle && (
-        <DialogDescription className="text-xs leading-relaxed text-[rgba(255,253,253,0.70)]">
+        <DialogDescription className="text-xs leading-relaxed text-[rgba(242,242,243,0.70)]">
           {subtitle}
         </DialogDescription>
       )}
