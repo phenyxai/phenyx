@@ -12,17 +12,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from '@/components/ui/alert-dialog'
 
 import { NotificationsModal } from './notifications'
 import { ConnectionsModal } from './connections'
@@ -30,8 +19,6 @@ import { DataManagementModal } from './data-management'
 import { CloseAccountModal } from './close-account'
 import { EditProfileModal } from './edit-profile'
 import { FeedbackModal } from './feedback'
-import { UpgradeModal } from './upgrade'
-import { SubscriptionModal } from './subscription'
 
 // ---------------------------------------------------------------------------
 // Settings & Account modal host (PHE-32; chrome restyled for v244 in PHE-95).
@@ -40,7 +27,7 @@ import { SubscriptionModal } from './subscription'
 // Radix Dialog gives us the focus trap, `esc` / overlay-click close, and focus
 // return to the trigger for free. Consumers wrap their tree in
 // `SettingsModalsProvider` and call `useSettingsModals().openModal(id)` from any
-// settings row, GET IN TOUCH action, or upgrade CTA.
+// settings row or GET IN TOUCH action.
 // ---------------------------------------------------------------------------
 
 export type SettingsModalId =
@@ -50,8 +37,6 @@ export type SettingsModalId =
   | 'close-account'
   | 'edit-profile'
   | 'feedback'
-  | 'upgrade'
-  | 'subscription'
 
 interface SettingsModalsContextValue {
   /** The currently open modal id, or null when nothing is open. */
@@ -99,8 +84,6 @@ export function SettingsModalsProvider({
         {openId === 'close-account' && <CloseAccountModal />}
         {openId === 'edit-profile' && <EditProfileModal />}
         {openId === 'feedback' && <FeedbackModal />}
-        {openId === 'upgrade' && <UpgradeModal />}
-        {openId === 'subscription' && <SubscriptionModal />}
       </Dialog>
     </SettingsModalsContext.Provider>
   )
@@ -139,7 +122,7 @@ const contentBaseClassName = cn(
 const MODAL_SURFACE_STYLE: React.CSSProperties = {
   background: 'var(--ph-black)',
   borderColor: 'rgba(var(--ph-accent-rgb),0.20)',
-  boxShadow: '0 0 0 1px rgba(255,253,253,0.03), 0 30px 80px -20px rgba(0,0,0,0.75)',
+  boxShadow: '0 0 0 1px rgba(242,242,243,0.03), 0 30px 80px -20px rgba(0,0,0,0.75)',
   color: 'var(--ph-white)',
 }
 
@@ -171,7 +154,7 @@ export function SettingsDialogContent({
             keyboard focus now shows as the accent instead. */}
         <DialogPrimitive.Close
           aria-label="close"
-          className="absolute top-4 right-4 border-0 bg-transparent p-0 text-ph-white/55 opacity-80 shadow-none outline-none hover:opacity-100 focus-visible:text-[var(--ph-accent)] focus-visible:opacity-100 [&_svg]:size-4"
+          className="absolute top-4 right-4 border-0 bg-transparent p-0 text-ph-secondary opacity-80 shadow-none outline-none hover:opacity-100 focus-visible:text-[var(--ph-accent)] focus-visible:opacity-100 [&_svg]:size-4"
         >
           <XIcon />
           <span className="sr-only">close</span>
@@ -181,10 +164,7 @@ export function SettingsDialogContent({
   )
 }
 
-/**
- * Title + optional verbatim subtitle for a modal header. Every pop-up title
- * opens with a small lit dot in the accent (PHE-129), the demo's one mark.
- */
+/** Title + optional verbatim subtitle for a modal header (PHE-163: no dot beside the title). */
 export function ModalHeading({
   title,
   subtitle,
@@ -194,12 +174,9 @@ export function ModalHeading({
 }) {
   return (
     <div className="flex flex-col gap-2 pr-6">
-      <DialogTitle className="flex items-center gap-2.5 text-[18px] leading-tight font-normal lowercase text-ph-white">
-        <AccentDot />
-        {title}
-      </DialogTitle>
+      <DialogTitle className="text-title lowercase text-ph-white">{title}</DialogTitle>
       {subtitle && (
-        <DialogDescription className="text-xs leading-relaxed text-[rgba(255,253,253,0.70)]">
+        <DialogDescription className="text-body text-ph-secondary">
           {subtitle}
         </DialogDescription>
       )}
@@ -207,7 +184,7 @@ export function ModalHeading({
   )
 }
 
-/** The small glowing accent dot that marks pop-up titles and thinking states. */
+/** The small glowing accent dot that marks polaris's thinking states. */
 export function AccentDot({ className }: { className?: string }) {
   return (
     <span
@@ -256,7 +233,7 @@ export function QuietAction({
     <button
       type="button"
       className={cn(
-        '-mt-1 self-center text-[13px] text-ph-white/60 transition-colors duration-200 hover:text-[var(--ph-accent)]',
+        '-mt-1 self-center text-body text-ph-secondary transition-colors duration-200 hover:text-[var(--ph-accent)]',
         className,
       )}
       {...props}
@@ -273,7 +250,7 @@ export function GhostButton({
     <button
       type="button"
       className={cn(
-        'rounded-lg border border-[var(--stellar)] px-6 py-2.5 text-xs text-[var(--stellar)] hover:bg-[rgba(var(--stellar-rgb),0.08)] disabled:cursor-not-allowed disabled:opacity-50',
+        'ph-button rounded-lg border border-[var(--stellar)] px-6 text-body font-medium text-[var(--stellar)] hover:bg-[rgba(var(--stellar-rgb),0.08)] disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -282,8 +259,8 @@ export function GhostButton({
 }
 
 /**
- * The primary call to action (e.g. upgrade). PHE-129: framed, never filled,
- * spanning the content width, in the accent; the hover adds a faint fill.
+ * The primary call to action. PHE-129: framed, never filled, spanning the
+ * content width, in the accent; the hover adds a faint fill.
  */
 export function PrimaryButton({
   className,
@@ -293,7 +270,7 @@ export function PrimaryButton({
     <button
       type="button"
       className={cn(
-        'h-[46px] w-full rounded-full border border-[rgba(var(--stellar-rgb),0.5)] bg-transparent px-6 text-[14px] text-[var(--stellar)] transition-colors duration-200 hover:bg-[rgba(var(--stellar-rgb),0.08)] disabled:cursor-not-allowed disabled:opacity-50',
+        'ph-button w-full rounded-full border border-[rgba(var(--stellar-rgb),0.5)] bg-transparent px-6 text-body font-medium text-[var(--stellar)] transition-colors duration-200 hover:bg-[rgba(var(--stellar-rgb),0.08)] disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
@@ -310,65 +287,11 @@ export function DangerButton({
     <button
       type="button"
       className={cn(
-        'rounded-lg border border-ph-red/30 px-5 py-2.5 text-xs text-ph-red/80 hover:bg-ph-red/10 disabled:cursor-not-allowed disabled:opacity-50',
+        'ph-button rounded-lg border border-ph-red/30 px-5 text-body font-medium text-ph-red hover:bg-ph-red/10 disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}
     />
-  )
-}
-
-/**
- * Wraps a danger trigger with an explicit confirm step (alert-dialog). The
- * passed child is the trigger; confirming runs `onConfirm`. Used for every
- * destructive action (delete constellation, close account).
- */
-export function DangerConfirm({
-  children,
-  title,
-  description,
-  confirmLabel,
-  cancelLabel = 'cancel',
-  onConfirm,
-}: {
-  children: React.ReactNode
-  title: string
-  description: string
-  confirmLabel: string
-  cancelLabel?: string
-  onConfirm: () => void | Promise<void>
-}) {
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
-      <AlertDialogContent
-        className="rounded-2xl motion-reduce:animate-none motion-reduce:transition-none"
-        style={{
-          ...MODAL_SURFACE_STYLE,
-          borderColor: 'color-mix(in srgb, var(--ph-red) 30%, transparent)',
-        }}
-      >
-        <AlertDialogHeader>
-          <AlertDialogTitle className="text-base font-medium lowercase text-ph-white">
-            {title}
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-xs leading-relaxed text-ph-white/55">
-            {description}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="border-ph-white/20 bg-transparent text-xs text-ph-white/55 hover:bg-ph-white/[0.04]">
-            {cancelLabel}
-          </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => onConfirm()}
-            className="border-none bg-ph-red/20 text-xs text-ph-white hover:bg-ph-red/30"
-          >
-            {confirmLabel}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   )
 }
 
@@ -385,7 +308,7 @@ export function StatusLine({
     <p
       role="status"
       aria-live="polite"
-      className="text-xs"
+      className="text-body"
       style={{ color: tone === 'error' ? 'var(--ph-red)' : 'var(--ph-green)' }}
     >
       {message}
@@ -397,14 +320,14 @@ export function StatusLine({
 export function ModalErr({ message }: { message: string }) {
   if (!message) return null
   return (
-    <p role="alert" className="text-[11.5px] leading-normal text-ph-red">
+    <p role="alert" className="text-meta text-ph-red">
       {message}
     </p>
   )
 }
 
 const fieldInputClassName =
-  'w-full border-0 border-b border-ph-white/7 bg-transparent px-0 py-2 text-base text-ph-white outline-none placeholder:text-[14px] placeholder:font-light placeholder:text-ph-white/50 focus:border-ph-accent'
+  'w-full text-reading text-ph-white outline-none placeholder:text-ph-tertiary focus:border-ph-accent'
 
 /** Label + input matching the v67 modal field. */
 export function ModalField({
@@ -426,7 +349,7 @@ export function ModalField({
 }) {
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-[11.5px] font-medium tracking-[0.1em] text-ph-white/50 uppercase">
+      <span className="text-meta text-ph-secondary">
         {label}
       </span>
       <input

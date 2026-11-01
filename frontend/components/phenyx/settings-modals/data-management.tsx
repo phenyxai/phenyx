@@ -3,18 +3,12 @@
 import * as React from 'react'
 
 import { apiFetch } from '@/lib/api-client'
-import {
-  DangerButton,
-  DangerConfirm,
-  GhostButton,
-  ModalHeading,
-  SettingsDialogContent,
-  StatusLine,
-} from './modal-host'
+import { GhostButton, ModalHeading, SettingsDialogContent, StatusLine } from './modal-host'
 
 /**
- * your data — export or delete the constellation. The title is the only
- * allowed "data" UI string. No pause/freeze toggles.
+ * your data — export only (PHE-163). Deleting happens only by closing the
+ * account. The title is the only allowed "data" UI string. No pause/freeze
+ * toggles.
  */
 export function DataManagementModal() {
   const [exporting, setExporting] = React.useState(false)
@@ -45,52 +39,25 @@ export function DataManagementModal() {
     }
   }
 
-  const handleDeleteConstellation = async () => {
-    setStatus('')
-    setError('')
-    try {
-      const res = await apiFetch('/account/constellation', { method: 'POST' })
-      if (!res.ok) throw new Error('failed')
-      setStatus('your constellation is being removed.')
-    } catch {
-      setError('could not remove your constellation. please try again.')
-    }
-  }
-
   return (
     <SettingsDialogContent>
       <ModalHeading
         title="your data"
-        subtitle="everything PHENYX has observed belongs to you. raw signals are never stored."
+        subtitle="everything observed about you belongs to you, and the raw signals are never kept."
       />
 
-      <div>
-        <p className="mb-2 text-[11px] text-ph-white/85">take it with you</p>
-        <p className="mb-3.5 text-[11.5px] leading-relaxed text-ph-white/60">
-          your constellation, observations and polaris history, in a portable format.
+      <div className="flex flex-col items-start gap-2">
+        <p className="text-item text-ph-white">take it with you</p>
+        <p className="text-body text-ph-secondary">
+          download your constellation, observations and polaris history in a format you can open anywhere.
         </p>
         <GhostButton
           onClick={handleExport}
           disabled={exporting}
-          className="self-start border-ph-white/[0.12] text-ph-white/80"
+          className="mt-2 border-ph-white/[0.14] text-ph-white"
         >
           {exporting ? 'preparing…' : 'export everything'}
         </GhostButton>
-      </div>
-
-      <div className="mt-2 border-t border-ph-red/10 pt-4">
-        <p className="mb-3 text-[11.5px] font-semibold tracking-[0.12em] text-ph-red/70 uppercase">
-          danger zone
-        </p>
-        <DangerConfirm
-          title="delete my constellation?"
-          description="this permanently removes your observations and synthesized patterns. your account remains. this cannot be undone."
-          confirmLabel="delete my constellation"
-          cancelLabel="keep my constellation"
-          onConfirm={handleDeleteConstellation}
-        >
-          <DangerButton className="self-start">delete my constellation</DangerButton>
-        </DangerConfirm>
       </div>
 
       {status && <StatusLine message={status} />}

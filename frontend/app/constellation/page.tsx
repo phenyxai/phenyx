@@ -165,7 +165,7 @@ export default function ConstellationPage() {
         radius: 5,
         opacity: 0.15,
         fill: "none",
-        stroke: "rgba(255,253,253,0.15)",
+        stroke: "rgba(242,242,243,0.15)",
         strokeWidth: 1,
         glow: null,
       };
@@ -185,7 +185,7 @@ export default function ConstellationPage() {
       y: pos.y,
       radius,
       opacity,
-      fill: `rgba(255,253,253,${opacity})`,
+      fill: `rgba(242,242,243,${opacity})`,
       stroke: "none",
       strokeWidth: 0,
       glow: {
@@ -243,7 +243,7 @@ export default function ConstellationPage() {
                 y1={NODE_POSITIONS[p1].y}
                 x2={NODE_POSITIONS[p2].x}
                 y2={NODE_POSITIONS[p2].y}
-                stroke="rgba(255,253,253,0.08)"
+                stroke="rgba(242,242,243,0.08)"
                 strokeWidth="0.3"
               />
             ))}
@@ -254,7 +254,7 @@ export default function ConstellationPage() {
                 cx={NODE_POSITIONS[pillar].x}
                 cy={NODE_POSITIONS[pillar].y}
                 r={5}
-                fill="rgba(255,253,253,0.15)"
+                fill="rgba(242,242,243,0.15)"
               />
             ))}
           </svg>
@@ -279,7 +279,7 @@ export default function ConstellationPage() {
       }}>
         <p style={{
           fontSize: "13px",
-          color: "rgba(255,253,253,0.5)",
+          color: "rgba(242,242,243,0.5)",
           margin: 0,
           fontWeight: 300,
         }}>
@@ -288,7 +288,7 @@ export default function ConstellationPage() {
         {archetype && (
           <p style={{
             fontSize: "11px",
-            color: "rgba(255,253,253,0.3)",
+            color: "rgba(242,242,243,0.3)",
             margin: 0,
             marginTop: "4px",
             textTransform: "uppercase",
@@ -334,7 +334,7 @@ export default function ConstellationPage() {
               y1={NODE_POSITIONS[p1].y}
               x2={NODE_POSITIONS[p2].x}
               y2={NODE_POSITIONS[p2].y}
-              stroke={`rgba(255,253,253,${getLineOpacity(p1, p2)})`}
+              stroke={`rgba(242,242,243,${getLineOpacity(p1, p2)})`}
               strokeWidth="0.3"
             />
           ))}
@@ -375,8 +375,8 @@ export default function ConstellationPage() {
             <div
               key={pillar}
               style={{
-                background: "rgba(255,253,253,0.02)",
-                border: "1px solid rgba(255,253,253,0.06)",
+                background: "rgba(242,242,243,0.02)",
+                border: "1px solid rgba(242,242,243,0.06)",
                 borderRadius: "12px",
                 padding: "20px 24px",
                 marginBottom: "12px",
@@ -391,7 +391,7 @@ export default function ConstellationPage() {
               }}>
                 <span style={{
                   fontSize: "11px",
-                  color: "rgba(255,253,253,0.35)",
+                  color: "rgba(242,242,243,0.35)",
                   textTransform: "uppercase",
                   letterSpacing: "0.15em",
                 }}>
@@ -399,7 +399,7 @@ export default function ConstellationPage() {
                 </span>
                 <span style={{
                   fontSize: "11px",
-                  color: "rgba(255,253,253,0.2)",
+                  color: "rgba(242,242,243,0.2)",
                 }}>
                   {score} / 100
                 </span>
@@ -409,7 +409,7 @@ export default function ConstellationPage() {
               <div style={{
                 width: "100%",
                 height: "2px",
-                background: "rgba(255,253,253,0.06)",
+                background: "rgba(242,242,243,0.06)",
                 borderRadius: "999px",
                 overflow: "hidden",
               }}>
@@ -431,7 +431,7 @@ export default function ConstellationPage() {
                   <p style={{
                     fontSize: "15px",
                     fontWeight: 300,
-                    color: "rgba(255,253,253,0.75)",
+                    color: "rgba(242,242,243,0.75)",
                     lineHeight: 1.7,
                     margin: 0,
                   }}>
@@ -440,7 +440,7 @@ export default function ConstellationPage() {
                 ) : (
                   <p style={{
                     fontSize: "13px",
-                    color: "rgba(255,253,253,0.2)",
+                    color: "rgba(242,242,243,0.2)",
                     fontStyle: "italic",
                     margin: 0,
                   }}>
@@ -454,15 +454,15 @@ export default function ConstellationPage() {
 
         {/* Locked pillars card */}
         <div style={{
-          background: "rgba(255,253,253,0.02)",
-          border: "1px solid rgba(255,253,253,0.06)",
+          background: "rgba(242,242,243,0.02)",
+          border: "1px solid rgba(242,242,243,0.06)",
           borderRadius: "12px",
           padding: "20px 24px",
           marginBottom: "12px",
         }}>
           <p style={{
             fontSize: "11px",
-            color: "rgba(255,253,253,0.2)",
+            color: "rgba(242,242,243,0.2)",
             textTransform: "uppercase",
             letterSpacing: "0.15em",
             margin: 0,
@@ -471,7 +471,7 @@ export default function ConstellationPage() {
           </p>
           <p style={{
             fontSize: "13px",
-            color: "rgba(255,253,253,0.2)",
+            color: "rgba(242,242,243,0.2)",
             fontWeight: 300,
             fontStyle: "italic",
             margin: 0,
@@ -485,7 +485,7 @@ export default function ConstellationPage() {
         {version && generatedAt && (
           <p style={{
             fontSize: "11px",
-            color: "rgba(255,253,253,0.2)",
+            color: "rgba(242,242,243,0.2)",
             textAlign: "center",
             marginTop: "24px",
           }}>

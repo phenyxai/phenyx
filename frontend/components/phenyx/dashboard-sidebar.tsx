@@ -1,10 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegment } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { useTier, applyTierUI, type Tier } from "@/lib/use-tier";
 import { trackTabVisit, trackTabDuration } from "@/lib/analytics";
 import { DASHBOARD_HOME, DASHBOARD_TABS, SETTINGS_HREF, segmentTab, tabTransition } from "@/lib/dashboard-nav";
 import type { TabClock } from "@/lib/dashboard-nav";
@@ -13,40 +12,6 @@ import { StellarMark } from "@/components/phenyx/stellar-mark";
 
 /** Per-viewer convenience only: whether the desktop sidebar is folded to its icon rail. */
 const COLLAPSED_KEY = "phenyx:sidebar-collapsed";
-
-const ShellTierContext = createContext<Tier>("free");
-
-/**
- * Reads the tier once for the shell chrome. The sidebar and the phone top bar
- * each show a TierBadge (one of them hidden at any width), and both read this
- * instead of running their own useTier() query.
- */
-export function ShellTierProvider({ children }: { children: ReactNode }) {
-  const { tier } = useTier();
-  return <ShellTierContext.Provider value={tier}>{children}</ShellTierContext.Provider>;
-}
-
-/**
- * The plan tier beside the PHENYX wordmark: "free" or "full" (gifted reads
- * full). Text + data-tier are owned by applyTierUI; the static "free" is the
- * pre-load default, and the element is only mutated, never remounted.
- */
-function TierBadge() {
-  const tier = useContext(ShellTierContext);
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    applyTierUI(tier, { badge: ref.current });
-  }, [tier]);
-  return (
-    <span
-      ref={ref}
-      data-tier="free"
-      className="ml-1.5 text-[12px] tracking-[0.08em] lowercase text-ph-white/65"
-    >
-      free
-    </span>
-  );
-}
 
 /**
  * Orbit mark + wordmark, linking home. Shared by the sidebar and the phone top
@@ -57,7 +22,7 @@ function BrandLink() {
   return (
     <Link href={DASHBOARD_HOME} aria-label="PHENYX, go to constellation" className="flex items-center gap-2.5 no-underline">
       <StellarMark />
-      <RailLabel className="text-[11.5px] font-semibold tracking-[0.09em] text-ph-white/90">PHENYX</RailLabel>
+      <RailLabel className="text-meta font-semibold tracking-[0.09em] text-ph-white">PHENYX</RailLabel>
     </Link>
   );
 }
@@ -78,9 +43,9 @@ function RailLabel({ children, className = "" }: { children: ReactNode; classNam
 }
 
 /** Sidebar rows share one shape: the four tabs and settings at the foot. Hover lights the icon in the accent. */
-function navItemClass(isActive: boolean, size = "text-[16px]"): string {
-  return `group/item flex h-11 items-center gap-3 rounded-xl px-3 ${size} font-light lowercase transition-colors duration-200 motion-reduce:transition-none group-data-[collapsed=true]/side:justify-center group-data-[collapsed=true]/side:px-0 rail:justify-center rail:px-0 ${
-    isActive ? "text-ph-white/90" : "text-ph-white/60 hover:text-ph-white/85"
+function navItemClass(isActive: boolean): string {
+  return `group/item flex h-11 items-center gap-3 rounded-xl px-3 text-reading lowercase transition-colors duration-200 motion-reduce:transition-none group-data-[collapsed=true]/side:justify-center group-data-[collapsed=true]/side:px-0 rail:justify-center rail:px-0 ${
+    isActive ? "text-ph-white" : "text-ph-secondary"
   }`;
 }
 
@@ -89,7 +54,7 @@ function NavItemIcon({ isActive, children }: { isActive: boolean; children: Reac
   return (
     <span
       className={`flex shrink-0 transition-colors duration-200 ${
-        isActive ? "text-[var(--ph-accent,var(--s))]" : "text-ph-white/45 group-hover/item:text-[var(--ph-accent,var(--s))]"
+        isActive ? "text-[var(--ph-accent,var(--s))]" : "text-ph-tertiary group-hover/item:text-[var(--ph-accent,var(--s))]"
       }`}
     >
       {children}
@@ -117,7 +82,7 @@ function SettingsLink({ active }: { active: boolean }) {
       className={`ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none ${
         active
           ? "border-[rgba(var(--s-rgb),0.35)] bg-[rgba(var(--s-rgb),0.10)] text-ph-white"
-          : "border-ph-white/10 text-ph-white/70 hover:border-ph-white/20 hover:bg-ph-white/[0.05] hover:text-ph-white"
+          : "border-ph-white/10 text-ph-secondary hover:border-ph-white/20 hover:bg-ph-white/[0.05] hover:text-ph-white"
       }`}
     >
       <GearIcon />
@@ -131,7 +96,7 @@ function SettingsLink({ active }: { active: boolean }) {
  * canvas/RAF state survives navigating away and back. The active tab derives
  * from the route segment (no client-only tab state that can desync from the URL).
  *
- * Top to bottom: brand (orbit mark + PHENYX + plan tier), the four tabs in
+ * Top to bottom: brand (orbit mark + PHENYX), the four tabs in
  * DASHBOARD_TABS order with their icons, and settings at the foot, a regular
  * row with a gear (PHE-126), beside the chevron that folds the sidebar to an
  * icon rail (PHE-129). From 641 to 999px it is always the rail. At or below
@@ -202,11 +167,6 @@ export function DashboardSidebar() {
     >
       <div className="mb-7 flex items-center gap-1 border-b border-ph-white/[0.055] pb-[22px] group-data-[collapsed=true]/side:justify-center rail:justify-center">
         <BrandLink />
-        {/* flex, so the badge gets its own line box and sits level with PHENYX
-            instead of on the baseline of a 16px line. */}
-        <RailLabel className="flex">
-          <TierBadge />
-        </RailLabel>
       </div>
 
       {/* Tab nav — rendered in DASHBOARD_TABS order, never sorted. The active
@@ -241,7 +201,7 @@ export function DashboardSidebar() {
           href={SETTINGS_HREF}
           aria-current={active === "settings" ? "page" : undefined}
           data-active={active === "settings" ? "true" : undefined}
-          className={`min-w-0 flex-1 ${navItemClass(active === "settings", "text-[14px]")} group-data-[collapsed=true]/side:w-full`}
+          className={`min-w-0 flex-1 ${navItemClass(active === "settings")} group-data-[collapsed=true]/side:w-full`}
         >
           <NavItemIcon isActive={active === "settings"}>
             <GearIcon size={16} />
@@ -253,7 +213,7 @@ export function DashboardSidebar() {
           onClick={toggleCollapsed}
           aria-label={collapsed ? "open the sidebar" : "collapse the sidebar"}
           aria-expanded={!collapsed}
-          className="h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-ph-white/45 transition-colors duration-200 hover:text-[var(--ph-accent,var(--s))] [@media(max-width:999px)]:hidden [@media(min-width:1000px)]:flex"
+          className="h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-ph-tertiary transition-colors duration-200 hover:text-[var(--ph-accent,var(--s))] [@media(max-width:999px)]:hidden [@media(min-width:1000px)]:flex"
         >
           <Chevron open={!collapsed} />
         </button>
@@ -263,8 +223,7 @@ export function DashboardSidebar() {
 }
 
 /**
- * Phone-width top bar: the brand linking home, the plan tier beside it, and
- * the settings gear (phones have no drawer, so this is how settings stays
+ * Phone-width top bar: the brand linking home and the settings gear (phones have no drawer, so this is how settings stays
  * reachable). Rendered at the top of the main column; hidden above 640px,
  * where the sidebar is in view.
  */
@@ -273,7 +232,6 @@ export function MobileTopBar() {
   return (
     <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-ph-white/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:640px)]:flex [@media(min-width:641px)]:hidden">
       <BrandLink />
-      <TierBadge />
       <SettingsLink active={segmentTab(segment) === "settings"} />
     </header>
   );

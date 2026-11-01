@@ -64,20 +64,36 @@ export const FIGURE: Record<Pillar, [number, number]> = {
   transcendence: [680, 61],
 };
 
-const xs = ALL_PILLARS.map((p) => FIGURE[p][0]);
-const ys = ALL_PILLARS.map((p) => FIGURE[p][1]);
+/** PHE-163: the figure tilts this many degrees up (counterclockwise) around its own center. */
+export const TILT_DEG = 7;
+
+const TILTED: Record<Pillar, [number, number]> = (() => {
+  const cx = ALL_PILLARS.reduce((sum, p) => sum + FIGURE[p][0], 0) / ALL_PILLARS.length;
+  const cy = ALL_PILLARS.reduce((sum, p) => sum + FIGURE[p][1], 0) / ALL_PILLARS.length;
+  const [cos, sin] = [Math.cos((TILT_DEG * Math.PI) / 180), Math.sin((TILT_DEG * Math.PI) / 180)];
+  // y points down, so lifting the right side subtracts from y.
+  return Object.fromEntries(
+    ALL_PILLARS.map((p) => {
+      const [dx, dy] = [FIGURE[p][0] - cx, FIGURE[p][1] - cy];
+      return [p, [cx + dx * cos + dy * sin, cy - dx * sin + dy * cos]];
+    })
+  ) as Record<Pillar, [number, number]>;
+})();
+
+const xs = ALL_PILLARS.map((p) => TILTED[p][0]);
+const ys = ALL_PILLARS.map((p) => TILTED[p][1]);
 const [minX, spanX] = [Math.min(...xs), Math.max(...xs) - Math.min(...xs)];
 const [minY, spanY] = [Math.min(...ys), Math.max(...ys) - Math.min(...ys)];
 
-/** Normalized [0,1] centers per axis. `z` is reserved for a future 3D layer. */
+/** Normalized [0,1] centers per axis, after the tilt. `z` is reserved for a future 3D layer. */
 export const NODE_LAYOUT = Object.fromEntries(
   ALL_PILLARS.map((p, i) => [
     p,
-    { x: (FIGURE[p][0] - minX) / spanX, y: (FIGURE[p][1] - minY) / spanY, z: i / 10 },
+    { x: (TILTED[p][0] - minX) / spanX, y: (TILTED[p][1] - minY) / spanY, z: i / 10 },
   ])
 ) as Record<Pillar, Vec3>;
 
-/** True width / height of the figure (about 1.9). */
+/** True width / height of the tilted figure (about 1.43). */
 export const SHAPE_ASPECT = spanX / spanY;
 
 /** Core radius in px from real brightness: brighter stars draw larger. */

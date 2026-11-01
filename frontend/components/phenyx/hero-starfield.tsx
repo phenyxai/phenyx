@@ -49,7 +49,7 @@ export function HeroStarfield() {
           : star.baseAlpha * (0.55 + 0.45 * Math.sin(time * star.speed + star.phase));
         context.beginPath();
         context.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-        context.fillStyle = `rgba(255,253,253,${alpha})`;
+        context.fillStyle = `rgba(242,242,243,${alpha})`;
         context.fill();
       });
     }

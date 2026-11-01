@@ -17,8 +17,7 @@ export interface TierState {
  * Reads the signed-in user's tier from user_profiles (keyed by `id`, = auth.users.id)
  * and exposes { tier, isPro } where isPro = hasFullAccess(tier) — true for pro and
  * gifted. The single tier source for the dashboard; Constellation timeline
- * gating, the insights tab's plan badge, and the shell's tier beside the logo
- * all read from here.
+ * gating and polaris's monthly points fallback read from here.
  *
  * Defaults to "free" until the row resolves (and when signed out) so tier-gated UI
  * fails closed — a pro surface is never shown to an unknown/unauthenticated user.
@@ -47,32 +46,4 @@ export function useTier(): TierState {
   }, []);
 
   return { tier, isPro: hasFullAccess(tier) };
-}
-
-/**
- * The single authority for tier-dependent shell UI. A pure function of `tier`:
- * sets the plan pill's label/attribute (and, where a surface still renders one,
- * the upgrade button's visibility) by mutating the DOM (display + textContent +
- * data-tier) on stable elements — never unmounting them — so the pill keeps DOM
- * identity across passes. Called on load and on any tier change.
- *
- *   - upgrade button (optional): display:none when isPro, else visible. The v244
- *     sidebar has no upgrade button, so this branch is a no-op when the element
- *     is absent.
- *   - plan pill: text reads isPro ? "full" : "free" (gifted → "full"; neither
- *     "gifted" nor "pro" is ever surfaced as product copy). data-tier carries
- *     the raw tier for styling and analytics.
- */
-export function applyTierUI(
-  tier: string,
-  els: { upgradeButton?: HTMLElement | null; badge: HTMLElement | null },
-): void {
-  const isPro = hasFullAccess(tier);
-  if (els.upgradeButton) {
-    els.upgradeButton.style.display = isPro ? "none" : "";
-  }
-  if (els.badge) {
-    els.badge.textContent = isPro ? "full" : "free";
-    els.badge.dataset.tier = tier;
-  }
 }

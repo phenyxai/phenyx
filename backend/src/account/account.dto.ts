@@ -1,16 +1,15 @@
 /**
- * PHE-75 / PHE-97 — account close confirmation.
+ * PHE-75 / PHE-163 — account close confirmation.
  *
- * Closing is irreversible and cascades every owned row, so it requires two
- * gates: a one-time code emailed to the account (it is you; PHE-97 replaced the
- * passphrase) and the typed sentence `delete my account` (you read what you are
- * doing). The phrase is compared lowercased and trimmed; any other value is
- * rejected before anything is touched.
+ * Closing is irreversible and cascades every owned row. The signed-in session
+ * says it is you, and the typed sentence `delete my account` says you read
+ * what you are doing (PHE-163 dropped the emailed code). The phrase is
+ * compared lowercased and trimmed; any other value is rejected before
+ * anything is touched.
  */
 export const DELETE_CONFIRMATION_PHRASE = "delete my account";
 
 export interface AccountCloseDto {
-  code?: unknown;
   confirmation?: unknown;
 }
 
@@ -23,14 +22,8 @@ export function normalizeConfirmation(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
-/** Client/server close-account errors, in fill order (code then phrase). */
-export function closeAccountError(
-  code: string,
-  confirmation: unknown
-): string | null {
-  if (!code.trim()) {
-    return "enter the code we sent to your email.";
-  }
+/** The close-account error when the phrase isn't typed, else null. */
+export function closeAccountError(confirmation: unknown): string | null {
   if (normalizeConfirmation(confirmation) !== DELETE_CONFIRMATION_PHRASE) {
     return `type ${DELETE_CONFIRMATION_PHRASE} exactly, to confirm.`;
   }

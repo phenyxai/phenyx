@@ -77,10 +77,10 @@ export function OnairosButtonWrapper({
         role="alert"
         style={{
           color: "var(--ph-red)",
-          fontSize: "12px",
+          fontSize: "13px",
           padding: "12px",
           maxWidth: 360,
-          lineHeight: 1.5,
+          lineHeight: "18px",
         }}
       >
         {error}
@@ -90,7 +90,7 @@ export function OnairosButtonWrapper({
 
   if (!initialized) {
     return (
-      <div style={{ color: "rgba(255, 253, 253, 0.4)", fontSize: "12px", padding: "12px" }}>
+      <div style={{ color: "var(--ph-text-3)", fontSize: "13px", lineHeight: "18px", padding: "12px" }}>
         initializing onairos...
       </div>
     );

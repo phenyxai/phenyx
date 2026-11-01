@@ -48,7 +48,7 @@ export function FeedbackModal() {
     <SettingsDialogContent>
       <ModalHeading
         title="share feedback"
-        subtitle="your feedback directly shapes how PHENYX develops. tell us what is working, what is not, and what you want to see."
+        subtitle="tell us what is working, what is not, and what you would like to see. every note shapes what comes next."
       />
 
       <div
@@ -65,7 +65,7 @@ export function FeedbackModal() {
             aria-label={`${star} ${star === 1 ? 'star' : 'stars'}`}
             onClick={() => setRating(star)}
             className="text-2xl leading-none transition-colors"
-            style={{ color: star <= rating ? 'var(--ph-accent)' : 'rgba(255,253,253,0.2)' }}
+            style={{ color: star <= rating ? 'var(--ph-accent)' : 'var(--ph-text-3)' }}
           >
             {star <= rating ? '★' : '☆'}
           </button>
@@ -76,7 +76,7 @@ export function FeedbackModal() {
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         placeholder="what would you like to tell us?"
-        className="min-h-24 border-ph-white/10 bg-ph-white/[0.03] text-[13px] text-ph-white placeholder:text-ph-white/35 focus-visible:border-[var(--ph-accent)] focus-visible:ring-0"
+        className="min-h-24 border-ph-white/10 bg-ph-white/[0.03] text-reading text-ph-white placeholder:text-ph-tertiary focus-visible:border-[var(--ph-accent)] focus-visible:ring-0"
       />
 
       <div className="flex flex-col gap-3">

@@ -26,7 +26,7 @@ const ITEM_BASE =
   "flex min-w-0 flex-1 flex-col items-center gap-[3px] px-0.5 py-1.5 transition-colors motion-reduce:transition-none";
 // Accent read as --ph-accent (PHE-98) with the stellar var as fallback.
 const ITEM_ON = "text-[var(--ph-accent,var(--s))]";
-const ITEM_OFF = "text-ph-white/50";
+const ITEM_OFF = "text-ph-tertiary";
 
 export function MobileBottomNav() {
   const active = segmentTab(useSelectedLayoutSegment());
@@ -49,7 +49,7 @@ export function MobileBottomNav() {
             <span className="flex h-[22px] items-center justify-center">
               <NavIcon tab={tab.id} size={20} />
             </span>
-            <span className="text-[10px] tracking-[0.02em]">{tab.label}</span>
+            <span className="text-meta">{tab.label}</span>
           </Link>
         );
       })}

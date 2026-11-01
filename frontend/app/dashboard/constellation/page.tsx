@@ -141,7 +141,7 @@ export default function ConstellationTabPage() {
               openMomentId={linked?.moment ?? null}
             />
           ) : (
-            <p className="text-[13px] font-light lowercase text-ph-white/30">
+            <p className="text-body lowercase text-ph-tertiary">
               aligning your constellation…
             </p>
           )}

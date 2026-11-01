@@ -7,7 +7,7 @@ import { ProfileService } from "./profile.service";
 
 /**
  * PHE-30 / PHE-38 / PHE-75 / PHE-95 — Profile overview + identity/notification
- * writes. Depends on AuthModule (owner guard + ConfirmCodeService),
+ * writes. Depends on AuthModule (owner guard),
  * StripeModule (renewal date for the subscription modal) and SynthesisModule
  * (queues a missing insights reading); SupabaseModule is global. No tier gate. Gifted is never returned as product copy.
  */

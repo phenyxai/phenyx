@@ -11,9 +11,10 @@ import { kindLabel, loopOffset, type Discovery } from "@/lib/discover";
 // neighbours sit 70px either side, dimmed but legible, with a lit edge facing
 // the main card (clicking one brings it forward). Phones show the main card
 // alone and swap it in place. Each card: its kind, the ★ save, the headline, what it is, the personal
-// reason in the accent, then "see the sources" and "ask polaris". The text
-// sits together as one block (PHE-160): the headline clamps at two lines, the
-// detail at three (four from 641px), the reason never. A long deck
+// reason in the accent, then "ask polaris" at the right (PHE-163). The text
+// sits together as one block (PHE-160): the headline clamps at two lines and
+// the detail at three (three and four on phones, where the display headline
+// wraps sooner), the reason never. A long deck
 // counts instead of drawing a dot per card. Layout, spacing, sizes from 641px
 // and the lit edge live in globals.css (.discover-*); this file owns state.
 // ============================================================================
@@ -50,8 +51,8 @@ function useInPlaceSwap<T>(target: T, fade: () => boolean): { shown: T; out: boo
 export function StarIcon({ filled = false }: { filled?: boolean }) {
   return (
     <svg
-      width="14"
-      height="14"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill={filled ? "var(--ph-accent)" : "currentColor"}
       stroke="none"
@@ -63,12 +64,12 @@ export function StarIcon({ filled = false }: { filled?: boolean }) {
   );
 }
 
-/** A card's two small actions, also used in the saved view. */
+/** A card's action pill ("ask polaris"), also used in the saved view. */
 export function CardLink(props: ComponentProps<"button">) {
   return (
     <button
       type="button"
-      className="h-[34px] rounded-full border border-ph-white/20 bg-ph-white/[0.035] px-[15px] text-[12px] font-medium text-ph-white/78 transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
+      className="ph-optical h-10 rounded-full border border-ph-white/20 bg-ph-white/[0.035] px-[18px] text-body font-medium text-ph-white transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
       {...props}
     />
   );
@@ -77,12 +78,10 @@ export function CardLink(props: ComponentProps<"button">) {
 export function DiscoverCarousel({
   discoveries,
   onSave,
-  onSources,
   onAsk,
 }: {
   discoveries: Discovery[];
   onSave: (discovery: Discovery) => void;
-  onSources: (discovery: Discovery) => void;
   onAsk: (discovery: Discovery) => void;
 }) {
   const count = discoveries.length;
@@ -135,7 +134,6 @@ export function DiscoverCarousel({
                 discovery={discovery}
                 active={depth === "main"}
                 onSave={() => onSave(discovery)}
-                onSources={() => onSources(discovery)}
                 onAsk={() => onAsk(discovery)}
               />
               {depth === "back" && (
@@ -156,7 +154,7 @@ export function DiscoverCarousel({
         <div className="mt-8 flex items-center justify-center gap-[18px]">
           <StepButton label="previous discovery" onClick={() => go(index - 1)} d="M19 12H5M11 6l-6 6 6 6" />
           {count > DOTS_MAX ? (
-            <p aria-live="polite" className="min-w-[64px] text-center text-[12.5px] tabular-nums text-ph-white/62">
+            <p aria-live="polite" className="min-w-[64px] text-center text-meta tabular-nums text-ph-secondary">
               {index + 1} of {count}
             </p>
           ) : (
@@ -192,7 +190,7 @@ function StepButton({ label, onClick, d }: { label: string; onClick: () => void;
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex h-9 w-9 items-center justify-center rounded-full border border-ph-white/10 text-ph-white/70 transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] motion-reduce:transition-none"
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-ph-white/10 text-ph-secondary transition-colors duration-200 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)] motion-reduce:transition-none"
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d={d} />
@@ -205,13 +203,11 @@ function DiscoverCard({
   discovery: d,
   active,
   onSave,
-  onSources,
   onAsk,
 }: {
   discovery: Discovery;
   active: boolean;
   onSave: () => void;
-  onSources: () => void;
   onAsk: () => void;
 }) {
   return (
@@ -219,27 +215,22 @@ function DiscoverCard({
       inert={!active}
       className="discover-card__face flex h-full flex-col rounded-[20px] border bg-ph-white/[0.016]"
     >
-      <div className="discover-card__head flex items-start justify-between gap-4">
-        <span className="discover-type pt-[11px] text-[10.5px] font-medium text-[var(--ph-accent)]">{kindLabel(d.type)}</span>
+      <div className="discover-card__head flex items-center justify-between gap-4">
+        <span className="discover-type text-[16px] leading-6 font-semibold text-[var(--ph-accent)]">{kindLabel(d.type)}</span>
         <button
           type="button"
           onClick={onSave}
           aria-pressed={d.saved}
           aria-label={`${d.saved ? "remove from saved" : "save discovery"}: ${d.headline}`}
-          className="-mr-1.5 flex h-9 w-9 items-center justify-center rounded-full text-ph-white/62 transition-colors duration-200 hover:text-[var(--ph-accent)]"
+          className="-mr-1.5 flex h-9 w-9 items-center justify-center rounded-full text-ph-secondary transition-colors duration-200 hover:text-[var(--ph-accent)]"
         >
           <StarIcon filled={d.saved} />
         </button>
       </div>
-      <h2 className="discover-card__headline line-clamp-2 text-[19px] font-normal leading-[1.35] text-ph-white/95">
-        {d.headline}
-      </h2>
-      <p className="discover-card__detail line-clamp-3 text-[14px] leading-[1.6] text-ph-white/80">{d.detail}</p>
-      <p className="discover-card__reason text-[13px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">
-        {d.reason}
-      </p>
-      <div className="discover-card__foot mt-auto flex flex-wrap gap-2">
-        <CardLink onClick={onSources}>see the sources</CardLink>
+      <h2 className="discover-card__headline text-display text-ph-white [@media(max-width:640px)]:line-clamp-3 [@media(min-width:641px)]:line-clamp-2">{d.headline}</h2>
+      <p className="discover-card__detail text-reading text-ph-white [@media(max-width:640px)]:line-clamp-4 [@media(min-width:641px)]:line-clamp-3">{d.detail}</p>
+      <p className="discover-card__reason text-reading italic text-[var(--ph-accent)]">{d.reason}</p>
+      <div className="discover-card__foot mt-auto flex justify-end">
         <CardLink onClick={onAsk}>ask polaris</CardLink>
       </div>
     </div>

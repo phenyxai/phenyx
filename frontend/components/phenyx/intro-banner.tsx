@@ -18,7 +18,7 @@ export const INTRO_COPY: Record<DashboardTab, string> = {
   constellation:
     "each point is a part of your story. open one to see the moments it was built from.",
   discover:
-    "each card is something worth exploring next, chosen from what your platforms show, with the dated sources behind it.",
+    "each card is something worth exploring next, chosen from what your platforms show.",
   polaris:
     "polaris answers what you ask, using only what your constellation has already shown.",
   insights: "insights steps back from single moments to what is becoming clearer across your history.",
@@ -52,14 +52,14 @@ export function IntroBanner({ tab, copy, onDismiss, className }: IntroBannerProp
         className ? ` ${className}` : ""
       }`}
     >
-      <p className="m-0 text-[13px] font-light lowercase leading-relaxed text-ph-white/70">
+      <p className="m-0 text-body lowercase text-ph-secondary">
         {copy}
       </p>
       <button
         type="button"
         onClick={handleDismiss}
         aria-label="dismiss"
-        className="-mr-1 -mt-0.5 shrink-0 text-[16px] leading-none text-ph-white/40"
+        className="-mr-1 -mt-0.5 shrink-0 text-[16px] leading-none text-ph-tertiary"
       >
         ×
       </button>

@@ -8,8 +8,6 @@ import { V67_PRICING } from "@/lib/billing";
 import {
   discoveriesLabel,
   refreshLabel,
-  trailLine,
-  trailYears,
   type Discovery,
   type DiscoveryAllowance,
 } from "@/lib/discover";
@@ -35,7 +33,7 @@ import { Popup, PrimaryButton } from "@/components/phenyx/settings-modals/modal-
 //
 // The ★ saves a card (`POST /discover/:id/save`) and the ★ pill opens the
 // saved list. "Ask polaris" opens a chat seeded with the card's own question
-// and the card as context. "See the sources" opens "behind this discovery".
+// and the card as context. The sources return later with the full plan.
 // ============================================================================
 
 const delay = (seconds: number) => ({ "--float-delay": `${seconds}s` }) as CSSProperties;
@@ -55,7 +53,6 @@ export default function DiscoverTabPage() {
   const [deck, setDeck] = useState<Discovery[] | null>(null);
   const [saved, setSaved] = useState<Discovery[]>([]);
   const [allowance, setAllowance] = useState<DiscoveryAllowance | null>(null);
-  const [sources, setSources] = useState<Discovery | null>(null);
   const [popup, setPopup] = useState<"saved" | "use" | "more" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -150,7 +147,6 @@ export default function DiscoverTabPage() {
           <HeaderChip
             onClick={() => setPopup("saved")}
             aria-label={`saved discoveries, ${saved.length} saved`}
-            className={saved.length ? "text-ph-white/90" : ""}
           >
             <StarIcon filled={saved.length > 0} />
             {saved.length}
@@ -159,47 +155,33 @@ export default function DiscoverTabPage() {
       </header>
 
       {deck === null ? (
-        <p className="float-in text-[13px] font-light text-ph-white/35" style={delay(0.12)}>
+        <p className="float-in text-body text-ph-tertiary" style={delay(0.12)}>
           looking across your platforms for what could be next. a new week’s set can take a minute.
         </p>
       ) : deck.length === 0 ? (
-        <p className="float-in max-w-[52ch] text-[15px] font-light leading-[1.55] text-ph-white/40" style={delay(0.12)}>
+        <p className="float-in max-w-[52ch] text-reading text-ph-secondary" style={delay(0.12)}>
           nothing has surfaced yet. connect more platforms and come back soon.
         </p>
       ) : (
         <div className="float-in" style={delay(0.12)}>
-          <DiscoverCarousel discoveries={deck} onSave={toggleSave} onSources={setSources} onAsk={ask} />
+          <DiscoverCarousel discoveries={deck} onSave={toggleSave} onAsk={ask} />
         </div>
       )}
 
       {toast && (
         <p
           role="status"
-          className="fixed bottom-8 left-1/2 z-20 -translate-x-1/2 rounded-full border border-[rgba(var(--ph-accent-rgb),0.4)] bg-[var(--ph-black)] px-4 py-2 text-[12.5px] text-[var(--ph-accent)]"
+          className="fixed bottom-8 left-1/2 z-20 -translate-x-1/2 rounded-full border border-[rgba(var(--ph-accent-rgb),0.4)] bg-[var(--ph-black)] px-4 py-2 text-meta text-[var(--ph-accent)]"
         >
           {toast}
         </p>
       )}
 
-      {sources && (
-        <BehindDiscovery
-          card={sources}
-          onClose={() => setSources(null)}
-          onAsk={() => {
-            setSources(null);
-            ask(sources);
-          }}
-        />
-      )}
       {popup === "saved" && (
         <SavedDiscoveries
           saved={saved}
           onClose={() => setPopup(null)}
           onRemove={toggleSave}
-          onSources={(card) => {
-            setPopup(null);
-            setSources(card);
-          }}
           onAsk={ask}
         />
       )}
@@ -242,7 +224,7 @@ function UseDiscoveries({
     return (
       <Popup title="all caught up" onClose={onClose}>
         <div className="flex flex-col gap-4">
-          <p className="text-[14px] font-light leading-[1.6] text-ph-white/75">
+          <p className="text-body text-ph-secondary">
             you’ve seen every discovery there is for now, so nothing was used. new ones arrive as your platforms do.
           </p>
           <PrimaryButton onClick={onClose}>done</PrimaryButton>
@@ -254,7 +236,7 @@ function UseDiscoveries({
   return (
     <Popup title={title} onClose={onClose}>
       <div className="flex flex-col gap-4">
-        <p className="text-[14px] font-light leading-[1.6] text-ph-white/75">
+        <p className="text-body text-ph-secondary">
           find facts, people, places, or things to try, chosen from your interests.
         </p>
         {most > 1 && (
@@ -263,7 +245,7 @@ function UseDiscoveries({
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
               aria-label="how many discoveries"
-              className="ph-bare-field min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent p-0 text-[14px] text-ph-white/90 outline-none"
+              className="ph-bare-field min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent p-0 text-reading text-ph-white outline-none"
             >
               {Array.from({ length: most }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n} className="bg-[var(--ph-black)]">
@@ -273,7 +255,7 @@ function UseDiscoveries({
             </select>
           </label>
         )}
-        <p className="text-[13px] leading-[1.55] text-ph-white/58">
+        <p className="text-body text-ph-tertiary">
           this uses {discoveriesLabel(count)}, and {allowance.available - count} will remain. your next weekly refresh arrives{" "}
           {refreshLabel(allowance.resets)}.
         </p>
@@ -281,7 +263,7 @@ function UseDiscoveries({
           {state === "loading" ? "finding your discoveries…" : `use ${discoveriesLabel(count)}`}
         </PrimaryButton>
         {state === "failed" && (
-          <p className="text-[13px] font-light text-ph-white/62">that didn’t go through, and nothing was used. please try again.</p>
+          <p className="text-body text-ph-secondary">that didn’t go through, and nothing was used. please try again.</p>
         )}
       </div>
     </Popup>
@@ -304,7 +286,7 @@ function MoreDiscoveries({ allowance, onClose }: { allowance: DiscoveryAllowance
   return (
     <Popup title="more discoveries" onClose={onClose}>
       <div className="flex flex-col gap-4">
-        <p className="text-[14px] font-light leading-[1.6] text-ph-white/75">
+        <p className="text-body text-ph-secondary">
           you’ve used this week’s {discoveriesLabel(allowance.limit)}. purchased discoveries stay until you use them, and
           your next weekly refresh arrives {refreshLabel(allowance.resets)}.
         </p>
@@ -319,11 +301,11 @@ function MoreDiscoveries({ allowance, onClose }: { allowance: DiscoveryAllowance
               className={`flex flex-col items-center gap-1 rounded-[14px] border px-2 py-3 transition-colors duration-200 hover:border-[var(--ph-accent)] ${
                 pack === p.size
                   ? "border-[var(--ph-accent)] bg-[rgba(var(--ph-accent-rgb),0.08)] text-[var(--ph-accent)]"
-                  : "border-ph-white/12 text-ph-white/80"
+                  : "border-ph-white/12 text-ph-white"
               }`}
             >
-              <span className="text-[15px]">{p.size}</span>
-              <span className="text-[12px] text-ph-white/58">${p.price.toFixed(2)}</span>
+              <span className="text-reading">{p.size}</span>
+              <span className="text-meta text-ph-tertiary">${p.price.toFixed(2)}</span>
             </button>
           ))}
         </div>
@@ -331,58 +313,23 @@ function MoreDiscoveries({ allowance, onClose }: { allowance: DiscoveryAllowance
           continue to checkout
         </PrimaryButton>
         {checkout === "failed" && (
-          <p className="text-[13px] font-light text-ph-white/62">checkout could not be started. please try again.</p>
+          <p className="text-body text-ph-secondary">checkout could not be started. please try again.</p>
         )}
       </div>
     </Popup>
   );
 }
 
-/** "behind this discovery": the public story, a divider, then each dated source of the reason. */
-function BehindDiscovery({ card, onClose, onAsk }: { card: Discovery; onClose: () => void; onAsk: () => void }) {
-  const years = trailYears(card.trail);
-  return (
-    <Popup title="behind this discovery" onClose={onClose}>
-      <div className="flex flex-col gap-5">
-        {card.story && (
-          <section className="border-b border-ph-white/[0.08] pb-5">
-            <p className="text-[12px] text-[var(--ph-accent)]">public story · {card.story.label}</p>
-            <p className="mt-2 text-[14.5px] text-ph-white/92">{card.story.title}</p>
-            <p className="mt-1 text-[13.5px] font-light leading-[1.6] text-ph-white/62">{card.story.detail}</p>
-          </section>
-        )}
-        <section>
-          <p className="text-[12px] text-[var(--ph-accent)]">
-            {[years, card.sources.join(" + ")].filter(Boolean).join(" · ")}
-          </p>
-          <p className="mt-2 text-[14.5px] text-ph-white/92">{card.reason}</p>
-          <ul className="mt-3 flex flex-col gap-3">
-            {card.trail.map((entry, i) => (
-              <li key={`${entry.platform}-${entry.date}-${i}`} className="text-[13.5px] leading-[1.55]">
-                <span className="block text-[12.5px] text-ph-white/52">{trailLine(entry)}</span>
-                <span className="block font-light text-ph-white/72">{entry.detail}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-        <PrimaryButton onClick={onAsk}>explore this in polaris</PrimaryButton>
-      </div>
-    </Popup>
-  );
-}
-
-/** The saved list, then one saved card with its sources, polaris and remove. */
+/** The saved list, then one saved card with polaris and remove. */
 function SavedDiscoveries({
   saved,
   onClose,
   onRemove,
-  onSources,
   onAsk,
 }: {
   saved: Discovery[];
   onClose: () => void;
   onRemove: (card: Discovery) => void;
-  onSources: (card: Discovery) => void;
   onAsk: (card: Discovery) => void;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -395,15 +342,14 @@ function SavedDiscoveries({
           <button
             type="button"
             onClick={() => setOpenId(null)}
-            className="flex items-center gap-1.5 self-start text-[12.5px] text-ph-white/60 transition-colors duration-200 hover:text-[var(--ph-accent)]"
+            className="flex items-center gap-1.5 self-start text-meta text-ph-secondary transition-colors duration-200 hover:text-[var(--ph-accent)]"
           >
             <Arrow direction="left" size={12} /> saved
           </button>
-          <h3 className="text-[17px] leading-[1.4] text-ph-white/95">{card.headline}</h3>
-          <p className="text-[14px] font-light leading-[1.6] text-ph-white/75">{card.detail}</p>
-          <p className="text-[13.5px] italic leading-[1.55] text-[rgba(var(--ph-accent-rgb),0.94)]">{card.reason}</p>
-          <div className="mt-1 flex flex-wrap gap-2">
-            <CardLink onClick={() => onSources(card)}>see the sources</CardLink>
+          <h3 className="text-item text-ph-white">{card.headline}</h3>
+          <p className="text-reading text-ph-secondary">{card.detail}</p>
+          <p className="text-reading italic text-[var(--ph-accent)]">{card.reason}</p>
+          <div className="mt-1 flex justify-end">
             <CardLink onClick={() => onAsk(card)}>ask polaris</CardLink>
           </div>
           <button
@@ -412,7 +358,7 @@ function SavedDiscoveries({
               onRemove(card);
               setOpenId(null);
             }}
-            className="mt-2 self-start text-[12.5px] text-ph-white/50 transition-colors duration-200 hover:text-[var(--ph-accent)]"
+            className="mt-2 self-start text-body text-ph-tertiary transition-colors duration-200 hover:text-[var(--ph-accent)]"
           >
             remove from saved
           </button>
@@ -424,23 +370,23 @@ function SavedDiscoveries({
   return (
     <Popup title="saved discoveries" onClose={onClose}>
       {saved.length === 0 ? (
-        <p className="text-[13.5px] font-light text-ph-white/55">discoveries you save will appear here.</p>
+        <p className="text-body text-ph-tertiary">discoveries you save will appear here.</p>
       ) : (
-        <ul className="flex flex-col">
+        <ul className="flex flex-col gap-1">
           {saved.map((s) => (
             <li key={s.id}>
               <button
                 type="button"
                 onClick={() => setOpenId(s.id)}
-                className="group flex w-full items-center gap-4 border-b border-ph-white/[0.06] py-3 text-left last:border-b-0"
+                className="group flex w-full items-center gap-4 py-3 text-left"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[14.5px] text-ph-white/92 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+                  <span className="block text-reading text-ph-white transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
                     {s.headline}
                   </span>
-                  <span className="mt-1 block text-[12.5px] font-light leading-[1.5] text-ph-white/55">{s.reason}</span>
+                  <span className="mt-1 block text-body text-ph-tertiary">{s.reason}</span>
                 </span>
-                <span className="text-ph-white/50 group-hover:text-[var(--ph-accent)]">
+                <span className="text-ph-tertiary group-hover:text-[var(--ph-accent)]">
                   <Arrow size={12} />
                 </span>
               </button>

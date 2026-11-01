@@ -320,7 +320,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
         className="relative p-8 md:p-12 max-w-md w-full transition-opacity duration-500"
         style={{
           backgroundColor: "#0A0A0A",
-          border: "1px solid rgba(255,253,253,0.08)",
+          border: "1px solid rgba(242,242,243,0.08)",
           opacity: isFading ? 0 : 1,
         }}
         onClick={(e) => e.stopPropagation()}
@@ -330,9 +330,9 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
           <button
             onClick={resetAndClose}
             className="absolute top-4 right-4 transition-colors"
-            style={{ color: "rgba(255,253,253,0.5)" }}
-            onMouseEnter={(e) => e.currentTarget.style.color = "#FFFDFD"}
-            onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.5)"}
+            style={{ color: "rgba(242,242,243,0.5)" }}
+            onMouseEnter={(e) => e.currentTarget.style.color = "#F2F2F3"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "rgba(242,242,243,0.5)"}
             aria-label="Close modal"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -363,7 +363,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
             <button
               onClick={() => setStatus("idle")}
               className="text-[13px] lowercase px-6 py-2 rounded-full transition-all"
-              style={{ border: "1px solid rgba(255,253,253,0.4)" }}
+              style={{ border: "1px solid rgba(242,242,243,0.4)" }}
             >
               try again
             </button>
@@ -379,7 +379,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
               }
             `}</style>
             <h2 className="text-2xl font-semibold mb-2 uppercase">PHENYX</h2>
-            <p className="text-xs font-light lowercase mb-8" style={{ color: "rgba(255,253,253,0.6)" }}>
+            <p className="text-xs font-light lowercase mb-8" style={{ color: "rgba(242,242,243,0.6)" }}>
               we{"'"}re not live yet. be among the first.
             </p>
             
@@ -412,7 +412,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                       y1={fromNode.y}
                       x2={toNode.x}
                       y2={toNode.y}
-                      stroke={isConnected ? ACCENT : "#FFFDFD"}
+                      stroke={isConnected ? ACCENT : "#F2F2F3"}
                       strokeWidth="0.5"
                       style={{
                         opacity: isConnected ? 0.5 : 0.08,
@@ -467,7 +467,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                         cx={node.x}
                         cy={node.y}
                         r={isActive ? 2.2 : 1.5}
-                        fill={isActive ? ACCENT : "#FFFDFD"}
+                        fill={isActive ? ACCENT : "#F2F2F3"}
                         opacity={isActive ? 1 : 0.3}
                         style={{ transition: "all 0.4s ease" }}
                       />
@@ -492,7 +492,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
               <p
                 className="lowercase text-sm leading-relaxed"
                 style={{ 
-                  color: "rgba(255,253,253,0.7)",
+                  color: "rgba(242,242,243,0.7)",
                   opacity: textOpacity,
                   transition: "opacity 0.3s ease-in-out",
                 }}
@@ -508,7 +508,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
               style={{ 
                 border: `1px solid ${ACCENT}80`,
                 backgroundColor: "transparent",
-                color: "#FFFDFD",
+                color: "#F2F2F3",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = ACCENT;
@@ -517,7 +517,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.color = "#FFFDFD";
+                e.currentTarget.style.color = "#F2F2F3";
                 e.currentTarget.style.borderColor = `${ACCENT}80`;
               }}
             >
@@ -528,13 +528,13 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
           <div style={{ animation: "fadeIn 400ms ease-out" }}>
             <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
             <h2 className="text-2xl font-semibold mb-2 uppercase">PHENYX</h2>
-            <p className="text-xs font-light lowercase mb-8" style={{ color: "rgba(255,253,253,0.6)" }}>
+            <p className="text-xs font-light lowercase mb-8" style={{ color: "rgba(242,242,243,0.6)" }}>
               we{"'"}re not live yet. be among the first.
             </p>
             
             <form onSubmit={handleStep1Submit} className="space-y-6">
               <div>
-                <label htmlFor="modal-name" className="block text-xs lowercase mb-2" style={{ color: "rgba(255,253,253,0.6)" }}>
+                <label htmlFor="modal-name" className="block text-xs lowercase mb-2" style={{ color: "rgba(242,242,243,0.6)" }}>
                   name
                 </label>
                 <input
@@ -545,10 +545,10 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                     setName(e.target.value);
                     setNameError("");
                   }}
-                  className="w-full bg-transparent border-b py-2 text-[#FFFDFD] focus:outline-none transition-colors"
-                  style={{ borderColor: nameError ? "#E8451E" : "rgba(255,253,253,0.3)" }}
-                  onFocus={(e) => !nameError && (e.target.style.borderColor = "rgba(255,253,253,0.6)")}
-                  onBlur={(e) => !nameError && (e.target.style.borderColor = "rgba(255,253,253,0.3)")}
+                  className="w-full bg-transparent border-b py-2 text-[#F2F2F3] focus:outline-none transition-colors"
+                  style={{ borderColor: nameError ? "#E8451E" : "rgba(242,242,243,0.3)" }}
+                  onFocus={(e) => !nameError && (e.target.style.borderColor = "rgba(242,242,243,0.6)")}
+                  onBlur={(e) => !nameError && (e.target.style.borderColor = "rgba(242,242,243,0.3)")}
                 />
                 {nameError && (
                   <p className="text-[11px] lowercase mt-1" style={{ color: "#E8451E" }}>
@@ -558,7 +558,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
               </div>
               
               <div>
-                <label htmlFor="modal-email" className="block text-xs lowercase mb-2" style={{ color: "rgba(255,253,253,0.6)" }}>
+                <label htmlFor="modal-email" className="block text-xs lowercase mb-2" style={{ color: "rgba(242,242,243,0.6)" }}>
                   email
                 </label>
                 <input
@@ -569,10 +569,10 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                     setEmail(e.target.value);
                     setEmailError("");
                   }}
-                  className="w-full bg-transparent border-b py-2 text-[#FFFDFD] focus:outline-none transition-colors"
-                  style={{ borderColor: emailError ? "#E8451E" : "rgba(255,253,253,0.3)" }}
-                  onFocus={(e) => !emailError && (e.target.style.borderColor = "rgba(255,253,253,0.6)")}
-                  onBlur={(e) => !emailError && (e.target.style.borderColor = "rgba(255,253,253,0.3)")}
+                  className="w-full bg-transparent border-b py-2 text-[#F2F2F3] focus:outline-none transition-colors"
+                  style={{ borderColor: emailError ? "#E8451E" : "rgba(242,242,243,0.3)" }}
+                  onFocus={(e) => !emailError && (e.target.style.borderColor = "rgba(242,242,243,0.6)")}
+                  onBlur={(e) => !emailError && (e.target.style.borderColor = "rgba(242,242,243,0.3)")}
                 />
                 {emailError && (
                   <p className="text-[11px] lowercase mt-1" style={{ color: "#E8451E" }}>
@@ -588,7 +588,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                 style={{ 
                   border: `1px solid ${ACCENT}80`,
                   backgroundColor: "transparent",
-                  color: "#FFFDFD",
+                  color: "#F2F2F3",
                 }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled) {
@@ -598,7 +598,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = "transparent";
-                  e.currentTarget.style.color = "#FFFDFD";
+                  e.currentTarget.style.color = "#F2F2F3";
                 }}
               >
                 {status === "loading" ? "..." : "enter"}
@@ -609,42 +609,42 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
           <div style={{ animation: "fadeIn 400ms ease-out" }}>
             <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
             <h2 className="text-2xl font-semibold mb-2 uppercase">PHENYX</h2>
-            <p className="text-xs font-light lowercase mb-8" style={{ color: "rgba(255,253,253,0.6)" }}>
+            <p className="text-xs font-light lowercase mb-8" style={{ color: "rgba(242,242,243,0.6)" }}>
               we{"'"}re not live yet. be among the first.
             </p>
             
             <div className="space-y-6">
               {/* Role dropdown */}
               <div>
-                <label className="block text-xs lowercase mb-2" style={{ color: "rgba(255,253,253,0.6)" }}>
+                <label className="block text-xs lowercase mb-2" style={{ color: "rgba(242,242,243,0.6)" }}>
                   what best describes you?
                 </label>
                 <div className="relative">
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full bg-transparent border-b py-2 text-[#FFFDFD] focus:outline-none appearance-none pr-10 lowercase"
+                    className="w-full bg-transparent border-b py-2 text-[#F2F2F3] focus:outline-none appearance-none pr-10 lowercase"
                     style={{ 
-                      borderColor: "rgba(255,253,253,0.3)",
-                      color: role ? "#FFFDFD" : "rgba(255,253,253,0.6)",
+                      borderColor: "rgba(242,242,243,0.3)",
+                      color: role ? "#F2F2F3" : "rgba(242,242,243,0.6)",
                     }}
                   >
                     {roleOptions.map((option) => (
-                      <option key={option.value} value={option.value} className="bg-[#0A0A0A] text-[#FFFDFD]">
+                      <option key={option.value} value={option.value} className="bg-[#0A0A0A] text-[#F2F2F3]">
                         {option.label}
                       </option>
                     ))}
                   </select>
                   <ChevronDown 
                     className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                    style={{ color: "rgba(255,253,253,0.5)" }}
+                    style={{ color: "rgba(242,242,243,0.5)" }}
                   />
                 </div>
               </div>
 
               {/* Platform pills */}
               <div>
-                <label className="block text-xs lowercase mb-3" style={{ color: "rgba(255,253,253,0.6)" }}>
+                <label className="block text-xs lowercase mb-3" style={{ color: "rgba(242,242,243,0.6)" }}>
                   where are you most active?
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -659,13 +659,13 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                         height: "32px",
                         border: platforms.includes(platform) 
                           ? `1px solid ${ACCENT}` 
-                          : "1px solid rgba(255,253,253,0.25)",
+                          : "1px solid rgba(242,242,243,0.25)",
                         backgroundColor: platforms.includes(platform) 
                           ? `${ACCENT}1F` 
                           : "transparent",
                         color: platforms.includes(platform) 
-                          ? "#FFFDFD" 
-                          : "rgba(255,253,253,0.7)",
+                          ? "#F2F2F3" 
+                          : "rgba(242,242,243,0.7)",
                       }}
                     >
                       {platform}
@@ -676,7 +676,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
 
               {/* Why field */}
               <div>
-                <label className="block text-xs lowercase mb-2" style={{ color: "rgba(255,253,253,0.6)" }}>
+                <label className="block text-xs lowercase mb-2" style={{ color: "rgba(242,242,243,0.6)" }}>
                   what brought you here?
                 </label>
                 <input
@@ -684,13 +684,13 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                   value={why}
                   onChange={(e) => setWhy(e.target.value)}
                   placeholder="tell us in a few words"
-                  className="w-full bg-transparent border-b py-2 text-[#FFFDFD] placeholder:lowercase focus:outline-none transition-colors"
+                  className="w-full bg-transparent border-b py-2 text-[#F2F2F3] placeholder:lowercase focus:outline-none transition-colors"
                   style={{ 
-                    borderColor: "rgba(255,253,253,0.3)",
-                    color: "#FFFDFD",
+                    borderColor: "rgba(242,242,243,0.3)",
+                    color: "#F2F2F3",
                   }}
-                  onFocus={(e) => e.target.style.borderColor = "rgba(255,253,253,0.6)"}
-                  onBlur={(e) => e.target.style.borderColor = "rgba(255,253,253,0.3)"}
+                  onFocus={(e) => e.target.style.borderColor = "rgba(242,242,243,0.6)"}
+                  onBlur={(e) => e.target.style.borderColor = "rgba(242,242,243,0.3)"}
                 />
               </div>
 
@@ -703,7 +703,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                   style={{ 
                     border: `1px solid ${ACCENT}80`,
                     backgroundColor: "transparent",
-                    color: "#FFFDFD",
+                    color: "#F2F2F3",
                   }}
                   onMouseEnter={(e) => {
                     if (!e.currentTarget.disabled) {
@@ -713,7 +713,7 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = "transparent";
-                    e.currentTarget.style.color = "#FFFDFD";
+                    e.currentTarget.style.color = "#F2F2F3";
                   }}
                 >
                   {status === "loading" ? "..." : "complete"}
@@ -723,9 +723,9 @@ export function WaitlistModal({ isOpen, onClose }: WaitlistModalProps) {
                   type="button"
                   onClick={handleSkip}
                   className="w-full text-[13px] lowercase py-2 transition-colors"
-                  style={{ color: "rgba(255,253,253,0.6)" }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.9)"}
-                  onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,253,253,0.6)"}
+                  style={{ color: "rgba(242,242,243,0.6)" }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = "rgba(242,242,243,0.9)"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "rgba(242,242,243,0.6)"}
                 >
                   skip for now
                 </button>

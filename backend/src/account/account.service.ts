@@ -1,7 +1,6 @@
 import { HttpException, Injectable, Logger } from "@nestjs/common";
 import { SupabaseService } from "../supabase/supabase.service";
 import { EncryptionService } from "../common/encryption.service";
-import { ConfirmCodeService, readCode } from "../auth/confirm-code.service";
 import { AccountCloseDto, closeAccountError } from "./account.dto";
 import { scrubCredentials } from "./account.redaction";
 
@@ -13,7 +12,7 @@ import { scrubCredentials } from "./account.redaction";
  *   • export   — a single portable JSON dump of everything observed about the
  *                owner, with Polaris turns decrypted owner-side and a hard "no
  *                token/JWT ever leaves" guarantee (see {@link scrubCredentials}).
- *   • close    — two-gate destroy: an emailed confirm code + typed confirmation.
+ *   • close    — destroy, confirmed by typing `delete my account`.
  *
  * Freeze/pause is gone: disconnecting through Onairos is the only stop.
  */
@@ -23,8 +22,7 @@ export class AccountService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly encryption: EncryptionService,
-    private readonly confirmCode: ConfirmCodeService
+    private readonly encryption: EncryptionService
   ) {}
 
   // --------------------------------------------------------------------------
@@ -167,9 +165,8 @@ export class AccountService {
   // --------------------------------------------------------------------------
 
   /**
-   * Permanently close the account. Checks run in fill order: the emailed
-   * confirm code first, then the typed confirmation phrase. Rejected (400) before anything is
-   * touched. Deletes the auth user via the service role, which cascades to every
+   * Permanently close the account once the typed confirmation phrase matches.
+   * Rejected (400) before anything is touched. Deletes the auth user via the service role, which cascades to every
    * per-user table. Irreversible. Logs only `{ user_id, timestamp }` — never any
    * content.
    */
@@ -177,13 +174,10 @@ export class AccountService {
     userId: string,
     body: AccountCloseDto | undefined
   ): Promise<{ deleted: true }> {
-    const code = readCode(body?.code);
-    const fieldError = closeAccountError(code, body?.confirmation);
+    const fieldError = closeAccountError(body?.confirmation);
     if (fieldError) {
       throw new HttpException({ error: fieldError }, 400);
     }
-
-    await this.confirmCode.assertValid(userId, code);
 
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase.auth.admin.deleteUser(userId);
@@ -196,37 +190,5 @@ export class AccountService {
       JSON.stringify({ event: "account_deleted", user_id: userId, ts: new Date().toISOString() })
     );
     return { deleted: true };
-  }
-
-  /**
-   * Remove constellation content (points, observations, polaris history, traits,
-   * v66 records) while keeping the account and profile. Irreversible.
-   */
-  async clearConstellation(userId: string): Promise<{ cleared: true }> {
-    const supabase = this.supabaseService.getClient();
-    const tables = [
-      "underneath_readings",
-      "artifact_observations",
-      "generated_artifacts",
-      "observation_signals",
-      "area_signal_memberships",
-      "areas",
-      "signal_source_records",
-      "signals",
-      "source_records",
-      "polaris_messages",
-      "polaris_conversations",
-      "observations",
-      "user_traits",
-      "constellation_points",
-      "constellation_state",
-    ];
-    for (const table of tables) {
-      const { error } = await supabase.from(table).delete().eq("user_id", userId);
-      if (error) {
-        this.logger.error(`constellation clear ${table} failed: ${error.message}`);
-      }
-    }
-    return { cleared: true };
   }
 }

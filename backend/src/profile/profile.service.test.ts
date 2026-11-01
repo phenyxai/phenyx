@@ -91,10 +91,6 @@ function makeSupabase(
   } as any;
 }
 
-const fakeConfirmCode = {
-  assertValid: async () => undefined,
-} as any;
-
 function makeSynthesis() {
   const queued: string[] = [];
   return {
@@ -135,7 +131,6 @@ test("getOverview on a monthly subscription reads renews_at from Stripe", async 
       stripe_subscription_id: "sub_123",
       subscription_status: "active",
     }),
-    fakeConfirmCode,
     stripe,
     fakeSynthesis
   );
@@ -159,7 +154,6 @@ test("getOverview on yearly_paid is yearly with no renewal and no Stripe call", 
       stripe_subscription_id: null,
       subscription_status: "yearly_paid",
     }),
-    fakeConfirmCode,
     stripe,
     fakeSynthesis
   );
@@ -177,7 +171,6 @@ test("getOverview on a gift has no billing period and no renewal", async () => {
       stripe_subscription_id: null,
       subscription_status: "gift",
     }),
-    fakeConfirmCode,
     stripe,
     fakeSynthesis
   );
@@ -196,7 +189,6 @@ test("getOverview on free never consults Stripe, even with a stale subscription 
       stripe_subscription_id: "sub_old",
       subscription_status: "canceled",
     }),
-    fakeConfirmCode,
     stripe,
     fakeSynthesis
   );
@@ -217,7 +209,6 @@ test("getOverview still returns when Stripe fails: renews_at null, billing_perio
       stripe_subscription_id: "sub_123",
       subscription_status: "active",
     }),
-    fakeConfirmCode,
     stripe,
     fakeSynthesis
   );
@@ -238,7 +229,6 @@ test("getOverview still returns when the Stripe key is missing", async () => {
       stripe_subscription_id: "sub_123",
       subscription_status: "active",
     }),
-    fakeConfirmCode,
     stripe,
     fakeSynthesis
   );
@@ -253,7 +243,6 @@ test("getOverview returns a stale insights reading and queues a fresh one", asyn
   const reading = { version: 2, generated_at: "2026-10-01T00:00:00.000Z", matters: [], eras: [] };
   const service = new ProfileService(
     makeSupabase({ tier: "free", prompt_times: {} }, { version: 3, insights: reading }),
-    fakeConfirmCode,
     stripe,
     synthesis
   );
@@ -267,7 +256,6 @@ test("getOverview leaves a current insights reading alone", async () => {
   const { synthesis, queued } = makeSynthesis();
   const service = new ProfileService(
     makeSupabase({ tier: "free", prompt_times: {} }, { version: 3, insights: { version: 3, patterns: [], arc: "quest" } }),
-    fakeConfirmCode,
     stripe,
     synthesis
   );
