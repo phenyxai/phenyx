@@ -22,7 +22,7 @@ test("the trail starts where the current quarter began and is brightest at its h
   assert.match(background, /^conic-gradient\(from 0\.00deg,/);
   assert.match(background, /rgba\(214,231,255,1\) 45\.00deg/);
   // nothing is painted past the head
-  assert.match(background, /rgba\(185,213,255,0\) 45\.60deg\)$/);
+  assert.match(background, /rgba\(180,204,244,0\) 45\.60deg\)$/);
 });
 
 test("the trail never sweeps past a full turn", () => {
