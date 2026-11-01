@@ -1,10 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSelectedLayoutSegment } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { useTier, applyTierUI, type Tier } from "@/lib/use-tier";
 import { trackTabVisit, trackTabDuration } from "@/lib/analytics";
 import { DASHBOARD_HOME, DASHBOARD_TABS, SETTINGS_HREF, segmentTab, tabTransition } from "@/lib/dashboard-nav";
 import type { TabClock } from "@/lib/dashboard-nav";
@@ -13,40 +12,6 @@ import { StellarMark } from "@/components/phenyx/stellar-mark";
 
 /** Per-viewer convenience only: whether the desktop sidebar is folded to its icon rail. */
 const COLLAPSED_KEY = "phenyx:sidebar-collapsed";
-
-const ShellTierContext = createContext<Tier>("free");
-
-/**
- * Reads the tier once for the shell chrome. The sidebar and the phone top bar
- * each show a TierBadge (one of them hidden at any width), and both read this
- * instead of running their own useTier() query.
- */
-export function ShellTierProvider({ children }: { children: ReactNode }) {
-  const { tier } = useTier();
-  return <ShellTierContext.Provider value={tier}>{children}</ShellTierContext.Provider>;
-}
-
-/**
- * The plan tier beside the PHENYX wordmark: "free" or "full" (gifted reads
- * full). Text + data-tier are owned by applyTierUI; the static "free" is the
- * pre-load default, and the element is only mutated, never remounted.
- */
-function TierBadge() {
-  const tier = useContext(ShellTierContext);
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    applyTierUI(tier, { badge: ref.current });
-  }, [tier]);
-  return (
-    <span
-      ref={ref}
-      data-tier="free"
-      className="ml-1.5 text-[12px] tracking-[0.08em] lowercase text-ph-white/65"
-    >
-      free
-    </span>
-  );
-}
 
 /**
  * Orbit mark + wordmark, linking home. Shared by the sidebar and the phone top
@@ -131,7 +96,7 @@ function SettingsLink({ active }: { active: boolean }) {
  * canvas/RAF state survives navigating away and back. The active tab derives
  * from the route segment (no client-only tab state that can desync from the URL).
  *
- * Top to bottom: brand (orbit mark + PHENYX + plan tier), the four tabs in
+ * Top to bottom: brand (orbit mark + PHENYX), the four tabs in
  * DASHBOARD_TABS order with their icons, and settings at the foot, a regular
  * row with a gear (PHE-126), beside the chevron that folds the sidebar to an
  * icon rail (PHE-129). From 641 to 999px it is always the rail. At or below
@@ -202,11 +167,6 @@ export function DashboardSidebar() {
     >
       <div className="mb-7 flex items-center gap-1 border-b border-ph-white/[0.055] pb-[22px] group-data-[collapsed=true]/side:justify-center rail:justify-center">
         <BrandLink />
-        {/* flex, so the badge gets its own line box and sits level with PHENYX
-            instead of on the baseline of a 16px line. */}
-        <RailLabel className="flex">
-          <TierBadge />
-        </RailLabel>
       </div>
 
       {/* Tab nav — rendered in DASHBOARD_TABS order, never sorted. The active
@@ -263,8 +223,7 @@ export function DashboardSidebar() {
 }
 
 /**
- * Phone-width top bar: the brand linking home, the plan tier beside it, and
- * the settings gear (phones have no drawer, so this is how settings stays
+ * Phone-width top bar: the brand linking home and the settings gear (phones have no drawer, so this is how settings stays
  * reachable). Rendered at the top of the main column; hidden above 640px,
  * where the sidebar is in view.
  */
@@ -273,7 +232,6 @@ export function MobileTopBar() {
   return (
     <header className="sticky top-0 z-[110] h-[calc(52px+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-ph-white/[0.07] bg-[color-mix(in_srgb,var(--ph-black,#080808)_94%,transparent)] px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[14px] [@media(max-width:640px)]:flex [@media(min-width:641px)]:hidden">
       <BrandLink />
-      <TierBadge />
       <SettingsLink active={segmentTab(segment) === "settings"} />
     </header>
   );

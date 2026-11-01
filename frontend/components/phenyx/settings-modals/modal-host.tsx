@@ -30,8 +30,6 @@ import { DataManagementModal } from './data-management'
 import { CloseAccountModal } from './close-account'
 import { EditProfileModal } from './edit-profile'
 import { FeedbackModal } from './feedback'
-import { UpgradeModal } from './upgrade'
-import { SubscriptionModal } from './subscription'
 
 // ---------------------------------------------------------------------------
 // Settings & Account modal host (PHE-32; chrome restyled for v244 in PHE-95).
@@ -40,7 +38,7 @@ import { SubscriptionModal } from './subscription'
 // Radix Dialog gives us the focus trap, `esc` / overlay-click close, and focus
 // return to the trigger for free. Consumers wrap their tree in
 // `SettingsModalsProvider` and call `useSettingsModals().openModal(id)` from any
-// settings row, GET IN TOUCH action, or upgrade CTA.
+// settings row or GET IN TOUCH action.
 // ---------------------------------------------------------------------------
 
 export type SettingsModalId =
@@ -50,8 +48,6 @@ export type SettingsModalId =
   | 'close-account'
   | 'edit-profile'
   | 'feedback'
-  | 'upgrade'
-  | 'subscription'
 
 interface SettingsModalsContextValue {
   /** The currently open modal id, or null when nothing is open. */
@@ -99,8 +95,6 @@ export function SettingsModalsProvider({
         {openId === 'close-account' && <CloseAccountModal />}
         {openId === 'edit-profile' && <EditProfileModal />}
         {openId === 'feedback' && <FeedbackModal />}
-        {openId === 'upgrade' && <UpgradeModal />}
-        {openId === 'subscription' && <SubscriptionModal />}
       </Dialog>
     </SettingsModalsContext.Provider>
   )

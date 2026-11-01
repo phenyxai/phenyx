@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { DashboardSidebar, MobileTopBar, ShellTierProvider } from "@/components/phenyx/dashboard-sidebar";
+import { DashboardSidebar, MobileTopBar } from "@/components/phenyx/dashboard-sidebar";
 import { MobileBottomNav } from "@/components/phenyx/mobile-bottom-nav";
 import { DashboardInstrumentation } from "@/components/phenyx/dashboard-instrumentation";
 import { SettingsModalsProvider } from "@/components/phenyx/settings-modals/modal-host";
@@ -16,13 +16,12 @@ export const metadata: Metadata = {
  * Authenticated dashboard shell. The sidebar lives here (persistent across tab
  * transitions — it does not remount when the active segment changes), and the
  * tab content is route-driven via {children}. At or below 640px the sidebar is
- * hidden: MobileTopBar carries the brand, plan tier and settings gear,
+ * hidden: MobileTopBar carries the brand and settings gear,
  * MobileBottomNav carries the tabs (the only phone navigation), and the main
- * column is padded so content clears the fixed bar (PHE-96). ShellTierProvider
- * reads the plan tier once for both tier badges.
+ * column is padded so content clears the fixed bar (PHE-96).
  *
  * SettingsModalsProvider wraps the whole shell so any tab (settings rows,
- * Constellation upgrade CTAs, feedback) can open a modal by id via
+ * feedback) can open a modal by id via
  * `useSettingsModals().openModal(id)` against a single shared host.
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -38,20 +37,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       >
         skip to content
       </a>
-      <ShellTierProvider>
-        <div className="flex min-h-screen bg-[var(--ph-black,#080808)] text-ph-white">
-          <DashboardSidebar />
-          <main
-            id="main"
-            tabIndex={-1}
-            className="min-w-0 flex-1 outline-none [@media(max-width:640px)]:pb-[calc(72px+env(safe-area-inset-bottom,0px))]"
-          >
-            <MobileTopBar />
-            {/* One centered column on every tab from 641px (globals.css). */}
-            <div className="dash-frame">{children}</div>
-          </main>
-        </div>
-      </ShellTierProvider>
+      <div className="flex min-h-screen bg-[var(--ph-black,#080808)] text-ph-white">
+        <DashboardSidebar />
+        <main
+          id="main"
+          tabIndex={-1}
+          className="min-w-0 flex-1 outline-none [@media(max-width:640px)]:pb-[calc(72px+env(safe-area-inset-bottom,0px))]"
+        >
+          <MobileTopBar />
+          {/* One centered column on every tab from 641px (globals.css). */}
+          <div className="dash-frame">{children}</div>
+        </main>
+      </div>
       <MobileBottomNav />
     </SettingsModalsProvider>
   );

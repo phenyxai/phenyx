@@ -24,7 +24,6 @@ const GROUPS: SettingsGroup[] = [
     label: "account",
     rows: [
       { modal: "edit-profile", label: "profile & sign-in", sub: "your name and how you sign in" },
-      { modal: "subscription", label: "membership", sub: "plan and billing" },
       { modal: "close-account", label: "deactivate or delete", sub: "manage account access and removal" },
     ],
   },
@@ -50,10 +49,8 @@ const GROUPS: SettingsGroup[] = [
  * Settings panel (PHE-91 / PHE-95, v244, PHE-129). Not a tab: reached from the
  * sidebar foot (desktop) and the top bar gear (phones) at /dashboard/settings.
  * Three sections of rows (account, your data, help & legal) whose names sit in
- * the accent; a row opens a modal by id or a legal page. Membership opens the
- * plans, which own the billing-portal and checkout calls. Log out sits once, at
- * the very bottom, and returns to sign-in. Gifted is never shown; freeze/pause
- * does not exist.
+ * the accent; a row opens a modal by id or a legal page. Log out sits once, at
+ * the very bottom, and returns to sign-in. Freeze/pause does not exist.
  */
 export default function SettingsPage() {
   const router = useRouter();

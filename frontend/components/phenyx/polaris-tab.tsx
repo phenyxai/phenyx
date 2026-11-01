@@ -12,14 +12,13 @@ import {
   type PolarisAllowance,
   type PolarisMode,
   type PolarisPlanState,
-  type PolarisReturnQuestion,
   type PolarisSavedPlan,
   type PolarisStarter,
   type PolarisThreadSummary,
 } from "@/lib/api-client";
 import { V67_PRICING, pointsPrice, polarisMonthlyPointsFor, turnCost } from "@/lib/billing";
 import { parsePlan, resetLabel, type ParsedPlan } from "@/lib/polaris-plan";
-import { AccentDot, Popup, PrimaryButton, QuietAction, useSettingsModals } from "@/components/phenyx/settings-modals/modal-host";
+import { AccentDot, Popup, PrimaryButton, QuietAction } from "@/components/phenyx/settings-modals/modal-host";
 import { HeaderChip } from "@/components/phenyx/panel-header";
 import { Arrow } from "@/components/phenyx/nav-icons";
 import { trackPolarisMessage } from "@/lib/analytics";
@@ -31,8 +30,7 @@ import { useTier } from "@/lib/use-tier";
 // HOME: "past conversations" and "usage" chips, a lit dot, "where would you
 // like to begin?", the question box, and three starting points (one per mode,
 // from the person's top pillars). Picking one fills the box and its mode.
-// "Your conversations" (questions to return to, saved plans, then past
-// conversations with search) and "polaris usage" (the month's points as a
+// "Your conversations" (saved plans, then past conversations with search) and "polaris usage" (the month's points as a
 // ring, when they reset, bought points, and adding more) are pop-ups.
 //
 // CONVERSATION: the question as the title with its topic under it and "leave
@@ -42,7 +40,7 @@ import { useTier } from "@/lib/use-tier";
 // A reply with numbered steps shows them as a plan card: steps to check off and
 // a save, both kept per reply (POST /api/polaris/plans/:messageId).
 //
-// Polaris runs on points (30 free, 300 full a month): 3, 4 or 5 for an opening
+// Polaris runs on points (30 a month, plus any bought): 3, 4 or 5 for an opening
 // question by its mode, 2 for a follow-up. Out of points, the question waits
 // in the box and a quiet note in the thread links to buying more. Deep links
 // `/dashboard/polaris?q=&mode=&context=` (a discovery) open a conversation
@@ -116,7 +114,6 @@ function autosize(el: HTMLTextAreaElement | null) {
 
 export function PolarisTab() {
   const searchParams = useSearchParams();
-  const { openModal } = useSettingsModals();
   const { tier } = useTier();
 
   const [view, setView] = useState<View>("home");
@@ -125,7 +122,6 @@ export function PolarisTab() {
   const [threads, setThreads] = useState<PolarisThreadSummary[]>([]);
   const [starters, setStarters] = useState<PolarisStarter[]>([]);
   const [savedPlans, setSavedPlans] = useState<PolarisSavedPlan[]>([]);
-  const [returns, setReturns] = useState<PolarisReturnQuestion[] | null>(null);
   // Backend points snapshot. Until it loads, the tier's monthly points stand
   // in so the ring never reads "0 of 0".
   const [allowance, setAllowance] = useState<PolarisAllowance | null>(null);
@@ -170,7 +166,6 @@ export function PolarisTab() {
       setThreads(data.threads ?? []);
       setStarters(data.starters ?? []);
       setSavedPlans(data.plans ?? []);
-      setReturns(data.returns ?? null);
       applyAllowance(data.allowance);
     } catch {
       setThreads([]);
@@ -425,11 +420,6 @@ export function PolarisTab() {
         <ConversationsPopup
           threads={threads}
           plans={savedPlans}
-          returns={returns}
-          onUpgrade={() => {
-            setPopup(null);
-            openModal("subscription");
-          }}
           onOpenThread={openThread}
           onPlan={updatePlan}
           onClose={() => setPopup(null)}
@@ -441,10 +431,6 @@ export function PolarisTab() {
           fallbackLimit={tierLimit}
           adding={popup === "add-points"}
           onAdd={() => setPopup("add-points")}
-          onUpgrade={() => {
-            setPopup(null);
-            openModal("subscription");
-          }}
           onClose={() => setPopup(null)}
         />
       )}
@@ -945,21 +931,16 @@ function PlanCard({
 // Pop-ups
 // ---------------------------------------------------------------------------
 
-/** "your conversations": questions to return to, saved plans, then past conversations with search. */
+/** "your conversations": saved plans, then past conversations with search. */
 function ConversationsPopup({
   threads,
   plans,
-  returns,
-  onUpgrade,
   onOpenThread,
   onPlan,
   onClose,
 }: {
   threads: PolarisThreadSummary[];
   plans: PolarisSavedPlan[];
-  /** Full: up to three open questions. Free: null, so the line to full shows instead. */
-  returns: PolarisReturnQuestion[] | null;
-  onUpgrade: () => void;
   onOpenThread: (id: string) => void;
   onPlan: (messageId: string, patch: { done?: number[]; saved?: boolean }) => void;
   onClose: () => void;
@@ -999,28 +980,6 @@ function ConversationsPopup({
   return (
     <Popup title="your conversations" onClose={onClose} className="w-[min(680px,calc(100vw-40px))]">
       <div className="flex flex-col gap-6">
-        {returns === null ? (
-          <section>
-            <SectionLabel>questions to return to</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              <HeaderChip onClick={onUpgrade}>return to unfinished questions with full</HeaderChip>
-              <HeaderChip onClick={onUpgrade}>upgrade plan</HeaderChip>
-            </div>
-          </section>
-        ) : (
-          returns.length > 0 && (
-            <section>
-              <SectionLabel>questions to return to</SectionLabel>
-              <ul className="flex flex-col">
-                {returns.map((r) => (
-                  <li key={r.thread_id}>
-                    <ListRow onClick={() => onOpenThread(r.thread_id)} title={r.line} meta={r.title} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )
-        )}
         {readable.length > 0 && (
           <section>
             <SectionLabel>saved plans</SectionLabel>
@@ -1098,15 +1057,14 @@ const POINT_STEPS = Array.from(
 
 /**
  * "polaris usage": the month's points as a ring that fills as they are used,
- * how many are left, when they reset, bought points still available, "add
- * points" (100 to 2,000, then checkout) and "upgrade plan".
+ * how many are left, when they reset, bought points still available and "add
+ * points" (100 to 2,000, then checkout).
  */
 function UsagePopup({
   allowance,
   fallbackLimit,
   adding,
   onAdd,
-  onUpgrade,
   onClose,
 }: {
   allowance: PolarisAllowance | null;
@@ -1115,7 +1073,6 @@ function UsagePopup({
   /** Open on the points picker (from "purchase more points"). */
   adding: boolean;
   onAdd: () => void;
-  onUpgrade: () => void;
   onClose: () => void;
 }) {
   const [points, setPoints] = useState<number>(V67_PRICING.pointsStep);
@@ -1195,9 +1152,6 @@ function UsagePopup({
         ) : (
           <PrimaryButton onClick={onAdd}>add points</PrimaryButton>
         )}
-        <QuietAction onClick={onUpgrade} className="self-center">
-          upgrade plan
-        </QuietAction>
       </div>
     </Popup>
   );
