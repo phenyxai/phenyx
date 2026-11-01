@@ -1732,7 +1732,8 @@ nav li > [aria-current="page"] {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 440px;
     align-items: start;
-    gap: 40px;
+    /* Room between the sky and the reading, narrower at 1024px so the sky keeps its width. */
+    gap: clamp(40px, 5.5vw, 80px);
   }
   .constellation-split > .constellation-sky {
     position: sticky;
