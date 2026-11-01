@@ -1,7 +1,8 @@
 # Render Blueprint (Infrastructure-as-Code) for PHENYX.
 #
-# This documents the two staging web services that already exist in Render and
-# deploy from `mvp`. It is a REFERENCE blueprint — review before applying via
+# This documents the staging web services that deploy from `mvp`. Since Nov 1
+# 2026 the backend is `phenyx` on Vedaant's Render account; the frontend service
+# is Ashwin's and is down, since mvp.phenyxai.com is served by Vercel. It is a REFERENCE blueprint — review before applying via
 # Render → Blueprints. Service names match the existing services so a blueprint
 # sync adopts them rather than creating duplicates.
 #
@@ -11,10 +12,10 @@
 
 services:
   # ---------------------------------------------------------------------------
-  # Backend — NestJS API (api.staging.phenyxcollective.com)
+  # Backend — NestJS API (https://phenyx-xt4k.onrender.com)
   # ---------------------------------------------------------------------------
   - type: web
-    name: phenyxcollective-backend-staging
+    name: phenyx
     runtime: node
     region: oregon
     plan: free # scale=1 required: auth throttle + OTP ledgers are in-memory.
@@ -72,6 +73,8 @@ services:
 
   # ---------------------------------------------------------------------------
   # Frontend — Next.js (staging.phenyxcollective.com)
+# Ashwin's Render account, not running since Nov 1 2026. The live frontend,
+# mvp.phenyxai.com, is on Vercel (ashwinshanmugam-projects/phenyx-staging).
   # NOTE: NEXT_PUBLIC_* are inlined at BUILD time — they must be set before the
   # build runs (Render injects service env vars into the build step).
   # ---------------------------------------------------------------------------
