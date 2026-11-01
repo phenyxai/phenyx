@@ -1778,9 +1778,25 @@ nav li > [aria-current="page"] {
   overflow: hidden;
   touch-action: pan-y;
   /* The neighbours fade out toward the stage's edges instead of being cut off
-     there. The fade stays inside the gutters, so the main card never dims. */
-  --discover-fade: max(0px, calc((100% - 430px) / 4));
-  mask-image: linear-gradient(to right, transparent, #000 var(--discover-fade), #000 calc(100% - var(--discover-fade)), transparent);
+     there: from their lit edge to nothing across all they show, on an eased
+     curve so neither end of the fade reads as a line. The main card, 70px
+     inside the lit edge, never dims. */
+  --discover-fade: max(0px, calc((100% - 430px) / 2 - 70px));
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    rgb(0 0 0 / 0.1) calc(var(--discover-fade) * 0.2),
+    rgb(0 0 0 / 0.35) calc(var(--discover-fade) * 0.4),
+    rgb(0 0 0 / 0.65) calc(var(--discover-fade) * 0.6),
+    rgb(0 0 0 / 0.9) calc(var(--discover-fade) * 0.8),
+    #000 var(--discover-fade),
+    #000 calc(100% - var(--discover-fade)),
+    rgb(0 0 0 / 0.9) calc(100% - var(--discover-fade) * 0.8),
+    rgb(0 0 0 / 0.65) calc(100% - var(--discover-fade) * 0.6),
+    rgb(0 0 0 / 0.35) calc(100% - var(--discover-fade) * 0.4),
+    rgb(0 0 0 / 0.1) calc(100% - var(--discover-fade) * 0.2),
+    transparent
+  );
 }
 .discover-card {
   grid-area: 1 / 1;
