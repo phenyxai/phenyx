@@ -1,7 +1,7 @@
 # PHENYX — Deployment Runbook
 
-Staging is two Render Node-20 web services that deploy from **`mvp`**:
-`phenyxcollective-backend-staging` (NestJS) and `phenyxcollective-frontend-staging` (Next.js).
+Staging deploys from **`mvp`**. The NestJS backend is the Render Node-20 web service `phenyx` (https://phenyx-xt4k.onrender.com), on Vedaant's Render account since Nov 1 2026.
+The Next.js frontend at mvp.phenyxai.com runs on Vercel (`ashwinshanmugam-projects/phenyx-staging`) with `NEXT_PUBLIC_API_BASE_URL` set to the backend URL. The old Render services (`phenyxcollective-*-staging`, Ashwin's account) are down.
 Infra is captured in [`render.yaml`](./render.yaml) (reference blueprint). This runbook is the ordered checklist to get a fresh `mvp` running.
 
 ---
@@ -19,7 +19,7 @@ psql "$DIRECT_URL" -f supabase/verification/phe31_acceptance.sql
 ```
 Skipping this makes every `/constellation`, `/profile/overview`, Polaris, and observations call 500.
 
-### 2. Set env vars on both Render services
+### 2. Set env vars on the Render backend and the Vercel frontend
 Full reference below. All secrets are `sync: false` in `render.yaml` — set their values in the Render dashboard (or `render env`), never in git.
 
 ### 3. Confirm build/start commands
@@ -29,7 +29,7 @@ Full reference below. All secrets are `sync: false` in `render.yaml` — set the
 | frontend | `npm install && npm run build` | `npm run start` | — |
 
 ### 4. Stripe webhook
-Register `https://<backend-url>/stripe/webhook` in the Stripe dashboard → put its signing secret in `STRIPE_WEBHOOK_SECRET`. `main.ts` already mounts `express.raw()` on that path. Create the 3 Price IDs and set them. Test keys for staging, live keys for prod.
+Register `https://<backend-url>/stripe/webhook` in the Stripe dashboard → put its signing secret in `STRIPE_WEBHOOK_SECRET`. `main.ts` already mounts `express.raw()` on that path. Create the 3 Price IDs and set them. Test keys for staging, live keys for prod. Staging currently runs live keys, so its endpoint is in Stripe live mode.
 
 ### 5. Deploy + smoke test
 Trigger a deploy, then run `./scripts/smoke-test.sh https://<backend-url> https://<frontend-url>` and walk the real flow (see §Smoke test).
@@ -38,7 +38,7 @@ Trigger a deploy, then run `./scripts/smoke-test.sh https://<backend-url> https:
 
 ## Environment variables
 
-### Backend (`phenyxcollective-backend-staging`)
+### Backend (`phenyx`)
 | Var | Purpose | How to get / generate |
 |---|---|---|
 | `PORT` | listen port | Render sets this automatically |
@@ -61,14 +61,14 @@ Trigger a deploy, then run `./scripts/smoke-test.sh https://<backend-url> https:
 
 > **`ENCRYPTION_KEY` is load-bearing.** It must be **64 hex chars (32 bytes)** and **identical across every restart and instance, forever**. It encrypts reflections + Polaris messages and keys the HMAC fingerprints used for lookups/dedup. Rotate it and all existing encrypted data becomes unreadable and lookups break. Generate once, store in a secrets manager, never change it without a re-encryption migration.
 
-### Frontend (`phenyxcollective-frontend-staging`)
+### Frontend (Vercel `phenyx-staging`)
 > `NEXT_PUBLIC_*` are **inlined at build time** — they must be set *before* `next build` runs (Render injects service env into the build).
 
 | Var | Purpose |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | client Supabase (OTP auth) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | client Supabase |
-| `NEXT_PUBLIC_API_BASE_URL` | the **backend** URL, e.g. `https://api.staging.phenyxcollective.com` |
+| `NEXT_PUBLIC_API_BASE_URL` | the **backend** URL, e.g. `https://phenyx-xt4k.onrender.com` |
 | `NEXT_PUBLIC_ONAIROS_API_KEY` | Onairos SDK |
 | `NEXT_PUBLIC_ADMIN_PASSWORD` | gates `/admin` (page-level only — weak) |
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Post-deploy liveness check for PHENYX.
 # Usage: ./scripts/smoke-test.sh <backend-url> [frontend-url]
-# Example: ./scripts/smoke-test.sh https://api.staging.phenyxcollective.com https://staging.phenyxcollective.com
+# Example: ./scripts/smoke-test.sh https://phenyx-xt4k.onrender.com https://mvp.phenyxai.com
 set -uo pipefail
 
 BACKEND="${1:-}"
