@@ -537,29 +537,34 @@ function HomeView({
             />
           </div>
 
-          {starters.length > 0 && (
-            <div className="mt-[30px]">
-              <p className="mb-2 text-[12.5px] font-semibold text-ph-white/84">starting points</p>
-              <ul className="flex flex-col">
-                {starters.map((s) => (
-                  <li key={s.mode}>
-                    <button
-                      type="button"
-                      onClick={() => onStarter(s)}
-                      className="group flex min-h-[46px] w-full items-center gap-4 px-0.5 py-[7px] text-left"
-                    >
-                      <span className="min-w-0 flex-1 text-[14.5px] font-light leading-[1.5] text-ph-white/80 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
-                        {s.text}
-                      </span>
-                      <span className="text-ph-white/76 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
-                        <Arrow size={14} />
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* From 641px the room for the three starting points is held before
+              they load, so the centered block already sits where it ends up
+              and they float in without moving it. */}
+          <div className="mt-[30px] [@media(min-width:641px)]:min-h-[165px]">
+            {starters.length > 0 && (
+              <div className="float-in">
+                <p className="mb-2 text-[12.5px] font-semibold text-ph-white/84">starting points</p>
+                <ul className="flex flex-col">
+                  {starters.map((s) => (
+                    <li key={s.mode}>
+                      <button
+                        type="button"
+                        onClick={() => onStarter(s)}
+                        className="group flex min-h-[46px] w-full items-center gap-4 px-0.5 py-[7px] text-left"
+                      >
+                        <span className="min-w-0 flex-1 text-[14.5px] font-light leading-[1.5] text-ph-white/80 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+                          {s.text}
+                        </span>
+                        <span className="text-ph-white/76 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+                          <Arrow size={14} />
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
