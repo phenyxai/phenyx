@@ -30,7 +30,7 @@ jobs:
       - name: Ping backend /health
         env:
           # Public health URL — not a secret. Change here if the backend moves.
-          BACKEND_HEALTH_URL: "https://phenyxcollective-backend-staging.onrender.com/health"
+          BACKEND_HEALTH_URL: "https://phenyx-xt4k.onrender.com/health"
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "$BACKEND_HEALTH_URL")
           echo "Backend /health -> HTTP ${code}"
