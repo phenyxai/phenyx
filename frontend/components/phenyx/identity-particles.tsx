@@ -227,7 +227,7 @@ export function IdentityParticles() {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(185,213,255,${Math.min(0.52, p.baseAlpha + 0.14) * wake})`;
+        ctx.fillStyle = `rgba(180,204,244,${Math.min(0.52, p.baseAlpha + 0.14) * wake})`;
         ctx.fill();
       }
 

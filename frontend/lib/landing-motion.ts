@@ -43,10 +43,10 @@ export function trailBackground(startAngle: number, sweep: number): string {
   const from = (((startAngle + 90) % 360) + 360) % 360;
   return (
     `conic-gradient(from ${from.toFixed(2)}deg,` +
-    `rgba(185,213,255,0) 0deg,` +
-    `rgba(185,213,255,.28) ${(deg * 0.55).toFixed(2)}deg,` +
+    `rgba(180,204,244,0) 0deg,` +
+    `rgba(180,204,244,.28) ${(deg * 0.55).toFixed(2)}deg,` +
     `rgba(214,231,255,1) ${deg.toFixed(2)}deg,` +
-    `rgba(185,213,255,0) ${(deg + 0.6).toFixed(2)}deg)`
+    `rgba(180,204,244,0) ${(deg + 0.6).toFixed(2)}deg)`
   );
 }
 
