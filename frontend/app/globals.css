@@ -589,8 +589,8 @@ nav li > [aria-current="page"] {
    (phenyx_landing.html) by hand, since no generator ships with the repo: those
    edits sit in place of the rules they replace. */
 .landing-vnext {
-  --s: #afcbff;
-  --s-rgb: 175, 203, 255;
+  --s: #B4CCF4;
+  --s-rgb: 180, 204, 244;
   --txt: #F2F2F3;
   --ink-1: rgba(242, 242, 243, 0.96);
   --ink-2: rgba(242, 242, 243, 0.78);
@@ -680,7 +680,7 @@ nav li > [aria-current="page"] {
 .landing-vnext__hero-particles { margin: 0px; padding: 0px; position: absolute; top: 6px; right: 0px; bottom: auto; width: 62%; height: calc(-12px + 100vh); max-height: none; z-index: 0; }
 .landing-vnext__hero-particles-canvas { margin: 0px; padding: 0px; max-width: 100%; height: 100%; position: absolute; top: 0px; right: 0px; bottom: 0px; left: 0px; width: 100%; z-index: 1; pointer-events: none; }
 .landing-vnext__scroll-cue { margin: 0px; padding: 0px; border-radius: 50%; border: 0px none currentcolor; transition: opacity 0.5s, visibility 0.5s; animation: none auto; background: none; flex-shrink: 0; position: fixed; left: 50%; bottom: 24px; width: 18px; height: 28px; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; box-shadow: none; transform: translateX(-50%); opacity: 0; visibility: hidden; pointer-events: none; z-index: 220; display: block; }
-.landing-vnext__scroll-cue::after { border-radius: 50%; animation: phenyxScrollDotBobGentle 2.2s ease-in-out infinite; background: rgb(175, 198, 242); content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; box-shadow: rgba(175, 198, 242, 0.34) 0px 0px 9px; transform: translate(-50%, -50%); }
+.landing-vnext__scroll-cue::after { border-radius: 50%; animation: phenyxScrollDotBobGentle 2.2s ease-in-out infinite; background: rgb(180, 204, 244); content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; box-shadow: rgba(180, 204, 244, 0.34) 0px 0px 9px; transform: translate(-50%, -50%); }
 #s0-about { margin: 0px; padding: 88px 0px; overflow: hidden; flex-shrink: 0; position: relative; scroll-margin-top: 86px; min-height: 0px; isolation: isolate; }
 #s0-about .landing-vnext__inner { margin: 0px auto; padding: 0px; margin-inline-start: auto; margin-inline-end: auto; }
 #s0-about .landing-vnext__eyebrow { margin: 0px 0px 14px; padding: 0px; overflow-wrap: anywhere; font-size: 13px; letter-spacing: 0; color: rgba(242, 242, 243, 0.66); text-transform: none; font-weight: 500; line-height: 18px; display: block; width: 100%; max-width: 100%; }
@@ -691,7 +691,7 @@ nav li > [aria-current="page"] {
 .landing-vnext__about-copy .landing-vnext__thesis { margin: var(--landing-paragraph-gap) 0px 0px; padding: 0px; overflow-wrap: anywhere; max-width: var(--m-lead); font-size: 15px; line-height: 23px; font-weight: 400; letter-spacing: 0px; color: rgba(242, 242, 243, 0.86); text-wrap-mode: initial; text-wrap-style: balance; font-style: italic; }
 .landing-vnext__platform-field { margin: -150px 0px 0px; padding: 0px; overflow: visible; position: relative; height: clamp(340px, 33vw, 430px); width: 100%; align-self: stretch; min-height: 330px; max-height: none; }
 .landing-vnext__platform-icon { margin: 0px; padding: 0px; border-radius: 14px; border: 1px solid rgba(242, 242, 243, 0.04); overflow: visible; transition: border-color 0.9s; background: rgba(242, 242, 243, 0.01); position: absolute; width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; box-shadow: none; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; backdrop-filter: none; opacity: 1; transform-origin: 50% 50%; }
-.landing-vnext__platform-aura { margin: 0px; padding: 0px; border-radius: 50%; background: radial-gradient(circle, rgba(175, 198, 242, 0.3) 0%, rgba(175, 198, 242, 0.13) 26%, rgba(146, 176, 232, 0.05) 48%, rgba(146, 176, 232, 0) 70%); position: absolute; left: 50%; top: 50%; width: 126px; height: 126px; transform: translate(-50%, -50%); pointer-events: none; opacity: 0; }
+.landing-vnext__platform-aura { margin: 0px; padding: 0px; border-radius: 50%; background: radial-gradient(circle, rgba(180, 204, 244, 0.3) 0%, rgba(180, 204, 244, 0.13) 26%, rgba(146, 176, 232, 0.05) 48%, rgba(146, 176, 232, 0) 70%); position: absolute; left: 50%; top: 50%; width: 126px; height: 126px; transform: translate(-50%, -50%); pointer-events: none; opacity: 0; }
 .landing-vnext__platform-glyph { margin: 0px; padding: 0px; transition: opacity 0.35s; animation: none auto; display: flex; align-items: center; justify-content: center; opacity: 0.52; position: relative; z-index: 1; }
 .landing-vnext__platform-icon svg { margin: 0px; padding: 0px; transition: opacity 0.3s; max-width: 100%; height: 21px; width: 21px; opacity: 1; display: block; }
 #s0-how { margin: 0px; padding: 88px 0px; flex-shrink: 0; position: relative; scroll-margin-top: 86px; min-height: 0px; }
@@ -723,7 +723,7 @@ nav li > [aria-current="page"] {
 .landing-vnext__stage-star-dot { margin: 0px; padding: 0px; transition: fill 0.35s ease, r 0.35s ease; fill: #e4e7ee; r: 3; }
 .landing-vnext__stage { margin: 0px; padding: 0px; display: grid; transition: opacity 0.7s ease, filter 0.7s ease, translate 0.9s cubic-bezier(0.18, 1, 0.3, 1); }
 .landing-vnext__stage-question { margin: 0px 0px 10px; padding: 0px; overflow-wrap: anywhere; font-size: 15px; line-height: 23px; color: rgba(242, 242, 243, 0.94); }
-.landing-vnext__stage-hint { margin: 0px 0px 14px; padding: 0px; overflow-wrap: anywhere; font-size: 13px; line-height: 18px; letter-spacing: 0.01em; color: rgba(175, 198, 242, 0.62); }
+.landing-vnext__stage-hint { margin: 0px 0px 14px; padding: 0px; overflow-wrap: anywhere; font-size: 13px; line-height: 18px; letter-spacing: 0.01em; color: rgba(180, 204, 244, 0.62); }
 .landing-vnext__insights { margin: 20px 0px 0px; padding: 0px; gap: 30px; display: grid; grid-template-columns: 1fr; }
 .landing-vnext__pattern { margin: 0px; padding: 0px 0px 0px 20px; position: relative; opacity: 0; grid-column-start: 1; grid-column-end: -1; }
 .landing-vnext__pattern::before { border-radius: 50%; background: rgb(223, 233, 255); content: ""; position: absolute; left: 0px; top: 9px; width: 6px; height: 6px; box-shadow: rgba(180, 204, 244, 0.8) 0px 0px 8px; }
@@ -953,7 +953,7 @@ nav li > [aria-current="page"] {
 
 /* states, from the export with each forced on */
 .landing-vnext__nav-links a[data-active="true"] { color: rgba(242, 242, 243, 0.82); }
-.landing-vnext__nav-links a[data-active="true"]::after { background: rgb(175, 198, 242); opacity: 0.85; transform: scaleX(1); box-shadow: none; }
+.landing-vnext__nav-links a[data-active="true"]::after { background: rgb(180, 204, 244); opacity: 0.85; transform: scaleX(1); box-shadow: none; }
 .landing-vnext__nav-links a:hover { background: none; color: rgba(242, 242, 243, 0.82); border-top-color: transparent; border-right-color: transparent; border-bottom-color: transparent; border-left-color: transparent; box-shadow: none; }
 .landing-vnext__nav-enter:hover { transition: background 0.28s, border-color 0.28s, box-shadow 0.32s, color 0.28s; color: rgb(242, 242, 243); border-top-color: rgba(var(--s-rgb),.38); border-right-color: rgba(var(--s-rgb),.38); border-bottom-color: rgba(var(--s-rgb),.38); border-left-color: rgba(var(--s-rgb),.38); background-color: rgba(242, 242, 243, 0.02); }
 .landing-vnext__nav-enter:focus-visible { border-radius: 6px; outline-width: 2px; outline-style: solid; outline-color: rgba(var(--s-rgb),.8); outline-offset: 3px; }
@@ -969,7 +969,7 @@ nav li > [aria-current="page"] {
 .landing-vnext__menu-button[data-open="true"] span:nth-child(2) { margin: 0px; padding: 0px; border-radius: 999px; transition: all 0.3s; background: var(--txt); width: 18px; height: 1px; opacity: 0; }
 .landing-vnext__menu-button[data-open="true"] span:nth-child(3) { margin: 0px; padding: 0px; border-radius: 999px; transition: all 0.3s; background: var(--txt); width: 18px; height: 1px; transform: translateY(-6px) rotate(-45deg); }
 .landing-vnext__footer-links a:hover { color: rgba(242, 242, 243, 0.9); }
-.landing-vnext__platform-icon:hover { border-top-color: rgba(175, 198, 242, 0.2); border-right-color: rgba(175, 198, 242, 0.2); border-bottom-color: rgba(175, 198, 242, 0.2); border-left-color: rgba(175, 198, 242, 0.2); }
+.landing-vnext__platform-icon:hover { border-top-color: rgba(180, 204, 244, 0.2); border-right-color: rgba(180, 204, 244, 0.2); border-bottom-color: rgba(180, 204, 244, 0.2); border-left-color: rgba(180, 204, 244, 0.2); }
 .landing-vnext__platform-icon:hover .landing-vnext__platform-glyph { opacity: 0.9; }
 
 /* ---- generated from the export: end ---- */
@@ -1126,8 +1126,8 @@ nav li > [aria-current="page"] {
 @keyframes orbDriftA { 0%, 100% { opacity: 0.45; transform: translate3d(0, 0, 0) scale(1); } 50% { opacity: 0.85; transform: translate3d(7vmin, -5vmin, 0) scale(1.14); } }
 @keyframes orbDriftB { 0%, 100% { opacity: 0.35; transform: translate3d(0, 0, 0) scale(1.06); } 50% { opacity: 0.7; transform: translate3d(-6vmin, 6vmin, 0) scale(0.9); } }
 @keyframes phenyxScrollDotBobGentle {
-  0%, 100% { opacity: 0.88; box-shadow: 0 0 8px rgba(175, 198, 242, 0.28); transform: translate(-50%, calc(-50% - 3px)); }
-  50% { opacity: 1; box-shadow: 0 0 10px rgba(175, 198, 242, 0.38); transform: translate(-50%, calc(-50% + 3px)); }
+  0%, 100% { opacity: 0.88; box-shadow: 0 0 8px rgba(180, 204, 244, 0.28); transform: translate(-50%, calc(-50% - 3px)); }
+  50% { opacity: 1; box-shadow: 0 0 10px rgba(180, 204, 244, 0.38); transform: translate(-50%, calc(-50% + 3px)); }
 }
 @keyframes v610spin { to { transform: rotate(360deg); } }
 @keyframes v610halo { 0%, 100% { fill: rgba(var(--s-rgb), 0.08); } 50% { fill: rgba(var(--s-rgb), 0.2); } }
