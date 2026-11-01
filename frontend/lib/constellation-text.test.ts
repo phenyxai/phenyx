@@ -4,7 +4,7 @@ import {
   firstSentence,
   momentTitle,
   momentTopic,
-  momentYear,
+  momentDate,
   newObservationCount,
   pointMoments,
   storyLine,
@@ -182,11 +182,13 @@ test("pointMoments lists a point's moments oldest first, undated last", () => {
   assert.deepEqual(pointMoments(detail).map((x) => x.id), ["early", "late", "undated-new", "undated-old"]);
 });
 
-test("momentTitle falls back to the body's first sentence, momentYear to empty", () => {
+test("momentTitle falls back to the body's first sentence; momentDate reads month and year", () => {
   assert.equal(momentTitle({ title: "a board of warm rooms", body: "x." } as any), "a board of warm rooms");
   assert.equal(momentTitle({ title: null, body: "you start a board. it grows." } as any), "you start a board");
-  assert.equal(momentYear({ occurred_at: "2013-05-02" } as any), "2013");
-  assert.equal(momentYear({ occurred_at: null } as any), "");
+  assert.equal(momentDate({ occurred_at: "2013-05-02", surfaced_at: "2026-10-01T00:00:00Z" }), "may 2013");
+  assert.equal(momentDate({ occurred_at: "2013", surfaced_at: "2026-10-01T00:00:00Z" }), "2013");
+  assert.equal(momentDate({ occurred_at: null, surfaced_at: "2026-10-01T00:00:00Z" }), "oct 2026");
+  assert.equal(momentDate({ occurred_at: null, surfaced_at: "" }), "");
 });
 
 test("momentTopic filters by the part of life, falling back to the platform", () => {

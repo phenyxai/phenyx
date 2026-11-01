@@ -7,22 +7,22 @@
 // a quiet "new signal" note beside the point a fresh signal belongs to.
 // Point (spec doc 2, Oct 20 demo): the name with previous/next arrows on one
 // row and nothing under it (PHE-146), a one-sentence story, "moments" with filters by the part of life each
-// moment sits in (or its platform on older rows), then the moments. Each opens
-// in place as one column: what happened, why it matters, what connects from
-// here, "see the sources →", "does this feel like you?" and "follow this
-// thread ⓘ". Following lights the moment's own dot, and later moments on the
-// same part of life carry "from your thread". The sources open "behind this
-// moment". The signal's moments carry a lit dot until one of them is opened.
+// moment sits in (or its platform on older rows), then the moments, each with
+// its platform and month (PHE-163). Each opens in place as one column: what
+// happened, why it matters, what connects from here, "does this feel like
+// you?" and "follow this thread ⓘ". Following lights the moment's own dot, and
+// later moments on the same part of life carry "from your thread". The
+// signal's moments carry a lit dot until one of them is opened. The sources
+// return later with the full plan.
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Popup } from "@/components/phenyx/settings-modals/modal-host";
 import { Arrow } from "@/components/phenyx/nav-icons";
 import {
   ALL_PILLARS,
   markSignalSeen,
+  momentDate,
   momentTitle,
   momentTopic,
-  momentYear,
   pillarLabel,
   pointMoments,
   sendMomentFeedback,
@@ -102,7 +102,7 @@ export function ConstellationPanel({ data, selectedPillar, onSelectPillar, onClo
 
 /** Small, lowercase, accent: every reading label in the panel. */
 function SectionLabel({ children }: { children: ReactNode }) {
-  return <p className="text-[12px] font-semibold text-[var(--ph-accent)]">{children}</p>;
+  return <p className="text-meta font-semibold text-[var(--ph-accent)]">{children}</p>;
 }
 
 /** The outlined list dot; it fills with the accent (soft glow) on hover, when open, or when lit. */
@@ -110,7 +110,7 @@ function ListDot({ on }: { on: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={`mt-[7px] inline-block h-[7px] w-[7px] shrink-0 rounded-full border border-[rgba(var(--ph-accent-rgb),0.8)] transition-[background-color,box-shadow] duration-200 motion-reduce:transition-none group-hover:bg-[var(--ph-accent)] group-hover:shadow-[0_0_8px_rgba(var(--ph-accent-rgb),0.6)] ${
+      className={`mt-2 inline-block h-[7px] w-[7px] shrink-0 rounded-full border border-[rgba(var(--ph-accent-rgb),0.8)] transition-[background-color,box-shadow] duration-200 motion-reduce:transition-none group-hover:bg-[var(--ph-accent)] group-hover:shadow-[0_0_8px_rgba(var(--ph-accent-rgb),0.6)] ${
         on ? "bg-[var(--ph-accent)] shadow-[0_0_10px_rgba(var(--ph-accent-rgb),0.6)]" : "bg-transparent"
       }`}
     />
@@ -120,7 +120,7 @@ function ListDot({ on }: { on: boolean }) {
 /** "new signal": a glowing dot and the words, no frame. */
 function SignalNote() {
   return (
-    <span className="ml-3 inline-flex items-center gap-1.5 align-middle text-[11px] font-semibold tracking-[0.02em] text-[var(--ph-accent)]">
+    <span className="ml-3 inline-flex items-center gap-1.5 align-middle text-meta font-semibold text-[var(--ph-accent)]">
       <span aria-hidden="true" className="h-[5px] w-[5px] rounded-full bg-[var(--ph-accent)] shadow-[0_0_8px_rgba(var(--ph-accent-rgb),0.8)]" />
       new signal
     </span>
@@ -140,14 +140,14 @@ function Overview({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-[12.5px] font-light text-ph-white/45">explore what shaped you.</p>
+      <p className="text-body text-ph-tertiary">explore what shaped you.</p>
       <ul className="-mx-3.5 flex flex-col">
         {ALL_PILLARS.map((pillar) => (
           <li key={pillar}>
             <button
               type="button"
               onClick={() => onSelectPillar(pillar)}
-              className="group flex w-full items-start gap-[15px] rounded-xl px-3.5 py-[13px] text-left text-[16px] font-light text-ph-white/92 transition-colors duration-200 hover:text-[var(--ph-accent)] motion-reduce:transition-none"
+              className="group flex w-full items-start gap-[15px] rounded-xl px-3.5 py-[13px] text-left text-reading text-ph-white transition-colors duration-200 hover:text-[var(--ph-accent)] motion-reduce:transition-none"
             >
               <ListDot on={pillar === signalPillar} />
               <span>
@@ -186,7 +186,7 @@ function StepButton({
       onClick={() => to && onSelect(to)}
       aria-label={to ? `${direction} point: ${pillarLabel(to)}` : `no ${direction} point`}
       className={`relative flex h-[26px] w-[26px] items-center justify-center transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] ${
-        to ? "text-ph-white/65 hover:text-[var(--ph-accent)]" : "cursor-default text-ph-white/20"
+        to ? "text-ph-secondary hover:text-[var(--ph-accent)]" : "cursor-default text-ph-white/20"
       }`}
     >
       <Arrow direction={direction === "previous" ? "left" : "right"} />
@@ -224,10 +224,7 @@ function PointView({
   const [openId, setOpenId] = useState<string | null>(() =>
     openMomentId && moments.some((m) => m.id === openMomentId) ? openMomentId : null,
   );
-  const [trail, setTrail] = useState<ClusterObservation | null>(null);
   const shown = topic === ALL_TOPICS ? moments : moments.filter((m) => momentTopic(m) === topic);
-  // Undated moments (older imports) leave the year column out rather than fill it with a mark.
-  const dated = shown.some((m) => momentYear(m));
   const threads = threadAreas(data, ALL_PILLARS, (id) => !!feedback[id]?.following);
 
   const toggle = (moment: ClusterObservation) => {
@@ -239,7 +236,7 @@ function PointView({
     <div className="flex flex-col">
       {/* The name, the step arrows and the way back to the seven names share one row. */}
       <div className="flex items-center gap-3">
-        <h2 className="min-w-0 flex-1 text-[18px] font-medium tracking-[-0.012em] text-ph-white/94">
+        <h2 className="min-w-0 flex-1 text-title text-ph-white">
           {pillarLabel(detail.pillar)}
         </h2>
         <div className="flex items-center gap-1.5">
@@ -249,7 +246,7 @@ function PointView({
             type="button"
             onClick={onClose}
             aria-label="close, back to all points"
-            className="relative ml-2 flex h-[26px] w-[26px] items-center justify-center text-ph-white/65 transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] hover:text-[var(--ph-accent)]"
+            className="relative ml-2 flex h-[26px] w-[26px] items-center justify-center text-ph-secondary transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] hover:text-[var(--ph-accent)]"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" />
@@ -258,21 +255,21 @@ function PointView({
         </div>
       </div>
 
-      <p className="mt-[19px] text-[15px] font-light leading-[1.65] text-ph-white/78">{storyLine(detail)}</p>
+      <p className="mt-[19px] text-reading text-ph-secondary">{storyLine(detail)}</p>
 
-      <h3 className="mt-6 text-[14px] font-medium text-ph-white/90">moments</h3>
+      <h3 className="mt-6 text-meta font-semibold text-[var(--ph-accent)]">moments</h3>
       {topics.length > 1 && (
-        <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="filter moments">
+        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="filter moments">
           {[ALL_TOPICS, ...topics].map((t) => (
             <button
               key={t}
               type="button"
               aria-pressed={topic === t}
               onClick={() => setTopic(t)}
-              className={`rounded-full border px-[11px] py-1.5 text-[12px] font-medium lowercase transition-colors duration-200 ${
+              className={`flex h-[34px] items-center rounded-full border px-3.5 text-body lowercase transition-colors duration-200 ${
                 topic === t
                   ? "border-[rgba(var(--ph-accent-rgb),0.5)] bg-[rgba(var(--ph-accent-rgb),0.16)] text-[var(--ph-accent)]"
-                  : "border-ph-white/10 text-ph-white/65 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
+                  : "border-ph-white/10 text-ph-secondary hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
               }`}
             >
               {t}
@@ -282,7 +279,7 @@ function PointView({
       )}
 
       {shown.length === 0 ? (
-        <p className="mt-4 text-[13px] font-light italic text-ph-white/30">no moments yet.</p>
+        <p className="mt-4 text-body italic text-ph-tertiary">no moments yet.</p>
       ) : (
         <ol className="mt-3.5 flex flex-col gap-1.5">
           {shown.map((moment) => {
@@ -293,13 +290,11 @@ function PointView({
               <MomentRow
                 key={moment.id}
                 moment={moment}
-                dated={dated}
                 open={openId === moment.id}
                 lit={reaction.following || !!signalIds?.has(moment.id)}
                 signal={!!signalIds?.has(moment.id)}
                 fromThread={fromThread}
                 onToggle={() => toggle(moment)}
-                onSources={() => setTrail(moment)}
               >
                 <Reactions
                   state={reaction}
@@ -310,8 +305,6 @@ function PointView({
           })}
         </ol>
       )}
-
-      {trail && <SourceTrail moment={trail} onClose={() => setTrail(null)} />}
     </div>
   );
 }
@@ -322,28 +315,23 @@ function PointView({
 
 function MomentRow({
   moment,
-  dated,
   open,
   lit,
   signal,
   fromThread,
   onToggle,
-  onSources,
   children,
 }: {
   moment: ClusterObservation;
-  /** Whether the list shows a year column. */
-  dated: boolean;
   open: boolean;
   lit: boolean;
   signal: boolean;
   fromThread: boolean;
   onToggle: () => void;
-  onSources: () => void;
   children: ReactNode;
 }) {
   const title = momentTitle(moment);
-  const year = momentYear(moment);
+  const source = [moment.platform?.toLowerCase(), momentDate(moment)].filter(Boolean).join(" · ");
   const bodyId = `moment-${moment.id}`;
   const happened = moment.what_happened || moment.body;
 
@@ -354,29 +342,20 @@ function MomentRow({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={bodyId}
-        aria-label={signal ? `new signal: ${[year, title].filter(Boolean).join(" ")}` : undefined}
-        className={`group grid w-full items-start gap-x-3.5 py-3.5 pr-4 pl-2.5 text-left ${
-          dated ? "grid-cols-[7px_66px_1fr_15px]" : "grid-cols-[7px_1fr_15px]"
-        }`}
+        aria-label={signal ? `new signal: ${title}` : undefined}
+        className="group grid w-full grid-cols-[7px_1fr_15px] items-start gap-x-3.5 py-3.5 pr-4 pl-2.5 text-left"
       >
         <ListDot on={open || lit} />
-        {dated && <span className="pt-px text-[12px] font-medium tabular-nums text-ph-white/74">{year}</span>}
         <span>
-          <span
-            className={`block text-[15px] font-medium leading-[1.5] transition-colors duration-200 group-hover:text-[var(--ph-accent)] ${
-              open ? "text-ph-white" : "text-ph-white/88"
-            }`}
-          >
+          <span className="block text-item text-ph-white transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
             {title}
             {fromThread && (
-              <span className="ml-2 inline-block rounded-full border border-[rgba(var(--ph-accent-rgb),0.4)] px-2 py-px align-middle text-[10.5px] font-medium text-[var(--ph-accent)]">
+              <span className="ml-2 inline-block rounded-full border border-[rgba(var(--ph-accent-rgb),0.4)] px-2 py-px align-middle text-meta text-[var(--ph-accent)]">
                 from your thread
               </span>
             )}
           </span>
-          {moment.platform && (
-            <span className="mt-[7px] block text-[12.5px] font-medium lowercase text-ph-white/72">{moment.platform}</span>
-          )}
+          {source && <span className="mt-1.5 block text-meta text-ph-tertiary">{source}</span>}
         </span>
         <svg
           width="15"
@@ -388,7 +367,7 @@ function MomentRow({
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden="true"
-          className={`mt-0.5 text-ph-white/55 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`mt-1 text-ph-tertiary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         >
           <path d="M6 9l6 6 6-6" />
         </svg>
@@ -397,35 +376,26 @@ function MomentRow({
       {open && (
         <div
           id={bodyId}
-          className={`flex flex-col gap-3 pb-4 pr-6 motion-safe:animate-fade-in-up [@media(max-width:640px)]:pl-[34px] ${
-            dated ? "[@media(min-width:641px)]:pl-[111px]" : "[@media(min-width:641px)]:pl-[31px]"
-          }`}
+          className="flex flex-col gap-3 pb-4 pr-6 motion-safe:animate-fade-in-up [@media(max-width:640px)]:pl-[34px] [@media(min-width:641px)]:pl-[31px]"
         >
           {happened && (
             <section>
               <SectionLabel>what happened</SectionLabel>
-              <p className="mt-1 text-[15.5px] leading-[1.6] text-ph-white/93">{happened}</p>
+              <p className="mt-1 text-reading text-ph-white">{happened}</p>
             </section>
           )}
           {moment.why_it_matters && (
             <section>
               <SectionLabel>why it matters</SectionLabel>
-              <p className="mt-1 text-[14.5px] font-medium leading-[1.62] text-ph-white/89">{moment.why_it_matters}</p>
+              <p className="mt-1 text-reading text-ph-white">{moment.why_it_matters}</p>
             </section>
           )}
           {moment.what_connects && (
             <section>
               <SectionLabel>what connects from here</SectionLabel>
-              <p className="mt-1 text-[14.5px] font-medium leading-[1.62] text-ph-white/89">{moment.what_connects}</p>
+              <p className="mt-1 text-reading text-ph-white">{moment.what_connects}</p>
             </section>
           )}
-          <button
-            type="button"
-            onClick={onSources}
-            className="flex h-8 items-center gap-1.5 self-start text-[13px] font-semibold text-ph-white/88 transition-colors duration-200 hover:text-[var(--ph-accent)]"
-          >
-            see the sources <Arrow size={12} />
-          </button>
           {children}
         </div>
       )}
@@ -462,7 +432,7 @@ function Reactions({
 
   return (
     <section className="mt-2">
-      <p className="text-[11.5px] font-semibold text-ph-white/70">does this feel like you?</p>
+      <p className="text-meta font-semibold text-ph-secondary">does this feel like you?</p>
       <div className="mt-2.5 flex flex-wrap gap-2">
         <ReactionPill on={state.verdict === "new"} onClick={() => verdict("new")}>
           this feels true
@@ -476,8 +446,8 @@ function Reactions({
           type="button"
           aria-pressed={state.following}
           onClick={follow}
-          className={`py-1 text-[12.5px] transition-colors duration-200 hover:text-[var(--ph-accent)] ${
-            state.following ? "font-medium text-[var(--ph-accent)]" : "text-ph-white/70"
+          className={`py-1 text-body transition-colors duration-200 hover:text-[var(--ph-accent)] ${
+            state.following ? "font-medium text-[var(--ph-accent)]" : "text-ph-secondary"
           }`}
         >
           {state.following ? "following this thread" : "follow this thread"}
@@ -487,13 +457,13 @@ function Reactions({
           aria-expanded={note}
           aria-label="what following does"
           onClick={() => setNote((n) => !n)}
-          className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-ph-white/38 text-[10.5px] font-medium italic text-ph-white/75 transition-colors duration-200 hover:border-[var(--ph-accent)] hover:text-[var(--ph-accent)]"
+          className="flex h-5 w-5 items-center justify-center rounded-full border border-ph-white/38 text-meta italic leading-none text-ph-secondary transition-colors duration-200 hover:border-[var(--ph-accent)] hover:text-[var(--ph-accent)]"
         >
           i
         </button>
       </div>
       {note && (
-        <p className="mt-2 rounded-[9px] border border-ph-white/[0.075] bg-ph-white/[0.02] px-2.5 py-2 text-[12px] leading-[1.55] text-ph-white/78">
+        <p className="mt-2 rounded-[9px] border border-ph-white/[0.075] bg-ph-white/[0.02] px-2.5 py-2 text-body text-ph-secondary">
           {FOLLOW_NOTE}
         </p>
       )}
@@ -507,61 +477,14 @@ function ReactionPill({ on, onClick, children }: { on: boolean; onClick: () => v
       type="button"
       aria-pressed={on}
       onClick={onClick}
-      className={`h-[34px] rounded-full border px-3.5 text-[12.5px] transition-colors duration-200 ${
+      className={`h-10 rounded-full border px-[18px] text-body transition-colors duration-200 ${
         on
-          ? "border-[var(--ph-accent)] bg-[rgba(var(--ph-accent-rgb),0.14)] text-ph-white/95"
-          : "border-ph-white/13 text-ph-white/72 hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
+          ? "border-[var(--ph-accent)] bg-[rgba(var(--ph-accent-rgb),0.14)] text-ph-white"
+          : "border-ph-white/13 text-ph-secondary hover:border-[rgba(var(--ph-accent-rgb),0.5)] hover:text-[var(--ph-accent)]"
       }`}
     >
       {on && <span aria-hidden="true">✓ </span>}
       {children}
     </button>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Source trail
-// ---------------------------------------------------------------------------
-
-/**
- * "behind this moment": the date, the moment, each dated source entry on an
- * accent bar, and why it matters (full). Both plans see the sources (PHE-129).
- */
-function SourceTrail({ moment, onClose }: { moment: ClusterObservation; onClose: () => void }) {
-  const entries = moment.evidence?.entries ?? [];
-  const year = momentYear(moment);
-  const fallback = [year, moment.platform].filter(Boolean).join(" · ");
-
-  return (
-    <Popup title="behind this moment" onClose={onClose}>
-      <div>
-        {year && <p className="text-[12.5px] text-[var(--ph-accent)]">{year}</p>}
-        <p className="mt-2.5 text-[15px] font-semibold text-ph-white/95">{momentTitle(moment)}</p>
-        {(moment.what_happened || moment.body) && (
-          <p className="mt-1 text-[14px] font-light leading-[1.6] text-ph-white/65">
-            {moment.what_happened || moment.body}
-          </p>
-        )}
-
-        <ol className="mt-5 flex flex-col gap-3">
-          {(entries.length ? entries : fallback ? [{ t: fallback, s: "", w: "" }] : []).map((entry, i) => (
-            <li
-              key={`${entry.t}-${i}`}
-              className="rounded-r-lg border-l-2 border-[var(--ph-accent)] bg-[rgba(var(--ph-accent-rgb),0.04)] px-4 py-3"
-            >
-              <p className="text-[12.5px] text-[rgba(var(--ph-accent-rgb),0.9)]">{[entry.t, entry.s].filter(Boolean).join(" · ")}</p>
-              {entry.w && <p className="mt-1 text-[13px] font-light leading-[1.6] text-ph-white/70">{entry.w}</p>}
-            </li>
-          ))}
-        </ol>
-
-        {moment.why_it_matters && (
-          <section className="mt-5">
-            <p className="text-[12px] text-[var(--ph-accent)]">why it matters</p>
-            <p className="mt-2 text-[14px] font-light leading-[1.65] text-ph-white/65">{moment.why_it_matters}</p>
-          </section>
-        )}
-      </div>
-    </Popup>
   );
 }

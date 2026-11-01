@@ -31,7 +31,7 @@ export {
   firstSentence,
   momentTitle,
   momentTopic,
-  momentYear,
+  momentDate,
   newObservationCount,
   pillarLabel,
   PILLAR_LENS,

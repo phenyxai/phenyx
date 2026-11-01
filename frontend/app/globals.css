@@ -1806,7 +1806,7 @@ nav li > [aria-current="page"] {
    split above, so neither Tailwind nor the onairos stylesheet overrides it. */
 .discover-stage {
   display: grid;
-  grid-template-columns: min(430px, 100%);
+  grid-template-columns: min(428px, 100%);
   justify-content: center;
   overflow: hidden;
   touch-action: pan-y;
@@ -1814,7 +1814,7 @@ nav li > [aria-current="page"] {
      there: from their lit edge to nothing across all they show, on an eased
      curve so neither end of the fade reads as a line. The main card, 70px
      inside the lit edge, never dims. */
-  --discover-fade: max(0px, calc((100% - 430px) / 2 - 70px));
+  --discover-fade: max(0px, calc((100% - 428px) / 2 - 70px));
   mask-image: linear-gradient(
     to right,
     transparent,
@@ -1844,35 +1844,28 @@ nav li > [aria-current="page"] {
 .discover-card[data-depth="far"] { opacity: 0; pointer-events: none; }
 /* Neighbours stay legible: their text sits near 25%. */
 .discover-card[data-depth="back"] .discover-card__face { opacity: 0.28; }
-/* PHE-152 (Mara prototype): from 641px a taller card, 32px in, with larger
-   type. PHE-160: the label, headline, discovery and reason read as one block
-   with short fixed gaps, and the extra height sits above the actions. Phones
-   keep the card to its content, 14px between parts. */
+/* PHE-152 (Mara prototype): from 641px a taller card, 32px in. PHE-160: the
+   label, headline, discovery and reason read as one block with short fixed
+   gaps, and the extra height sits above the action. PHE-163: the card is
+   428 x 479 with 18px between headline, discovery and reason; type sizes come
+   from the type roles on the elements. Phones keep the card to its content,
+   14px between parts. */
 @media (min-width: 641px) {
   .discover-card__face {
     display: grid;
+    min-height: 479px;
     padding: 32px;
     row-gap: 0;
-    grid-template-rows: auto 16px auto 12px auto 14px auto minmax(28px, 1fr) auto;
+    grid-template-rows: auto 16px auto 18px auto 18px auto minmax(28px, 1fr) auto;
   }
   .discover-card__head { grid-row: 1; }
-  .discover-card__headline { grid-row: 3; font-size: 24px; line-height: 1.35; }
-  .discover-card__detail { grid-row: 5; font-size: 15px; line-height: 1.6; -webkit-line-clamp: 4; }
-  .discover-card__reason { grid-row: 7; font-size: 14px; line-height: 1.55; }
+  .discover-card__headline { grid-row: 3; }
+  .discover-card__detail { grid-row: 5; }
+  .discover-card__reason { grid-row: 7; }
   .discover-card__foot { grid-row: 9; }
-}
-@media (min-width: 641px) and (min-height: 601px) {
-  .discover-card__face { min-height: clamp(420px, 58dvh, 580px); }
-}
-/* The two actions stay on one row on phones, 44px tall; under 360px they stack. */
-@media (max-width: 640px) {
-  .discover-card__foot { flex-wrap: nowrap; }
-  .discover-card__foot > button { height: 44px; padding: 0 11px; font-size: 11.5px; white-space: nowrap; }
 }
 @media (max-width: 359px) {
   .discover-card__face { padding: 18px; row-gap: 12px; }
-  .discover-card__foot { display: grid; grid-template-columns: 1fr; }
-  .discover-card__foot > button { width: 100%; }
 }
 .discover-card[data-swapping="true"] { opacity: 0; transform: translateY(4px); filter: blur(2px); }
 .discover-card__face { transition: opacity 0.45s ease, transform 0.45s ease, border-color 0.45s ease; }

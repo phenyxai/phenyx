@@ -7,6 +7,7 @@ import {
   NODE_LAYOUT,
   SHAPE_ASPECT,
   STARS,
+  TILT_DEG,
   fitShape,
 } from "./constellation-shape.ts";
 
@@ -59,5 +60,14 @@ test("the shape is the reference Big Dipper, undistorted", () => {
       assert.ok(Math.abs(onScreen / inDrawing - 1) < 1e-9, `${a}>${b} distorted in ${w}x${h}`);
     }
   }
-  assert.ok(SHAPE_ASPECT > 1.8 && SHAPE_ASPECT < 2);
+  assert.ok(SHAPE_ASPECT > 1.4 && SHAPE_ASPECT < 1.5);
+});
+
+test("the figure is tilted 7 degrees up from the reference drawing", () => {
+  const angle = ([ax, ay]: [number, number], [bx, by]: [number, number]) => Math.atan2(ay - by, bx - ax);
+  const px = Object.fromEntries(fitShape(0, 0, 1000, 1000).map((n) => [n.pillar, [n.x, n.y] as [number, number]]));
+  for (const [a, b] of EDGES) {
+    const turned = (angle(px[a], px[b]) - angle(FIGURE[a], FIGURE[b])) * (180 / Math.PI);
+    assert.ok(Math.abs(turned - TILT_DEG) < 1e-9, `${a}>${b} turned ${turned}`);
+  }
 });

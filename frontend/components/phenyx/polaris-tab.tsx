@@ -489,7 +489,7 @@ function HomeView({
       {/* From 641px the question and its starting points sit just above the middle of the screen, under the chips. */}
       <div className="mx-auto flex min-h-full w-full max-w-[780px] flex-col">
         <div className="flex items-center justify-between gap-3">
-          <HeaderChip onClick={onConversations} className="text-ph-white/62">
+          <HeaderChip onClick={onConversations}>
             <HistoryIcon />
             past conversations
           </HeaderChip>

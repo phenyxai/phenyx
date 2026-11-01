@@ -1,8 +1,9 @@
 // PHE-124 / PHE-129 — the three stats under the insights header (spec doc 5,
 // rebuild doc 10): connected platforms, years in view and here since, all
 // computed from real data. A count with nothing behind it is left out rather
-// than shown as zero; years in view always keeps its place (PHE-152) and reads
-// "forming" until a dated source arrives (older imports carry no dates).
+// than shown as zero; years in view is how many years the data holds ("6 years
+// in view", PHE-163) and waits until a dated source arrives (older imports
+// carry no dates).
 //
 // Type-only import so this module stays runnable under `node --test`.
 
@@ -88,8 +89,10 @@ export function buildInsightsStats(
       label: platforms === 1 ? "connected platform" : "connected platforms",
     });
   }
-  const years = firstYear === null ? null : Math.max(1, now.getFullYear() - firstYear);
-  rows.push({ key: "years", value: years === null ? "forming" : `${years} ${years === 1 ? "year" : "years"}`, label: "in view" });
+  if (firstYear !== null) {
+    const years = Math.max(1, now.getFullYear() - firstYear);
+    rows.push({ key: "years", value: `${years} ${years === 1 ? "year" : "years"}`, label: "in view" });
+  }
   const joined = since ? new Date(since) : null;
   if (joined && !Number.isNaN(joined.getTime())) {
     rows.push({ key: "since", value: `${MONTHS[joined.getMonth()]} ${joined.getFullYear()}`, label: "here since" });

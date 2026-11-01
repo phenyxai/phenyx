@@ -166,7 +166,16 @@ export function momentTitle(moment: ClusterObservation): string {
   return moment.title?.trim() || firstSentence(moment.body).replace(/[.?!]+$/, "");
 }
 
-/** The year a moment happened; empty when it is undated. */
-export function momentYear(moment: ClusterObservation): string {
-  return /^\d{4}/.exec(moment.occurred_at ?? "")?.[0] ?? "";
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/**
+ * When a moment happened as month and year ("oct 2026", PHE-163), shown beside
+ * its platform. Undated moments (older imports) fall back to when they
+ * surfaced; a bare year stays a year.
+ */
+export function momentDate(moment: Pick<ClusterObservation, "occurred_at" | "surfaced_at">): string {
+  const m = /^(\d{4})(?:-(\d{2}))?/.exec(moment.occurred_at || moment.surfaced_at || "");
+  if (!m) return "";
+  const month = MONTHS[Number(m[2]) - 1];
+  return month ? `${month} ${m[1]}` : m[1];
 }

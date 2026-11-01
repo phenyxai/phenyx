@@ -19,12 +19,12 @@ function momentHref(ids: string[] | undefined): string | null {
 
 /** Small, lowercase, accent: the label on each reading. */
 function SectionLabel({ children }: { children: string }) {
-  return <h2 className="mb-3.5 text-[12px] font-semibold text-[var(--ph-accent)]">{children}</h2>;
+  return <h2 className="mb-3.5 text-meta font-semibold text-[var(--ph-accent)]">{children}</h2>;
 }
 
 /** Shown in place of a section until the first reading has been generated. */
 function Forming() {
-  return <p className="text-[13px] font-light italic text-ph-white/40">forming.</p>;
+  return <p className="text-body italic text-ph-tertiary">forming.</p>;
 }
 
 /** One sentence and the short line under it (becoming clearer, needs shape). */
@@ -34,8 +34,8 @@ function ReadingLine({ label, value }: { label: string; value: InsightsReading["
       <SectionLabel>{label}</SectionLabel>
       {value ? (
         <>
-          <p className="max-w-[60ch] text-[14px] leading-[1.68] text-ph-white/68">{value.line}</p>
-          {value.support && <p className="mt-3 max-w-[60ch] text-[13px] font-medium leading-[1.55] text-ph-white/85">{value.support}</p>}
+          <p className="max-w-[60ch] text-reading text-ph-secondary">{value.line}</p>
+          {value.support && <p className="mt-4 max-w-[60ch] text-reading font-medium text-ph-white">{value.support}</p>}
         </>
       ) : (
         <Forming />
@@ -44,11 +44,11 @@ function ReadingLine({ label, value }: { label: string; value: InsightsReading["
   );
 }
 
-/** A reading that opens in place: native <details>, with a + that turns while open. */
+/** A reading that opens in place: native <details>, its heading in the accent, with a + that turns while open. */
 function Disclosure({ title, children }: { title: string; children: ReactNode }) {
   return (
     <details className="group border-b border-ph-white/[0.08]">
-      <summary className="flex cursor-pointer list-none items-center justify-between py-4 text-[15px] text-ph-white/87 transition-colors duration-200 hover:text-[var(--ph-accent)] [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between py-5 text-heading text-[var(--ph-accent)] transition-colors duration-200 hover:text-[var(--ph-accent)] [&::-webkit-details-marker]:hidden">
         {title}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true" className="transition-transform duration-200 group-open:rotate-45">
           <path d="M12 5v14M5 12h14" />
@@ -63,20 +63,20 @@ function Disclosure({ title, children }: { title: string; children: ReactNode })
 function Items({ items }: { items: { title: string; body: string; moment_ids?: string[] }[] | undefined }) {
   if (!items?.length) return <Forming />;
   return (
-    <div className="grid gap-x-12 gap-y-6 [@media(max-width:640px)]:grid-cols-1 [@media(min-width:641px)]:grid-cols-2">
+    <div className="grid gap-x-12 gap-y-9 [@media(max-width:640px)]:grid-cols-1 [@media(min-width:641px)]:grid-cols-2">
       {items.map((item) => (
         <div key={item.title}>
           {momentHref(item.moment_ids) ? (
             <Link
               href={momentHref(item.moment_ids)!}
-              className="mb-1.5 block text-[14.5px] text-ph-white/90 transition-colors duration-200 hover:text-[var(--ph-accent)]"
+              className="mb-2 block text-item text-ph-white transition-colors duration-200 hover:text-[var(--ph-accent)]"
             >
               {item.title}
             </Link>
           ) : (
-            <p className="mb-1.5 text-[14.5px] text-ph-white/90">{item.title}</p>
+            <p className="mb-2 text-item text-ph-white">{item.title}</p>
           )}
-          <p className="text-[13.5px] font-light leading-[1.6] text-ph-white/65">{item.body}</p>
+          <p className="text-reading text-ph-secondary">{item.body}</p>
         </div>
       ))}
     </div>
@@ -91,10 +91,10 @@ function Items({ items }: { items: { title: string; body: string; moment_ids?: s
 function Story({ story }: { story: InsightsReading["story"] | undefined }) {
   return (
     <section className="rounded-[20px] border border-ph-white/11 bg-ph-white/[0.016] p-6">
-      <p className="text-[12px] font-medium text-[var(--ph-accent)]">your story so far</p>
+      <p className="text-meta font-semibold text-[var(--ph-accent)]">your story so far</p>
       {story ? (
         <>
-          <p className="mt-2.5 text-[16px] leading-[1.6] text-ph-white/90">{story.line}</p>
+          <p className="mt-2.5 text-title text-ph-white">{story.line}</p>
           <ol className="relative mt-6 grid gap-x-6 gap-y-5 [@media(max-width:640px)]:grid-cols-1 [@media(min-width:641px)]:grid-flow-col [@media(min-width:641px)]:auto-cols-fr">
             {story.milestones.map((m, i) => {
               const when = m.date ?? pillarLabel(m.pillar as Pillar);
@@ -113,8 +113,8 @@ function Story({ story }: { story: InsightsReading["story"] | undefined }) {
                       className="block h-[9px] w-[9px] rounded-full bg-[var(--ph-accent)] shadow-[0_0_0_3px_var(--ph-black)] [@media(max-width:640px)]:row-span-2 [@media(max-width:640px)]:mt-[4px]"
                       style={{ opacity: 0.55 + (0.45 * (i + 1)) / story.milestones.length }}
                     />
-                    <span className="block text-[12px] font-light text-ph-white/78 [@media(min-width:641px)]:mt-4">{when}</span>
-                    <b className="block text-[15px] [@media(min-width:641px)]:mt-2 [@media(max-width:640px)]:mt-1 font-medium leading-[1.45] text-ph-white/90 transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
+                    <span className="block text-meta text-ph-tertiary [@media(min-width:641px)]:mt-4">{when}</span>
+                    <b className="block text-item [@media(min-width:641px)]:mt-2 [@media(max-width:640px)]:mt-1 text-ph-white transition-colors duration-200 group-hover:text-[var(--ph-accent)]">
                       {m.label}
                     </b>
                   </Link>
@@ -220,8 +220,8 @@ export default function InsightsTabPage() {
         <div className="w-full">
           <header className="mb-7 flex flex-wrap items-start justify-between gap-x-10 gap-y-5">
             <div className="min-w-0">
-              {name && <h1 className="text-[17px] font-medium lowercase text-ph-white/92">{name}</h1>}
-              {updated && <p className="mt-2 text-[12px] text-ph-white/45">updated {relativeTime(updated)}</p>}
+              {name && <h1 className="text-display lowercase text-ph-white">{name}</h1>}
+              {updated && <p className="mt-1 text-meta text-ph-tertiary">updated {relativeTime(updated)}</p>}
             </div>
             {/* As in the demo: one row 40px apart, each stat at least 86px wide;
                 phones keep the three on one row as equal columns. */}
@@ -230,9 +230,9 @@ export default function InsightsTabPage() {
                 {stats.map((stat) => {
                   const body = (
                     <>
-                      <span className="text-[13.5px] text-ph-white/94">{stat.value}</span>
+                      <span className="text-reading text-ph-white">{stat.value}</span>
                       {/* Inline, so the arrow follows the last word when the label wraps on phones. */}
-                      <span className="mt-1 text-[11.5px] tracking-[0.01em] text-ph-white/82">
+                      <span className="text-meta text-ph-secondary">
                         {stat.label}
                         {stat.key === "platforms" && (
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="ml-[3px] inline-block align-[-1px]">

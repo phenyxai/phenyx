@@ -22,7 +22,7 @@ function BrandLink() {
   return (
     <Link href={DASHBOARD_HOME} aria-label="PHENYX, go to constellation" className="flex items-center gap-2.5 no-underline">
       <StellarMark />
-      <RailLabel className="text-[11.5px] font-semibold tracking-[0.09em] text-ph-white/90">PHENYX</RailLabel>
+      <RailLabel className="text-meta font-semibold tracking-[0.09em] text-ph-white">PHENYX</RailLabel>
     </Link>
   );
 }
@@ -43,9 +43,9 @@ function RailLabel({ children, className = "" }: { children: ReactNode; classNam
 }
 
 /** Sidebar rows share one shape: the four tabs and settings at the foot. Hover lights the icon in the accent. */
-function navItemClass(isActive: boolean, size = "text-[16px]"): string {
-  return `group/item flex h-11 items-center gap-3 rounded-xl px-3 ${size} font-light lowercase transition-colors duration-200 motion-reduce:transition-none group-data-[collapsed=true]/side:justify-center group-data-[collapsed=true]/side:px-0 rail:justify-center rail:px-0 ${
-    isActive ? "text-ph-white/90" : "text-ph-white/60 hover:text-ph-white/85"
+function navItemClass(isActive: boolean): string {
+  return `group/item flex h-11 items-center gap-3 rounded-xl px-3 text-reading lowercase transition-colors duration-200 motion-reduce:transition-none group-data-[collapsed=true]/side:justify-center group-data-[collapsed=true]/side:px-0 rail:justify-center rail:px-0 ${
+    isActive ? "text-ph-white" : "text-ph-secondary"
   }`;
 }
 
@@ -54,7 +54,7 @@ function NavItemIcon({ isActive, children }: { isActive: boolean; children: Reac
   return (
     <span
       className={`flex shrink-0 transition-colors duration-200 ${
-        isActive ? "text-[var(--ph-accent,var(--s))]" : "text-ph-white/45 group-hover/item:text-[var(--ph-accent,var(--s))]"
+        isActive ? "text-[var(--ph-accent,var(--s))]" : "text-ph-tertiary group-hover/item:text-[var(--ph-accent,var(--s))]"
       }`}
     >
       {children}
@@ -82,7 +82,7 @@ function SettingsLink({ active }: { active: boolean }) {
       className={`ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none ${
         active
           ? "border-[rgba(var(--s-rgb),0.35)] bg-[rgba(var(--s-rgb),0.10)] text-ph-white"
-          : "border-ph-white/10 text-ph-white/70 hover:border-ph-white/20 hover:bg-ph-white/[0.05] hover:text-ph-white"
+          : "border-ph-white/10 text-ph-secondary hover:border-ph-white/20 hover:bg-ph-white/[0.05] hover:text-ph-white"
       }`}
     >
       <GearIcon />
@@ -201,7 +201,7 @@ export function DashboardSidebar() {
           href={SETTINGS_HREF}
           aria-current={active === "settings" ? "page" : undefined}
           data-active={active === "settings" ? "true" : undefined}
-          className={`min-w-0 flex-1 ${navItemClass(active === "settings", "text-[14px]")} group-data-[collapsed=true]/side:w-full`}
+          className={`min-w-0 flex-1 ${navItemClass(active === "settings")} group-data-[collapsed=true]/side:w-full`}
         >
           <NavItemIcon isActive={active === "settings"}>
             <GearIcon size={16} />
@@ -213,7 +213,7 @@ export function DashboardSidebar() {
           onClick={toggleCollapsed}
           aria-label={collapsed ? "open the sidebar" : "collapse the sidebar"}
           aria-expanded={!collapsed}
-          className="h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-ph-white/45 transition-colors duration-200 hover:text-[var(--ph-accent,var(--s))] [@media(max-width:999px)]:hidden [@media(min-width:1000px)]:flex"
+          className="h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-ph-tertiary transition-colors duration-200 hover:text-[var(--ph-accent,var(--s))] [@media(max-width:999px)]:hidden [@media(min-width:1000px)]:flex"
         >
           <Chevron open={!collapsed} />
         </button>

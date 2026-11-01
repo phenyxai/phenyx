@@ -12,8 +12,8 @@ test("buildInsightsStats reads connected platforms, years in view and here since
   ]);
 });
 
-test("buildInsightsStats leaves out what it cannot count, and years in view waits as forming", () => {
-  assert.deepEqual(buildInsightsStats(0, null, null, NOW), [{ key: "years", value: "forming", label: "in view" }]);
+test("buildInsightsStats leaves out what it cannot count, years in view included until a date arrives", () => {
+  assert.deepEqual(buildInsightsStats(0, null, null, NOW), []);
   assert.deepEqual(buildInsightsStats(1, 2026, "not a date", NOW), [
     { key: "platforms", value: "1", label: "connected platform" },
     { key: "years", value: "1 year", label: "in view" },
